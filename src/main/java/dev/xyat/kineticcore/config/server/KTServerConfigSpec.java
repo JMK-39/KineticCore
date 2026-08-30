@@ -63,6 +63,37 @@ public final class KTServerConfigSpec {
         afterSave.accept(server);
     }
 
+    public void applyAndSave(MinecraftServer server, Map<String, Object> values) throws Throwable {
+        Map<String, Object> previous = snapshot();
+
+        try {
+            apply(values);
+            saver.run();
+            afterSave.accept(server);
+        } catch (Throwable failure) {
+            try {
+                apply(previous);
+            } catch (Throwable rollbackFailure) {
+                failure.addSuppressed(rollbackFailure);
+                throw failure;
+            }
+
+            try {
+                saver.run();
+            } catch (Throwable rollbackSaveFailure) {
+                failure.addSuppressed(rollbackSaveFailure);
+            }
+
+            try {
+                afterSave.accept(server);
+            } catch (Throwable rollbackApplyFailure) {
+                failure.addSuppressed(rollbackApplyFailure);
+            }
+
+            throw failure;
+        }
+    }
+
     private record Entry(String id, Supplier<Object> reader, Function<Object, Runnable> prepareWriter) {
         private Object read() {
             return copyValue(reader.get());

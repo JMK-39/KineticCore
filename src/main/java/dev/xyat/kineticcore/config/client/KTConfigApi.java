@@ -84,6 +84,10 @@ public final class KTConfigApi {
             return Component.translatable(REQUIRES_WORLD_KEY);
         }
         if (!KTServerConfigClient.isLoaded(page.id())) {
+            String failureKey = KTServerConfigClient.loadFailureKey(page.id());
+            if (!failureKey.isBlank()) {
+                return Component.translatable(failureKey);
+            }
             return Component.translatable("gui.kineticcore.config.server.loading");
         }
         if (!KTServerConfigClient.canEdit(page.id())) {

@@ -88,7 +88,9 @@ public final class SpawnEggConfig {
     }
 
     public static void save() {
-        if (configData == null) return;
+        if (configData == null) {
+            throw new IllegalStateException("Spawn egg config is not loaded");
+        }
         configData.set("spawn_eggs.enable", enableSpawnEggThrow);
         configData.set("spawn_eggs.speed", spawnEggThrowSpeed);
         configData.set("spawn_eggs.inaccuracy", spawnEggThrowInaccuracy);

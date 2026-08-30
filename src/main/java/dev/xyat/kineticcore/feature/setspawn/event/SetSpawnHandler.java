@@ -125,7 +125,7 @@ public class SetSpawnHandler {
         }
 
         SetSpawnData data = SetSpawnData.get(server.overworld());
-        debug("prepareLevels initial data: " + describeData(data) + ", hasAnyPlayerData=" + hasAnyPlayerData(server) + ", hasExistingWorldFootprint=" + hasExistingWorldFootprint(server));
+        debug("prepareLevels initial data: " + describeData(data));
         ensureWorldSpawnState(server, data);
         debug("prepareLevels validated data: " + describeData(data));
 
@@ -154,9 +154,7 @@ public class SetSpawnHandler {
         }
 
         ServerLevel level = spawn.getFirst();
-        BlockPos requestedPos = spawn.getSecond();
-        BlockPos pos = ensureFinalSafeSpawn(server, level, requestedPos, false);
-        FRESH_LOGIN_PLACEMENTS.put(player.getUUID(), Pair.of(level, pos));
+        BlockPos pos = spawn.getSecond();
         placePlayerExactly(player, pos);
 
         return Optional.of(level);
@@ -184,10 +182,8 @@ public class SetSpawnHandler {
             return;
         }
 
-        ServerLevel level = spawn.getFirst();
-        BlockPos requestedPos = spawn.getSecond();
-        BlockPos pos = ensureFinalSafeSpawn(level.getServer(), level, requestedPos, false);
-        APPLIED_RESPAWN_PLACEMENT.set(Pair.of(level, pos));
+        BlockPos pos = spawn.getSecond();
+        APPLIED_RESPAWN_PLACEMENT.set(spawn);
         placePlayerExactly(player, pos);
     }
 
@@ -380,11 +376,7 @@ public class SetSpawnHandler {
             return Optional.empty();
         }
 
-        ServerLevel level = spawn.get().getFirst();
-        BlockPos requestedPos = spawn.get().getSecond();
-        BlockPos pos = ensureFinalSafeSpawn(server, level, requestedPos, false);
-
-        return Optional.of(Pair.of(level, pos));
+        return spawn;
     }
 
     private static BlockPos ensureFinalSafeSpawn(MinecraftServer server, ServerLevel level, BlockPos pos, boolean adminSpawn) {
@@ -1076,7 +1068,9 @@ public class SetSpawnHandler {
 
 
     private static void debug(String message) {
-        KineticCore.LOGGER.info("{} {}", LOG_PREFIX, message);
+        if (KineticCore.LOGGER.isDebugEnabled()) {
+            KineticCore.LOGGER.debug("{} {}", LOG_PREFIX, message);
+        }
     }
 
     private static String posToString(BlockPos pos) {

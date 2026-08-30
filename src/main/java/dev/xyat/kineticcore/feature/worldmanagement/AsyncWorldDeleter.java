@@ -9,51 +9,65 @@ import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
-import org.apache.commons.io.file.PathUtils;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class AsyncWorldDeleter {
     private static final AtomicBoolean IS_DELETING = new AtomicBoolean(false);
+    private static final AtomicBoolean SHUTDOWN_HOOK_REGISTERED = new AtomicBoolean(false);
+    private static final AtomicReference<Thread> ACTIVE_DELETE_THREAD = new AtomicReference<>();
     private static final Component DELETING_MSG = Component.translatable("msg.kineticcore.deleting_archive");
 
-    public static void moveToTrashOrDelete(Path worldPath) {
-        if (!IS_DELETING.getAndSet(true)) {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                Minecraft mc = Minecraft.getInstance();
-                mc.execute(() -> NotificationOverlay.addNotification(DELETING_MSG, true));
-            });
-            Thread deleteThread = createDeleteThread(worldPath);
-            registerShutdownHook(deleteThread);
-            deleteThread.start();
+    public static boolean moveToTrash(Path worldPath) {
+        if (!IS_DELETING.compareAndSet(false, true)) {
+            showDeletingNotification();
+            return false;
         }
+
+        showDeletingNotification();
+        registerShutdownHookOnce();
+
+        Thread deleteThread = createDeleteThread(worldPath);
+        ACTIVE_DELETE_THREAD.set(deleteThread);
+        deleteThread.start();
+        return true;
+    }
+
+    private static void showDeletingNotification() {
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+            Minecraft mc = Minecraft.getInstance();
+            mc.execute(() -> NotificationOverlay.addNotification(DELETING_MSG, true));
+        });
     }
 
     private static Thread createDeleteThread(Path worldPath) {
         File worldFolder = worldPath.toFile();
         return new Thread(() -> {
             try {
-                // 等待文件锁彻底释放
-                Thread.sleep(150);
+                Thread.sleep(150L);
 
                 FileUtils fileUtils = FileUtils.getInstance();
                 if (!fileUtils.hasTrash()) {
-                    throw new UnsupportedOperationException();
+                    throw new IllegalStateException("System recycle bin is unavailable");
                 }
 
                 fileUtils.moveToTrash(worldFolder);
-
                 handleCompletion(true);
-            } catch (Exception var6) {
-                performPermanentDeletion(worldPath);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                KineticCore.LOGGER.error("World recycle operation was interrupted: {}", worldPath, e);
+                handleCompletion(false);
+            } catch (Exception e) {
+                KineticCore.LOGGER.error("Failed to move world to system recycle bin: {}", worldPath, e);
+                handleCompletion(false);
             } finally {
+                ACTIVE_DELETE_THREAD.compareAndSet(Thread.currentThread(), null);
                 IS_DELETING.set(false);
             }
-        }, "World-Deletion-Thread");
+        }, "World-Recycle-Bin-Thread");
     }
 
     private static void handleCompletion(boolean success) {
@@ -68,31 +82,28 @@ public class AsyncWorldDeleter {
                 }
 
                 NotificationOverlay.addNotification(Component.translatable(
-                        success ? "msg.kineticcore.archive_deleted" : "msg.kineticcore.archive_deleted_permanent"
+                        success ? "msg.kineticcore.archive_deleted" : "msg.kineticcore.archive_delete_failed"
                 ));
             });
         });
     }
 
-    private static void registerShutdownHook(Thread deleteThread) {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (deleteThread.isAlive()) {
-                try {
-                    deleteThread.join();
-                } catch (InterruptedException ignored) {
-                }
-            }
-        }));
-    }
-
-    private static void performPermanentDeletion(Path path) {
-        try {
-            if (Files.exists(path)) {
-                PathUtils.deleteDirectory(path);
-                handleCompletion(false);
-            }
-        } catch (IOException e) {
-            KineticCore.LOGGER.error("Failed to delete: {}", path, e);
+    private static void registerShutdownHookOnce() {
+        if (!SHUTDOWN_HOOK_REGISTERED.compareAndSet(false, true)) {
+            return;
         }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            Thread deleteThread = ACTIVE_DELETE_THREAD.get();
+            if (deleteThread == null || !deleteThread.isAlive()) {
+                return;
+            }
+
+            try {
+                deleteThread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "KineticCore-World-Recycle-Shutdown"));
     }
 }

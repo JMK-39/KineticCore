@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.feature.pvp.command;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import dev.xyat.kineticcore.feature.pvp.event.PvpEventHandler;
 import dev.xyat.kineticcore.feature.pvp.network.PvpNetwork;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -47,6 +48,9 @@ public class PvpCommand {
 
         boolean newState = !isPvpProtected(player);
         setPvpProtected(player, newState);
+        if (newState) {
+            PvpEventHandler.clearConflictingTargets(player);
+        }
         PvpNetwork.sendState(player, newState);
 
         return 1;

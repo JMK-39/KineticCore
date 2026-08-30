@@ -21,7 +21,7 @@ public final class NetworkConfigGui {
                 .applyNotice(Component.translatable("cfg.kineticcore.network.apply_notice"))
                 .intValue("packet_size", Component.translatable("cfg.kineticcore.network.packet_size"),
                         () -> NetworkConfig.packetSize, value -> NetworkConfig.packetSize = value,
-                        67108864, 1048576, Integer.MAX_VALUE,
+                        33554432, 1048576, 33554432,
                         Component.translatable("cfg.kineticcore.network.packet_size.desc"))
                 .intValue("decoder_size", Component.translatable("cfg.kineticcore.network.decoder_size"),
                         () -> NetworkConfig.decoderSize, value -> NetworkConfig.decoderSize = value,
@@ -33,7 +33,7 @@ public final class NetworkConfigGui {
                         Component.translatable("cfg.kineticcore.network.chunk_packet_data.desc"))
                 .longValue("nbt_max_size", Component.translatable("cfg.kineticcore.network.nbt_max_size"),
                         () -> NetworkConfig.nbtMaxSize, value -> NetworkConfig.nbtMaxSize = value,
-                        33554432L, 2097152L, 8589934592L,
+                        4194304L, 2097152L, 4194304L,
                         Component.translatable("cfg.kineticcore.network.nbt_max_size.desc"))
                 .intValue("string_size", Component.translatable("cfg.kineticcore.network.string_size"),
                         () -> NetworkConfig.stringSize, value -> NetworkConfig.stringSize = value,

@@ -14,10 +14,10 @@ public class NetworkConfig {
     private static CommentedFileConfig configData;
 
     public static int timeout = 120;
-    public static int packetSize = 67108864;
+    public static int packetSize = 33554432;
     public static int decoderSize = 67108864;
     public static int chunkPacketData = 16777216;
-    public static long nbtMaxSize = 33554432L;
+    public static long nbtMaxSize = 4194304L;
     public static int stringSize = 262144;
     public static int varInt = 5;
     public static int varLong = 10;
@@ -28,8 +28,8 @@ public class NetworkConfig {
             configData = CommentedFileConfig.builder(CONFIG_PATH).sync().preserveInsertionOrder().writingMode(WritingMode.REPLACE).build();
             configData.load();
             setupConfig();
-            configData.save();
             readValues();
+            save();
 
             System.setProperty("forge.disablePacketCompressionDebug", "true");
             System.setProperty("forge.readTimeout", String.valueOf(timeout));
@@ -53,12 +53,12 @@ public class NetworkConfig {
                  [范围：30 ~ 99999] 填错将自动还原为 120。
                  [Range: 30 ~ 99999] Invalid values will be reset to 120.""");
 
-        setIfAbsentAndComment("packetSize", 67108864,
+        setIfAbsentAndComment("packetSize", 33554432,
                 """
                  自定义 Payload 数据包最大限制。原版默认 1048576。
                  Custom max limit for Payload packets. Vanilla default is 1048576.
-                 [范围：1048576 ~ 2147483647] 填错将自动还原为 67108864。
-                 [Range: 1048576 ~ 2147483647] Invalid values will be reset to 67108864.""");
+                 [范围：1048576 ~ 33554432] 填错将自动还原为 33554432。
+                 [Range: 1048576 ~ 33554432] Invalid values will be reset to 33554432.""");
 
         setIfAbsentAndComment("decoderSize", 67108864,
                 """
@@ -74,12 +74,12 @@ public class NetworkConfig {
                  [范围：2097152 ~ 2147483647] 填错将自动还原为 16777216。
                  [Range: 2097152 ~ 2147483647] Invalid values will be reset to 16777216.""");
 
-        setIfAbsentAndComment("nbtMaxSize", 33554432L,
+        setIfAbsentAndComment("nbtMaxSize", 4194304L,
                 """
                  NBT 数据最大读取限制（字节）。原版默认 2097152。
                  Max NBT data read limit in bytes. Vanilla default is 2097152.
-                 [范围：2097152 ~ 8589934592 (8GB)] 填错将自动还原为 33554432。
-                 [Range: 2097152 ~ 8589934592 (8GB)] Invalid values will be reset to 33554432.""");
+                 [范围：2097152 ~ 4194304 (4MB)] 填错将自动还原为 4194304。
+                 [Range: 2097152 ~ 4194304 (4MB)] Invalid values will be reset to 4194304.""");
 
         setIfAbsentAndComment("stringSize", 262144,
                 """
@@ -125,24 +125,24 @@ public class NetworkConfig {
         Object val = configData.get("nbtMaxSize");
         if (val instanceof Number num) {
             long l = num.longValue();
-            if (l >= 2097152L && l <= 8589934592L) {
+            if (l >= 2097152L && l <= 4194304L) {
                 return l;
             }
         } else if (val instanceof String str) {
             try {
                 long l = Long.parseLong(str);
-                if (l >= 2097152L && l <= 8589934592L) {
+                if (l >= 2097152L && l <= 4194304L) {
                     return l;
                 }
             } catch (NumberFormatException ignored) {
             }
         }
-        return 33554432L;
+        return 4194304L;
     }
 
     private static void readValues() {
         timeout = getIntSafe("timeout", 120, 30, 99999);
-        packetSize = getIntSafe("packetSize", 67108864, 1048576, Integer.MAX_VALUE);
+        packetSize = getIntSafe("packetSize", 33554432, 1048576, 33554432);
         decoderSize = getIntSafe("decoderSize", 67108864, 8388608, Integer.MAX_VALUE);
         chunkPacketData = getIntSafe("chunkPacketData", 16777216, 2097152, Integer.MAX_VALUE);
         nbtMaxSize = getNbtMaxSizeSafe();

@@ -47,7 +47,7 @@ public class LogCleanerConfig {
                 "是否在游戏关闭时自动在后台清理旧的日志和崩溃报告。\nWhether to auto-clean old logs and crash reports asynchronously on game shutdown.");
 
         define("log_cleaner.deduplication", true,
-                "是否开启控制台与文件日志的自动去重功能。连续重复的日志将在末尾加上 *2, *3 等。\nWhether to enable log deduplication. Repeated consecutive logs will be appended with *2, *3, etc.");
+                "仅保留 ERROR/FATAL 错误日志，并对连续重复错误自动去重。\nOnly ERROR/FATAL logs are kept, with consecutive duplicate errors automatically collapsed.");
 
         define("log_cleaner.filtered_keywords", "Tried to load a block entity for block",
                 """

@@ -32,6 +32,7 @@ public class ItemCache {
     private static final String CACHE_TOAST_ID = "cache_building";
     private static final Object CACHE_LOCK = new Object();
     private static final AtomicInteger THREAD_INDEX = new AtomicInteger();
+    private static final AtomicInteger CACHE_GENERATION = new AtomicInteger();
     private static final int WORKER_COUNT = Math.max(1, Math.min(4, Runtime.getRuntime().availableProcessors() - 1));
     private static final ExecutorService CACHE_EXECUTOR = Executors.newFixedThreadPool(WORKER_COUNT, new CacheThreadFactory());
 
@@ -153,6 +154,7 @@ public class ItemCache {
 
     public static void clear() {
         synchronized (CACHE_LOCK) {
+            CACHE_GENERATION.incrementAndGet();
             CACHED_ITEMS = Collections.emptyList();
             PENDING_CALLBACKS.clear();
             isCaching = false;
@@ -163,6 +165,7 @@ public class ItemCache {
     }
 
     public static void prepareCache(Runnable onDone) {
+        int generation;
         synchronized (CACHE_LOCK) {
             if (isReady()) {
                 runCallback(onDone);
@@ -174,33 +177,36 @@ public class ItemCache {
             }
 
             if (isCaching) {
-                showProgressToast(Math.max(lastProgress, 0));
+                showProgressToast(CACHE_GENERATION.get(), Math.max(lastProgress, 0));
                 return;
             }
 
+            generation = CACHE_GENERATION.incrementAndGet();
             isCaching = true;
             cacheReady = false;
             lastProgress = 0;
             CACHED_ITEMS = Collections.emptyList();
         }
 
-        showProgressToast(0);
-        startBuildTask();
+        showProgressToast(generation, 0);
+        startBuildTask(generation);
     }
 
-    private static void startBuildTask() {
+    private static void startBuildTask(int generation) {
         executeOnClient(() -> {
+            if (!isCurrentGeneration(generation)) return;
             try {
-                List<ItemSnapshot> snapshots = collectSnapshots();
-                updateProgressIfChanged(10);
-                buildSnapshotsAsync(snapshots);
+                List<ItemSnapshot> snapshots = collectSnapshots(generation);
+                if (!isCurrentGeneration(generation)) return;
+                updateProgressIfChanged(generation, 10);
+                buildSnapshotsAsync(snapshots, generation);
             } catch (Throwable throwable) {
-                failBuild(throwable);
+                failBuild(generation, throwable);
             }
         });
     }
 
-    private static List<ItemSnapshot> collectSnapshots() {
+    private static List<ItemSnapshot> collectSnapshots(int generation) {
         Set<String> seen = new HashSet<>();
         List<ItemSnapshot> snapshots = new ArrayList<>();
 
@@ -213,7 +219,7 @@ public class ItemCache {
                 addSnapshot(new ItemStack(item), seen, snapshots);
             }
             itemCount++;
-            updateProgressIfChanged(itemCount * 5 / itemTotal);
+            updateProgressIfChanged(generation, itemCount * 5 / itemTotal);
         }
 
         List<ItemStack> tabStacks = new ArrayList<>();
@@ -227,7 +233,7 @@ public class ItemCache {
         for (ItemStack stack : tabStacks) {
             addSnapshot(stack, seen, snapshots);
             tabCount++;
-            updateProgressIfChanged(5 + tabCount * 5 / tabTotal);
+            updateProgressIfChanged(generation, 5 + tabCount * 5 / tabTotal);
         }
 
         return snapshots;
@@ -255,9 +261,10 @@ public class ItemCache {
         snapshots.add(new ItemSnapshot(copy, idStr, uniqueKey, displayName, idLoc.getNamespace(), List.copyOf(tags)));
     }
 
-    private static void buildSnapshotsAsync(List<ItemSnapshot> snapshots) {
+    private static void buildSnapshotsAsync(List<ItemSnapshot> snapshots, int generation) {
+        if (!isCurrentGeneration(generation)) return;
         if (snapshots.isEmpty()) {
-            executeOnClient(() -> finishBuild(Collections.emptyList()));
+            executeOnClient(() -> finishBuild(generation, Collections.emptyList()));
             return;
         }
 
@@ -269,13 +276,14 @@ public class ItemCache {
         for (int start = 0; start < total; start += chunkSize) {
             int end = Math.min(total, start + chunkSize);
             List<ItemSnapshot> chunk = snapshots.subList(start, end);
-            futures.add(CompletableFuture.supplyAsync(() -> buildChunk(chunk, finished, total), CACHE_EXECUTOR));
+            futures.add(CompletableFuture.supplyAsync(() -> buildChunk(chunk, finished, total, generation), CACHE_EXECUTOR));
         }
 
         CompletableFuture<?>[] futureArray = futures.toArray(new CompletableFuture<?>[0]);
         CompletableFuture.allOf(futureArray).whenComplete((ignored, throwable) -> {
+            if (!isCurrentGeneration(generation)) return;
             if (throwable != null) {
-                executeOnClient(() -> failBuild(throwable));
+                executeOnClient(() -> failBuild(generation, throwable));
                 return;
             }
 
@@ -286,26 +294,27 @@ public class ItemCache {
                     result.addAll(future.join());
                 }
             } catch (CompletionException exception) {
-                executeOnClient(() -> failBuild(exception));
+                executeOnClient(() -> failBuild(generation, exception));
                 return;
             }
 
-            updateProgressIfChanged(99);
-            executeOnClient(() -> finishBuild(result));
+            updateProgressIfChanged(generation, 99);
+            executeOnClient(() -> finishBuild(generation, result));
         });
     }
 
-    private static List<CachedItem> buildChunk(List<ItemSnapshot> snapshots, AtomicInteger finished, int total) {
+    private static List<CachedItem> buildChunk(List<ItemSnapshot> snapshots, AtomicInteger finished, int total, int generation) {
         List<CachedItem> result = new ArrayList<>(snapshots.size());
 
         for (ItemSnapshot snapshot : snapshots) {
+            if (!isCurrentGeneration(generation)) break;
             try {
                 String searchData = buildSearchData(snapshot);
                 result.add(new CachedItem(snapshot, searchData));
             } catch (Throwable ignored) {
             } finally {
                 int done = finished.incrementAndGet();
-                updateProgressIfChanged(10 + done * 89 / total);
+                updateProgressIfChanged(generation, 10 + done * 89 / total);
             }
         }
 
@@ -330,28 +339,38 @@ public class ItemCache {
         }
     }
 
-    private static void updateProgressIfChanged(int progress) {
+    private static boolean isCurrentGeneration(int generation) {
+        return generation == CACHE_GENERATION.get();
+    }
+
+    private static void updateProgressIfChanged(int generation, int progress) {
         int safeProgress = Math.max(0, Math.min(99, progress));
-        if (safeProgress == lastProgress) return;
-        lastProgress = safeProgress;
-        showProgressToast(safeProgress);
+        synchronized (CACHE_LOCK) {
+            if (!isCurrentGeneration(generation) || !isCaching || safeProgress <= lastProgress) return;
+            lastProgress = safeProgress;
+        }
+        showProgressToast(generation, safeProgress);
     }
 
-    private static void showProgressToast(int progress) {
-        executeOnClient(() -> GuiToastUtil.showToast(
-                CACHE_TOAST_ID,
-                Component.translatable("gui.kineticcore.items.cache.building", Component.literal(progress + "%").withStyle(ChatFormatting.YELLOW)),
-                GuiToastUtil.Position.BOTTOM_CENTER,
-                3000,
-                0,
-                -30
-        ));
+    private static void showProgressToast(int generation, int progress) {
+        executeOnClient(() -> {
+            if (!isCurrentGeneration(generation) || !isCaching) return;
+            GuiToastUtil.showToast(
+                    CACHE_TOAST_ID,
+                    Component.translatable("gui.kineticcore.items.cache.building", Component.literal(progress + "%").withStyle(ChatFormatting.YELLOW)),
+                    GuiToastUtil.Position.BOTTOM_CENTER,
+                    3000,
+                    0,
+                    -30
+            );
+        });
     }
 
-    private static void finishBuild(List<CachedItem> tempCache) {
+    private static void finishBuild(int generation, List<CachedItem> tempCache) {
         List<Runnable> callbacks;
 
         synchronized (CACHE_LOCK) {
+            if (!isCurrentGeneration(generation) || !isCaching) return;
             CACHED_ITEMS = List.copyOf(tempCache);
             isCaching = false;
             cacheReady = true;
@@ -374,16 +393,17 @@ public class ItemCache {
         }
     }
 
-    private static void failBuild(Throwable throwable) {
-        LOGGER.error("Cache build failed", throwable);
-
+    private static void failBuild(int generation, Throwable throwable) {
         synchronized (CACHE_LOCK) {
+            if (!isCurrentGeneration(generation) || !isCaching) return;
             CACHED_ITEMS = Collections.emptyList();
             isCaching = false;
             cacheReady = false;
             lastProgress = -1;
             PENDING_CALLBACKS.clear();
         }
+
+        LOGGER.error("Cache build failed", throwable);
 
         GuiToastUtil.showToast(
                 CACHE_TOAST_ID,

@@ -29,13 +29,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class FirstJoinHandler {
 
     private static final String NBT_KEY = "kineticcore:first_join_received";
+    private static final String PENDING_NBT_KEY = "kineticcore:first_join_pending";
     private static final String DATA_NAME = "kineticcore_first_join_received";
     private static final Map<UUID, Integer> PENDING_REWARDS = new ConcurrentHashMap<>();
 
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!PlayerConfig.enableFirstJoin || event.getEntity().level().isClientSide) return;
-
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
         UUID uuid = player.getUUID();
@@ -47,19 +47,14 @@ public class FirstJoinHandler {
             return;
         }
 
-        if (hasExistingPlayerState(player)) {
+        boolean pending = rewardData.isPending(uuid) || persistentData.getBoolean(PENDING_NBT_KEY);
+        if (!pending && hasExistingPlayerState(player)) {
             markReceived(player, rewardData);
             return;
         }
 
-        markReceived(player, rewardData);
-
-        int delay = Math.max(0, PlayerConfig.firstJoinDelay);
-        if (delay > 0) {
-            PENDING_REWARDS.put(uuid, delay);
-        } else {
-            grantRewards(player);
-        }
+        markPending(player, rewardData);
+        scheduleOrGrant(player, rewardData);
     }
 
     @SubscribeEvent
@@ -74,12 +69,33 @@ public class FirstJoinHandler {
             if (ticksLeft <= 0) {
                 ServerPlayer player = event.getServer().getPlayerList().getPlayer(entry.getKey());
                 if (player != null && player.isAlive()) {
-                    grantRewards(player);
+                    grantAndMark(player, getRewardData(event.getServer()));
                 }
                 iterator.remove();
             } else {
                 entry.setValue(ticksLeft);
             }
+        }
+    }
+
+    private static void scheduleOrGrant(ServerPlayer player, FirstJoinRewardData rewardData) {
+        int delay = Math.max(0, PlayerConfig.firstJoinDelay);
+        if (delay > 0) {
+            PENDING_REWARDS.put(player.getUUID(), delay);
+            return;
+        }
+
+        grantAndMark(player, rewardData);
+    }
+
+    private static void grantAndMark(ServerPlayer player, FirstJoinRewardData rewardData) {
+        try {
+            grantRewards(player);
+            markReceived(player, rewardData);
+            PENDING_REWARDS.remove(player.getUUID());
+        } catch (Throwable throwable) {
+            KineticCore.LOGGER.error("首次进服奖励发放失败，保留待发放状态: {}", player.getGameProfile().getName(), throwable);
+            markPending(player, rewardData);
         }
     }
 
@@ -160,8 +176,14 @@ public class FirstJoinHandler {
         return false;
     }
 
+    private static void markPending(ServerPlayer player, FirstJoinRewardData rewardData) {
+        player.getPersistentData().putBoolean(PENDING_NBT_KEY, true);
+        rewardData.markPending(player.getUUID());
+    }
+
     private static void markReceived(ServerPlayer player, FirstJoinRewardData rewardData) {
         player.getPersistentData().putBoolean(NBT_KEY, true);
+        player.getPersistentData().remove(PENDING_NBT_KEY);
         rewardData.markReceived(player.getUUID());
     }
 
@@ -171,39 +193,58 @@ public class FirstJoinHandler {
 
     private static final class FirstJoinRewardData extends SavedData {
         private final Set<UUID> receivedPlayers = new HashSet<>();
+        private final Set<UUID> pendingPlayers = new HashSet<>();
 
         private static FirstJoinRewardData load(CompoundTag tag) {
             FirstJoinRewardData data = new FirstJoinRewardData();
-            ListTag list = tag.getList("players", Tag.TAG_STRING);
+            loadUuidSet(tag.getList("players", Tag.TAG_STRING), data.receivedPlayers);
+            loadUuidSet(tag.getList("pending", Tag.TAG_STRING), data.pendingPlayers);
+            data.pendingPlayers.removeAll(data.receivedPlayers);
+            return data;
+        }
 
+        private static void loadUuidSet(ListTag list, Set<UUID> target) {
             for (int i = 0; i < list.size(); i++) {
                 try {
-                    data.receivedPlayers.add(UUID.fromString(list.getString(i)));
+                    target.add(UUID.fromString(list.getString(i)));
                 } catch (Exception ignored) {
                 }
             }
-
-            return data;
         }
 
         @Override
         public @NotNull CompoundTag save(@NotNull CompoundTag tag) {
-            ListTag list = new ListTag();
+            tag.put("players", saveUuidSet(receivedPlayers));
+            tag.put("pending", saveUuidSet(pendingPlayers));
+            return tag;
+        }
 
-            for (UUID uuid : receivedPlayers) {
+        private static ListTag saveUuidSet(Set<UUID> source) {
+            ListTag list = new ListTag();
+            for (UUID uuid : source) {
                 list.add(StringTag.valueOf(uuid.toString()));
             }
-
-            tag.put("players", list);
-            return tag;
+            return list;
         }
 
         private boolean hasReceived(UUID uuid) {
             return receivedPlayers.contains(uuid);
         }
 
+        private boolean isPending(UUID uuid) {
+            return pendingPlayers.contains(uuid);
+        }
+
+        private void markPending(UUID uuid) {
+            if (!receivedPlayers.contains(uuid) && pendingPlayers.add(uuid)) {
+                setDirty();
+            }
+        }
+
         private void markReceived(UUID uuid) {
-            if (receivedPlayers.add(uuid)) {
+            boolean changed = receivedPlayers.add(uuid);
+            changed |= pendingPlayers.remove(uuid);
+            if (changed) {
                 setDirty();
             }
         }

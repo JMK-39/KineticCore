@@ -77,7 +77,7 @@ public class WorldInitConfig {
 
     public static void save() {
         if (configData == null) {
-            return;
+            throw new IllegalStateException("World init config is not loaded");
         }
 
         configData.set("world_init.enable", enableWorldInit);

@@ -298,7 +298,9 @@ public class PlayerConfig {
     }
 
     public static void save() {
-        if (configData == null) return;
+        if (configData == null) {
+            throw new IllegalStateException("First join config is not loaded");
+        }
         configData.set("first_join.enable", enableFirstJoin);
         configData.set("first_join.clear_inventory", clearInvBeforeJoin);
         configData.set("first_join.delay_ticks", firstJoinDelay);

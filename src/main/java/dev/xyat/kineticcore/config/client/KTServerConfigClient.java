@@ -22,7 +22,13 @@ import java.util.Objects;
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(modid = KineticCore.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class KTServerConfigClient {
-    private record State(boolean loaded, boolean editable, Map<String, Object> values, long revision) {
+    private record State(
+            boolean loaded,
+            boolean editable,
+            Map<String, Object> values,
+            long revision,
+            String loadFailureKey
+    ) {
     }
 
     private static final Map<String, State> STATES = new HashMap<>();
@@ -46,12 +52,24 @@ public final class KTServerConfigClient {
         return state == null ? 0L : state.revision;
     }
 
+    public static String loadFailureKey(String pageId) {
+        State state = STATES.get(pageId);
+        return state == null || state.loadFailureKey == null ? "" : state.loadFailureKey;
+    }
+
     public static void request(KTConfigPage page) {
         Objects.requireNonNull(page, "page");
         if (page.scope() != KTConfigScope.SERVER_AUTHORITATIVE || !page.serverManaged()) return;
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.getConnection() == null || minecraft.player == null) return;
-        KTServerConfigNetwork.CHANNEL.sendToServer(new KTServerConfigNetwork.RequestPacket(page.id()));
+        markLoading(page.id());
+        try {
+            KTServerConfigNetwork.CHANNEL.sendToServer(new KTServerConfigNetwork.RequestPacket(page.id()));
+        } catch (Throwable throwable) {
+            KineticCore.LOGGER.error("Failed to request server config page {}", page.id(), throwable);
+            markLoadFailure(page.id(), "gui.kineticcore.config.server.load_failed");
+            refreshOpenScreen(page.id());
+        }
     }
 
     public static void request(String pageId) {
@@ -114,19 +132,39 @@ public final class KTServerConfigClient {
             byte[] payload
     ) {
         Map<String, Object> values = new LinkedHashMap<>();
+        boolean snapshotLoaded = false;
+        String loadFailureKey = "";
         if (payload != null && payload.length > 0) {
             try {
                 values.putAll(KTServerConfigNetwork.decodeValues(payload));
+                snapshotLoaded = true;
             } catch (Throwable throwable) {
                 KineticCore.LOGGER.error("Failed to decode server config snapshot {}", pageId, throwable);
                 success = false;
                 messageKey = "gui.kineticcore.config.server.load_failed";
+                loadFailureKey = messageKey;
             }
+        } else if (!success) {
+            loadFailureKey = messageKey == null || messageKey.isBlank()
+                    ? "gui.kineticcore.config.server.load_failed"
+                    : messageKey;
+        } else {
+            success = false;
+            messageKey = "gui.kineticcore.config.server.load_failed";
+            loadFailureKey = messageKey;
         }
 
         long revision = ++revisionCounter;
-        STATES.put(pageId, new State(true, editable, Map.copyOf(values), revision));
-        KTConfigApi.find(pageId).ifPresent(page -> applyToClientMirror(page, values));
+        STATES.put(pageId, new State(
+                snapshotLoaded,
+                snapshotLoaded && editable,
+                Map.copyOf(values),
+                revision,
+                snapshotLoaded ? "" : loadFailureKey
+        ));
+        if (snapshotLoaded) {
+            KTConfigApi.find(pageId).ifPresent(page -> applyToClientMirror(page, values));
+        }
         refreshOpenScreen(pageId);
 
         if (saveResponse) {
@@ -140,6 +178,16 @@ public final class KTServerConfigClient {
                     message
             );
         }
+    }
+
+    private static void markLoading(String pageId) {
+        long revision = ++revisionCounter;
+        STATES.put(pageId, new State(false, false, Map.of(), revision, ""));
+    }
+
+    private static void markLoadFailure(String pageId, String messageKey) {
+        long revision = ++revisionCounter;
+        STATES.put(pageId, new State(false, false, Map.of(), revision, messageKey == null ? "" : messageKey));
     }
 
     private static Object value(String pageId, String entryId) {

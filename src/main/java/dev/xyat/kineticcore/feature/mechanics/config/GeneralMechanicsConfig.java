@@ -164,7 +164,9 @@ public class GeneralMechanicsConfig {
     }
 
     public static void save() {
-        if (configData == null) return;
+        if (configData == null) {
+            throw new IllegalStateException("General mechanics config is not loaded");
+        }
         configData.set("mechanics.enablePvpProtection", enablePvpProtection);
         configData.set("mechanics.enableEntityAttributeFixer", enableEntityAttributeFixer);
         configData.set("mechanics.enableAlwaysEdible", enableAlwaysEdible);

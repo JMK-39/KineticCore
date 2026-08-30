@@ -3,6 +3,7 @@ package dev.xyat.kineticcore.feature.gpufix.client;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.TextureUtil;
+import dev.xyat.kineticcore.KineticCore;
 import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
 import net.minecraft.core.Vec3i;
 import net.minecraftforge.common.MinecraftForge;
@@ -17,11 +18,7 @@ public class GpuMemLeakFixHandler {
     private static final Cleaner CLEANER = Cleaner.create();
     public static final ConcurrentLinkedQueue<Vec3i> PENDING_DELETIONS = new ConcurrentLinkedQueue<>();
 
-    /**
-     * 你的自动扫描系统会反射调用此方法
-     */
     public static void register() {
-        // 自动挂载到 Forge 的客户端 Tick 事件
         MinecraftForge.EVENT_BUS.addListener(GpuMemLeakFixHandler::onClientTick);
     }
 
@@ -32,15 +29,35 @@ public class GpuMemLeakFixHandler {
     }
 
     public static class RenderTargetState implements Runnable {
-        public int colorTextureId = -1;
-        public int depthBufferId = -1;
-        public int frameBufferId = -1;
+        private int colorTextureId = -1;
+        private int depthBufferId = -1;
+        private int frameBufferId = -1;
+
+        public synchronized void update(int colorTextureId, int depthBufferId, int frameBufferId) {
+            this.colorTextureId = colorTextureId;
+            this.depthBufferId = depthBufferId;
+            this.frameBufferId = frameBufferId;
+        }
+
+        public synchronized void clear() {
+            this.colorTextureId = -1;
+            this.depthBufferId = -1;
+            this.frameBufferId = -1;
+        }
 
         @Override
         public void run() {
-            if (colorTextureId > -1 || depthBufferId > -1 || frameBufferId > -1) {
-                PENDING_DELETIONS.add(new Vec3i(colorTextureId, depthBufferId, frameBufferId));
+            Vec3i leakedIds;
+            synchronized (this) {
+                if (colorTextureId < 0 && depthBufferId < 0 && frameBufferId < 0) {
+                    return;
+                }
+                leakedIds = new Vec3i(colorTextureId, depthBufferId, frameBufferId);
+                colorTextureId = -1;
+                depthBufferId = -1;
+                frameBufferId = -1;
             }
+            PENDING_DELETIONS.add(leakedIds);
         }
     }
 
@@ -49,23 +66,29 @@ public class GpuMemLeakFixHandler {
     }
 
     public static void processPendingDeletions() {
-        if (PENDING_DELETIONS.isEmpty()) return;
-
         Vec3i ids;
         while ((ids = PENDING_DELETIONS.poll()) != null) {
-            int color = ids.getX();
-            int depth = ids.getY();
-            int frame = ids.getZ();
+            releaseTexture(ids.getX(), "color texture");
+            releaseTexture(ids.getY(), "depth texture");
+            releaseFramebuffer(ids.getZ());
+        }
+    }
 
-            if (color > -1) {
-                TextureUtil.releaseTextureId(color);
-            }
-            if (depth > -1) {
-                TextureUtil.releaseTextureId(depth);
-            }
-            if (frame > -1) {
-                GlStateManager._glDeleteFramebuffers(frame);
-            }
+    private static void releaseTexture(int textureId, String type) {
+        if (textureId < 0) return;
+        try {
+            TextureUtil.releaseTextureId(textureId);
+        } catch (Throwable throwable) {
+            KineticCore.LOGGER.error("Failed to release leaked GPU {} id {}", type, textureId, throwable);
+        }
+    }
+
+    private static void releaseFramebuffer(int framebufferId) {
+        if (framebufferId < 0) return;
+        try {
+            GlStateManager._glDeleteFramebuffers(framebufferId);
+        } catch (Throwable throwable) {
+            KineticCore.LOGGER.error("Failed to release leaked GPU framebuffer id {}", framebufferId, throwable);
         }
     }
 }

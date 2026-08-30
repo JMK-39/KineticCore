@@ -140,8 +140,7 @@ public final class KTServerConfigNetwork {
 
                 try {
                     Map<String, Object> values = decodeValues(packet.payload);
-                    spec.apply(values);
-                    spec.save(player.server);
+                    spec.applyAndSave(player.server, values);
                     sendSnapshot(player, packet.pageId, true, true, "gui.kineticcore.config.server.saved");
                 } catch (Throwable throwable) {
                     KineticCore.LOGGER.error("Failed to save server config page {}", packet.pageId, throwable);
