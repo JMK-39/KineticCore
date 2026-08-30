@@ -1,0 +1,15 @@
+{
+  "minVersion": "0.8",
+  "package": "dev.xyat.kineticcore.feature.datapack.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "kineticcore.mixins.refmap.json",
+  "mixins": [
+    "DatapackRepositoryMixin"
+  ],
+  "client": [
+    "client.ScreenReloadNoticeMixin",
+    "client.PackSelectionScreenMixin",
+    "client.MinecraftResourceReloadMixin",
+    "client.GuiReloadNoticeMixin"
+  ]
+}

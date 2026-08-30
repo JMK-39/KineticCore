@@ -1,0 +1,17 @@
+{
+  "package": "dev.xyat.kineticcore.feature.recipebook.mixin",
+  "minVersion": "0.8",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.xyat.kineticcore.MixinPlugin",
+  "refmap": "kineticcore.mixins.refmap.json",
+  "mixins": [
+    "RecipeBookServerMixins$Advancements",
+    "RecipeBookServerMixins$BookData",
+    "RecipeBookServerMixins$Player"
+  ],
+  "client": [
+    "client.ButtonAccess",
+    "client.RecipeBookClientMixins$Gui",
+    "client.RecipeBookClientMixins$Logic"
+  ]
+}

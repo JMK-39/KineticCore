@@ -1,0 +1,20 @@
+{
+  "package": "dev.xyat.kineticcore.feature.flight.mixin",
+  "minVersion": "0.8",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.xyat.kineticcore.MixinPlugin",
+  "refmap": "kineticcore.mixins.refmap.json",
+  "mixins": [
+    "FlightServerMixins$PlayerAbilityTweaks",
+    "FlightServerMixins$ServerPlayerTweaks",
+    "FlightServerMixins$NetworkTweaks"
+  ],
+  "client": [
+    "client.FlightClientMixins$LocalPlayerTweaks",
+    "client.FlightClientMixins$PlayerPhysicsTweaks",
+    "client.FlightClientMixins$MouseTweaks",
+    "client.FlightClientMixins$GameModeTweaks",
+    "client.FlightClientMixins$CameraTweaks",
+    "client.FlightClientMixins$LevelRendererTweaks"
+  ]
+}
