@@ -507,7 +507,7 @@
   "gui.kineticcore.items.mode.inv": "背包",
   "gui.kineticcore.items.search.hint": "搜索... (@模组 #标签)",
   "gui.kineticcore.module.function": "核心API",
-  "gui.kineticcore.module.name": "KineticCore",
+  "gui.kineticcore.module.name": "动力核心",
   "gui.kineticcore.module.tooltip": "提供 Kinetic 系列模组共用的配置界面、GUI、网络与基础 API。",
   "gui.kineticcore.nbt.clear": "§6清空内容",
   "gui.kineticcore.nbt.close": "§c关闭",
