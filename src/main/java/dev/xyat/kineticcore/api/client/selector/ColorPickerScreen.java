@@ -8,7 +8,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
@@ -125,8 +124,7 @@ public final class ColorPickerScreen extends KineticScreen {
         this.maxColors = Math.max(1, maxColors);
         this.colorConsumer = colorConsumer;
         this.paletteConsumer = paletteConsumer;
-        useCanvas(CANVAS_W, CANVAS_H, 6);
-        maxScale = 1.0f;
+        useResponsiveCanvas(CANVAS_W, CANVAS_H, 6);
         for (Integer color : initialColors) {
             if (color != null && colors.size() < this.maxColors) {
                 colors.add(color & 0xFFFFFF);
@@ -137,87 +135,66 @@ public final class ColorPickerScreen extends KineticScreen {
 
     @Override
     protected void buildUi() {
-        Button cancel = Button.builder(
-                        Component.translatable("gui.kineticcore.palette.cancel"),
-                        button -> onClose()
-                )
-                .bounds(PANEL_X + PANEL_W - 128, PANEL_Y + 10, 56, 18)
-                .tooltip(Tooltip.create(Component.translatable("gui.kineticcore.palette.cancel.tooltip")))
-                .build();
-        addRenderableWidget(cancel);
+        addButton(
+                PANEL_X + PANEL_W - 128, PANEL_Y + 10, 56,
+                Component.translatable("gui.kineticcore.palette.cancel"),
+                Component.translatable("gui.kineticcore.palette.cancel.tooltip"),
+                this::onClose
+        );
+        addButton(
+                PANEL_X + PANEL_W - 66, PANEL_Y + 10, 56,
+                Component.translatable("gui.kineticcore.palette.apply"),
+                Component.translatable("gui.kineticcore.palette.apply.tooltip"),
+                this::applyAndClose
+        );
 
-        Button apply = Button.builder(
-                        Component.translatable("gui.kineticcore.palette.apply"),
-                        button -> applyAndClose()
-                )
-                .bounds(PANEL_X + PANEL_W - 66, PANEL_Y + 10, 56, 18)
-                .tooltip(Tooltip.create(Component.translatable("gui.kineticcore.palette.apply.tooltip")))
-                .build();
-        addRenderableWidget(apply);
-
-        hexBox = new EditBox(
-                font,
-                SIDE_X + 45,
-                PICKER_Y + 33,
-                SIDE_W - 45,
-                18,
-                Component.translatable("gui.kineticcore.palette.hex")
+        hexBox = addTextField(
+                SIDE_X + 45, PICKER_Y + 33, SIDE_W - 45,
+                Component.translatable("gui.kineticcore.palette.hex"),
+                Component.translatable("gui.kineticcore.palette.hex.tooltip")
         );
         hexBox.setMaxLength(6);
         hexBox.setFilter(raw -> raw.matches("[0-9a-fA-F]{0,6}"));
         hexBox.setResponder(this::onHexChanged);
-        hexBox.setTooltip(Tooltip.create(Component.translatable("gui.kineticcore.palette.hex.tooltip")));
-        addRenderableWidget(hexBox);
 
         redBox = createRgbBox(PICKER_Y + 59, "gui.kineticcore.palette.red");
         greenBox = createRgbBox(PICKER_Y + 83, "gui.kineticcore.palette.green");
         blueBox = createRgbBox(PICKER_Y + 107, "gui.kineticcore.palette.blue");
 
-        Button copy = Button.builder(
-                        Component.translatable("gui.kineticcore.palette.copy_hex"),
-                        button -> Minecraft.getInstance().keyboardHandler.setClipboard(String.format(Locale.ROOT, "#%06X", rgb))
-                )
-                .bounds(SIDE_X, PICKER_Y + 137, 89, 18)
-                .tooltip(Tooltip.create(Component.translatable("gui.kineticcore.palette.copy_hex.tooltip")))
-                .build();
-        addRenderableWidget(copy);
+        addButton(
+                SIDE_X, PICKER_Y + 137, 89,
+                Component.translatable("gui.kineticcore.palette.copy_hex"),
+                Component.translatable("gui.kineticcore.palette.copy_hex.tooltip"),
+                () -> Minecraft.getInstance().keyboardHandler.setClipboard(String.format(Locale.ROOT, "#%06X", rgb))
+        );
 
         if (paletteMode) {
-            Button add = Button.builder(
-                            Component.translatable("gui.kineticcore.palette.add"),
-                            button -> addCurrentColor()
-                    )
-                    .bounds(SIDE_X + 96, PICKER_Y + 137, 91, 18)
-                    .tooltip(Tooltip.create(Component.translatable("gui.kineticcore.palette.add.tooltip")))
-                    .build();
+            Button add = addButton(
+                    SIDE_X + 96, PICKER_Y + 137, 91,
+                    Component.translatable("gui.kineticcore.palette.add"),
+                    Component.translatable("gui.kineticcore.palette.add.tooltip"),
+                    this::addCurrentColor
+            );
             add.active = colors.size() < maxColors;
-            addRenderableWidget(add);
         }
 
         syncFields();
     }
 
     private NumericEditBox createRgbBox(int y, String key) {
-        NumericEditBox box = NumericEditBox.integer(
-                font,
-                SIDE_X + 45,
-                y,
-                SIDE_W - 45,
-                18,
+        NumericEditBox box = addIntegerField(
+                SIDE_X + 45, y, SIDE_W - 45,
                 Component.translatable(key),
-                false,
-                0,
-                255
+                false, 0, 255,
+                Component.translatable("gui.kineticcore.palette.rgb.tooltip")
         );
         box.setResponder(raw -> onRgbChanged());
-        box.setTooltip(Tooltip.create(Component.translatable("gui.kineticcore.palette.rgb.tooltip")));
-        addRenderableWidget(box);
         return box;
     }
 
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        GuiTheme.shadow(graphics, canvasWidth, canvasHeight);
+        GuiTheme.shadow(graphics, canvasWidth(), canvasHeight());
         GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_W, paletteMode ? PANEL_H : 215);
         graphics.drawCenteredString(font, title, PANEL_X + PANEL_W / 2, PANEL_Y + 15, 0xFFFFFF);
 
@@ -456,12 +433,7 @@ public final class ColorPickerScreen extends KineticScreen {
         if (!colors.contains(color)) {
             colors.add(color);
         }
-        rebuildColorPickerWidgets();
-    }
-
-    private void rebuildColorPickerWidgets() {
-        clearWidgets();
-        buildUi();
+        rebuildUi();
     }
 
     private int swatchIndexAt(double mouseX, double mouseY) {
@@ -492,7 +464,7 @@ public final class ColorPickerScreen extends KineticScreen {
                 Component.translatable("gui.kineticcore.palette.context.delete"),
                 () -> {
                     if (index >= 0 && index < colors.size()) colors.remove(index);
-                    rebuildColorPickerWidgets();
+                    rebuildUi();
                 }
         ));
         if (colors.isEmpty()) {
@@ -502,7 +474,7 @@ public final class ColorPickerScreen extends KineticScreen {
                     Component.translatable("gui.kineticcore.palette.context.clear"),
                     () -> {
                         colors.clear();
-                        rebuildColorPickerWidgets();
+                        rebuildUi();
                     }
             ));
         }

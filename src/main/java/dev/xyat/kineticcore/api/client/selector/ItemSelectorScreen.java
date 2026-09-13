@@ -178,12 +178,11 @@ public class ItemSelectorScreen extends KineticScreen {
         super(Component.translatable("gui.kineticcore.items.item_selector.title"));
         this.parent = parent;
         this.onSelect = onSelect;
-        useCanvas(
+        useResponsiveCanvas(
                 640f,
                 360f,
                 6
         );
-        maxScale = 1.0f;
         loadPlayerStacks();
         loadFilters();
         rebuildCategoryEntries();
@@ -273,7 +272,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 + SCROLLBAR_WIDTH
                 + 4;
 
-        categoryX = Math.max(8, (canvasWidth - totalWidth) / 2);
+        categoryX = Math.max(8, (canvasWidth() - totalWidth) / 2);
         gridX = categoryX + CATEGORY_WIDTH + CATEGORY_SCROLLBAR_WIDTH + CATEGORY_GAP - GRID_SHIFT_LEFT;
 
         int gap = 4;
@@ -287,47 +286,33 @@ public class ItemSelectorScreen extends KineticScreen {
         btnAreaStartX = applyBtnX;
         topInfoY = topY + 6;
 
-        addRenderableWidget(
-                Button.builder(
-                                Component.translatable("gui.kineticcore.config.back"),
-                                button -> {
-                                    if (minecraft != null) {
-                                        minecraft.setScreen(parent);
-                                    }
-                                }
-                        )
-                        .bounds(backBtnX, topY, backBtnW, 20)
-                        .build()
+        addButton(
+                backBtnX, topY, backBtnW,
+                Component.translatable("gui.kineticcore.config.back"),
+                null,
+                () -> {
+                    if (minecraft != null) minecraft.setScreen(parent);
+                }
         );
 
-        applyFilterBtn = Button.builder(
-                        Component.translatable("gui.kineticcore.items.filter.apply"),
-                        button -> applyFilterAsResult()
-                )
-                .bounds(applyBtnX, topY, applyBtnW, 20)
-                .build();
-
+        applyFilterBtn = addButton(
+                applyBtnX, topY, applyBtnW,
+                Component.translatable("gui.kineticcore.items.filter.apply"),
+                null,
+                this::applyFilterAsResult
+        );
         applyFilterBtn.visible = false;
         applyFilterBtn.active = false;
-        addRenderableWidget(applyFilterBtn);
 
         int searchX = gridX;
         int maxSearchWidth = Math.max(100, applyBtnX - gap - searchX);
         int searchWidth = Math.min(220, maxSearchWidth);
 
-        searchBox = new EditBox(
-                font,
-                searchX,
-                topY,
-                searchWidth,
-                20,
-                Component.empty()
-        );
+        searchBox = addTextField(searchX, topY, searchWidth, Component.empty());
 
         searchBox.setMaxLength(1024);
         searchBox.setResponder(this::onSearchInput);
         searchBox.setValue(rememberedSearch);
-        addRenderableWidget(searchBox);
 
         categoryScroll.update(categoryEntries.size(), FIXED_GRID_ROWS);
         createCategoryButtons();
@@ -707,8 +692,8 @@ public class ItemSelectorScreen extends KineticScreen {
         if (ItemSearchIndex.isReady()) {
             syncCategoryButtons();
         }
-        graphics.fillGradient(0, 0, this.canvasWidth, this.canvasHeight, 0xFF222222, 0xFF111111);
-        graphics.fill(0, this.gridY - 4, this.canvasWidth, this.gridY - 3, 0x40FFFFFF);
+        graphics.fillGradient(0, 0, this.canvasWidth(), this.canvasHeight(), 0xFF222222, 0xFF111111);
+        graphics.fill(0, this.gridY - 4, this.canvasWidth(), this.gridY - 3, 0x40FFFFFF);
 
     }
 
@@ -800,26 +785,20 @@ public class ItemSelectorScreen extends KineticScreen {
         categoryButtons.clear();
         for (int index = 0; index < categoryEntries.size(); index++) {
             int categoryIndex = index;
-            Button button = Button.builder(
-                            Component.empty(),
-                            ignored -> selectCategoryIndex(categoryIndex)
-                    )
-                    .bounds(
-                            categoryButtonX(),
-                            categoryY + index * CELL_SIZE,
-                            CATEGORY_BUTTON_WIDTH,
-                            SLOT_SIZE
-                    )
-                    .build();
-            categoryButtons.add(button);
-            addScrollableWidget(
-                    button,
+            Button button = addCompactScrollableButton(
+                    categoryButtonX(),
+                    categoryY + index * CELL_SIZE,
+                    CATEGORY_BUTTON_WIDTH,
+                    Component.empty(),
+                    null,
+                    () -> selectCategoryIndex(categoryIndex),
                     categoryButtonX(),
                     categoryY,
                     categoryButtonX() + CATEGORY_BUTTON_WIDTH,
                     categoryY + gridContentHeight(),
                     () -> categoryScroll.smoothOffset() * CELL_SIZE
             );
+            categoryButtons.add(button);
         }
         syncCategoryButtons();
     }
@@ -940,7 +919,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 graphics.renderItem(slot.stack(), slot.x() + 1, slot.y() + 1);
             }
         } finally {
-            graphics.disableScissor();
+            disableCanvasScissor(graphics);
         }
     }
 
@@ -1048,7 +1027,7 @@ public class ItemSelectorScreen extends KineticScreen {
     private void renderAutoComplete(GuiGraphics graphics, int mouseX, int mouseY) {
         int acX = searchBox.getX();
         int acY = searchBox.getY() + searchBox.getHeight() + 2;
-        int acW = Math.max(80, Math.min(250, canvasWidth - acX - 12));
+        int acW = Math.max(80, Math.min(250, canvasWidth() - acX - 12));
         int itemH = 14;
         int visibleCount = Math.min(autoCompleteList.size(), autoCompleteMaxVisible);
         int totalH = visibleCount * itemH;
@@ -1087,7 +1066,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 graphics.drawString(this.font, lineText, acX + 4, top + 3, 0xFFFFFF, false);
             }
         } finally {
-            graphics.disableScissor();
+            disableCanvasScissor(graphics);
         }
 
         autoCompleteScroll.render(
@@ -1142,7 +1121,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 80,
                 Math.min(
                         250,
-                        canvasWidth - acX - 12
+                        canvasWidth() - acX - 12
                 )
         );
             int visibleCount = Math.min(autoCompleteList.size(), autoCompleteMaxVisible);
@@ -1191,7 +1170,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 80,
                 Math.min(
                         250,
-                        canvasWidth - acX - 12
+                        canvasWidth() - acX - 12
                 )
         );
         int itemH = 14;
@@ -1371,7 +1350,7 @@ public class ItemSelectorScreen extends KineticScreen {
                             80,
                             Math.min(
                                     250,
-                                    canvasWidth
+                                    canvasWidth()
                                             - acX
                                             - 12
                             )

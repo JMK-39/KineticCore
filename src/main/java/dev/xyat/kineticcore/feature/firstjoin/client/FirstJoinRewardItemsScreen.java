@@ -14,7 +14,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
@@ -89,7 +88,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
             }
             defaultSlot++;
         }
-        useCanvas(640F, 360F, 6);
+        useStandardCanvas();
     }
 
     @Override
@@ -109,63 +108,58 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
             final int entryIndex = index;
             int y = LIST_Y + index * ROW_H + 6;
 
-            EditBox countField = new EditBox(
-                    font,
-                    COUNT_FIELD_X,
-                    y,
-                    COUNT_FIELD_W,
-                    20,
-                    Component.translatable("gui.kineticcore.firstjoin.reward_items.count")
+            EditBox countField = addIntegerField(
+                    COUNT_FIELD_X, y, COUNT_FIELD_W,
+                    Component.translatable("gui.kineticcore.firstjoin.reward_items.count"),
+                    false, 1, 999, null
             );
             countField.setMaxLength(3);
-            countField.setFilter(value -> value.isEmpty() || value.matches("[1-9]\\d{0,2}"));
             countField.setResponder(value -> applyCount(entryIndex, value));
-            countFields.add(addRowWidget(countField));
+            countFields.add(attachScrollableWidget(
+                    countField,
+                    LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
+                    () -> scroll.smoothOffset() * ROW_H
+            ));
 
-            upButtons.add(addRowWidget(Button.builder(
-                            Component.literal("↑"),
-                            button -> moveIndex(entryIndex, -1))
-                    .bounds(upX, y, MOVE_BUTTON_W, 20)
-                    .build()));
-            downButtons.add(addRowWidget(Button.builder(
-                            Component.literal("↓"),
-                            button -> moveIndex(entryIndex, 1))
-                    .bounds(downX, y, MOVE_BUTTON_W, 20)
-                    .build()));
-            deleteButtons.add(addRowWidget(Button.builder(
-                            Component.translatable("gui.kineticcore.firstjoin.reward_items.delete"),
-                            button -> deleteIndex(entryIndex))
-                    .bounds(deleteX, y, DELETE_BUTTON_W, 20)
-                    .build()));
+            upButtons.add(addScrollableButton(
+                    upX, y, MOVE_BUTTON_W,
+                    Component.literal("↑"), null,
+                    () -> moveIndex(entryIndex, -1),
+                    LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
+                    () -> scroll.smoothOffset() * ROW_H
+            ));
+            downButtons.add(addScrollableButton(
+                    downX, y, MOVE_BUTTON_W,
+                    Component.literal("↓"), null,
+                    () -> moveIndex(entryIndex, 1),
+                    LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
+                    () -> scroll.smoothOffset() * ROW_H
+            ));
+            deleteButtons.add(addScrollableButton(
+                    deleteX, y, DELETE_BUTTON_W,
+                    Component.translatable("gui.kineticcore.firstjoin.reward_items.delete"), null,
+                    () -> deleteIndex(entryIndex),
+                    LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
+                    () -> scroll.smoothOffset() * ROW_H
+            ));
         }
 
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.firstjoin.reward_items.add"),
-                        button -> addEntry())
-                .bounds(44, 314, 110, 20)
-                .build());
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.firstjoin.reward_items.back"),
-                        button -> requestClose())
-                .bounds(265, 314, 110, 20)
-                .build());
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.firstjoin.reward_items.save"),
-                        button -> saveAndClose())
-                .bounds(472, 314, 110, 20)
-                .build());
-        updateRowButtons();
-    }
-
-    private <T extends net.minecraft.client.gui.components.AbstractWidget> T addRowWidget(T widget) {
-        return addScrollableWidget(
-                widget,
-                LIST_X,
-                LIST_Y,
-                LIST_X + LIST_W,
-                LIST_Y + LIST_H,
-                () -> scroll.smoothOffset() * ROW_H
+        addButton(
+                44, 314, 110,
+                Component.translatable("gui.kineticcore.firstjoin.reward_items.add"),
+                null, this::addEntry
         );
+        addButton(
+                265, 314, 110,
+                Component.translatable("gui.kineticcore.firstjoin.reward_items.back"),
+                null, this::requestClose
+        );
+        addButton(
+                472, 314, 110,
+                Component.translatable("gui.kineticcore.firstjoin.reward_items.save"),
+                null, this::saveAndClose
+        );
+        updateRowButtons();
     }
 
     private void updateScrollRange() {
@@ -337,18 +331,14 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
             return;
         }
 
-        client.setScreen(new ConfirmScreen(
-                shouldSave -> {
-                    if (!shouldSave) {
-                        client.setScreen(parent);
-                        return;
-                    }
-                    client.setScreen(this);
-                    saveAndClose();
-                },
+        openDialog(
                 Component.translatable("gui.kineticcore.config.unsaved_action.title"),
-                Component.translatable("gui.kineticcore.firstjoin.reward_items.unsaved")
-        ));
+                Component.translatable("gui.kineticcore.firstjoin.reward_items.unsaved"),
+                Component.translatable("gui.yes"),
+                Component.translatable("gui.no"),
+                this::saveAndClose,
+                () -> client.setScreen(parent)
+        );
     }
 
     private boolean hasUnsavedChanges() {
@@ -396,10 +386,10 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         int hoveredIndex = rowIndex(mouseY);
         updateRowButtons();
-        graphics.fillGradient(0, 0, canvasWidth, canvasHeight, 0xFF171717, 0xFF0E0E0E);
+        graphics.fillGradient(0, 0, canvasWidth(), canvasHeight(), 0xFF171717, 0xFF0E0E0E);
         GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_W, PANEL_H);
         GuiTheme.panelAlt(graphics, LIST_X - 4, LIST_Y - 4, LIST_W + 8, LIST_H + 8);
-        graphics.drawCenteredString(font, title, canvasWidth / 2, 30, 0xFFFFFF);
+        graphics.drawCenteredString(font, title, canvasWidth() / 2, 30, 0xFFFFFF);
 
         scroll.update(entries.size(), VISIBLE_ROWS);
         double smoothOffset = scroll.smoothOffset();
@@ -441,7 +431,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                 );
             }
         } finally {
-            graphics.disableScissor();
+            disableCanvasScissor(graphics);
         }
 
         GuiTheme.scrollbar(scroll, graphics, mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18);
@@ -457,7 +447,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
         graphics.drawCenteredString(
                 font,
                 Component.translatable("gui.kineticcore.firstjoin.reward_items.hint"),
-                canvasWidth / 2,
+                canvasWidth() / 2,
                 292,
                 0xFFFFFFFF
         );

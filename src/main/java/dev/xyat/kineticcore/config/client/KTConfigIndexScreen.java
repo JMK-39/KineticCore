@@ -7,7 +7,6 @@ import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollControlle
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -69,7 +68,7 @@ public final class KTConfigIndexScreen extends KineticScreen {
         this.parent = parent;
         this.ownerNamespace = ownerNamespace;
         moduleModel.setComparator(Comparator.comparing(ModuleGroup::namespace));
-        useCanvas(640, 360, 6);
+        useStandardCanvas();
     }
 
     @Override
@@ -84,24 +83,24 @@ public final class KTConfigIndexScreen extends KineticScreen {
         moduleModel.refresh(searchQuery);
         updateScrollRange();
 
-        searchBox = new EditBox(
-                font,
+        searchBox = addTextField(
                 LIST_X,
                 48,
                 430,
-                20,
                 Component.translatable("gui.kineticcore.config.search_plugins")
         );
         searchBox.setMaxLength(256);
         searchBox.setValue(searchQuery);
         searchBox.setResponder(this::updateSearch);
-        addRenderableWidget(searchBox);
 
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.done"),
-                        ignored -> onClose())
-                .bounds(514, 24, 72, 20)
-                .build());
+        addButton(
+                514,
+                24,
+                72,
+                Component.translatable("gui.done"),
+                null,
+                this::onClose
+        );
     }
 
     private void updateSearch(String query) {
@@ -123,7 +122,7 @@ public final class KTConfigIndexScreen extends KineticScreen {
             float partialTick
     ) {
         GuiTheme.panel(graphics, 42, 18, 556, 330);
-        graphics.drawCenteredString(font, title, canvasWidth / 2, 28, 0xFFFFAA00);
+        graphics.drawCenteredString(font, title, canvasWidth() / 2, 28, 0xFFFFAA00);
         graphics.drawCenteredString(
                 font,
                 Component.translatable(
@@ -131,7 +130,7 @@ public final class KTConfigIndexScreen extends KineticScreen {
                         Component.literal(String.valueOf(moduleModel.items().size())).withStyle(ChatFormatting.GREEN),
                         Component.literal(String.valueOf(registeredModules.size())).withStyle(ChatFormatting.YELLOW)
                 ),
-                canvasWidth / 2,
+                canvasWidth() / 2,
                 72,
                 0xFFAAAAAA
         );
@@ -165,24 +164,13 @@ public final class KTConfigIndexScreen extends KineticScreen {
             int mouseY,
             float partialTick
     ) {
-        renderSearchPlaceholder(graphics, searchBox);
+        renderTextFieldPlaceholder(
+                graphics,
+                searchBox,
+                Component.translatable("gui.kineticcore.config.search_plugins")
+        );
     }
 
-    private void renderSearchPlaceholder(GuiGraphics graphics, EditBox box) {
-        if (box == null || !box.visible || !box.getValue().isEmpty() || box.isFocused()) return;
-        String text = font.plainSubstrByWidth(
-                Component.translatable("gui.kineticcore.config.search_plugins").getString(),
-                Math.max(0, box.getWidth() - 10)
-        );
-        graphics.drawString(
-                font,
-                text,
-                box.getX() + 5,
-                box.getY() + (box.getHeight() - font.lineHeight) / 2,
-                0xFFAAAAAA,
-                false
-        );
-    }
 
     private void renderModuleRows(GuiGraphics graphics, int mouseX, int mouseY) {
         List<ModuleGroup> modules = moduleModel.items();
@@ -268,7 +256,7 @@ public final class KTConfigIndexScreen extends KineticScreen {
                 graphics.drawString(font, count, countX, y + 16, 0xFF999999, false);
             }
         } finally {
-            graphics.disableScissor();
+            disableCanvasScissor(graphics);
         }
     }
 

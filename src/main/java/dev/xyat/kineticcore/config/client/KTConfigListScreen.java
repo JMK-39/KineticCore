@@ -9,7 +9,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -64,7 +63,7 @@ final class KTConfigListScreen extends KineticScreen {
         this.resultConsumer = resultConsumer;
         for (Object value : initialValues) values.add(String.valueOf(value));
         originalValues.addAll(values);
-        useCanvas(640, 360, 6);
+        useStandardCanvas();
     }
 
     @Override
@@ -77,30 +76,42 @@ final class KTConfigListScreen extends KineticScreen {
             int y = LIST_Y + index * ROW_HEIGHT;
             EditBox box;
             if (integerList) {
-                box = NumericEditBox.integer(font, EDIT_X, y + 4, EDIT_WIDTH, 20, title,
-                        true, Integer.MIN_VALUE, Integer.MAX_VALUE);
+                box = addIntegerField(
+                        EDIT_X, y + 4, EDIT_WIDTH, title,
+                        true, Integer.MIN_VALUE, Integer.MAX_VALUE, null
+                );
             } else {
-                box = new EditBox(font, EDIT_X, y + 4, EDIT_WIDTH, 20, title);
+                box = addTextField(EDIT_X, y + 4, EDIT_WIDTH, title);
                 box.setMaxLength(32767);
             }
             box.setValue(values.get(index));
             box.setResponder(value -> values.set(capturedIndex, value));
             addListScrollableWidget(box);
-            addListScrollableWidget(Button.builder(Component.translatable("gui.kineticcore.config.move_up"), ignored -> move(capturedIndex, -1))
-                    .bounds(476, y + 4, 28, 20).build());
-            addListScrollableWidget(Button.builder(Component.translatable("gui.kineticcore.config.move_down"), ignored -> move(capturedIndex, 1))
-                    .bounds(510, y + 4, 28, 20).build());
-            addListScrollableWidget(Button.builder(Component.translatable("gui.kineticcore.config.remove_short"), ignored -> remove(capturedIndex))
-                    .bounds(544, y + 4, 34, 20).build());
+
+            addListScrollableWidget(addButton(
+                    476, y + 4, 28,
+                    Component.translatable("gui.kineticcore.config.move_up"),
+                    null,
+                    () -> move(capturedIndex, -1)
+            ));
+            addListScrollableWidget(addButton(
+                    510, y + 4, 28,
+                    Component.translatable("gui.kineticcore.config.move_down"),
+                    null,
+                    () -> move(capturedIndex, 1)
+            ));
+            addListScrollableWidget(addButton(
+                    544, y + 4, 34,
+                    Component.translatable("gui.kineticcore.config.remove_short"),
+                    null,
+                    () -> remove(capturedIndex)
+            ));
         }
 
         int footerY = 326;
-        addRenderableWidget(Button.builder(Component.translatable("gui.kineticcore.config.add"), ignored -> add())
-                .bounds(166, footerY, 92, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.kineticcore.config.back"), ignored -> onClose())
-                .bounds(274, footerY, 92, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), ignored -> finish())
-                .bounds(382, footerY, 92, 20).build());
+        addButton(166, footerY, 92, Component.translatable("gui.kineticcore.config.add"), null, this::add);
+        addButton(274, footerY, 92, Component.translatable("gui.kineticcore.config.back"), null, this::onClose);
+        addButton(382, footerY, 92, Component.translatable("gui.done"), null, this::finish);
     }
 
     private double listPixelOffset() {
@@ -109,7 +120,7 @@ final class KTConfigListScreen extends KineticScreen {
 
     private <T extends AbstractWidget> T addListScrollableWidget(T widget) {
         listWidgets.add(widget);
-        return addScrollableWidget(
+        return attachScrollableWidget(
                 widget,
                 LIST_X,
                 LIST_Y,
@@ -130,7 +141,7 @@ final class KTConfigListScreen extends KineticScreen {
         listScroll.update(values.size(), VISIBLE_ROWS);
         listScroll.setOffset(Math.max(0, values.size() - VISIBLE_ROWS));
         status = null;
-        rebuildWidgets();
+        rebuildUi();
     }
 
     private void remove(int index) {
@@ -138,7 +149,7 @@ final class KTConfigListScreen extends KineticScreen {
         clearDragState();
         listScroll.update(values.size(), VISIBLE_ROWS);
         status = null;
-        rebuildWidgets();
+        rebuildUi();
     }
 
     private void move(int index, int direction) {
@@ -153,7 +164,7 @@ final class KTConfigListScreen extends KineticScreen {
         values.add(target, value);
         ensureVisible(target);
         status = null;
-        rebuildWidgets();
+        rebuildUi();
     }
 
     private void ensureVisible(int index) {
@@ -337,14 +348,14 @@ final class KTConfigListScreen extends KineticScreen {
                 );
             }
         } finally {
-            graphics.disableScissor();
+            disableCanvasScissor(graphics);
         }
     }
 
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         GuiTheme.panel(graphics, 20, 12, 600, 342);
-        graphics.drawCenteredString(font, title, canvasWidth / 2, 23, GuiTheme.current().accentHover());
+        graphics.drawCenteredString(font, title, canvasWidth() / 2, 23, GuiTheme.current().accentHover());
 
         if (description != null) {
             List<FormattedCharSequence> lines = font.split(description, 548);
@@ -354,7 +365,7 @@ final class KTConfigListScreen extends KineticScreen {
                 graphics.drawCenteredString(
                         font,
                         lines.get(index),
-                        canvasWidth / 2,
+                        canvasWidth() / 2,
                         firstY + index * 11,
                         GuiTheme.current().text()
                 );
@@ -381,20 +392,20 @@ final class KTConfigListScreen extends KineticScreen {
                     );
                 }
             } finally {
-                graphics.disableScissor();
+                disableCanvasScissor(graphics);
             }
         }
 
         if (values.isEmpty()) {
             graphics.drawCenteredString(font, Component.translatable("gui.kineticcore.config.list_empty"),
-                    canvasWidth / 2, LIST_Y + LIST_HEIGHT / 2 - 4, GuiTheme.current().mutedText());
+                    canvasWidth() / 2, LIST_Y + LIST_HEIGHT / 2 - 4, GuiTheme.current().mutedText());
         }
         GuiTheme.scrollbar(
                 listScroll, graphics, mouseX, mouseY,
                 SCROLL_X, LIST_Y, SCROLL_WIDTH, LIST_HEIGHT, 18
         );
         if (status != null) {
-            graphics.drawCenteredString(font, status, canvasWidth / 2, 309, GuiTheme.current().danger());
+            graphics.drawCenteredString(font, status, canvasWidth() / 2, 309, GuiTheme.current().danger());
         }
     }
 
@@ -496,18 +507,14 @@ final class KTConfigListScreen extends KineticScreen {
             return;
         }
 
-        client.setScreen(new ConfirmScreen(
-                shouldApply -> {
-                    if (!shouldApply) {
-                        client.setScreen(parent);
-                        return;
-                    }
-                    client.setScreen(this);
-                    finish();
-                },
+        openDialog(
                 Component.translatable("gui.kineticcore.config.unsaved_action.title"),
-                Component.translatable("gui.kineticcore.config.unsaved_list.message")
-        ));
+                Component.translatable("gui.kineticcore.config.unsaved_list.message"),
+                Component.translatable("gui.yes"),
+                Component.translatable("gui.no"),
+                this::finish,
+                () -> client.setScreen(parent)
+        );
     }
 
     @Override

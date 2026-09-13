@@ -14,9 +14,9 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 public abstract class KineticContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
-    private float preferredWidth = 640f;
-    private float preferredHeight = 360f;
-    private int safeMargin = 6;
+    private float preferredWidth = KineticScreen.STANDARD_CANVAS_WIDTH;
+    private float preferredHeight = KineticScreen.STANDARD_CANVAS_HEIGHT;
+    private int safeMargin = KineticScreen.STANDARD_SAFE_MARGIN;
     private float uiScale = 1f;
     private int uiX;
     private int uiY;
@@ -27,6 +27,14 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
 
     protected KineticContainerScreen(T menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
+    }
+
+    protected final void useStandardContainer() {
+        useResponsiveContainer(
+                KineticScreen.STANDARD_CANVAS_WIDTH,
+                KineticScreen.STANDARD_CANVAS_HEIGHT,
+                KineticScreen.STANDARD_SAFE_MARGIN
+        );
     }
 
     protected final void useResponsiveContainer(float preferredWidth, float preferredHeight, int safeMargin) {
@@ -53,6 +61,34 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
 
     protected final double toVirtualY(double screenY) {
         return (screenY - uiY) / uiScale;
+    }
+
+    protected final int toScreenX(double virtualX) {
+        return uiX + (int) Math.floor(virtualX * uiScale);
+    }
+
+    protected final int toScreenY(double virtualY) {
+        return uiY + (int) Math.floor(virtualY * uiScale);
+    }
+
+    protected final int toScreenRight(double virtualX) {
+        return uiX + (int) Math.ceil(virtualX * uiScale);
+    }
+
+    protected final int toScreenBottom(double virtualY) {
+        return uiY + (int) Math.ceil(virtualY * uiScale);
+    }
+
+    protected final void enableUiScissor(GuiGraphics graphics, int left, int top, int right, int bottom) {
+        if (graphics instanceof UiCanvasGraphics) {
+            graphics.enableScissor(left, top, right, bottom);
+            return;
+        }
+        graphics.enableScissor(toScreenX(left), toScreenY(top), toScreenRight(right), toScreenBottom(bottom));
+    }
+
+    protected final void disableUiScissor(GuiGraphics graphics) {
+        graphics.disableScissor();
     }
 
     protected final GuiOverlay overlays() {
@@ -123,7 +159,7 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
                 preferredWidth,
                 preferredHeight
         );
-        uiScale = Math.max(0.05f, Math.min(1f, metrics.fitScale()));
+        uiScale = Math.max(0.05f, metrics.fitScale());
         uiX = safeArea.left();
         uiY = safeArea.top();
         uiWidth = Math.max(1, (int) Math.floor(safeArea.width() / uiScale));
@@ -137,19 +173,39 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
         int virtualMouseX = (int) Math.floor(toVirtualX(mouseX));
         int virtualMouseY = (int) Math.floor(toVirtualY(mouseY));
 
-        graphics.pose().pushPose();
-        graphics.pose().translate(uiX, uiY, 0);
-        graphics.pose().scale(uiScale, uiScale, 1f);
+        GuiGraphics uiGraphics = new ContainerGuiGraphics(graphics);
+        uiGraphics.pose().pushPose();
+        uiGraphics.pose().translate(uiX, uiY, 0);
+        uiGraphics.pose().scale(uiScale, uiScale, 1f);
         try {
-            super.render(graphics, virtualMouseX, virtualMouseY, partialTick);
-            requestContainerTooltips(graphics, virtualMouseX, virtualMouseY, mouseX, mouseY);
-            renderUiForeground(graphics, virtualMouseX, virtualMouseY, partialTick);
+            super.render(uiGraphics, virtualMouseX, virtualMouseY, partialTick);
+            requestContainerTooltips(uiGraphics, virtualMouseX, virtualMouseY, mouseX, mouseY);
+            renderUiForeground(uiGraphics, virtualMouseX, virtualMouseY, partialTick);
         } finally {
-            graphics.pose().popPose();
+            uiGraphics.pose().popPose();
         }
 
         renderScreenOverlay(graphics, virtualMouseX, virtualMouseY, mouseX, mouseY, partialTick);
         overlays.render(graphics, font, width, height, mouseX, mouseY);
+    }
+
+    private interface UiCanvasGraphics {
+    }
+
+    private final class ContainerGuiGraphics extends GuiGraphics implements UiCanvasGraphics {
+        private ContainerGuiGraphics(GuiGraphics source) {
+            super(KineticContainerScreen.this.minecraft, source.bufferSource());
+        }
+
+        @Override
+        public void enableScissor(int left, int top, int right, int bottom) {
+            super.enableScissor(
+                    toScreenX(left),
+                    toScreenY(top),
+                    toScreenRight(right),
+                    toScreenBottom(bottom)
+            );
+        }
     }
 
     protected void requestContainerTooltips(

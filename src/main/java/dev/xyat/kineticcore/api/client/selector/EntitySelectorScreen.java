@@ -9,7 +9,6 @@ import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollControlle
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -89,15 +88,15 @@ public final class EntitySelectorScreen extends KineticScreen {
         }
         allEntityIds.sort(String::compareToIgnoreCase);
         buildSearchData();
-        useCanvas(640, 360, 6);
+        useStandardCanvas();
     }
 
     @Override
     protected void buildUi() {
-        searchBox = addRenderableWidget(new EditBox(
-                font, GRID_X, 38, Math.min(GRID_W, 430), 20,
+        searchBox = addTextField(
+                GRID_X, 38, Math.min(GRID_W, 430),
                 Component.translatable("gui.kineticcore.entity_selector.search_hint")
-        ));
+        );
         searchBox.setMaxLength(256);
         searchBox.setValue(searchQuery);
         searchBox.setResponder(query -> {
@@ -105,18 +104,9 @@ public final class EntitySelectorScreen extends KineticScreen {
             updateSearch(searchQuery);
         });
 
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.entity_selector.clear"),
-                        ignored -> selectedIds.clear())
-                .bounds(166, 325, 92, 20).build());
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.config.back"),
-                        ignored -> onClose())
-                .bounds(274, 325, 92, 20).build());
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.entity_selector.apply"),
-                        ignored -> applyAndReturn())
-                .bounds(382, 325, 92, 20).build());
+        addButton(166, 325, 92, Component.translatable("gui.kineticcore.entity_selector.clear"), null, selectedIds::clear);
+        addButton(274, 325, 92, Component.translatable("gui.kineticcore.config.back"), null, this::onClose);
+        addButton(382, 325, 92, Component.translatable("gui.kineticcore.entity_selector.apply"), null, this::applyAndReturn);
 
         updateSearch(searchQuery);
     }
@@ -159,7 +149,7 @@ public final class EntitySelectorScreen extends KineticScreen {
             @NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         deferredTooltip = null;
         GuiTheme.panel(graphics, 20, 12, 600, 342);
-        graphics.drawCenteredString(font, title, canvasWidth / 2, 22, 0xFFFFAA00);
+        graphics.drawCenteredString(font, title, canvasWidth() / 2, 22, 0xFFFFAA00);
         GuiTheme.panelAlt(graphics, GRID_X - 3, GRID_Y - 3, GRID_W + 6, GRID_H + 6);
         renderGrid(graphics, mouseX, mouseY);
         GuiTheme.scrollbar(
@@ -169,7 +159,7 @@ public final class EntitySelectorScreen extends KineticScreen {
         graphics.drawCenteredString(
                 font,
                 Component.translatable("gui.kineticcore.entity_selector.selected", Component.literal(String.valueOf(selectedIds.size())).withStyle(ChatFormatting.GREEN)),
-                canvasWidth / 2,
+                canvasWidth() / 2,
                 306,
                 0xFFAAAAAA
         );
@@ -191,34 +181,10 @@ public final class EntitySelectorScreen extends KineticScreen {
             int mouseY,
             float partialTick
     ) {
-        renderSearchPlaceholder(
+        renderTextFieldPlaceholder(
                 graphics,
-                searchBox
-        );
-    }
-
-    private void renderSearchPlaceholder(
-            GuiGraphics graphics,
-            EditBox box
-    ) {
-        if (box == null
-                || !box.visible
-                || !box.getValue().isEmpty()
-                || box.isFocused()) {
-            return;
-        }
-
-        String text = font.plainSubstrByWidth(
-                Component.translatable("gui.kineticcore.entity_selector.search_hint").getString(),
-                Math.max(0, box.getWidth() - 10)
-        );
-        graphics.drawString(
-                font,
-                text,
-                box.getX() + 5,
-                box.getY() + (box.getHeight() - font.lineHeight) / 2,
-                0xFFAAAAAA,
-                false
+                searchBox,
+                Component.translatable("gui.kineticcore.entity_selector.search_hint")
         );
     }
 
@@ -254,7 +220,7 @@ public final class EntitySelectorScreen extends KineticScreen {
             boolean rendered = previewRenderer.render(
                     graphics, id, "selector:" + id,
                     x + 3, y + 3, CELL_W - 6, CELL_H - 19,
-                    canvasScale, canvasX, canvasY, hovered
+                    hovered
             );
             if (!rendered) {
                 graphics.drawCenteredString(font, "?", x + CELL_W / 2, y + 23, 0xFF777777);
@@ -276,7 +242,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                 );
             }
         }
-        graphics.disableScissor();
+        disableCanvasScissor(graphics);
     }
 
     private String entityName(String id) {
@@ -385,7 +351,7 @@ public final class EntitySelectorScreen extends KineticScreen {
         return false;
     }
 
-    private static final class EntityPreviewRenderer {
+    private final class EntityPreviewRenderer {
         public static final float DEFAULT_ROTATION = 20f;
         public static final float DEFAULT_BASE_ROTATION_SPEED = 90f;
         public static final int DEFAULT_ZOOM_PERCENT = 100;
@@ -482,9 +448,6 @@ public final class EntitySelectorScreen extends KineticScreen {
                 int boxY,
                 int boxW,
                 int boxH,
-                float guiScale,
-                int offsetX,
-                int offsetY,
                 boolean hovered
         ) {
             ResourceLocation id = ResourceLocation.tryParse(entityId);
@@ -504,9 +467,6 @@ public final class EntitySelectorScreen extends KineticScreen {
                     boxY,
                     boxW,
                     boxH,
-                    guiScale,
-                    offsetX,
-                    offsetY,
                     hovered
             );
         }
@@ -520,9 +480,6 @@ public final class EntitySelectorScreen extends KineticScreen {
                 int boxY,
                 int boxW,
                 int boxH,
-                float guiScale,
-                int offsetX,
-                int offsetY,
                 boolean hovered
         ) {
             if (type == null || id == null || stateKey == null) {
@@ -574,16 +531,12 @@ public final class EntitySelectorScreen extends KineticScreen {
                     DEFAULT_FRAME_LIMIT_NANOS
             );
 
-            int scissorX1 = (int) (boxX * guiScale) + offsetX;
-            int scissorY1 = (int) (boxY * guiScale) + offsetY;
-            int scissorX2 = (int) ((boxX + boxW) * guiScale) + offsetX;
-            int scissorY2 = (int) ((boxY + boxH) * guiScale) + offsetY;
-
-            graphics.enableScissor(
-                    scissorX1,
-                    scissorY1,
-                    scissorX2,
-                    scissorY2
+            enableCanvasScissor(
+                    graphics,
+                    boxX,
+                    boxY,
+                    boxX + boxW,
+                    boxY + boxH
             );
 
             graphics.pose().pushPose();
@@ -696,7 +649,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                 }
 
                 graphics.pose().popPose();
-                graphics.disableScissor();
+                disableCanvasScissor(graphics);
             }
         }
 

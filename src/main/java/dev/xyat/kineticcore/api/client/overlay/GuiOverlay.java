@@ -33,18 +33,58 @@ public final class GuiOverlay {
         TOP_RIGHT
     }
 
-    public record MenuItem(Component label, Runnable action, boolean enabled) {
+    public enum MenuItemStyle {
+        NORMAL,
+        DANGER,
+        SEPARATOR
+    }
+
+    public record MenuItem(
+            Component label,
+            Component tooltip,
+            Boolean checked,
+            Runnable action,
+            boolean enabled,
+            MenuItemStyle style
+    ) {
+        public MenuItem(Component label, Runnable action, boolean enabled) {
+            this(label, Component.empty(), null, action, enabled, MenuItemStyle.NORMAL);
+        }
+
         public MenuItem {
             label = Objects.requireNonNullElse(label, Component.empty());
+            tooltip = Objects.requireNonNullElse(tooltip, Component.empty());
             action = action == null ? () -> { } : action;
+            style = style == null ? MenuItemStyle.NORMAL : style;
+            if (style == MenuItemStyle.SEPARATOR) enabled = false;
         }
 
         public static MenuItem action(Component label, Runnable action) {
-            return new MenuItem(label, action, true);
+            return action(label, Component.empty(), action);
+        }
+
+        public static MenuItem action(Component label, Component tooltip, Runnable action) {
+            return new MenuItem(label, tooltip, null, action, true, MenuItemStyle.NORMAL);
+        }
+
+        public static MenuItem toggle(Component label, Component tooltip, boolean checked, Runnable action) {
+            return new MenuItem(label, tooltip, checked, action, true, MenuItemStyle.NORMAL);
+        }
+
+        public static MenuItem danger(Component label, Runnable action) {
+            return danger(label, Component.empty(), action);
+        }
+
+        public static MenuItem danger(Component label, Component tooltip, Runnable action) {
+            return new MenuItem(label, tooltip, null, action, true, MenuItemStyle.DANGER);
         }
 
         public static MenuItem disabled(Component label) {
-            return new MenuItem(label, () -> { }, false);
+            return new MenuItem(label, Component.empty(), null, () -> { }, false, MenuItemStyle.NORMAL);
+        }
+
+        public static MenuItem separator() {
+            return new MenuItem(Component.empty(), Component.empty(), null, () -> { }, false, MenuItemStyle.SEPARATOR);
         }
     }
 
@@ -131,6 +171,11 @@ public final class GuiOverlay {
         if (lines == null || lines.isEmpty()) return;
         List<Component> clean = lines.stream().filter(Objects::nonNull).toList();
         if (!clean.isEmpty()) tooltip = new WrappedTextTooltip(clean, Math.max(1, maxWidth));
+    }
+
+    public void formattedTooltip(List<FormattedCharSequence> lines) {
+        if (lines == null || lines.isEmpty()) return;
+        tooltip = new FormattedTooltip(List.copyOf(lines));
     }
 
     public void itemTooltip(ItemStack stack) {
@@ -233,10 +278,14 @@ public final class GuiOverlay {
             return true;
         }
 
-        int row = ((int) mouseY - bounds.y - 3) / bounds.rowHeight;
-        if (row >= 0 && row < contextMenu.items().size()) {
-            MenuItem item = contextMenu.items().get(row);
-            if (item.enabled()) item.action().run();
+        for (MenuRow row : bounds.rows()) {
+            MenuItem item = row.item();
+            if (!item.enabled() || item.style() == MenuItemStyle.SEPARATOR) continue;
+            if (GuiTheme.hovering(mouseX, mouseY, bounds.x + 2, row.y(), bounds.width - 4, row.height())) {
+                contextMenu = null;
+                item.action().run();
+                return true;
+            }
         }
         contextMenu = null;
         return true;
@@ -311,34 +360,57 @@ public final class GuiOverlay {
             int mouseY
     ) {
         MenuBounds bounds = menuBounds(contextMenu, screenWidth, screenHeight, font);
+        MenuItem hoveredItem = null;
         graphics.pose().pushPose();
         graphics.pose().translate(0, 0, 900);
         GuiTheme.panel(graphics, bounds.x, bounds.y, bounds.width, bounds.height);
 
-        for (int index = 0; index < contextMenu.items().size(); index++) {
-            MenuItem item = contextMenu.items().get(index);
-            int rowY = bounds.y + 3 + index * bounds.rowHeight;
+        for (MenuRow row : bounds.rows()) {
+            MenuItem item = row.item();
+            if (item.style() == MenuItemStyle.SEPARATOR) {
+                int lineY = row.y() + row.height() / 2;
+                graphics.fill(bounds.x + 5, lineY, bounds.x + bounds.width - 5, lineY + 1, GuiTheme.current().border());
+                continue;
+            }
+
             boolean hovered = item.enabled()
-                    && GuiTheme.hovering(mouseX, mouseY, bounds.x + 2, rowY, bounds.width - 4, bounds.rowHeight);
+                    && GuiTheme.hovering(mouseX, mouseY, bounds.x + 2, row.y(), bounds.width - 4, row.height());
             if (hovered) {
+                hoveredItem = item;
                 graphics.fill(
                         bounds.x + 2,
-                        rowY,
+                        row.y(),
                         bounds.x + bounds.width - 2,
-                        rowY + bounds.rowHeight,
+                        row.y() + row.height(),
                         GuiTheme.current().panelAlt()
                 );
             }
+
+            int textColor;
+            if (!item.enabled()) textColor = GuiTheme.current().mutedText();
+            else if (item.style() == MenuItemStyle.DANGER) textColor = GuiTheme.current().danger();
+            else textColor = GuiTheme.current().text();
+
             graphics.drawString(
                     font,
-                    item.label(),
+                    displayMenuLabel(item),
                     bounds.x + 6,
-                    rowY + (bounds.rowHeight - 8) / 2,
-                    item.enabled() ? GuiTheme.current().text() : GuiTheme.current().mutedText(),
+                    row.y() + (row.height() - 8) / 2,
+                    textColor,
                     false
             );
         }
         graphics.pose().popPose();
+
+        if (hoveredItem != null && !hoveredItem.tooltip().getString().isBlank()) {
+            renderTooltipRequest(
+                    graphics,
+                    font,
+                    new WrappedTextTooltip(List.of(hoveredItem.tooltip()), 320),
+                    mouseX,
+                    mouseY
+            );
+        }
     }
 
     private void renderDialog(
@@ -412,14 +484,38 @@ public final class GuiOverlay {
     }
 
     private static MenuBounds menuBounds(ContextMenu menu, int screenWidth, int screenHeight, Font font) {
-        int rowHeight = 20;
-        int width = 80;
-        for (MenuItem item : menu.items()) width = Math.max(width, font.width(item.label()) + 12);
+        int itemHeight = 20;
+        int separatorHeight = 5;
+        int width = 126;
+        int contentHeight = 0;
+        for (MenuItem item : menu.items()) {
+            if (item.style() == MenuItemStyle.SEPARATOR) {
+                contentHeight += separatorHeight;
+                continue;
+            }
+            width = Math.max(width, font.width(displayMenuLabel(item)) + 20);
+            contentHeight += itemHeight;
+        }
         width = Math.min(width, Math.max(20, screenWidth - 8));
-        int height = menu.items().size() * rowHeight + 6;
+        int height = Math.min(contentHeight + 6, Math.max(12, screenHeight - 8));
         int x = Math.max(4, Math.min(menu.x(), screenWidth - width - 4));
         int y = Math.max(4, Math.min(menu.y(), screenHeight - height - 4));
-        return new MenuBounds(x, y, width, height, rowHeight);
+
+        List<MenuRow> rows = new ArrayList<>();
+        int cursorY = y + 3;
+        for (MenuItem item : menu.items()) {
+            int rowHeight = item.style() == MenuItemStyle.SEPARATOR ? separatorHeight : itemHeight;
+            rows.add(new MenuRow(item, cursorY, rowHeight));
+            cursorY += rowHeight;
+        }
+        return new MenuBounds(x, y, width, height, List.copyOf(rows));
+    }
+
+    private static Component displayMenuLabel(MenuItem item) {
+        if (Boolean.TRUE.equals(item.checked())) {
+            return Component.literal("✓ ").append(item.label());
+        }
+        return item.label();
     }
 
     private DialogBounds dialogBounds(int screenWidth, int screenHeight, Font font) {
@@ -436,7 +532,10 @@ public final class GuiOverlay {
         return new DialogBounds(x, y, width, height, confirmX, cancelX, buttonY, buttonWidth, buttonHeight);
     }
 
-    private record MenuBounds(int x, int y, int width, int height, int rowHeight) {
+    private record MenuRow(MenuItem item, int y, int height) {
+    }
+
+    private record MenuBounds(int x, int y, int width, int height, List<MenuRow> rows) {
     }
 
     private record DialogBounds(

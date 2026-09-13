@@ -124,7 +124,7 @@ public final class FirstJoinCommandListScreen extends KineticScreen {
         this.serverEntryId = serverEntryId;
         this.commandSetter.accept(KTServerConfigClient.getStringList(serverPageId, serverEntryId, commandGetter.get()));
         this.showPlayerVariables = showPlayerVariables;
-        useCanvas(640F, 360F, 6);
+        useStandardCanvas();
     }
 
     @Override
@@ -142,46 +142,42 @@ public final class FirstJoinCommandListScreen extends KineticScreen {
         for (int index = 0; index < commands.size(); index++) {
             final int commandIndex = index;
             int y = LIST_Y + index * ROW_H + 2;
-            upButtons.add(addRowWidget(Button.builder(
-                            Component.literal("↑"),
-                            button -> moveIndex(commandIndex, -1))
-                    .bounds(upX, y, MOVE_W, ROW_H - 6)
-                    .build()));
-            downButtons.add(addRowWidget(Button.builder(
-                            Component.literal("↓"),
-                            button -> moveIndex(commandIndex, 1))
-                    .bounds(downX, y, MOVE_W, ROW_H - 6)
-                    .build()));
-            deleteButtons.add(addRowWidget(Button.builder(
-                            Component.translatable("gui.kineticcore.firstjoin.command_list.delete"),
-                            button -> deleteCommand(commandIndex))
-                    .bounds(deleteX, y, DELETE_W, ROW_H - 6)
-                    .build()));
+            upButtons.add(addCompactScrollableButton(
+                    upX, y, MOVE_W,
+                    Component.literal("↑"), null,
+                    () -> moveIndex(commandIndex, -1),
+                    LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
+                    () -> scroll.smoothOffset() * ROW_H
+            ));
+            downButtons.add(addCompactScrollableButton(
+                    downX, y, MOVE_W,
+                    Component.literal("↓"), null,
+                    () -> moveIndex(commandIndex, 1),
+                    LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
+                    () -> scroll.smoothOffset() * ROW_H
+            ));
+            deleteButtons.add(addCompactScrollableButton(
+                    deleteX, y, DELETE_W,
+                    Component.translatable("gui.kineticcore.firstjoin.command_list.delete"), null,
+                    () -> deleteCommand(commandIndex),
+                    LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
+                    () -> scroll.smoothOffset() * ROW_H
+            ));
         }
 
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.firstjoin.command_list.add"),
-                        button -> openEditor(-1))
-                .bounds(44, 314, 110, 20)
-                .build());
-
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.firstjoin.command_list.back"),
-                        button -> closeToParent())
-                .bounds(472, 314, 110, 20)
-                .build());
-        updateRowButtons();
-    }
-
-    private <T extends net.minecraft.client.gui.components.AbstractWidget> T addRowWidget(T widget) {
-        return addScrollableWidget(
-                widget,
-                LIST_X,
-                LIST_Y,
-                LIST_X + LIST_W,
-                LIST_Y + LIST_H,
-                () -> scroll.smoothOffset() * ROW_H
+        addButton(
+                44, 314, 110,
+                Component.translatable("gui.kineticcore.firstjoin.command_list.add"),
+                null,
+                () -> openEditor(-1)
         );
+        addButton(
+                472, 314, 110,
+                Component.translatable("gui.kineticcore.firstjoin.command_list.back"),
+                null,
+                this::closeToParent
+        );
+        updateRowButtons();
     }
 
     List<String> currentCommands() {
@@ -263,10 +259,10 @@ public final class FirstJoinCommandListScreen extends KineticScreen {
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         deferredTooltip = null;
         updateRowButtons();
-        graphics.fillGradient(0, 0, canvasWidth, canvasHeight, 0xFF171717, 0xFF0E0E0E);
+        graphics.fillGradient(0, 0, canvasWidth(), canvasHeight(), 0xFF171717, 0xFF0E0E0E);
         GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_W, PANEL_H);
         GuiTheme.panelAlt(graphics, LIST_X - 4, LIST_Y - 4, LIST_W + 8, LIST_H + 8);
-        graphics.drawCenteredString(font, title, canvasWidth / 2, 30, 0xFFFFFF);
+        graphics.drawCenteredString(font, title, canvasWidth() / 2, 30, 0xFFFFFF);
 
         renderRows(graphics, mouseX, mouseY);
         GuiTheme.scrollbar(scroll, graphics, mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18);
@@ -322,7 +318,7 @@ public final class FirstJoinCommandListScreen extends KineticScreen {
                 }
             }
         } finally {
-            graphics.disableScissor();
+            disableCanvasScissor(graphics);
         }
     }
 

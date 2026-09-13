@@ -3,13 +3,11 @@ package dev.xyat.kineticcore.api.client.selector;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.search.ItemSearchIndex;
-import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -78,29 +76,16 @@ public final class ItemListEditorScreen extends KineticScreen {
             }
             rules.addAll(unique);
         }
-        useCanvas(640, 360, 6);
-        maxScale = 1.0F;
+        useStandardCanvas();
     }
 
     @Override
     protected void buildUi() {
         updateScrollRange();
 
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.items.list_editor.add"),
-                        ignored -> openSelector())
-                .bounds(158, 316, 96, 20)
-                .build());
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.config.back"),
-                        ignored -> onClose())
-                .bounds(272, 316, 96, 20)
-                .build());
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.hud_editor.save"),
-                        ignored -> saveAndClose())
-                .bounds(386, 316, 96, 20)
-                .build());
+        addButton(158, 316, 96, Component.translatable("gui.kineticcore.items.list_editor.add"), null, this::openSelector);
+        addButton(272, 316, 96, Component.translatable("gui.kineticcore.config.back"), null, this::onClose);
+        addButton(386, 316, 96, Component.translatable("gui.kineticcore.hud_editor.save"), null, this::saveAndClose);
     }
 
     private void openSelector() {
@@ -169,7 +154,7 @@ public final class ItemListEditorScreen extends KineticScreen {
             float partialTick
     ) {
         GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
-        graphics.drawCenteredString(font, title, canvasWidth / 2, 30, 0xFFFFAA00);
+        graphics.drawCenteredString(font, title, canvasWidth() / 2, 30, 0xFFFFAA00);
         GuiTheme.itemGrid(graphics, GRID_X, GRID_Y, GRID_WIDTH, GRID_HEIGHT);
         renderRules(graphics, mouseX, mouseY);
         GuiTheme.scrollbar(
@@ -248,7 +233,7 @@ public final class ItemListEditorScreen extends KineticScreen {
                 graphics.drawString(font, rule.substring(0, 1), x + 2, y + 2, 0xFFFFFFFF, true);
             }
         }
-        graphics.disableScissor();
+        disableCanvasScissor(graphics);
     }
 
     private ItemStack previewStack(String rule) {

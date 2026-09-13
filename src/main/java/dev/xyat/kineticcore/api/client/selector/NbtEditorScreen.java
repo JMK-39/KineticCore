@@ -8,7 +8,6 @@ import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.nbt.TagParser;
@@ -34,7 +33,7 @@ public class NbtEditorScreen extends KineticScreen {
         this.initialNbt = initialNbt;
         this.parentScreen = null;
         this.onSave = value -> NbtNetwork.sendToServer(new NbtNetwork.SaveNbtPacket(value));
-        useCanvas(
+        useResponsiveCanvas(
                 640f,
                 360f,
                 6
@@ -46,7 +45,7 @@ public class NbtEditorScreen extends KineticScreen {
         this.initialNbt = initialNbt;
         this.onSave = onSave;
         this.parentScreen = parentScreen;
-        useCanvas(
+        useResponsiveCanvas(
                 640f,
                 360f,
                 6
@@ -55,24 +54,21 @@ public class NbtEditorScreen extends KineticScreen {
 
     @Override
     protected void buildUi() {
-        searchBox = new EditBox(this.font, 20, 10, 120, 20, Component.translatable("gui.kineticcore.search"));
+        searchBox = addTextField(20, 10, 120, Component.translatable("gui.kineticcore.search"));
         searchBox.setResponder(query -> {
             if (nbtEditor != null) nbtEditor.setSearchQuery(query);
         });
-        this.addRenderableWidget(searchBox);
 
-        this.addRenderableWidget(Button.builder(Component.literal("↑"), b -> nbtEditor.navigateSearch(-1))
-                .bounds(145, 10, 20, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal("↓"), b -> nbtEditor.navigateSearch(1))
-                .bounds(170, 10, 20, 20).build());
+        addButton(145, 10, 20, Component.literal("↑"), null, () -> nbtEditor.navigateSearch(-1));
+        addButton(170, 10, 20, Component.literal("↓"), null, () -> nbtEditor.navigateSearch(1));
 
         int btnW = 80;
         int gap = 10;
-        int closeX = this.canvasWidth - 20 - btnW;
+        int closeX = this.canvasWidth() - 20 - btnW;
         int saveX = closeX - gap - btnW;
         int clearX = saveX - gap - btnW;
 
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.kineticcore.nbt.save"), b -> {
+        addButton(saveX, 10, btnW, Component.translatable("gui.kineticcore.nbt.save"), null, () -> {
             String val = nbtEditor.getValue().trim();
             if (val.isEmpty() || val.equals("{}")) {
                 onSave.accept("");
@@ -86,18 +82,17 @@ public class NbtEditorScreen extends KineticScreen {
                 }
             }
             if (this.minecraft != null) this.minecraft.setScreen(parentScreen);
-        }).bounds(saveX, 10, btnW, 20).build());
+        });
 
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.kineticcore.nbt.clear"), b -> nbtEditor.setValue("")).bounds(clearX, 10, btnW, 20).build());
-
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.kineticcore.nbt.close"), b -> {
+        addButton(clearX, 10, btnW, Component.translatable("gui.kineticcore.nbt.clear"), null, () -> nbtEditor.setValue(""));
+        addButton(closeX, 10, btnW, Component.translatable("gui.kineticcore.nbt.close"), null, () -> {
             if (this.minecraft != null) this.minecraft.setScreen(parentScreen);
-        }).bounds(closeX, 10, btnW, 20).build());
+        });
 
         int editorX = 20;
         int editorY = 40;
-        int editorW = this.canvasWidth - 40;
-        int editorH = this.canvasHeight - 60;
+        int editorW = this.canvasWidth() - 40;
+        int editorH = this.canvasHeight() - 60;
 
         nbtEditor = new NbtEditorWidget(this.font, editorX, editorY, editorW, editorH);
         nbtEditor.setValue(initialNbt);
@@ -114,7 +109,7 @@ public class NbtEditorScreen extends KineticScreen {
 
     @Override
     public void renderCanvasBackground(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        g.fill(0, 0, this.canvasWidth, this.canvasHeight, 0xCC000000);
+        g.fill(0, 0, this.canvasWidth(), this.canvasHeight(), 0xCC000000);
         nbtEditor.render(g, mx, my);
 
         if (nbtEditor != null) {

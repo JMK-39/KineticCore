@@ -13,7 +13,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ObjectSelectionList;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -58,11 +57,7 @@ public class SetSpawnScreen extends KineticScreen {
 
     public SetSpawnScreen(SetSpawnNetwork.OpenSetSpawnGuiPacket packet) {
         super(Component.translatable("gui.kineticcore.setspawn.title"));
-        useCanvas(
-                640f,
-                360f,
-                6
-        );
+        useStandardCanvas();
 
         this.globalEnable = packet.globalEnable();
         this.dimEnable = packet.dimEnable();
@@ -84,87 +79,113 @@ public class SetSpawnScreen extends KineticScreen {
 
     @Override
     protected void buildUi() {
-        int panelW = this.canvasWidth - 40;
+        int panelW = canvasWidth() - 40;
         int startX = 20;
         int topY = 16;
 
-        Button btnDim = Button.builder(Component.translatable("gui.kineticcore.setspawn.dim"), b -> switchTab(0))
-                .bounds(startX, topY, 80, 20)
-                .tooltip(Tooltip.create(Component.translatable("gui.kineticcore.setspawn.tooltip.dim")))
-                .build();
+        Button btnDim = addButton(
+                startX, topY, 80,
+                Component.translatable("gui.kineticcore.setspawn.dim"),
+                Component.translatable("gui.kineticcore.setspawn.tooltip.dim"),
+                () -> switchTab(0)
+        );
         btnDim.active = currentTab != 0;
-        this.addRenderableWidget(btnDim);
 
-        Button btnBiome = Button.builder(Component.translatable("gui.kineticcore.setspawn.biome"), b -> switchTab(1))
-                .bounds(startX + 85, topY, 80, 20)
-                .tooltip(Tooltip.create(Component.translatable("gui.kineticcore.setspawn.tooltip.biome")))
-                .build();
+        Button btnBiome = addButton(
+                startX + 85, topY, 80,
+                Component.translatable("gui.kineticcore.setspawn.biome"),
+                Component.translatable("gui.kineticcore.setspawn.tooltip.biome"),
+                () -> switchTab(1)
+        );
         btnBiome.active = currentTab != 1;
-        this.addRenderableWidget(btnBiome);
 
-        Button btnStruct = Button.builder(Component.translatable("gui.kineticcore.setspawn.struct"), b -> switchTab(2))
-                .bounds(startX + 170, topY, 80, 20)
-                .tooltip(Tooltip.create(Component.translatable("gui.kineticcore.setspawn.tooltip.struct")))
-                .build();
+        Button btnStruct = addButton(
+                startX + 170, topY, 80,
+                Component.translatable("gui.kineticcore.setspawn.struct"),
+                Component.translatable("gui.kineticcore.setspawn.tooltip.struct"),
+                () -> switchTab(2)
+        );
         btnStruct.active = currentTab != 2;
-        this.addRenderableWidget(btnStruct);
 
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.kineticcore.hud_editor.save"), b -> SetSpawnNetwork.CHANNEL.sendToServer(new SetSpawnNetwork.SaveSetSpawnPacket(globalEnable, dimEnable, dims, biomeEnable, biomes, structEnable, structs))).bounds(startX + panelW - 145, topY, 80, 20).build());
-
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.kineticcore.config.back"), b -> this.onClose())
-                .bounds(startX + panelW - 60, topY, 60, 20).build());
+        addButton(
+                startX + panelW - 145, topY, 80,
+                Component.translatable("gui.kineticcore.hud_editor.save"),
+                null,
+                () -> SetSpawnNetwork.CHANNEL.sendToServer(new SetSpawnNetwork.SaveSetSpawnPacket(
+                        globalEnable, dimEnable, dims, biomeEnable, biomes, structEnable, structs
+                ))
+        );
+        addButton(
+                startX + panelW - 60, topY, 60,
+                Component.translatable("gui.kineticcore.config.back"),
+                null,
+                this::onClose
+        );
 
         int searchY = 46;
         int switchesW = 270;
         int inputW = panelW - switchesW - 5;
 
-        String hintKey = currentTab == 0 ? "gui.kineticcore.setspawn.hint_dim" : (currentTab == 1 ? "gui.kineticcore.setspawn.hint_biome" : "gui.kineticcore.setspawn.hint_struct");
-        activeInput = new AutoCompleteBox(this.font, startX, searchY, inputW, 20, Component.empty(), this::getActiveDict) {
-            @Override
-            public void renderWidget(@NotNull GuiGraphics g, int mx, int my, float pt) {
-                super.renderWidget(g, mx, my, pt);
-                if (!this.isFocused() && this.getValue().isEmpty()) {
-                    g.drawString(Minecraft.getInstance().font, Component.translatable(hintKey), this.getX() + 4, this.getY() + (this.height - 9) / 2 + 1, 0xFFAAAAAA, false);
-                }
-            }
-        };
-        this.addRenderableWidget(activeInput);
+        activeInput = addAutoCompleteField(
+                startX, searchY, inputW,
+                Component.empty(),
+                this::getActiveDict,
+                null
+        );
 
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.kineticcore.setspawn.global_btn", Component.translatable(globalEnable ? "gui.kineticcore.setspawn.enable" : "gui.kineticcore.setspawn.disable").withStyle(globalEnable ? ChatFormatting.GREEN : ChatFormatting.RED)), b -> {
-            globalEnable = !globalEnable;
-            b.setMessage(Component.translatable("gui.kineticcore.setspawn.global_btn", Component.translatable(globalEnable ? "gui.kineticcore.setspawn.enable" : "gui.kineticcore.setspawn.disable").withStyle(globalEnable ? ChatFormatting.GREEN : ChatFormatting.RED)));
-        }).bounds(startX + inputW + 5, searchY, 85, 20).tooltip(Tooltip.create(Component.translatable("gui.kineticcore.setspawn.tooltip.global"))).build());
+        Component enabled = Component.translatable("gui.kineticcore.setspawn.enable").withStyle(ChatFormatting.GREEN);
+        Component disabled = Component.translatable("gui.kineticcore.setspawn.disable").withStyle(ChatFormatting.RED);
+        addToggleButton(
+                startX + inputW + 5, searchY, 85,
+                globalEnable,
+                Component.translatable("gui.kineticcore.setspawn.global_btn", enabled),
+                Component.translatable("gui.kineticcore.setspawn.global_btn", disabled),
+                Component.translatable("gui.kineticcore.setspawn.tooltip.global"),
+                value -> globalEnable = value
+        );
 
         boolean currentEnable = currentTab == 0 ? dimEnable : (currentTab == 1 ? biomeEnable : structEnable);
-        String tabPrefix = currentTab == 0 ? "gui.kineticcore.setspawn.dim_btn" : (currentTab == 1 ? "gui.kineticcore.setspawn.biome_btn" : "gui.kineticcore.setspawn.struct_btn");
-        Component tabTooltip = Component.translatable(currentTab == 0 ? "gui.kineticcore.setspawn.tooltip.dim" : (currentTab == 1 ? "gui.kineticcore.setspawn.tooltip.biome" : "gui.kineticcore.setspawn.tooltip.struct"));
-
-        this.addRenderableWidget(Button.builder(Component.translatable(tabPrefix, Component.translatable(currentEnable ? "gui.kineticcore.setspawn.enable" : "gui.kineticcore.setspawn.disable").withStyle(currentEnable ? ChatFormatting.GREEN : ChatFormatting.RED)), b -> {
-            if (currentTab == 0) dimEnable = !dimEnable;
-            else if (currentTab == 1) biomeEnable = !biomeEnable;
-            else structEnable = !structEnable;
-            boolean newState = currentTab == 0 ? dimEnable : (currentTab == 1 ? biomeEnable : structEnable);
-            b.setMessage(Component.translatable(tabPrefix, Component.translatable(newState ? "gui.kineticcore.setspawn.enable" : "gui.kineticcore.setspawn.disable").withStyle(newState ? ChatFormatting.GREEN : ChatFormatting.RED)));
-        }).bounds(startX + inputW + 95, searchY, 85, 20).tooltip(Tooltip.create(tabTooltip)).build());
+        String tabPrefix = currentTab == 0
+                ? "gui.kineticcore.setspawn.dim_btn"
+                : (currentTab == 1 ? "gui.kineticcore.setspawn.biome_btn" : "gui.kineticcore.setspawn.struct_btn");
+        Component tabTooltip = Component.translatable(
+                currentTab == 0
+                        ? "gui.kineticcore.setspawn.tooltip.dim"
+                        : (currentTab == 1 ? "gui.kineticcore.setspawn.tooltip.biome" : "gui.kineticcore.setspawn.tooltip.struct")
+        );
+        addToggleButton(
+                startX + inputW + 95, searchY, 85,
+                currentEnable,
+                Component.translatable(tabPrefix, enabled),
+                Component.translatable(tabPrefix, disabled),
+                tabTooltip,
+                value -> {
+                    if (currentTab == 0) dimEnable = value;
+                    else if (currentTab == 1) biomeEnable = value;
+                    else structEnable = value;
+                }
+        );
 
         String currentEnv = currentTab == 0 ? playerDim : (currentTab == 1 ? playerBiome : playerStruct);
         boolean isOverworldDim = currentTab == 0 && "minecraft:overworld".equals(currentEnv);
-
-        Button envBtn = Button.builder(Component.translatable("gui.kineticcore.setspawn.add_current_single"), b -> {
-            if (currentEnv.equals("none") || currentEnv.isEmpty() || isOverworldDim) return;
-            addToList(currentEnv);
-        }).bounds(startX + panelW - 85, searchY, 85, 20).tooltip(Tooltip.create(Component.literal(toDisplayEntry(currentEnv, getCurrentPrefix())))).build();
-
-        if (currentEnv.equals("none") || currentEnv.isEmpty() || isOverworldDim) envBtn.active = false;
-        this.addRenderableWidget(envBtn);
+        Button envBtn = addButton(
+                startX + panelW - 85, searchY, 85,
+                Component.translatable("gui.kineticcore.setspawn.add_current_single"),
+                Component.literal(toDisplayEntry(currentEnv, getCurrentPrefix())),
+                () -> {
+                    if (currentEnv.equals("none") || currentEnv.isEmpty() || isOverworldDim) return;
+                    addToList(currentEnv);
+                }
+        );
+        envBtn.active = !(currentEnv.equals("none") || currentEnv.isEmpty() || isOverworldDim);
 
         int listY = 76;
-        int listH = this.canvasHeight - listY - 16;
+        int listH = canvasHeight() - listY - 16;
         List<String> activeData = currentTab == 0 ? dims : (currentTab == 1 ? biomes : structs);
 
-        activeListWidget = new StringListWidget(this.minecraft, panelW, listH, listY, listY + listH, 20, activeData);
+        activeListWidget = new StringListWidget(minecraft, panelW, listH, listY, listY + listH, 20, activeData);
         activeListWidget.setLeftPos(startX);
-        this.addWidget(activeListWidget);
+        addEventListWidget(activeListWidget);
     }
 
     public void handleSaveResult(boolean success) {
@@ -178,7 +199,7 @@ public class SetSpawnScreen extends KineticScreen {
 
     private void switchTab(int tab) {
         this.currentTab = tab;
-        this.rebuildWidgets();
+        rebuildUi();
     }
 
     private void addToList(String rawValue) {
@@ -364,17 +385,17 @@ public class SetSpawnScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        GuiTheme.shadow(g, this.canvasWidth, this.canvasHeight);
+        GuiTheme.shadow(g, this.canvasWidth(), this.canvasHeight());
 
-        int panelW = this.canvasWidth - 40;
+        int panelW = this.canvasWidth() - 40;
         int startX = 20;
         int listY = 76;
-        int listH = this.canvasHeight - listY - 16;
+        int listH = this.canvasHeight() - listY - 16;
 
-        GuiTheme.panel(g, 10, 8, this.canvasWidth - 20, this.canvasHeight - 16);
+        GuiTheme.panel(g, 10, 8, this.canvasWidth() - 20, this.canvasHeight() - 16);
 
-        g.fill(16, 40, this.canvasWidth - 16, 41, 0xFF444444);
-        g.fill(16, 71, this.canvasWidth - 16, 72, 0xFF444444);
+        g.fill(16, 40, this.canvasWidth() - 16, 41, 0xFF444444);
+        g.fill(16, 71, this.canvasWidth() - 16, 72, 0xFF444444);
 
         GuiTheme.panelAlt(g, startX - 2, listY - 2, panelW + 4, listH + 4);
 
@@ -383,6 +404,11 @@ public class SetSpawnScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasForeground(@NotNull GuiGraphics g, int mx, int my, float pt) {
+        if (activeInput == null) return;
+        String hintKey = currentTab == 0
+                ? "gui.kineticcore.setspawn.hint_dim"
+                : (currentTab == 1 ? "gui.kineticcore.setspawn.hint_biome" : "gui.kineticcore.setspawn.hint_struct");
+        renderTextFieldPlaceholder(g, activeInput, Component.translatable(hintKey));
         activeInput.renderSuggestions(g, mx, my);
     }
 

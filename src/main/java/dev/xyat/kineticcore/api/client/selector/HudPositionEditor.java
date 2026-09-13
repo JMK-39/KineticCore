@@ -3,6 +3,7 @@ package dev.xyat.kineticcore.api.client.selector;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import dev.xyat.kineticcore.api.client.widget.KineticWidgets.HighZButton;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -204,17 +205,20 @@ public final class HudPositionEditor {
         int startX = (screenWidth - totalWidth) / 2;
         int buttonY = screenHeight - 30;
 
-        buttonAdder.accept(Button.builder(saveText, button -> saveAction.run())
-                .bounds(startX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT)
-                .build());
+        buttonAdder.accept(new HighZButton(
+                startX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT,
+                saveText, ignored -> saveAction.run(), null, 0
+        ));
 
-        buttonAdder.accept(Button.builder(resetText, button -> reset())
-                .bounds(startX + BUTTON_WIDTH + BUTTON_GAP, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT)
-                .build());
+        buttonAdder.accept(new HighZButton(
+                startX + BUTTON_WIDTH + BUTTON_GAP, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT,
+                resetText, ignored -> reset(), null, 0
+        ));
 
-        buttonAdder.accept(Button.builder(cancelText, button -> cancelAction.run())
-                .bounds(startX + (BUTTON_WIDTH + BUTTON_GAP) * 2, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT)
-                .build());
+        buttonAdder.accept(new HighZButton(
+                startX + (BUTTON_WIDTH + BUTTON_GAP) * 2, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT,
+                cancelText, ignored -> cancelAction.run(), null, 0
+        ));
     }
 
     public void render(

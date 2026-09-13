@@ -2,23 +2,29 @@ package dev.xyat.kineticcore.api.client.screen;
 
 import dev.xyat.kineticcore.api.client.layout.GuiLayout;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 public abstract class KineticScreen extends Screen {
     private enum CanvasMode {
@@ -26,24 +32,30 @@ public abstract class KineticScreen extends Screen {
         FLUID
     }
 
-    protected int canvasWidth;
-    protected int canvasHeight;
-    protected float canvasScale;
-    protected int canvasX;
-    protected int canvasY;
+    public static final int STANDARD_CANVAS_WIDTH = 640;
+    public static final int STANDARD_CANVAS_HEIGHT = 360;
+    public static final int STANDARD_SAFE_MARGIN = 6;
+    public static final int STANDARD_CONTROL_HEIGHT = 20;
+    public static final int COMPACT_CONTROL_HEIGHT = 18;
 
-    protected float scaleMultiplier = 1f;
-    protected float minScale = 0.1f;
-    protected float maxScale = Float.MAX_VALUE;
+    private int canvasWidth;
+    private int canvasHeight;
+    private float canvasScale;
+    private int canvasX;
+    private int canvasY;
     protected boolean renderRenderablesOnly;
 
-    private float designWidth = 640f;
-    private float designHeight = 360f;
-    private int safeMargin;
+    private float scaleMultiplier = 1f;
+    private float minScale = 0.1f;
+    private float maxScale = Float.MAX_VALUE;
+    private float designWidth = STANDARD_CANVAS_WIDTH;
+    private float designHeight = STANDARD_CANVAS_HEIGHT;
+    private int safeMargin = STANDARD_SAFE_MARGIN;
     private CanvasMode canvasMode = CanvasMode.FIT;
     private GuiLayout.SafeArea safeArea = GuiLayout.SafeArea.of(1, 1, 0);
     private GuiLayout.Metrics metrics = GuiLayout.measure(1, 1, 640, 360);
     private final GuiOverlay overlays = new GuiOverlay();
+    private final Map<AbstractWidget, Component> widgetTooltips = new IdentityHashMap<>();
     private final List<ScrollViewportWidget> scrollViewportWidgets = new ArrayList<>();
     private GuiSession.DraftSession draftSession = new GuiSession.DraftSession();
 
@@ -68,18 +80,78 @@ public abstract class KineticScreen extends Screen {
         super(title);
     }
 
+    /**
+     * Uses the standard Kinetic editor canvas. The canvas always fits the available GUI area and is
+     * allowed to scale above 1.0 on high-resolution displays.
+     */
+    protected final void useStandardCanvas() {
+        useResponsiveCanvas(STANDARD_CANVAS_WIDTH, STANDARD_CANVAS_HEIGHT, STANDARD_SAFE_MARGIN);
+    }
+
+    /**
+     * Uses a responsive fixed-aspect canvas. Scaling policy is owned by the API so child screens
+     * cannot silently cap themselves to 1.0 and become undersized on 2K/4K displays.
+     */
+    protected final void useResponsiveCanvas(float designWidth, float designHeight, int safeMargin) {
+        configureCanvas(designWidth, designHeight, safeMargin, CanvasMode.FIT, 1f, 0.1f, Float.MAX_VALUE);
+    }
+
+    /**
+     * Compatibility alias. New editor screens should prefer {@link #useStandardCanvas()} or
+     * {@link #useResponsiveCanvas(float, float, int)}.
+     */
     protected final void useCanvas(float designWidth, float designHeight, int safeMargin) {
-        this.designWidth = Math.max(1f, designWidth);
-        this.designHeight = Math.max(1f, designHeight);
-        this.safeMargin = Math.max(0, safeMargin);
-        this.canvasMode = CanvasMode.FIT;
+        useResponsiveCanvas(designWidth, designHeight, safeMargin);
+    }
+
+    /**
+     * Uses a fixed-aspect canvas that will never scale above 1.0. This is reserved for interfaces
+     * whose pixel size is part of their functional contract.
+     */
+    protected final void useFixedCanvas(float designWidth, float designHeight, int safeMargin) {
+        configureCanvas(designWidth, designHeight, safeMargin, CanvasMode.FIT, 1f, 0.1f, 1f);
     }
 
     protected final void useFluidCanvas(float preferredWidth, float preferredHeight, int safeMargin) {
-        this.designWidth = Math.max(1f, preferredWidth);
-        this.designHeight = Math.max(1f, preferredHeight);
+        configureCanvas(preferredWidth, preferredHeight, safeMargin, CanvasMode.FLUID, 1f, 0.1f, Float.MAX_VALUE);
+    }
+
+    private void configureCanvas(
+            float designWidth,
+            float designHeight,
+            int safeMargin,
+            CanvasMode mode,
+            float scaleMultiplier,
+            float minScale,
+            float maxScale
+    ) {
+        this.designWidth = Math.max(1f, designWidth);
+        this.designHeight = Math.max(1f, designHeight);
         this.safeMargin = Math.max(0, safeMargin);
-        this.canvasMode = CanvasMode.FLUID;
+        this.canvasMode = mode == null ? CanvasMode.FIT : mode;
+        this.scaleMultiplier = Math.max(0.0001f, scaleMultiplier);
+        this.minScale = Math.max(0.0001f, minScale);
+        this.maxScale = Math.max(this.minScale, maxScale);
+    }
+
+    protected final int canvasWidth() {
+        return canvasWidth;
+    }
+
+    protected final int canvasHeight() {
+        return canvasHeight;
+    }
+
+    protected final float canvasScale() {
+        return canvasScale;
+    }
+
+    protected final int canvasX() {
+        return canvasX;
+    }
+
+    protected final int canvasY() {
+        return canvasY;
     }
 
     protected final GuiLayout.SafeArea safeArea() {
@@ -110,6 +182,361 @@ public abstract class KineticScreen extends Screen {
         return overlays;
     }
 
+    protected final EditBox addTextField(
+            int x,
+            int y,
+            int width,
+            Component message
+    ) {
+        return addTextField(x, y, width, message, null);
+    }
+
+    protected final EditBox addTextField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            Component tooltip
+    ) {
+        EditBox box = new EditBox(
+                font, x, y, width, STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message
+        );
+        addRenderableWidget(box);
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    protected final KineticWidgets.AutoCompleteBox addAutoCompleteField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            Component tooltip
+    ) {
+        KineticWidgets.AutoCompleteBox box = new KineticWidgets.AutoCompleteBox(
+                font, x, y, width, STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                dictionarySupplier
+        );
+        addRenderableWidget(box);
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    protected final KineticWidgets.NumericEditBox addIntegerField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Integer minValue,
+            Integer maxValue,
+            Component tooltip
+    ) {
+        KineticWidgets.NumericEditBox box = KineticWidgets.NumericEditBox.integer(
+                font, x, y, width, STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                allowNegative, minValue, maxValue
+        );
+        addRenderableWidget(box);
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    protected final KineticWidgets.NumericEditBox addLongField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Long minValue,
+            Long maxValue,
+            Component tooltip
+    ) {
+        KineticWidgets.NumericEditBox box = KineticWidgets.NumericEditBox.longInteger(
+                font, x, y, width, STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                allowNegative, minValue, maxValue
+        );
+        addRenderableWidget(box);
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    protected final KineticWidgets.NumericEditBox addDecimalField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Double minValue,
+            Double maxValue,
+            Component tooltip
+    ) {
+        KineticWidgets.NumericEditBox box = KineticWidgets.NumericEditBox.decimal(
+                font, x, y, width, STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                allowNegative, minValue, maxValue
+        );
+        addRenderableWidget(box);
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    protected final void renderTextFieldPlaceholder(
+            GuiGraphics graphics,
+            EditBox box,
+            Component placeholder
+    ) {
+        if (graphics == null || box == null || placeholder == null
+                || !box.visible || !box.getValue().isEmpty() || box.isFocused()) {
+            return;
+        }
+        String text = font.plainSubstrByWidth(
+                placeholder.getString(),
+                Math.max(0, box.getWidth() - 10)
+        );
+        graphics.drawString(
+                font,
+                text,
+                box.getX() + 5,
+                box.getY() + (box.getHeight() - font.lineHeight) / 2,
+                GuiTheme.current().mutedText(),
+                false
+        );
+    }
+
+    protected final Button addButton(
+            int x,
+            int y,
+            int width,
+            Component text,
+            Component tooltip,
+            Runnable action
+    ) {
+        return addButton(x, y, width, STANDARD_CONTROL_HEIGHT, text, tooltip, action);
+    }
+
+    private Button addButton(
+            int x,
+            int y,
+            int width,
+            int height,
+            Component text,
+            Component tooltip,
+            Runnable action
+    ) {
+        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
+                x, y, width, height,
+                text == null ? Component.empty() : text,
+                ignored -> {
+                    if (action != null) action.run();
+                },
+                null,
+                0
+        );
+        addRenderableWidget(button);
+        registerWidgetTooltip(button, tooltip);
+        return button;
+    }
+
+    protected final KineticWidgets.HighZButton addHighZButton(
+            int x,
+            int y,
+            int width,
+            Component text,
+            Component tooltip,
+            int zLevel,
+            Runnable action
+    ) {
+        return addHighZButton(x, y, width, STANDARD_CONTROL_HEIGHT, text, tooltip, zLevel, action);
+    }
+
+    private KineticWidgets.HighZButton addHighZButton(
+            int x,
+            int y,
+            int width,
+            int height,
+            Component text,
+            Component tooltip,
+            int zLevel,
+            Runnable action
+    ) {
+        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
+                x, y, width, height,
+                text == null ? Component.empty() : text,
+                ignored -> {
+                    if (action != null) action.run();
+                },
+                null,
+                zLevel
+        );
+        addRenderableWidget(button);
+        registerWidgetTooltip(button, tooltip);
+        return button;
+    }
+
+    protected final KineticWidgets.ToggleButton addToggleButton(
+            int x,
+            int y,
+            int width,
+            boolean value,
+            Component onText,
+            Component offText,
+            Component tooltip,
+            Consumer<Boolean> responder
+    ) {
+        return addToggleButton(x, y, width, STANDARD_CONTROL_HEIGHT, value, onText, offText, tooltip, responder);
+    }
+
+    private KineticWidgets.ToggleButton addToggleButton(
+            int x,
+            int y,
+            int width,
+            int height,
+            boolean value,
+            Component onText,
+            Component offText,
+            Component tooltip,
+            Consumer<Boolean> responder
+    ) {
+        KineticWidgets.ToggleButton button = new KineticWidgets.ToggleButton(
+                x, y, width, height, value,
+                onText == null ? Component.empty() : onText,
+                offText == null ? Component.empty() : offText,
+                responder
+        );
+        addRenderableWidget(button);
+        registerWidgetTooltip(button, tooltip);
+        return button;
+    }
+
+    protected final Button addCompactScrollableButton(
+            int x,
+            int y,
+            int width,
+            Component text,
+            Component tooltip,
+            Runnable action,
+            int viewportLeft,
+            int viewportTop,
+            int viewportRight,
+            int viewportBottom,
+            DoubleSupplier pixelOffset
+    ) {
+        return addScrollableButton(
+                x, y, width, COMPACT_CONTROL_HEIGHT,
+                text, tooltip, action,
+                viewportLeft, viewportTop, viewportRight, viewportBottom, pixelOffset
+        );
+    }
+
+    protected final Button addScrollableButton(
+            int x,
+            int y,
+            int width,
+            Component text,
+            Component tooltip,
+            Runnable action,
+            int viewportLeft,
+            int viewportTop,
+            int viewportRight,
+            int viewportBottom,
+            DoubleSupplier pixelOffset
+    ) {
+        return addScrollableButton(
+                x, y, width, STANDARD_CONTROL_HEIGHT,
+                text, tooltip, action,
+                viewportLeft, viewportTop, viewportRight, viewportBottom, pixelOffset
+        );
+    }
+
+    private Button addScrollableButton(
+            int x,
+            int y,
+            int width,
+            int height,
+            Component text,
+            Component tooltip,
+            Runnable action,
+            int viewportLeft,
+            int viewportTop,
+            int viewportRight,
+            int viewportBottom,
+            DoubleSupplier pixelOffset
+    ) {
+        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
+                x, y, width, height,
+                text == null ? Component.empty() : text,
+                ignored -> {
+                    if (action != null) action.run();
+                },
+                null,
+                0
+        );
+        addScrollableWidget(
+                button,
+                viewportLeft,
+                viewportTop,
+                viewportRight,
+                viewportBottom,
+                pixelOffset
+        );
+        registerWidgetTooltip(button, tooltip);
+        return button;
+    }
+
+    protected final KineticWidgets.ColorPreviewButton addColorPreviewButton(
+            int x,
+            int y,
+            int width,
+            int color,
+            Component text,
+            Component tooltip,
+            Runnable action
+    ) {
+        KineticWidgets.ColorPreviewButton button = new KineticWidgets.ColorPreviewButton(
+                x, y, width, STANDARD_CONTROL_HEIGHT, color,
+                text == null ? Component.empty() : text,
+                ignored -> {
+                    if (action != null) action.run();
+                }
+        );
+        addRenderableWidget(button);
+        registerWidgetTooltip(button, tooltip);
+        return button;
+    }
+
+    protected final void closeContextMenu() {
+        overlays.closeMenu();
+    }
+
+    protected final <T extends AbstractWidget> T registerWidgetTooltip(T widget, Component tooltip) {
+        if (widget == null) return null;
+        if (tooltip == null || tooltip.getString().isBlank()) widgetTooltips.remove(widget);
+        else widgetTooltips.put(widget, tooltip);
+        return widget;
+    }
+
+    private void requestWidgetTooltip(double mouseX, double mouseY) {
+        for (Map.Entry<AbstractWidget, Component> entry : widgetTooltips.entrySet()) {
+            AbstractWidget widget = entry.getKey();
+            if (widget == null || !widget.visible) continue;
+            if (mouseX >= widget.getX() && mouseX < widget.getX() + widget.getWidth()
+                    && mouseY >= widget.getY() && mouseY < widget.getY() + widget.getHeight()) {
+                overlays.tooltip(entry.getValue(), 320);
+                return;
+            }
+        }
+    }
+
+    protected final <T extends ObjectSelectionList<?>> T addEventListWidget(T list) {
+        addWidget(list);
+        return list;
+    }
+
     protected final void resetScrollableWidgets() {
         scrollViewportWidgets.clear();
     }
@@ -123,6 +550,22 @@ public abstract class KineticScreen extends Screen {
             DoubleSupplier pixelOffset
     ) {
         addRenderableWidget(widget);
+        return bindScrollableWidget(widget, left, top, right, bottom, pixelOffset);
+    }
+
+    /**
+     * Registers a widget that was already created through a KineticScreen API factory as belonging
+     * to a scrolling viewport. Child screens must use this instead of re-adding the widget.
+     */
+    protected final <T extends AbstractWidget> T bindScrollableWidget(
+            T widget,
+            int left,
+            int top,
+            int right,
+            int bottom,
+            DoubleSupplier pixelOffset
+    ) {
+        if (widget == null) return null;
         scrollViewportWidgets.add(new ScrollViewportWidget(
                 widget,
                 widget.getY(),
@@ -133,6 +576,24 @@ public abstract class KineticScreen extends Screen {
                 pixelOffset
         ));
         return widget;
+    }
+
+    /**
+     * Makes an arbitrary widget participate in a Kinetic scrolling viewport. Widgets created by an
+     * API factory are only bound; custom widgets that are not yet attached to the screen are added
+     * once before being bound.
+     */
+    protected final <T extends AbstractWidget> T attachScrollableWidget(
+            T widget,
+            int left,
+            int top,
+            int right,
+            int bottom,
+            DoubleSupplier pixelOffset
+    ) {
+        if (widget == null) return null;
+        if (!children().contains(widget)) addRenderableWidget(widget);
+        return bindScrollableWidget(widget, left, top, right, bottom, pixelOffset);
     }
 
     private void updateScrollableWidgetPositions() {
@@ -169,7 +630,7 @@ public abstract class KineticScreen extends Screen {
             try {
                 widget.render(graphics, mouseX, mouseY, partialTick);
             } finally {
-                graphics.disableScissor();
+                disableCanvasScissor(graphics);
             }
         }
     }
@@ -241,6 +702,10 @@ public abstract class KineticScreen extends Screen {
         overlays.tooltip(lines, maxWidth);
     }
 
+    protected final void showFormattedTooltip(List<FormattedCharSequence> lines) {
+        overlays.formattedTooltip(lines);
+    }
+
     protected final void showItemTooltip(ItemStack stack) {
         overlays.itemTooltip(stack);
     }
@@ -260,7 +725,25 @@ public abstract class KineticScreen extends Screen {
         overlays.openDialog(title, message, confirmText, cancelText, onConfirm, onCancel);
     }
 
-    protected final KineticWidgets.Dropdown dropdown(
+    protected final KineticWidgets.Dropdown addDropdown(
+            int x,
+            int y,
+            int width,
+            List<? extends Component> options,
+            int selectedIndex,
+            Component tooltip,
+            Consumer<Integer> responder
+    ) {
+        List<Component> normalizedOptions = new ArrayList<>(options);
+        KineticWidgets.Dropdown control = dropdown(
+                x, y, width, STANDARD_CONTROL_HEIGHT, normalizedOptions, selectedIndex, responder
+        );
+        addRenderableWidget(control);
+        registerWidgetTooltip(control, tooltip);
+        return control;
+    }
+
+    private KineticWidgets.Dropdown dropdown(
             int x,
             int y,
             int width,
@@ -287,7 +770,13 @@ public abstract class KineticScreen extends Screen {
     protected final void init() {
         super.init();
         updateMetrics();
+        rebuildUi();
+    }
+
+    protected final void rebuildUi() {
         clearWidgets();
+        widgetTooltips.clear();
+        scrollViewportWidgets.clear();
         buildUi();
     }
 
@@ -329,12 +818,13 @@ public abstract class KineticScreen extends Screen {
         int virtualMouseX = (int) Math.floor(toVirtualX(mouseX));
         int virtualMouseY = (int) Math.floor(toVirtualY(mouseY));
 
-        graphics.pose().pushPose();
-        graphics.pose().translate(canvasX, canvasY, 0);
-        graphics.pose().scale(canvasScale, canvasScale, 1f);
+        GuiGraphics canvasGraphics = new CanvasGuiGraphics(graphics);
+        canvasGraphics.pose().pushPose();
+        canvasGraphics.pose().translate(canvasX, canvasY, 0);
+        canvasGraphics.pose().scale(canvasScale, canvasScale, 1f);
         try {
             updateScrollableWidgetPositions();
-            renderCanvasBackground(graphics, virtualMouseX, virtualMouseY, partialTick);
+            renderCanvasBackground(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
 
             List<AbstractWidget> temporarilyHidden = new ArrayList<>();
             for (ScrollViewportWidget viewportWidget : scrollViewportWidgets) {
@@ -347,10 +837,10 @@ public abstract class KineticScreen extends Screen {
             try {
                 if (renderRenderablesOnly) {
                     for (Renderable renderable : renderables) {
-                        renderable.render(graphics, virtualMouseX, virtualMouseY, partialTick);
+                        renderable.render(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
                     }
                 } else {
-                    super.render(graphics, virtualMouseX, virtualMouseY, partialTick);
+                    super.render(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
                 }
             } finally {
                 for (AbstractWidget widget : temporarilyHidden) {
@@ -358,15 +848,32 @@ public abstract class KineticScreen extends Screen {
                 }
             }
 
-            renderScrollableWidgets(graphics, virtualMouseX, virtualMouseY, partialTick);
-            renderCanvasForeground(graphics, virtualMouseX, virtualMouseY, partialTick);
+            renderScrollableWidgets(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
+            renderCanvasForeground(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
         } finally {
-            graphics.pose().popPose();
+            canvasGraphics.pose().popPose();
         }
 
+        if (!overlays.blocksInput()) requestWidgetTooltip(virtualMouseX, virtualMouseY);
         renderTooltips(graphics, virtualMouseX, virtualMouseY, mouseX, mouseY);
         renderScreenOverlay(graphics, virtualMouseX, virtualMouseY, mouseX, mouseY, partialTick);
         overlays.render(graphics, font, width, height, mouseX, mouseY);
+    }
+
+    private final class CanvasGuiGraphics extends GuiGraphics {
+        private CanvasGuiGraphics(GuiGraphics source) {
+            super(KineticScreen.this.minecraft, source.bufferSource());
+        }
+
+        @Override
+        public void enableScissor(int left, int top, int right, int bottom) {
+            super.enableScissor(
+                    toScreenX(left),
+                    toScreenY(top),
+                    toScreenRight(right),
+                    toScreenBottom(bottom)
+            );
+        }
     }
 
     protected void renderCanvasBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
@@ -425,7 +932,15 @@ public abstract class KineticScreen extends Screen {
     }
 
     public final void enableCanvasScissor(GuiGraphics graphics, int left, int top, int right, int bottom) {
+        if (graphics instanceof CanvasGuiGraphics) {
+            graphics.enableScissor(left, top, right, bottom);
+            return;
+        }
         graphics.enableScissor(toScreenX(left), toScreenY(top), toScreenRight(right), toScreenBottom(bottom));
+    }
+
+    public final void disableCanvasScissor(GuiGraphics graphics) {
+        graphics.disableScissor();
     }
 
     protected final void renderScaledList(
@@ -436,15 +951,19 @@ public abstract class KineticScreen extends Screen {
             float partialTick
     ) {
         if (list == null || minecraft == null) return;
-        GuiGraphics proxy = new GuiGraphics(minecraft, graphics.bufferSource()) {
-            @Override
-            public void enableScissor(int left, int top, int right, int bottom) {
-                super.enableScissor(toScreenX(left), toScreenY(top), toScreenRight(right), toScreenBottom(bottom));
-            }
-        };
+        if (graphics instanceof CanvasGuiGraphics) {
+            list.render(graphics, mouseX, mouseY, partialTick);
+            return;
+        }
+        GuiGraphics proxy = new CanvasGuiGraphics(graphics);
+        proxy.pose().pushPose();
         proxy.pose().translate(canvasX, canvasY, 0);
         proxy.pose().scale(canvasScale, canvasScale, 1f);
-        list.render(proxy, mouseX, mouseY, partialTick);
+        try {
+            list.render(proxy, mouseX, mouseY, partialTick);
+        } finally {
+            proxy.pose().popPose();
+        }
     }
 
     @Override

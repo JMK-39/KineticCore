@@ -11,7 +11,6 @@ import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfigGui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
@@ -52,7 +51,7 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
     public FirstJoinEquipmentScreen(Screen parent) {
         super(Component.translatable("gui.kineticcore.firstjoin.equipment.title"));
         this.parent = parent;
-        useCanvas(640, 360, 6);
+        useStandardCanvas();
         loadStacks();
     }
 
@@ -114,11 +113,12 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
 
     @Override
     protected void buildUi() {
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.kineticcore.config.back"),
-                        button -> saveAndClose())
-                .bounds(270, 292, 100, 20)
-                .build());
+        addButton(
+                270, 292, 100,
+                Component.translatable("gui.kineticcore.config.back"),
+                null,
+                this::saveAndClose
+        );
     }
 
     private void openItemSelector(String slotKey) {
@@ -192,7 +192,7 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         GuiTheme.panel(graphics, 70, 42, 500, 226);
-        graphics.drawCenteredString(font, title, canvasWidth / 2, 58, 0xFFFFFF);
+        graphics.drawCenteredString(font, title, canvasWidth() / 2, 58, 0xFFFFFF);
         hoveredSlot = slotAt(mouseX, mouseY);
 
         for (int index = 0; index < SLOT_DEFINITIONS.size(); index++) {
@@ -224,7 +224,7 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
         graphics.drawCenteredString(
                 font,
                 Component.translatable("gui.kineticcore.firstjoin.equipment.hint"),
-                canvasWidth / 2,
+                canvasWidth() / 2,
                 210,
                 0xFFFFFF
         );
