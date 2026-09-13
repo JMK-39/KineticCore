@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.feature.firstjoin.client;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
 import dev.xyat.kineticcore.api.client.search.ItemSearchIndex;
@@ -421,11 +422,13 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                 GuiTheme.itemSlot(graphics, ITEM_X, itemY, SLOT_SIZE, 4, itemHovered);
                 GuiTheme.item(graphics, font, stack, ITEM_X, itemY, SLOT_SIZE, 1.0F, false);
 
-                graphics.drawString(
+                KineticText.drawScrollingLeft(
+                        graphics,
                         font,
-                        GuiTheme.trim(font, stack.getHoverName().getString(), 220),
+                        stack.getHoverName(),
                         ITEM_X + SLOT_SIZE + 8,
                         y + 11,
+                        220,
                         0xFFFFFFFF,
                         false
                 );

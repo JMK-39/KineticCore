@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.config.client;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.KineticCore;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
@@ -689,8 +690,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
                     }
                     case PAGE -> {
                         graphics.fill(34, y - 2, 608, y + 19, 0x44222222);
-                        String text = GuiTheme.trim(font, row.text().getString(), 540);
-                        graphics.drawString(font, text, 46, y + 4, 0xFFFFAA00, false);
+                        KineticText.drawScrollingLeft(graphics, font, row.text(), 46, y + 4, 540, 0xFFFFAA00, false);
                         if (!KTConfigApi.canEdit(row.page())) {
                             Component locked = Component.translatable("gui.kineticcore.config.server_locked");
                             graphics.drawString(
@@ -710,8 +710,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
                             graphics.fill(38, y - 3, 612, y + 20, 0x33222222);
                             graphics.drawString(font, entry.label(), 46, y + 4, 0xFFFFCC55, false);
                         } else if (entry.type() == KTConfigEntry.Type.DESCRIPTION) {
-                            String text = GuiTheme.trim(font, entry.label().getString(), 554);
-                            graphics.drawString(font, text, 46, y + 5, 0xFFAAAAAA, false);
+                            KineticText.drawScrollingLeft(graphics, font, entry.label(), 46, y + 5, 554, 0xFFAAAAAA, false);
                         } else {
                             int color;
                             if (!KTConfigApi.canEdit(row.page())) {
@@ -719,8 +718,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
                             } else {
                                 color = invalidEntries.contains(key) ? 0xFFFF5555 : 0xFFE0E0E0;
                             }
-                            String text = GuiTheme.trim(font, entry.label().getString(), 282);
-                            graphics.drawString(font, text, 46, y + 6, color, false);
+                            KineticText.drawScrollingLeft(graphics, font, entry.label(), 46, y + 6, 282, color, false);
                         }
                     }
                 }

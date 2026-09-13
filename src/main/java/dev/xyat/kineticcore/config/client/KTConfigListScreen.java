@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.config.client;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
@@ -293,11 +294,13 @@ final class KTConfigListScreen extends KineticScreen {
                 GuiTheme.current().field(),
                 lifted ? GuiTheme.current().accentHover() : GuiTheme.current().border()
         );
-        graphics.drawString(
+        KineticText.drawScrollingLeft(
+                graphics,
                 font,
-                GuiTheme.trim(font, values.get(valueIndex), EDIT_WIDTH - 8),
+                values.get(valueIndex),
                 EDIT_X + dx + 4,
                 y + 10,
+                EDIT_WIDTH - 8,
                 GuiTheme.current().text(),
                 false
         );

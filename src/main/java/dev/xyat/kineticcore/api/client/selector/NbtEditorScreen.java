@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.api.client.selector;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets.Scroll;
@@ -429,8 +430,7 @@ public class NbtEditorScreen extends KineticScreen {
             g.fill(x, y, x + width, y + height, 0xFF181818);
 
             if (value.isEmpty() && !isFocused && hint != null && !hint.isEmpty()) {
-                String line = font.plainSubstrByWidth(hint, width - 18);
-                g.drawString(font, line, x + 6, y + 6, 0xFF777777, false);
+                KineticText.drawScrollingLeft(g, font, hint, x + 6, y + 6, width - 18, 0xFF777777, false);
             }
 
             int maxVisible = getMaxVisibleLines();
@@ -536,8 +536,7 @@ public class NbtEditorScreen extends KineticScreen {
             g.fill(x, footerY - 4, x + width, y + height, 0xFF222222);
 
             if (errorMsg != null && !errorMsg.isEmpty()) {
-                String displayError = font.width(errorMsg) > width - 100 ? font.plainSubstrByWidth(errorMsg, width - 110) + "..." : errorMsg;
-                g.drawString(font, "❌ " + displayError, x + 4, footerY, 0xFF5555, false);
+                KineticText.drawScrollingLeft(g, font, "❌ " + errorMsg, x + 4, footerY, Math.max(0, width - 100), 0xFF5555, false);
             } else if (!value.trim().isEmpty() && !value.trim().equals("{}")) {
                 g.drawString(font, "✅", x + 4, footerY, 0x55FF55, false);
             }

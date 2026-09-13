@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.feature.setspawn.client.gui;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import net.minecraft.ChatFormatting;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -543,12 +544,9 @@ public class SetSpawnScreen extends KineticScreen {
 
                 String disp = toDisplayEntry(this.text, getCurrentPrefix());
                 int maxW = delX - (l + 4) - 8;
-                if (Minecraft.getInstance().font.width(disp) > maxW) {
-                    disp = Minecraft.getInstance().font.plainSubstrByWidth(disp, maxW - 10) + "...";
-                }
 
                 int textY = t + (h - 1 - Minecraft.getInstance().font.lineHeight) / 2 + 1;
-                g.drawString(Minecraft.getInstance().font, disp, l + 6, textY, 0xFFFFFF, false);
+                KineticText.drawScrollingLeft(g, Minecraft.getInstance().font, disp, l + 6, textY, maxW, 0xFFFFFF, false);
             }
 
             @Override

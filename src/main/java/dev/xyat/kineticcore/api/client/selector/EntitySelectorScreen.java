@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.api.client.selector;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
@@ -225,12 +226,15 @@ public final class EntitySelectorScreen extends KineticScreen {
             if (!rendered) {
                 graphics.drawCenteredString(font, "?", x + CELL_W / 2, y + 23, 0xFF777777);
             }
-            graphics.drawCenteredString(
+            KineticText.drawScrollingCentered(
+                    graphics,
                     font,
-                    GuiTheme.trim(font, entityName(id), CELL_W - 6),
+                    entityName(id),
                     x + CELL_W / 2,
                     y + CELL_H - 12,
-                    selected ? 0xFF55FF55 : 0xFFE0E0E0
+                    CELL_W - 6,
+                    selected ? 0xFF55FF55 : 0xFFE0E0E0,
+                    false
             );
             if (hovered) {
                 deferredTooltip = List.of(

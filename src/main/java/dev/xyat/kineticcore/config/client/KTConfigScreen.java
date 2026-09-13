@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.config.client;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import net.minecraft.ChatFormatting;
 import dev.xyat.kineticcore.KineticCore;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
@@ -668,12 +669,10 @@ public final class KTConfigScreen extends KineticScreen {
                     graphics.fill(30, y - 3, 612, y + 20, 0x55222222);
                     graphics.drawString(font, entry.label(), 38, y + 4, 0xFFFFAA00, false);
                 } else if (entry.type() == KTConfigEntry.Type.DESCRIPTION) {
-                    String text = GuiTheme.trim(font, entry.label().getString(), 562);
-                    graphics.drawString(font, text, 38, y + 5, 0xFFAAAAAA, false);
+                    KineticText.drawScrollingLeft(graphics, font, entry.label(), 38, y + 5, 562, 0xFFAAAAAA, false);
                 } else {
                     int color = invalidEntries.contains(entry.id()) ? 0xFFFF5555 : 0xFFE0E0E0;
-                    String text = GuiTheme.trim(font, entry.label().getString(), 282);
-                    graphics.drawString(font, text, 38, y + 6, color, false);
+                    KineticText.drawScrollingLeft(graphics, font, entry.label(), 38, y + 6, 282, color, false);
                 }
             }
         } finally {

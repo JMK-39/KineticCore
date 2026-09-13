@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.config.client;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
@@ -217,31 +218,25 @@ public final class KTConfigIndexScreen extends KineticScreen {
                         hovered ? 0xFFFFAA00 : 0xFF555555
                 );
 
-                String nameText = GuiTheme.trim(
+                KineticText.drawScrollingLeft(
+                        graphics,
                         font,
-                        module.title().getString(),
-                        MODULE_FUNCTION_X - MODULE_NAME_X - 12
-                );
-                graphics.drawString(
-                        font,
-                        nameText,
+                        module.title(),
                         MODULE_NAME_X,
                         y + 4,
+                        MODULE_FUNCTION_X - MODULE_NAME_X - 12,
                         MODULE_NAME_COLOR,
                         false
                 );
 
-                String functionText = GuiTheme.trim(
-                        font,
-                        module.function().getString(),
-                        LIST_X + LIST_WIDTH - 9 - MODULE_FUNCTION_X
-                );
-                if (!functionText.isBlank()) {
-                    graphics.drawString(
+                if (!module.function().getString().isBlank()) {
+                    KineticText.drawScrollingLeft(
+                            graphics,
                             font,
-                            functionText,
+                            module.function(),
                             MODULE_FUNCTION_X,
                             y + 4,
+                            LIST_X + LIST_WIDTH - 9 - MODULE_FUNCTION_X,
                             MODULE_FUNCTION_COLOR,
                             false
                     );

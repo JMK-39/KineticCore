@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.feature.firstjoin.client;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
@@ -301,11 +302,13 @@ public final class FirstJoinCommandListScreen extends KineticScreen {
 
                 String display = displayCommand(commands.get(index));
                 int commandWidth = LIST_W - actionWidth - 14;
-                graphics.drawString(
+                KineticText.drawScrollingLeft(
+                        graphics,
                         font,
-                        GuiTheme.trim(font, display, commandWidth),
+                        display,
                         LIST_X + 7,
                         y + 7,
+                        commandWidth,
                         0xFFFFFF,
                         false
                 );

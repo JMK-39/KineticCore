@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.api.client.selector;
 
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.search.ItemSearchIndex;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
@@ -751,16 +752,14 @@ public class ItemSelectorScreen extends KineticScreen {
         if (activeFilterType == 0 || activeFilterValue == null || nextX >= maxInfoX) return;
         String prefix = activeFilterType == 1 ? "@" : "#";
         String fullLabel = prefix + activeFilterValue;
-        int availW = maxInfoX - nextX - 14;
-        String displayLabel = fullLabel;
-        if (this.font.width(displayLabel) > availW) displayLabel = this.font.plainSubstrByWidth(fullLabel, availW - 6) + "..";
-        Component filterComp = Component.translatable("gui.kineticcore.items.filter.label", Component.literal(displayLabel).withStyle(ChatFormatting.GOLD));
-        int filterW = this.font.width(filterComp) + 14;
+        int filterW = Math.max(14, maxInfoX - nextX);
+        int availW = Math.max(0, filterW - 14);
+        Component filterComp = Component.translatable("gui.kineticcore.items.filter.label", Component.literal(fullLabel).withStyle(ChatFormatting.GOLD));
         int badgeY = searchBox.getY() + 2;
 
         graphics.fill(nextX, badgeY, nextX + filterW, badgeY + 16, 0xCC2A2A2A);
         graphics.renderOutline(nextX, badgeY, filterW, 16, 0xFFAAAAAA);
-        graphics.drawString(this.font, filterComp, nextX + 3, badgeY + 4, 0xFFFFFF, false);
+        KineticText.drawScrollingLeft(graphics, this.font, filterComp, nextX + 3, badgeY + 4, availW, 0xFFFFFF, false);
 
         int closeX = nextX + filterW - 11;
         int closeY = badgeY + 4;
@@ -1055,11 +1054,8 @@ public class ItemSelectorScreen extends KineticScreen {
                 String entry = autoCompleteList.get(index);
                 String rawText = prefix + entry;
                 int textMaxW = acW - 8;
-                if (this.font.width(rawText) > textMaxW) {
-                    rawText = this.font.plainSubstrByWidth(rawText, textMaxW - 6) + "..";
-                }
                 Component lineText = Component.literal(rawText).withStyle(ChatFormatting.GOLD);
-                graphics.drawString(this.font, lineText, acX + 4, top + 3, 0xFFFFFF, false);
+                KineticText.drawScrollingLeft(graphics, this.font, lineText, acX + 4, top + 3, textMaxW, 0xFFFFFF, false);
             }
         } finally {
             disableCanvasScissor(graphics);
@@ -1144,11 +1140,9 @@ public class ItemSelectorScreen extends KineticScreen {
 
         String prefix = activeFilterType == 1 ? "@" : "#";
         String fullLabel = prefix + activeFilterValue;
-        int availW = maxInfoX - nextX - 14;
-        String displayLabel = fullLabel;
-        if (this.font.width(displayLabel) > availW) displayLabel = this.font.plainSubstrByWidth(fullLabel, availW - 6) + "..";
-        Component filterComp = Component.translatable("gui.kineticcore.items.filter.label", Component.literal(displayLabel).withStyle(ChatFormatting.GOLD));
-        int filterW = this.font.width(filterComp) + 14;
+        int filterW = Math.max(14, maxInfoX - nextX);
+        int availW = Math.max(0, filterW - 14);
+        Component filterComp = Component.translatable("gui.kineticcore.items.filter.label", Component.literal(fullLabel).withStyle(ChatFormatting.GOLD));
         int closeX = nextX + filterW - 11;
         int closeY = searchBox.getY() + 6;
         if (mouseX >= closeX - 2 && mouseX < closeX + 8 && mouseY >= closeY - 2 && mouseY < closeY + 10) {

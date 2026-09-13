@@ -2,6 +2,7 @@ package dev.xyat.kineticcore.api.client.screen;
 
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -197,15 +198,13 @@ public abstract class KineticNativeScreen extends Screen {
                 || !box.visible || !box.getValue().isEmpty() || box.isFocused()) {
             return;
         }
-        String text = font.plainSubstrByWidth(
-                placeholder.getString(),
-                Math.max(0, box.getWidth() - 10)
-        );
-        graphics.drawString(
+        KineticText.drawScrollingLeft(
+                graphics,
                 font,
-                text,
+                placeholder,
                 box.getX() + 5,
                 box.getY() + (box.getHeight() - font.lineHeight) / 2,
+                Math.max(0, box.getWidth() - 10),
                 GuiTheme.current().mutedText(),
                 false
         );

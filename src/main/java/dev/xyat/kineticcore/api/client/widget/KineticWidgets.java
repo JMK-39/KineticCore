@@ -629,7 +629,6 @@ public final class KineticWidgets {
     public abstract static class SmoothSelectionList<E extends ObjectSelectionList.Entry<E>>
             extends ObjectSelectionList<E> {
         private static final int SCROLLBAR_WIDTH = 4;
-        private static final int VANILLA_SCROLLBAR_WIDTH = 6;
 
         private final Scroll.State smoothScrollState = new Scroll.State();
         private final int kineticListTop;
@@ -678,7 +677,12 @@ public final class KineticWidgets {
         }
 
         private int scrollbarX() {
-            return this.getLeft() + this.width - 3 - SCROLLBAR_WIDTH;
+            return this.getLeft() + this.width - 6;
+        }
+
+        @Override
+        protected int getScrollbarPosition() {
+            return this.getLeft() + this.width + 2;
         }
 
         private int scrollbarTrackHeight() {
@@ -792,14 +796,6 @@ public final class KineticWidgets {
             if (max > 0D) {
                 int trackHeight = scrollbarTrackHeight();
                 int barX = scrollbarX();
-                int vanillaBarX = getScrollbarPosition();
-                graphics.fill(
-                        vanillaBarX,
-                        kineticListTop,
-                        vanillaBarX + VANILLA_SCROLLBAR_WIDTH,
-                        kineticListBottom,
-                        GuiTheme.current().panel()
-                );
                 graphics.fill(
                         barX,
                         kineticListTop,
