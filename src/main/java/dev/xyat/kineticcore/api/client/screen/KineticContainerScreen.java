@@ -171,11 +171,12 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     }
 
     public final Button addButton(int x, int y, int width, Component text, Component tooltip, Button.OnPress action) {
-        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
-                x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
-                text == null ? Component.empty() : text,
-                pressed -> { if (action != null) action.onPress(pressed); }, null, 0
-        );
+        Button button = Button.builder(
+                        text == null ? Component.empty() : text,
+                        pressed -> { if (action != null) action.onPress(pressed); }
+                )
+                .bounds(x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT)
+                .build();
         addRenderableWidget(button);
         registerWidgetTooltip(button, tooltip);
         return button;
@@ -190,11 +191,12 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     public final Button addCompactButton(
             int x, int y, int width, Component text, Component tooltip, Button.OnPress action
     ) {
-        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
-                x, y, width, KineticScreen.COMPACT_CONTROL_HEIGHT,
-                text == null ? Component.empty() : text,
-                pressed -> { if (action != null) action.onPress(pressed); }, null, 0
-        );
+        Button button = Button.builder(
+                        text == null ? Component.empty() : text,
+                        pressed -> { if (action != null) action.onPress(pressed); }
+                )
+                .bounds(x, y, width, KineticScreen.COMPACT_CONTROL_HEIGHT)
+                .build();
         addRenderableWidget(button);
         registerWidgetTooltip(button, tooltip);
         return button;

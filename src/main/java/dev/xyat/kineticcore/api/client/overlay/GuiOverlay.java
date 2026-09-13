@@ -27,6 +27,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Mod.EventBusSubscriber(modid = KineticCore.MODID, value = Dist.CLIENT)
 public final class GuiOverlay {
+    private static final int TOOLTIP_Z = 1200;
+
     public enum Position {
         TOP_CENTER,
         BOTTOM_CENTER,
@@ -386,24 +388,30 @@ public final class GuiOverlay {
             int mouseX,
             int mouseY
     ) {
-        if (request instanceof ItemTooltip item) {
-            graphics.renderTooltip(font, item.stack(), mouseX, mouseY);
-            return;
-        }
-        if (request instanceof TextTooltip text) {
-            List<FormattedCharSequence> lines = new ArrayList<>();
-            for (Component line : text.lines()) lines.add(line.getVisualOrderText());
-            graphics.renderTooltip(font, lines, mouseX, mouseY);
-            return;
-        }
-        if (request instanceof WrappedTextTooltip text) {
-            List<FormattedCharSequence> lines = new ArrayList<>();
-            for (Component line : text.lines()) lines.addAll(font.split(line, text.maxWidth()));
-            graphics.renderTooltip(font, lines, mouseX, mouseY);
-            return;
-        }
-        if (request instanceof FormattedTooltip text) {
-            graphics.renderTooltip(font, text.lines(), mouseX, mouseY);
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, TOOLTIP_Z);
+        try {
+            if (request instanceof ItemTooltip item) {
+                graphics.renderTooltip(font, item.stack(), mouseX, mouseY);
+                return;
+            }
+            if (request instanceof TextTooltip text) {
+                List<FormattedCharSequence> lines = new ArrayList<>();
+                for (Component line : text.lines()) lines.add(line.getVisualOrderText());
+                graphics.renderTooltip(font, lines, mouseX, mouseY);
+                return;
+            }
+            if (request instanceof WrappedTextTooltip text) {
+                List<FormattedCharSequence> lines = new ArrayList<>();
+                for (Component line : text.lines()) lines.addAll(font.split(line, text.maxWidth()));
+                graphics.renderTooltip(font, lines, mouseX, mouseY);
+                return;
+            }
+            if (request instanceof FormattedTooltip text) {
+                graphics.renderTooltip(font, text.lines(), mouseX, mouseY);
+            }
+        } finally {
+            graphics.pose().popPose();
         }
     }
 

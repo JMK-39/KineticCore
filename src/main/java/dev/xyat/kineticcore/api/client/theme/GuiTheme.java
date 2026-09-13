@@ -51,7 +51,7 @@ public final class GuiTheme {
     public static final int BORDER_NORMAL = 0xFFFFFFFF;
     public static final int BORDER_HOVER = 0xFF4DA6FF;
     public static final int BORDER_ERROR = 0xFFFF5555;
-    public static final int BORDER_SELECTED = 0xFFFFD700;
+    public static final int BORDER_SELECTED = 0xFFFFAA00;
 
     private static final ResourceLocation ITEM_GRID_TEXTURE = new ResourceLocation("kineticcore", "textures/gui/item_selector_checkerboard.png");
     private static final int ITEM_GRID_TEXTURE_WIDTH = 475;
@@ -91,35 +91,6 @@ public final class GuiTheme {
     ) {
         if (graphics == null || width <= 0 || height <= 0) return;
         graphics.renderOutline(x, y, width, height, stateBorder(selected, hovered, error));
-    }
-
-    public static void scrollMask(
-            GuiGraphics graphics,
-            int x,
-            int y,
-            int width,
-            int height
-    ) {
-        scrollMask(graphics, x, y, width, height, 6, current.panel());
-    }
-
-    public static void scrollMask(
-            GuiGraphics graphics,
-            int x,
-            int y,
-            int width,
-            int height,
-            int edgeSize,
-            int backgroundColor
-    ) {
-        if (graphics == null || width <= 0 || height <= 0 || edgeSize <= 0) return;
-        int edge = Math.min(edgeSize, Math.max(1, height / 2));
-        int rgb = backgroundColor & 0x00FFFFFF;
-        int alpha = (backgroundColor >>> 24) & 0xFF;
-        int opaque = (Math.max(alpha, 220) << 24) | rgb;
-        int transparent = rgb;
-        graphics.fillGradient(x, y, x + width, y + edge, opaque, transparent);
-        graphics.fillGradient(x, y + height - edge, x + width, y + height, transparent, opaque);
     }
 
     public static void panel(GuiGraphics graphics, int x, int y, int width, int height) {

@@ -503,13 +503,12 @@ public abstract class KineticScreen extends Screen {
             Component tooltip,
             Button.OnPress action
     ) {
-        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
-                x, y, width, STANDARD_CONTROL_HEIGHT,
-                text == null ? Component.empty() : text,
-                action == null ? ignored -> { } : action,
-                null,
-                0
-        );
+        Button button = Button.builder(
+                        text == null ? Component.empty() : text,
+                        action == null ? ignored -> { } : action
+                )
+                .bounds(x, y, width, STANDARD_CONTROL_HEIGHT)
+                .build();
         registerWidgetTooltip(button, tooltip);
         return button;
     }
@@ -523,15 +522,12 @@ public abstract class KineticScreen extends Screen {
             Component tooltip,
             Runnable action
     ) {
-        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
-                x, y, width, height,
-                text == null ? Component.empty() : text,
-                ignored -> {
-                    if (action != null) action.run();
-                },
-                null,
-                0
-        );
+        Button button = Button.builder(
+                        text == null ? Component.empty() : text,
+                        ignored -> { if (action != null) action.run(); }
+                )
+                .bounds(x, y, width, height)
+                .build();
         addRenderableWidget(button);
         registerWidgetTooltip(button, tooltip);
         return button;
@@ -546,15 +542,12 @@ public abstract class KineticScreen extends Screen {
             Component tooltip,
             Button.OnPress action
     ) {
-        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
-                x, y, width, height,
-                text == null ? Component.empty() : text,
-                pressed -> {
-                    if (action != null) action.onPress(pressed);
-                },
-                null,
-                0
-        );
+        Button button = Button.builder(
+                        text == null ? Component.empty() : text,
+                        pressed -> { if (action != null) action.onPress(pressed); }
+                )
+                .bounds(x, y, width, height)
+                .build();
         addRenderableWidget(button);
         registerWidgetTooltip(button, tooltip);
         return button;

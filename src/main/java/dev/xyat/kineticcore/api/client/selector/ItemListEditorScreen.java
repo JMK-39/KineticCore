@@ -247,15 +247,6 @@ public final class ItemListEditorScreen extends KineticScreen {
             }
         }
         disableCanvasScissor(graphics);
-        GuiTheme.scrollMask(
-                graphics,
-                GRID_X,
-                GRID_Y,
-                GRID_WIDTH,
-                GRID_HEIGHT,
-                6,
-                GuiTheme.current().panelAlt()
-        );
     }
 
     private ItemStack previewStack(String rule) {
