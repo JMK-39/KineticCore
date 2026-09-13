@@ -320,14 +320,14 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
             GuiOverlay.toast(Component.translatable("gui.kineticcore.config.server.save_failed"));
             return;
         }
-        if (minecraft != null) minecraft.setScreen(parent);
+        if (minecraft != null) navigateBack();
     }
 
     private void requestClose() {
         clearCountFieldFocus();
         Minecraft client = Minecraft.getInstance();
         if (!hasUnsavedChanges()) {
-            client.setScreen(parent);
+            navigateBack();
             return;
         }
 
@@ -337,7 +337,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                 Component.translatable("gui.yes"),
                 Component.translatable("gui.no"),
                 this::saveAndClose,
-                () -> client.setScreen(parent)
+                () -> navigateBack()
         );
     }
 

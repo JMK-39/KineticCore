@@ -400,7 +400,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
                     if (shouldShowImmediateSavedToast(outcome)) showSavedToast();
                     runAction(page, entry);
                 },
-                () -> { }
+                () -> runAction(page, entry)
         );
     }
 
@@ -538,7 +538,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
         SaveOutcome outcome = persistPendingValues();
         if (outcome == SaveOutcome.FAILED) return;
         if (shouldShowImmediateSavedToast(outcome)) showSavedToast();
-        Minecraft.getInstance().setScreen(parent);
+        navigateBack();
     }
 
     private SaveOutcome persistPendingValues() {
@@ -805,24 +805,13 @@ public final class KTModuleConfigScreen extends KineticScreen {
             int mouseY,
             float partialTick
     ) {
-        renderSearchPlaceholder(graphics, searchBox);
+        renderTextFieldPlaceholder(
+                graphics,
+                searchBox,
+                Component.translatable("gui.kineticcore.config.search_fields")
+        );
     }
 
-    private void renderSearchPlaceholder(GuiGraphics graphics, EditBox box) {
-        if (box == null || !box.visible || !box.getValue().isEmpty() || box.isFocused()) return;
-        String text = font.plainSubstrByWidth(
-                Component.translatable("gui.kineticcore.config.search_fields").getString(),
-                Math.max(0, box.getWidth() - 10)
-        );
-        graphics.drawString(
-                font,
-                text,
-                box.getX() + 5,
-                box.getY() + (box.getHeight() - font.lineHeight) / 2,
-                0xFFAAAAAA,
-                false
-        );
-    }
 
     @Override
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
@@ -874,7 +863,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
     public void onClose() {
         Minecraft client = Minecraft.getInstance();
         if (!isDirty()) {
-            client.setScreen(parent);
+            navigateBack();
             return;
         }
 
@@ -887,9 +876,9 @@ public final class KTModuleConfigScreen extends KineticScreen {
                     SaveOutcome outcome = persistPendingValues();
                     if (outcome == SaveOutcome.FAILED) return;
                     if (shouldShowImmediateSavedToast(outcome)) showSavedToast();
-                    client.setScreen(parent);
+                    navigateBack();
                 },
-                () -> client.setScreen(parent)
+                () -> navigateBack()
         );
     }
 

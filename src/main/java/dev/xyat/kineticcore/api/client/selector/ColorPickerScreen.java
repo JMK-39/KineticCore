@@ -495,7 +495,7 @@ public final class ColorPickerScreen extends KineticScreen {
     @Override
     public void onClose() {
         if (minecraft != null) {
-            minecraft.setScreen(parent);
+            navigateBack();
         }
     }
 

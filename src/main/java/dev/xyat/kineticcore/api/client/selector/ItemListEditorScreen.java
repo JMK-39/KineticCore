@@ -135,7 +135,7 @@ public final class ItemListEditorScreen extends KineticScreen {
 
     private void saveAndClose() {
         onSave.accept(List.copyOf(rules));
-        Minecraft.getInstance().setScreen(parent);
+        navigateBack();
     }
 
     private void updateScrollRange() {
@@ -155,7 +155,14 @@ public final class ItemListEditorScreen extends KineticScreen {
     ) {
         GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
         graphics.drawCenteredString(font, title, canvasWidth() / 2, 30, 0xFFFFAA00);
-        GuiTheme.itemGrid(graphics, GRID_X, GRID_Y, GRID_WIDTH, GRID_HEIGHT);
+        graphics.fill(
+                GRID_X,
+                GRID_Y,
+                GRID_X + GRID_WIDTH,
+                GRID_Y + GRID_HEIGHT,
+                GuiTheme.current().panelAlt()
+        );
+        GuiTheme.stateOutline(graphics, GRID_X, GRID_Y, GRID_WIDTH, GRID_HEIGHT, false, false, false);
         renderRules(graphics, mouseX, mouseY);
         GuiTheme.scrollbar(
                 scroll,
@@ -212,9 +219,16 @@ public final class ItemListEditorScreen extends KineticScreen {
             int x = GRID_X + column * CELL_SIZE;
             int y = GRID_Y + row * CELL_SIZE - scrollShift;
             boolean hovered = index == hoveredIndex;
+            String rule = rules.get(index);
+            ItemStack stack = previewStack(rule);
+            boolean invalid = stack.isEmpty();
 
-            GuiTheme.itemSlot(graphics, x, y, SLOT_SIZE, hovered);
-            ItemStack stack = previewStack(rules.get(index));
+            if (invalid) {
+                graphics.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, GuiTheme.current().panel());
+                GuiTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, false, hovered, true);
+            } else {
+                GuiTheme.itemSlot(graphics, x, y, SLOT_SIZE, false, hovered, false);
+            }
             if (!stack.isEmpty()) {
                 GuiTheme.item(
                         graphics,
@@ -228,12 +242,20 @@ public final class ItemListEditorScreen extends KineticScreen {
                 );
             }
 
-            String rule = rules.get(index);
             if (rule.startsWith("#") || rule.startsWith("@")) {
                 graphics.drawString(font, rule.substring(0, 1), x + 2, y + 2, 0xFFFFFFFF, true);
             }
         }
         disableCanvasScissor(graphics);
+        GuiTheme.scrollMask(
+                graphics,
+                GRID_X,
+                GRID_Y,
+                GRID_WIDTH,
+                GRID_HEIGHT,
+                6,
+                GuiTheme.current().panelAlt()
+        );
     }
 
     private ItemStack previewStack(String rule) {
@@ -365,7 +387,7 @@ public final class ItemListEditorScreen extends KineticScreen {
 
     @Override
     public void onClose() {
-        Minecraft.getInstance().setScreen(parent);
+        navigateBack();
     }
 
     @Override

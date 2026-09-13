@@ -232,7 +232,7 @@ final class KTConfigListScreen extends KineticScreen {
     private void finish() {
         if (!integerList) {
             resultConsumer.accept(new ArrayList<>(values));
-            Minecraft.getInstance().setScreen(parent);
+            navigateBack();
             return;
         }
 
@@ -246,7 +246,7 @@ final class KTConfigListScreen extends KineticScreen {
             }
         }
         resultConsumer.accept(parsed);
-        Minecraft.getInstance().setScreen(parent);
+        navigateBack();
     }
 
     private void renderSnapshotButton(GuiGraphics graphics, int x, int y, int width, Component label, boolean lifted) {
@@ -503,7 +503,7 @@ final class KTConfigListScreen extends KineticScreen {
         clearDragState();
         Minecraft client = Minecraft.getInstance();
         if (values.equals(originalValues)) {
-            client.setScreen(parent);
+            navigateBack();
             return;
         }
 
@@ -513,7 +513,7 @@ final class KTConfigListScreen extends KineticScreen {
                 Component.translatable("gui.yes"),
                 Component.translatable("gui.no"),
                 this::finish,
-                () -> client.setScreen(parent)
+                () -> navigateBack()
         );
     }
 

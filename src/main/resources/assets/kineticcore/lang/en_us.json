@@ -454,7 +454,7 @@
   "gui.kineticcore.config.search_fields": "Click to search settings by name, Pinyin, or ID...",
   "gui.kineticcore.config.search_plugins": "Search installed plugins, module names, or settings...",
   "gui.kineticcore.config.server_locked": "§cCurrently unavailable",
-  "gui.kineticcore.config.unsaved_action.message": "Save these changes before opening the specialized editor? Choose No to keep editing this page.",
+  "gui.kineticcore.config.unsaved_action.message": "The current configuration has unsaved changes. Choose Yes to save and continue opening the specialized editor, or No to skip saving and continue. Press ESC to cancel.",
   "gui.kineticcore.config.unsaved_action.title": "Unsaved configuration changes",
   "gui.kineticcore.config.unsaved_close.message": "This configuration page has unsaved changes. Save them before leaving?",
   "gui.kineticcore.config.unsaved_list.message": "This list has unapplied changes. Apply them before returning? The configuration page must still be saved.",

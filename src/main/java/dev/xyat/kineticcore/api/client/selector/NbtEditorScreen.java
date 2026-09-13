@@ -122,10 +122,11 @@ public class NbtEditorScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasForeground(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        if (searchBox != null && !searchBox.isFocused() && searchBox.getValue().isEmpty()) {
-            g.drawString(this.font, Component.translatable("gui.kineticcore.search_hint"),
-                    searchBox.getX() + 4, searchBox.getY() + 6, 0xFFAAAAAA, false);
-        }
+        renderTextFieldPlaceholder(
+                g,
+                searchBox,
+                Component.translatable("gui.kineticcore.search_hint")
+        );
     }
 
     @Override

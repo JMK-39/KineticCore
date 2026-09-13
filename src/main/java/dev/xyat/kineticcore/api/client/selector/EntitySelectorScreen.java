@@ -317,14 +317,14 @@ public final class EntitySelectorScreen extends KineticScreen {
 
     private void applyAndReturn() {
         onApply.accept(new ArrayList<>(selectedIds));
-        Minecraft.getInstance().setScreen(parent);
+        navigateBack();
     }
 
     @Override
     public void onClose() {
         Minecraft client = Minecraft.getInstance();
         if (selectedIds.equals(originalIds)) {
-            client.setScreen(parent);
+            navigateBack();
             return;
         }
         client.setScreen(new ConfirmScreen(
@@ -332,7 +332,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                     if (shouldApply) {
                         applyAndReturn();
                     } else {
-                        client.setScreen(parent);
+                        navigateBack();
                     }
                 },
                 Component.translatable("gui.kineticcore.config.unsaved_action.title"),

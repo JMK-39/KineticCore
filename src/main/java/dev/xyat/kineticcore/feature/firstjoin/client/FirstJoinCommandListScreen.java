@@ -409,7 +409,7 @@ public final class FirstJoinCommandListScreen extends KineticScreen {
     }
 
     private void closeToParent() {
-        if (minecraft != null) minecraft.setScreen(parent);
+        if (minecraft != null) navigateBack();
     }
 
     @Override

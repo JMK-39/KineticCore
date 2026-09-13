@@ -35,8 +35,8 @@ public abstract class KineticScreen extends Screen {
     public static final int STANDARD_CANVAS_WIDTH = 640;
     public static final int STANDARD_CANVAS_HEIGHT = 360;
     public static final int STANDARD_SAFE_MARGIN = 6;
-    public static final int STANDARD_CONTROL_HEIGHT = 20;
-    public static final int COMPACT_CONTROL_HEIGHT = 18;
+    public static final int STANDARD_CONTROL_HEIGHT = 16;
+    public static final int COMPACT_CONTROL_HEIGHT = 16;
 
     private int canvasWidth;
     private int canvasHeight;
@@ -134,47 +134,47 @@ public abstract class KineticScreen extends Screen {
         this.maxScale = Math.max(this.minScale, maxScale);
     }
 
-    protected final int canvasWidth() {
+    public final int canvasWidth() {
         return canvasWidth;
     }
 
-    protected final int canvasHeight() {
+    public final int canvasHeight() {
         return canvasHeight;
     }
 
-    protected final float canvasScale() {
+    public final float canvasScale() {
         return canvasScale;
     }
 
-    protected final int canvasX() {
+    public final int canvasX() {
         return canvasX;
     }
 
-    protected final int canvasY() {
+    public final int canvasY() {
         return canvasY;
     }
 
-    protected final GuiLayout.SafeArea safeArea() {
+    public final GuiLayout.SafeArea safeArea() {
         return safeArea;
     }
 
-    protected final GuiLayout.Metrics layout() {
+    public final GuiLayout.Metrics layout() {
         return metrics;
     }
 
-    protected final GuiLayout.Level layoutLevel() {
+    public final GuiLayout.Level layoutLevel() {
         return metrics.level();
     }
 
-    protected final boolean isPortraitLayout() {
+    public final boolean isPortraitLayout() {
         return metrics.isPortrait();
     }
 
-    protected final boolean isUltrawideLayout() {
+    public final boolean isUltrawideLayout() {
         return metrics.isUltrawide();
     }
 
-    protected final boolean isCompactLayout() {
+    public final boolean isCompactLayout() {
         return metrics.isCompact();
     }
 
@@ -182,7 +182,7 @@ public abstract class KineticScreen extends Screen {
         return overlays;
     }
 
-    protected final EditBox addTextField(
+    public final EditBox addTextField(
             int x,
             int y,
             int width,
@@ -191,23 +191,49 @@ public abstract class KineticScreen extends Screen {
         return addTextField(x, y, width, message, null);
     }
 
-    protected final EditBox addTextField(
+    public final EditBox addTextField(
             int x,
             int y,
             int width,
             Component message,
             Component tooltip
     ) {
-        EditBox box = new EditBox(
+        EditBox box = createTextField(x, y, width, message, tooltip);
+        addRenderableWidget(box);
+        return box;
+    }
+
+    public final EditBox createTextField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            Component tooltip
+    ) {
+        EditBox box = new KineticWidgets.KineticEditBox(
                 font, x, y, width, STANDARD_CONTROL_HEIGHT,
                 message == null ? Component.empty() : message
         );
-        addRenderableWidget(box);
         registerWidgetTooltip(box, tooltip);
         return box;
     }
 
-    protected final KineticWidgets.AutoCompleteBox addAutoCompleteField(
+    public final KineticWidgets.AutoCompleteBox addAutoCompleteField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            Component tooltip
+    ) {
+        KineticWidgets.AutoCompleteBox box = createAutoCompleteField(
+                x, y, width, message, dictionarySupplier, tooltip
+        );
+        addRenderableWidget(box);
+        return box;
+    }
+
+    public final KineticWidgets.AutoCompleteBox createAutoCompleteField(
             int x,
             int y,
             int width,
@@ -220,12 +246,106 @@ public abstract class KineticScreen extends Screen {
                 message == null ? Component.empty() : message,
                 dictionarySupplier
         );
-        addRenderableWidget(box);
         registerWidgetTooltip(box, tooltip);
         return box;
     }
 
-    protected final KineticWidgets.NumericEditBox addIntegerField(
+    public final KineticWidgets.NumericAutoCompleteBox addIntegerAutoCompleteField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            boolean allowNegative,
+            Integer minValue,
+            Integer maxValue,
+            Component tooltip
+    ) {
+        KineticWidgets.NumericAutoCompleteBox box = createIntegerAutoCompleteField(
+                x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, tooltip
+        );
+        addRenderableWidget(box);
+        return box;
+    }
+
+    public final KineticWidgets.NumericAutoCompleteBox createIntegerAutoCompleteField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            boolean allowNegative,
+            Integer minValue,
+            Integer maxValue,
+            Component tooltip
+    ) {
+        KineticWidgets.NumericAutoCompleteBox box = KineticWidgets.NumericAutoCompleteBox.integer(
+                font, x, y, width, STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                dictionarySupplier,
+                allowNegative, minValue, maxValue
+        );
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    public final KineticWidgets.NumericAutoCompleteBox addDecimalAutoCompleteField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            boolean allowNegative,
+            Double minValue,
+            Double maxValue,
+            Component tooltip
+    ) {
+        KineticWidgets.NumericAutoCompleteBox box = createDecimalAutoCompleteField(
+                x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, tooltip
+        );
+        addRenderableWidget(box);
+        return box;
+    }
+
+    public final KineticWidgets.NumericAutoCompleteBox createDecimalAutoCompleteField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            boolean allowNegative,
+            Double minValue,
+            Double maxValue,
+            Component tooltip
+    ) {
+        KineticWidgets.NumericAutoCompleteBox box = KineticWidgets.NumericAutoCompleteBox.decimal(
+                font, x, y, width, STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                dictionarySupplier,
+                allowNegative, minValue, maxValue
+        );
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    public final KineticWidgets.NumericEditBox addIntegerField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Integer minValue,
+            Integer maxValue,
+            Component tooltip
+    ) {
+        KineticWidgets.NumericEditBox box = createIntegerField(
+                x, y, width, message, allowNegative, minValue, maxValue, tooltip
+        );
+        addRenderableWidget(box);
+        return box;
+    }
+
+    public final KineticWidgets.NumericEditBox createIntegerField(
             int x,
             int y,
             int width,
@@ -240,12 +360,28 @@ public abstract class KineticScreen extends Screen {
                 message == null ? Component.empty() : message,
                 allowNegative, minValue, maxValue
         );
-        addRenderableWidget(box);
         registerWidgetTooltip(box, tooltip);
         return box;
     }
 
-    protected final KineticWidgets.NumericEditBox addLongField(
+    public final KineticWidgets.NumericEditBox addLongField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Long minValue,
+            Long maxValue,
+            Component tooltip
+    ) {
+        KineticWidgets.NumericEditBox box = createLongField(
+                x, y, width, message, allowNegative, minValue, maxValue, tooltip
+        );
+        addRenderableWidget(box);
+        return box;
+    }
+
+    public final KineticWidgets.NumericEditBox createLongField(
             int x,
             int y,
             int width,
@@ -260,12 +396,28 @@ public abstract class KineticScreen extends Screen {
                 message == null ? Component.empty() : message,
                 allowNegative, minValue, maxValue
         );
-        addRenderableWidget(box);
         registerWidgetTooltip(box, tooltip);
         return box;
     }
 
-    protected final KineticWidgets.NumericEditBox addDecimalField(
+    public final KineticWidgets.NumericEditBox addDecimalField(
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Double minValue,
+            Double maxValue,
+            Component tooltip
+    ) {
+        KineticWidgets.NumericEditBox box = createDecimalField(
+                x, y, width, message, allowNegative, minValue, maxValue, tooltip
+        );
+        addRenderableWidget(box);
+        return box;
+    }
+
+    public final KineticWidgets.NumericEditBox createDecimalField(
             int x,
             int y,
             int width,
@@ -280,12 +432,11 @@ public abstract class KineticScreen extends Screen {
                 message == null ? Component.empty() : message,
                 allowNegative, minValue, maxValue
         );
-        addRenderableWidget(box);
         registerWidgetTooltip(box, tooltip);
         return box;
     }
 
-    protected final void renderTextFieldPlaceholder(
+    public final void renderTextFieldPlaceholder(
             GuiGraphics graphics,
             EditBox box,
             Component placeholder
@@ -308,7 +459,7 @@ public abstract class KineticScreen extends Screen {
         );
     }
 
-    protected final Button addButton(
+    public final Button addButton(
             int x,
             int y,
             int width,
@@ -317,6 +468,50 @@ public abstract class KineticScreen extends Screen {
             Runnable action
     ) {
         return addButton(x, y, width, STANDARD_CONTROL_HEIGHT, text, tooltip, action);
+    }
+
+    public final Button addButton(
+            int x,
+            int y,
+            int width,
+            Component text,
+            Component tooltip,
+            Button.OnPress action
+    ) {
+        return addButton(x, y, width, STANDARD_CONTROL_HEIGHT, text, tooltip, action);
+    }
+
+    public final Button createButton(
+            int x,
+            int y,
+            int width,
+            Component text,
+            Component tooltip,
+            Runnable action
+    ) {
+        return createButton(
+                x, y, width, text, tooltip,
+                action == null ? null : ignored -> action.run()
+        );
+    }
+
+    public final Button createButton(
+            int x,
+            int y,
+            int width,
+            Component text,
+            Component tooltip,
+            Button.OnPress action
+    ) {
+        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
+                x, y, width, STANDARD_CONTROL_HEIGHT,
+                text == null ? Component.empty() : text,
+                action == null ? ignored -> { } : action,
+                null,
+                0
+        );
+        registerWidgetTooltip(button, tooltip);
+        return button;
     }
 
     private Button addButton(
@@ -342,7 +537,42 @@ public abstract class KineticScreen extends Screen {
         return button;
     }
 
-    protected final KineticWidgets.HighZButton addHighZButton(
+    private Button addButton(
+            int x,
+            int y,
+            int width,
+            int height,
+            Component text,
+            Component tooltip,
+            Button.OnPress action
+    ) {
+        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
+                x, y, width, height,
+                text == null ? Component.empty() : text,
+                pressed -> {
+                    if (action != null) action.onPress(pressed);
+                },
+                null,
+                0
+        );
+        addRenderableWidget(button);
+        registerWidgetTooltip(button, tooltip);
+        return button;
+    }
+
+    public final Button addCompactButton(
+            int x, int y, int width, Component text, Component tooltip, Runnable action
+    ) {
+        return addButton(x, y, width, COMPACT_CONTROL_HEIGHT, text, tooltip, action);
+    }
+
+    public final Button addCompactButton(
+            int x, int y, int width, Component text, Component tooltip, Button.OnPress action
+    ) {
+        return addButton(x, y, width, COMPACT_CONTROL_HEIGHT, text, tooltip, action);
+    }
+
+    public final KineticWidgets.HighZButton addHighZButton(
             int x,
             int y,
             int width,
@@ -352,6 +582,44 @@ public abstract class KineticScreen extends Screen {
             Runnable action
     ) {
         return addHighZButton(x, y, width, STANDARD_CONTROL_HEIGHT, text, tooltip, zLevel, action);
+    }
+
+    public final KineticWidgets.HighZButton addHighZButton(
+            int x,
+            int y,
+            int width,
+            Component text,
+            Component tooltip,
+            int zLevel,
+            Button.OnPress action
+    ) {
+        KineticWidgets.HighZButton button = createHighZButton(x, y, width, text, tooltip, zLevel, action);
+        addRenderableWidget(button);
+        return button;
+    }
+
+    public final KineticWidgets.HighZButton createHighZButton(
+            int x,
+            int y,
+            int width,
+            Component text,
+            Component tooltip,
+            int zLevel,
+            Button.OnPress action
+    ) {
+        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
+                x, y, width, STANDARD_CONTROL_HEIGHT,
+                text == null ? Component.empty() : text,
+                pressed -> {
+                    if (action != null) action.onPress(pressed);
+                },
+                null,
+                zLevel
+        );
+        if (tooltip != null && !tooltip.getString().isBlank()) {
+            registerWidgetTooltip(button, tooltip);
+        }
+        return button;
     }
 
     private KineticWidgets.HighZButton addHighZButton(
@@ -378,7 +646,7 @@ public abstract class KineticScreen extends Screen {
         return button;
     }
 
-    protected final KineticWidgets.ToggleButton addToggleButton(
+    public final KineticWidgets.ToggleButton addToggleButton(
             int x,
             int y,
             int width,
@@ -413,7 +681,7 @@ public abstract class KineticScreen extends Screen {
         return button;
     }
 
-    protected final Button addCompactScrollableButton(
+    public final Button addCompactScrollableButton(
             int x,
             int y,
             int width,
@@ -433,7 +701,7 @@ public abstract class KineticScreen extends Screen {
         );
     }
 
-    protected final Button addScrollableButton(
+    public final Button addScrollableButton(
             int x,
             int y,
             int width,
@@ -488,7 +756,19 @@ public abstract class KineticScreen extends Screen {
         return button;
     }
 
-    protected final KineticWidgets.ColorPreviewButton addColorPreviewButton(
+    public final KineticWidgets.ColorSwatchButton addColorSwatchButton(
+            int x, int y, int rgb, Component tooltip, Runnable action
+    ) {
+        KineticWidgets.ColorSwatchButton button = new KineticWidgets.ColorSwatchButton(
+                x, y, COMPACT_CONTROL_HEIGHT, rgb,
+                ignored -> { if (action != null) action.run(); }
+        );
+        addRenderableWidget(button);
+        registerWidgetTooltip(button, tooltip);
+        return button;
+    }
+
+    public final KineticWidgets.ColorPreviewButton addColorPreviewButton(
             int x,
             int y,
             int width,
@@ -509,15 +789,31 @@ public abstract class KineticScreen extends Screen {
         return button;
     }
 
-    protected final void closeContextMenu() {
+    public final void closeContextMenu() {
         overlays.closeMenu();
     }
 
-    protected final <T extends AbstractWidget> T registerWidgetTooltip(T widget, Component tooltip) {
+    public final <T extends AbstractWidget> T registerWidgetTooltip(T widget, Component tooltip) {
         if (widget == null) return null;
         if (tooltip == null || tooltip.getString().isBlank()) widgetTooltips.remove(widget);
         else widgetTooltips.put(widget, tooltip);
         return widget;
+    }
+
+    public final <T extends AbstractWidget> T addControl(T widget, Component tooltip) {
+        if (widget == null) return null;
+        addRenderableWidget(widget);
+        if (tooltip != null && !tooltip.getString().isBlank()) {
+            registerWidgetTooltip(widget, tooltip);
+        }
+        return widget;
+    }
+
+    public final void removeControl(AbstractWidget widget) {
+        if (widget == null) return;
+        widgetTooltips.remove(widget);
+        scrollViewportWidgets.removeIf(entry -> entry.widget() == widget);
+        removeWidget(widget);
     }
 
     private void requestWidgetTooltip(double mouseX, double mouseY) {
@@ -532,16 +828,16 @@ public abstract class KineticScreen extends Screen {
         }
     }
 
-    protected final <T extends ObjectSelectionList<?>> T addEventListWidget(T list) {
+    public final <T extends ObjectSelectionList<?>> T addEventListWidget(T list) {
         addWidget(list);
         return list;
     }
 
-    protected final void resetScrollableWidgets() {
+    public final void resetScrollableWidgets() {
         scrollViewportWidgets.clear();
     }
 
-    protected final <T extends AbstractWidget> T addScrollableWidget(
+    public final <T extends AbstractWidget> T addScrollableWidget(
             T widget,
             int left,
             int top,
@@ -557,7 +853,7 @@ public abstract class KineticScreen extends Screen {
      * Registers a widget that was already created through a KineticScreen API factory as belonging
      * to a scrolling viewport. Child screens must use this instead of re-adding the widget.
      */
-    protected final <T extends AbstractWidget> T bindScrollableWidget(
+    public final <T extends AbstractWidget> T bindScrollableWidget(
             T widget,
             int left,
             int top,
@@ -583,7 +879,7 @@ public abstract class KineticScreen extends Screen {
      * API factory are only bound; custom widgets that are not yet attached to the screen are added
      * once before being bound.
      */
-    protected final <T extends AbstractWidget> T attachScrollableWidget(
+    public final <T extends AbstractWidget> T attachScrollableWidget(
             T widget,
             int left,
             int top,
@@ -686,35 +982,35 @@ public abstract class KineticScreen extends Screen {
     }
 
 
-    protected final void showTooltip(Component component) {
+    public final void showTooltip(Component component) {
         overlays.tooltip(component);
     }
 
-    protected final void showTooltip(List<Component> lines) {
+    public final void showTooltip(List<? extends Component> lines) {
         overlays.tooltip(lines);
     }
 
-    protected final void showTooltip(Component component, int maxWidth) {
+    public final void showTooltip(Component component, int maxWidth) {
         overlays.tooltip(component, maxWidth);
     }
 
-    protected final void showTooltip(List<Component> lines, int maxWidth) {
+    public final void showTooltip(List<? extends Component> lines, int maxWidth) {
         overlays.tooltip(lines, maxWidth);
     }
 
-    protected final void showFormattedTooltip(List<FormattedCharSequence> lines) {
+    public final void showFormattedTooltip(List<FormattedCharSequence> lines) {
         overlays.formattedTooltip(lines);
     }
 
-    protected final void showItemTooltip(ItemStack stack) {
+    public final void showItemTooltip(ItemStack stack) {
         overlays.itemTooltip(stack);
     }
 
-    protected final void openContextMenu(double virtualX, double virtualY, List<GuiOverlay.MenuItem> items) {
+    public final void openContextMenu(double virtualX, double virtualY, List<GuiOverlay.MenuItem> items) {
         overlays.openMenu(toScreenX(virtualX), toScreenY(virtualY), items);
     }
 
-    protected final void openDialog(
+    public final void openDialog(
             Component title,
             Component message,
             Component confirmText,
@@ -725,7 +1021,7 @@ public abstract class KineticScreen extends Screen {
         overlays.openDialog(title, message, confirmText, cancelText, onConfirm, onCancel);
     }
 
-    protected final KineticWidgets.Dropdown addDropdown(
+    public final KineticWidgets.Dropdown addDropdown(
             int x,
             int y,
             int width,
@@ -734,9 +1030,23 @@ public abstract class KineticScreen extends Screen {
             Component tooltip,
             Consumer<Integer> responder
     ) {
-        List<Component> normalizedOptions = new ArrayList<>(options);
+        return addDropdown(x, y, width, options, List.of(), selectedIndex, tooltip, responder);
+    }
+
+    public final KineticWidgets.Dropdown addDropdown(
+            int x,
+            int y,
+            int width,
+            List<? extends Component> options,
+            List<? extends Component> optionTooltips,
+            int selectedIndex,
+            Component tooltip,
+            Consumer<Integer> responder
+    ) {
+        List<Component> normalizedOptions = options == null ? new ArrayList<>() : new ArrayList<>(options);
+        List<Component> normalizedTooltips = optionTooltips == null ? new ArrayList<>() : new ArrayList<>(optionTooltips);
         KineticWidgets.Dropdown control = dropdown(
-                x, y, width, STANDARD_CONTROL_HEIGHT, normalizedOptions, selectedIndex, responder
+                x, y, width, STANDARD_CONTROL_HEIGHT, normalizedOptions, normalizedTooltips, selectedIndex, responder
         );
         addRenderableWidget(control);
         registerWidgetTooltip(control, tooltip);
@@ -749,21 +1059,30 @@ public abstract class KineticScreen extends Screen {
             int width,
             int height,
             List<Component> options,
+            List<Component> optionTooltips,
             int selectedIndex,
             Consumer<Integer> responder
     ) {
-        KineticWidgets.Dropdown dropdown = new KineticWidgets.Dropdown(
+        return new KineticWidgets.Dropdown(
                 x, y, width, height, options, selectedIndex, responder, control -> {
                     List<GuiOverlay.MenuItem> entries = new ArrayList<>();
                     List<Component> values = control.options();
                     for (int index = 0; index < values.size(); index++) {
                         int optionIndex = index;
-                        entries.add(GuiOverlay.MenuItem.action(values.get(index), () -> control.choose(optionIndex)));
+                        Component optionTooltip = index < optionTooltips.size() && optionTooltips.get(index) != null
+                                && !optionTooltips.get(index).getString().isBlank()
+                                ? optionTooltips.get(index)
+                                : values.get(index);
+                        entries.add(GuiOverlay.MenuItem.toggle(
+                                values.get(index),
+                                optionTooltip,
+                                optionIndex == control.selectedIndex(),
+                                () -> control.choose(optionIndex)
+                        ));
                     }
                     openContextMenu(x, y + height, entries);
                 }
         );
-        return dropdown;
     }
 
     @Override
@@ -773,7 +1092,7 @@ public abstract class KineticScreen extends Screen {
         rebuildUi();
     }
 
-    protected final void rebuildUi() {
+    public final void rebuildUi() {
         clearWidgets();
         widgetTooltips.clear();
         scrollViewportWidgets.clear();
@@ -824,6 +1143,7 @@ public abstract class KineticScreen extends Screen {
         canvasGraphics.pose().scale(canvasScale, canvasScale, 1f);
         try {
             updateScrollableWidgetPositions();
+            updateCanvasWidgets(virtualMouseX, virtualMouseY, partialTick);
             renderCanvasBackground(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
 
             List<AbstractWidget> temporarilyHidden = new ArrayList<>();
@@ -854,8 +1174,10 @@ public abstract class KineticScreen extends Screen {
             canvasGraphics.pose().popPose();
         }
 
-        if (!overlays.blocksInput()) requestWidgetTooltip(virtualMouseX, virtualMouseY);
-        renderTooltips(graphics, virtualMouseX, virtualMouseY, mouseX, mouseY);
+        if (!overlays.blocksInput()) {
+            requestWidgetTooltip(virtualMouseX, virtualMouseY);
+            renderTooltips(graphics, virtualMouseX, virtualMouseY, mouseX, mouseY);
+        }
         renderScreenOverlay(graphics, virtualMouseX, virtualMouseY, mouseX, mouseY, partialTick);
         overlays.render(graphics, font, width, height, mouseX, mouseY);
     }
@@ -874,6 +1196,9 @@ public abstract class KineticScreen extends Screen {
                     toScreenBottom(bottom)
             );
         }
+    }
+
+    protected void updateCanvasWidgets(int mouseX, int mouseY, float partialTick) {
     }
 
     protected void renderCanvasBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
@@ -901,31 +1226,31 @@ public abstract class KineticScreen extends Screen {
     ) {
     }
 
-    protected final double toVirtualX(double screenX) {
+    public final double toVirtualX(double screenX) {
         return (screenX - canvasX) / canvasScale;
     }
 
-    protected final double toVirtualY(double screenY) {
+    public final double toVirtualY(double screenY) {
         return (screenY - canvasY) / canvasScale;
     }
 
-    protected final int toScreenX(double virtualX) {
+    public final int toScreenX(double virtualX) {
         return canvasX + (int) Math.floor(virtualX * canvasScale);
     }
 
-    protected final int toScreenY(double virtualY) {
+    public final int toScreenY(double virtualY) {
         return canvasY + (int) Math.floor(virtualY * canvasScale);
     }
 
-    protected final int toScreenRight(double virtualX) {
+    public final int toScreenRight(double virtualX) {
         return canvasX + (int) Math.ceil(virtualX * canvasScale);
     }
 
-    protected final int toScreenBottom(double virtualY) {
+    public final int toScreenBottom(double virtualY) {
         return canvasY + (int) Math.ceil(virtualY * canvasScale);
     }
 
-    protected final boolean isInsideCanvas(double screenX, double screenY) {
+    public final boolean isInsideCanvas(double screenX, double screenY) {
         double virtualX = toVirtualX(screenX);
         double virtualY = toVirtualY(screenY);
         return virtualX >= 0 && virtualX < canvasWidth && virtualY >= 0 && virtualY < canvasHeight;
@@ -943,7 +1268,7 @@ public abstract class KineticScreen extends Screen {
         graphics.disableScissor();
     }
 
-    protected final void renderScaledList(
+    public final void renderScaledList(
             ObjectSelectionList<?> list,
             GuiGraphics graphics,
             int mouseX,
@@ -1042,7 +1367,6 @@ public abstract class KineticScreen extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (overlays.keyPressed(keyCode)) return true;
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            commitDraft();
             onClose();
             return true;
         }
@@ -1068,8 +1392,12 @@ public abstract class KineticScreen extends Screen {
         draftSession.discardToBaseline();
     }
 
+    public final void navigateBack() {
+        GuiSession.back(this);
+    }
+
     @Override
     public void onClose() {
-        GuiSession.back(this);
+        navigateBack();
     }
 }

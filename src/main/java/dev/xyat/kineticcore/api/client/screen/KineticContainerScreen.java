@@ -2,7 +2,13 @@ package dev.xyat.kineticcore.api.client.screen;
 
 import dev.xyat.kineticcore.api.client.layout.GuiLayout;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -12,6 +18,10 @@ import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import java.util.IdentityHashMap;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public abstract class KineticContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
     private float preferredWidth = KineticScreen.STANDARD_CANVAS_WIDTH;
@@ -23,6 +33,7 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     private int uiWidth = 1;
     private int uiHeight = 1;
     private final GuiOverlay overlays = new GuiOverlay();
+    private final Map<AbstractWidget, Component> widgetTooltips = new IdentityHashMap<>();
     private GuiSession.DraftSession draftSession = new GuiSession.DraftSession();
 
     protected KineticContainerScreen(T menu, Inventory inventory, Component title) {
@@ -95,23 +106,180 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
         return overlays;
     }
 
-    protected final void showTooltip(Component component) {
+    public final EditBox addTextField(int x, int y, int width, Component message) {
+        return addTextField(x, y, width, message, null);
+    }
+
+    public final EditBox addTextField(int x, int y, int width, Component message, Component tooltip) {
+        EditBox box = new KineticWidgets.KineticEditBox(font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message);
+        addRenderableWidget(box);
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    public final KineticWidgets.AutoCompleteBox addAutoCompleteField(
+            int x, int y, int width, Component message, Supplier<List<String>> dictionarySupplier, Component tooltip
+    ) {
+        KineticWidgets.AutoCompleteBox box = new KineticWidgets.AutoCompleteBox(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message, dictionarySupplier
+        );
+        addRenderableWidget(box);
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    public final KineticWidgets.NumericEditBox addIntegerField(
+            int x, int y, int width, Component message, boolean allowNegative, Integer minValue, Integer maxValue, Component tooltip
+    ) {
+        KineticWidgets.NumericEditBox box = KineticWidgets.NumericEditBox.integer(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message, allowNegative, minValue, maxValue
+        );
+        addRenderableWidget(box);
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    public final KineticWidgets.NumericEditBox addLongField(
+            int x, int y, int width, Component message, boolean allowNegative, Long minValue, Long maxValue, Component tooltip
+    ) {
+        KineticWidgets.NumericEditBox box = KineticWidgets.NumericEditBox.longInteger(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message, allowNegative, minValue, maxValue
+        );
+        addRenderableWidget(box);
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    public final KineticWidgets.NumericEditBox addDecimalField(
+            int x, int y, int width, Component message, boolean allowNegative, Double minValue, Double maxValue, Component tooltip
+    ) {
+        KineticWidgets.NumericEditBox box = KineticWidgets.NumericEditBox.decimal(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message, allowNegative, minValue, maxValue
+        );
+        addRenderableWidget(box);
+        registerWidgetTooltip(box, tooltip);
+        return box;
+    }
+
+    public final Button addButton(int x, int y, int width, Component text, Component tooltip, Runnable action) {
+        return addButton(x, y, width, text, tooltip, action == null ? null : ignored -> action.run());
+    }
+
+    public final Button addButton(int x, int y, int width, Component text, Component tooltip, Button.OnPress action) {
+        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
+                x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                text == null ? Component.empty() : text,
+                pressed -> { if (action != null) action.onPress(pressed); }, null, 0
+        );
+        addRenderableWidget(button);
+        registerWidgetTooltip(button, tooltip);
+        return button;
+    }
+
+    public final Button addCompactButton(
+            int x, int y, int width, Component text, Component tooltip, Runnable action
+    ) {
+        return addCompactButton(x, y, width, text, tooltip, action == null ? null : ignored -> action.run());
+    }
+
+    public final Button addCompactButton(
+            int x, int y, int width, Component text, Component tooltip, Button.OnPress action
+    ) {
+        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
+                x, y, width, KineticScreen.COMPACT_CONTROL_HEIGHT,
+                text == null ? Component.empty() : text,
+                pressed -> { if (action != null) action.onPress(pressed); }, null, 0
+        );
+        addRenderableWidget(button);
+        registerWidgetTooltip(button, tooltip);
+        return button;
+    }
+
+    public final KineticWidgets.HighZButton addHighZButton(
+            int x, int y, int width, Component text, Component tooltip, int zLevel, Button.OnPress action
+    ) {
+        KineticWidgets.HighZButton button = new KineticWidgets.HighZButton(
+                x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                text == null ? Component.empty() : text,
+                pressed -> { if (action != null) action.onPress(pressed); }, null, zLevel
+        );
+        addRenderableWidget(button);
+        registerWidgetTooltip(button, tooltip);
+        return button;
+    }
+
+    public final <W extends AbstractWidget> W addControl(W widget, Component tooltip) {
+        if (widget == null) return null;
+        addRenderableWidget(widget);
+        if (tooltip != null && !tooltip.getString().isBlank()) registerWidgetTooltip(widget, tooltip);
+        return widget;
+    }
+
+    public final <W extends AbstractWidget> W registerWidgetTooltip(W widget, Component tooltip) {
+        if (widget == null) return null;
+        if (tooltip == null || tooltip.getString().isBlank()) widgetTooltips.remove(widget);
+        else widgetTooltips.put(widget, tooltip);
+        return widget;
+    }
+
+    private boolean requestWidgetTooltip(double mouseX, double mouseY) {
+        for (Map.Entry<AbstractWidget, Component> entry : widgetTooltips.entrySet()) {
+            AbstractWidget widget = entry.getKey();
+            if (widget == null || !widget.visible) continue;
+            if (mouseX >= widget.getX() && mouseX < widget.getX() + widget.getWidth()
+                    && mouseY >= widget.getY() && mouseY < widget.getY() + widget.getHeight()) {
+                overlays.tooltip(entry.getValue(), 320);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public final void renderTextFieldPlaceholder(
+            GuiGraphics graphics,
+            EditBox box,
+            Component placeholder
+    ) {
+        if (graphics == null || box == null || placeholder == null
+                || !box.visible || !box.getValue().isEmpty() || box.isFocused()) {
+            return;
+        }
+        String text = font.plainSubstrByWidth(
+                placeholder.getString(),
+                Math.max(0, box.getWidth() - 10)
+        );
+        graphics.drawString(
+                font,
+                text,
+                box.getX() + 5,
+                box.getY() + (box.getHeight() - font.lineHeight) / 2,
+                GuiTheme.current().mutedText(),
+                false
+        );
+    }
+
+    public final void showTooltip(Component component) {
         overlays.tooltip(component);
     }
 
-    protected final void showTooltip(List<Component> lines) {
+    public final void showTooltip(List<? extends Component> lines) {
         overlays.tooltip(lines);
     }
 
-    protected final void showTooltip(Component component, int maxWidth) {
+    public final void showTooltip(Component component, int maxWidth) {
         overlays.tooltip(component, maxWidth);
     }
 
-    protected final void showTooltip(List<Component> lines, int maxWidth) {
+    public final void showTooltip(List<? extends Component> lines, int maxWidth) {
         overlays.tooltip(lines, maxWidth);
     }
 
-    protected final void showItemTooltip(ItemStack stack) {
+    public final void showItemTooltip(ItemStack stack) {
         overlays.itemTooltip(stack);
     }
 
@@ -137,7 +305,7 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
 
 
     @Override
-    protected void init() {
+    protected final void init() {
         updateMetrics();
         int screenWidth = this.width;
         int screenHeight = this.height;
@@ -145,6 +313,27 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
         this.height = uiHeight;
         try {
             super.init();
+            widgetTooltips.clear();
+            buildUi();
+        } finally {
+            this.width = screenWidth;
+            this.height = screenHeight;
+        }
+    }
+
+    protected abstract void buildUi();
+
+    public final void rebuildUi() {
+        updateMetrics();
+        int screenWidth = this.width;
+        int screenHeight = this.height;
+        this.width = uiWidth;
+        this.height = uiHeight;
+        try {
+            clearWidgets();
+            widgetTooltips.clear();
+            super.init();
+            buildUi();
         } finally {
             this.width = screenWidth;
             this.height = screenHeight;
@@ -179,7 +368,9 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
         uiGraphics.pose().scale(uiScale, uiScale, 1f);
         try {
             super.render(uiGraphics, virtualMouseX, virtualMouseY, partialTick);
-            requestContainerTooltips(uiGraphics, virtualMouseX, virtualMouseY, mouseX, mouseY);
+            if (!overlays.blocksInput()) {
+                requestContainerTooltips(uiGraphics, virtualMouseX, virtualMouseY, mouseX, mouseY);
+            }
             renderUiForeground(uiGraphics, virtualMouseX, virtualMouseY, partialTick);
         } finally {
             uiGraphics.pose().popPose();
@@ -215,6 +406,7 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
             int screenMouseX,
             int screenMouseY
     ) {
+        if (requestWidgetTooltip(virtualMouseX, virtualMouseY)) return;
         if (hoveredSlot != null && hoveredSlot.hasItem()) {
             showItemTooltip(hoveredSlot.getItem());
         }
@@ -283,7 +475,6 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (overlays.keyPressed(keyCode)) return true;
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            commitDraft();
             onClose();
             return true;
         }
@@ -311,8 +502,12 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
         draftSession.discardToBaseline();
     }
 
+    public final void navigateBack() {
+        GuiSession.back(this);
+    }
+
     @Override
     public void onClose() {
-        GuiSession.back(this);
+        navigateBack();
     }
 }

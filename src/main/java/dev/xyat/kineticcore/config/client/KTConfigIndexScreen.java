@@ -412,7 +412,7 @@ public final class KTConfigIndexScreen extends KineticScreen {
 
     @Override
     public void onClose() {
-        Minecraft.getInstance().setScreen(parent);
+        navigateBack();
     }
 
     @Override

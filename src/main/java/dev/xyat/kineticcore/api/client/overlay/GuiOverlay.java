@@ -3,6 +3,8 @@ package dev.xyat.kineticcore.api.client.overlay;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.xyat.kineticcore.KineticCore;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.screen.KineticScreen;
+import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -48,7 +50,7 @@ public final class GuiOverlay {
             MenuItemStyle style
     ) {
         public MenuItem(Component label, Runnable action, boolean enabled) {
-            this(label, Component.empty(), null, action, enabled, MenuItemStyle.NORMAL);
+            this(label, label, null, action, enabled, MenuItemStyle.NORMAL);
         }
 
         public MenuItem {
@@ -56,11 +58,15 @@ public final class GuiOverlay {
             tooltip = Objects.requireNonNullElse(tooltip, Component.empty());
             action = action == null ? () -> { } : action;
             style = style == null ? MenuItemStyle.NORMAL : style;
-            if (style == MenuItemStyle.SEPARATOR) enabled = false;
+            if (style == MenuItemStyle.SEPARATOR) {
+                enabled = false;
+            } else if (tooltip.getString().isBlank()) {
+                tooltip = label;
+            }
         }
 
         public static MenuItem action(Component label, Runnable action) {
-            return action(label, Component.empty(), action);
+            return action(label, label, action);
         }
 
         public static MenuItem action(Component label, Component tooltip, Runnable action) {
@@ -72,7 +78,7 @@ public final class GuiOverlay {
         }
 
         public static MenuItem danger(Component label, Runnable action) {
-            return danger(label, Component.empty(), action);
+            return danger(label, label, action);
         }
 
         public static MenuItem danger(Component label, Component tooltip, Runnable action) {
@@ -80,7 +86,11 @@ public final class GuiOverlay {
         }
 
         public static MenuItem disabled(Component label) {
-            return new MenuItem(label, Component.empty(), null, () -> { }, false, MenuItemStyle.NORMAL);
+            return disabled(label, label);
+        }
+
+        public static MenuItem disabled(Component label, Component tooltip) {
+            return new MenuItem(label, tooltip, null, () -> { }, false, MenuItemStyle.NORMAL);
         }
 
         public static MenuItem separator() {
@@ -103,7 +113,10 @@ public final class GuiOverlay {
     private record ItemTooltip(ItemStack stack) implements TooltipRequest {
     }
 
-    private record ContextMenu(int x, int y, List<MenuItem> items) {
+    private record MenuControl(MenuItem item, KineticWidgets.MenuButton button) {
+    }
+
+    private record ContextMenu(int x, int y, List<MenuControl> controls) {
     }
 
     private record Dialog(
@@ -112,7 +125,9 @@ public final class GuiOverlay {
             Component confirmText,
             Component cancelText,
             Runnable onConfirm,
-            Runnable onCancel
+            Runnable onCancel,
+            KineticWidgets.MenuButton confirmButton,
+            KineticWidgets.MenuButton cancelButton
     ) {
     }
 
@@ -156,9 +171,9 @@ public final class GuiOverlay {
         tooltip = new TextTooltip(List.of(line));
     }
 
-    public void tooltip(List<Component> lines) {
+    public void tooltip(List<? extends Component> lines) {
         if (lines == null || lines.isEmpty()) return;
-        List<Component> clean = lines.stream().filter(Objects::nonNull).toList();
+        List<Component> clean = lines.stream().filter(Objects::nonNull).map(Component.class::cast).toList();
         if (!clean.isEmpty()) tooltip = new TextTooltip(clean);
     }
 
@@ -167,9 +182,9 @@ public final class GuiOverlay {
         tooltip(List.of(line), maxWidth);
     }
 
-    public void tooltip(List<Component> lines, int maxWidth) {
+    public void tooltip(List<? extends Component> lines, int maxWidth) {
         if (lines == null || lines.isEmpty()) return;
-        List<Component> clean = lines.stream().filter(Objects::nonNull).toList();
+        List<Component> clean = lines.stream().filter(Objects::nonNull).map(Component.class::cast).toList();
         if (!clean.isEmpty()) tooltip = new WrappedTextTooltip(clean, Math.max(1, maxWidth));
     }
 
@@ -188,9 +203,9 @@ public final class GuiOverlay {
         pendingScreenTooltip = new GlobalTooltipRequest(new TextTooltip(List.of(line)), mouseX, mouseY);
     }
 
-    public static void requestTooltip(List<Component> lines, int mouseX, int mouseY) {
+    public static void requestTooltip(List<? extends Component> lines, int mouseX, int mouseY) {
         if (lines == null || lines.isEmpty()) return;
-        List<Component> clean = lines.stream().filter(Objects::nonNull).toList();
+        List<Component> clean = lines.stream().filter(Objects::nonNull).map(Component.class::cast).toList();
         if (!clean.isEmpty()) pendingScreenTooltip = new GlobalTooltipRequest(new TextTooltip(clean), mouseX, mouseY);
     }
 
@@ -199,9 +214,9 @@ public final class GuiOverlay {
         requestTooltip(List.of(line), maxWidth, mouseX, mouseY);
     }
 
-    public static void requestTooltip(List<Component> lines, int maxWidth, int mouseX, int mouseY) {
+    public static void requestTooltip(List<? extends Component> lines, int maxWidth, int mouseX, int mouseY) {
         if (lines == null || lines.isEmpty()) return;
-        List<Component> clean = lines.stream().filter(Objects::nonNull).toList();
+        List<Component> clean = lines.stream().filter(Objects::nonNull).map(Component.class::cast).toList();
         if (!clean.isEmpty()) {
             pendingScreenTooltip = new GlobalTooltipRequest(
                     new WrappedTextTooltip(clean, Math.max(1, maxWidth)),
@@ -227,7 +242,30 @@ public final class GuiOverlay {
             contextMenu = null;
             return;
         }
-        contextMenu = new ContextMenu(screenX, screenY, List.copyOf(items));
+        List<MenuControl> controls = new ArrayList<>();
+        for (MenuItem item : items) {
+            if (item == null) continue;
+            if (item.style() == MenuItemStyle.SEPARATOR) {
+                controls.add(new MenuControl(item, null));
+                continue;
+            }
+            KineticWidgets.MenuButton button = KineticWidgets.createMenuButton(
+                    displayMenuLabel(item),
+                    item.enabled(),
+                    item.style() == MenuItemStyle.DANGER,
+                    pressed -> {
+                        contextMenu = null;
+                        item.action().run();
+                    }
+            );
+            button.setSelected(Boolean.TRUE.equals(item.checked()));
+            controls.add(new MenuControl(item, button));
+        }
+        if (controls.isEmpty()) {
+            contextMenu = null;
+            return;
+        }
+        contextMenu = new ContextMenu(screenX, screenY, List.copyOf(controls));
         dialog = null;
     }
 
@@ -243,13 +281,33 @@ public final class GuiOverlay {
             Runnable onConfirm,
             Runnable onCancel
     ) {
+        Component safeTitle = Objects.requireNonNullElse(title, Component.empty());
+        Component safeMessage = Objects.requireNonNullElse(message, Component.empty());
+        Component safeConfirmText = Objects.requireNonNullElse(confirmText, Component.empty());
+        Component safeCancelText = Objects.requireNonNullElse(cancelText, Component.empty());
+        Runnable safeConfirm = onConfirm == null ? () -> { } : onConfirm;
+        Runnable safeCancel = onCancel == null ? () -> { } : onCancel;
+        KineticWidgets.MenuButton confirmButton = KineticWidgets.createMenuButton(
+                safeConfirmText, true, false, ignored -> {
+                    dialog = null;
+                    safeConfirm.run();
+                }
+        );
+        KineticWidgets.MenuButton cancelButton = KineticWidgets.createMenuButton(
+                safeCancelText, true, false, ignored -> {
+                    dialog = null;
+                    safeCancel.run();
+                }
+        );
         dialog = new Dialog(
-                Objects.requireNonNullElse(title, Component.empty()),
-                Objects.requireNonNullElse(message, Component.empty()),
-                Objects.requireNonNullElse(confirmText, Component.empty()),
-                Objects.requireNonNullElse(cancelText, Component.empty()),
-                onConfirm == null ? () -> { } : onConfirm,
-                onCancel == null ? () -> { } : onCancel
+                safeTitle,
+                safeMessage,
+                safeConfirmText,
+                safeCancelText,
+                safeConfirm,
+                safeCancel,
+                confirmButton,
+                cancelButton
         );
         contextMenu = null;
     }
@@ -273,30 +331,25 @@ public final class GuiOverlay {
         }
 
         MenuBounds bounds = menuBounds(contextMenu, screenWidth, screenHeight, font);
+        layoutMenuButtons(bounds);
         if (!GuiTheme.hovering(mouseX, mouseY, bounds.x, bounds.y, bounds.width, bounds.height)) {
             contextMenu = null;
             return true;
         }
 
         for (MenuRow row : bounds.rows()) {
-            MenuItem item = row.item();
-            if (!item.enabled() || item.style() == MenuItemStyle.SEPARATOR) continue;
-            if (GuiTheme.hovering(mouseX, mouseY, bounds.x + 2, row.y(), bounds.width - 4, row.height())) {
-                contextMenu = null;
-                item.action().run();
+            KineticWidgets.MenuButton menuButton = row.control().button();
+            if (menuButton != null && menuButton.mouseClicked(mouseX, mouseY, button)) {
                 return true;
             }
         }
-        contextMenu = null;
         return true;
     }
 
     public boolean keyPressed(int keyCode) {
         if (keyCode != 256) return false;
         if (dialog != null) {
-            Dialog current = dialog;
             dialog = null;
-            current.onCancel().run();
             return true;
         }
         if (contextMenu != null) {
@@ -314,6 +367,9 @@ public final class GuiOverlay {
             int mouseX,
             int mouseY
     ) {
+        if (contextMenu != null || dialog != null) {
+            pendingScreenTooltip = null;
+        }
         if (contextMenu != null) renderMenu(graphics, font, screenWidth, screenHeight, mouseX, mouseY);
         if (dialog != null) renderDialog(graphics, font, screenWidth, screenHeight, mouseX, mouseY);
         if (dialog == null && contextMenu == null && tooltip != null) renderTooltip(graphics, font, mouseX, mouseY);
@@ -360,45 +416,26 @@ public final class GuiOverlay {
             int mouseY
     ) {
         MenuBounds bounds = menuBounds(contextMenu, screenWidth, screenHeight, font);
+        layoutMenuButtons(bounds);
         MenuItem hoveredItem = null;
+
         graphics.pose().pushPose();
         graphics.pose().translate(0, 0, 900);
         GuiTheme.panel(graphics, bounds.x, bounds.y, bounds.width, bounds.height);
-
         for (MenuRow row : bounds.rows()) {
-            MenuItem item = row.item();
+            MenuControl control = row.control();
+            MenuItem item = control.item();
             if (item.style() == MenuItemStyle.SEPARATOR) {
                 int lineY = row.y() + row.height() / 2;
                 graphics.fill(bounds.x + 5, lineY, bounds.x + bounds.width - 5, lineY + 1, GuiTheme.current().border());
                 continue;
             }
-
-            boolean hovered = item.enabled()
-                    && GuiTheme.hovering(mouseX, mouseY, bounds.x + 2, row.y(), bounds.width - 4, row.height());
-            if (hovered) {
+            KineticWidgets.MenuButton button = control.button();
+            if (button == null) continue;
+            button.render(graphics, mouseX, mouseY, 0f);
+            if (button.isMouseOver(mouseX, mouseY)) {
                 hoveredItem = item;
-                graphics.fill(
-                        bounds.x + 2,
-                        row.y(),
-                        bounds.x + bounds.width - 2,
-                        row.y() + row.height(),
-                        GuiTheme.current().panelAlt()
-                );
             }
-
-            int textColor;
-            if (!item.enabled()) textColor = GuiTheme.current().mutedText();
-            else if (item.style() == MenuItemStyle.DANGER) textColor = GuiTheme.current().danger();
-            else textColor = GuiTheme.current().text();
-
-            graphics.drawString(
-                    font,
-                    displayMenuLabel(item),
-                    bounds.x + 6,
-                    row.y() + (row.height() - 8) / 2,
-                    textColor,
-                    false
-            );
         }
         graphics.pose().popPose();
 
@@ -410,6 +447,14 @@ public final class GuiOverlay {
                     mouseX,
                     mouseY
             );
+        }
+    }
+
+    private void layoutMenuButtons(MenuBounds bounds) {
+        for (MenuRow row : bounds.rows()) {
+            KineticWidgets.MenuButton button = row.control().button();
+            if (button == null) continue;
+            button.setBounds(bounds.x + 3, row.y(), bounds.width - 6, row.height());
         }
     }
 
@@ -426,6 +471,8 @@ public final class GuiOverlay {
         graphics.pose().translate(0, 0, 950);
         graphics.fill(0, 0, screenWidth, screenHeight, GuiTheme.current().shadow());
         GuiTheme.panel(graphics, bounds.x, bounds.y, bounds.width, bounds.height);
+        GuiTheme.stateOutline(graphics, bounds.x, bounds.y, bounds.width, bounds.height, true, false, false);
+        GuiTheme.stateOutline(graphics, bounds.x + 2, bounds.y + 2, bounds.width - 4, bounds.height - 4, true, false, false);
         graphics.drawCenteredString(font, dialog.title(), bounds.x + bounds.width / 2, bounds.y + 12, GuiTheme.current().text());
 
         List<FormattedCharSequence> lines = font.split(dialog.message(), bounds.width - 24);
@@ -436,26 +483,11 @@ public final class GuiOverlay {
             lineY += 10;
         }
 
-        drawDialogButton(graphics, font, dialog.confirmText(), bounds.confirmX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight,
-                GuiTheme.hovering(mouseX, mouseY, bounds.confirmX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight));
-        drawDialogButton(graphics, font, dialog.cancelText(), bounds.cancelX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight,
-                GuiTheme.hovering(mouseX, mouseY, bounds.cancelX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight));
+        dialog.confirmButton().setBounds(bounds.confirmX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight);
+        dialog.cancelButton().setBounds(bounds.cancelX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight);
+        dialog.confirmButton().render(graphics, mouseX, mouseY, 0f);
+        dialog.cancelButton().render(graphics, mouseX, mouseY, 0f);
         graphics.pose().popPose();
-    }
-
-    private void drawDialogButton(
-            GuiGraphics graphics,
-            Font font,
-            Component text,
-            int x,
-            int y,
-            int width,
-            int height,
-            boolean hovered
-    ) {
-        graphics.fill(x, y, x + width, y + height, hovered ? GuiTheme.current().accentHover() : GuiTheme.current().panelAlt());
-        graphics.renderOutline(x, y, width, height, GuiTheme.current().border());
-        graphics.drawCenteredString(font, text, x + width / 2, y + (height - 8) / 2, GuiTheme.current().text());
     }
 
     private boolean handleDialogClick(
@@ -468,27 +500,20 @@ public final class GuiOverlay {
     ) {
         if (button != 0) return true;
         DialogBounds bounds = dialogBounds(screenWidth, screenHeight, font);
-        if (GuiTheme.hovering(mouseX, mouseY, bounds.confirmX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight)) {
-            Dialog current = dialog;
-            dialog = null;
-            current.onConfirm().run();
-            return true;
-        }
-        if (GuiTheme.hovering(mouseX, mouseY, bounds.cancelX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight)) {
-            Dialog current = dialog;
-            dialog = null;
-            current.onCancel().run();
-            return true;
-        }
+        dialog.confirmButton().setBounds(bounds.confirmX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight);
+        dialog.cancelButton().setBounds(bounds.cancelX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight);
+        if (dialog.confirmButton().mouseClicked(mouseX, mouseY, button)) return true;
+        if (dialog.cancelButton().mouseClicked(mouseX, mouseY, button)) return true;
         return true;
     }
 
     private static MenuBounds menuBounds(ContextMenu menu, int screenWidth, int screenHeight, Font font) {
-        int itemHeight = 20;
+        int itemHeight = KineticScreen.STANDARD_CONTROL_HEIGHT;
         int separatorHeight = 5;
         int width = 126;
         int contentHeight = 0;
-        for (MenuItem item : menu.items()) {
+        for (MenuControl control : menu.controls()) {
+            MenuItem item = control.item();
             if (item.style() == MenuItemStyle.SEPARATOR) {
                 contentHeight += separatorHeight;
                 continue;
@@ -503,9 +528,9 @@ public final class GuiOverlay {
 
         List<MenuRow> rows = new ArrayList<>();
         int cursorY = y + 3;
-        for (MenuItem item : menu.items()) {
-            int rowHeight = item.style() == MenuItemStyle.SEPARATOR ? separatorHeight : itemHeight;
-            rows.add(new MenuRow(item, cursorY, rowHeight));
+        for (MenuControl control : menu.controls()) {
+            int rowHeight = control.item().style() == MenuItemStyle.SEPARATOR ? separatorHeight : itemHeight;
+            rows.add(new MenuRow(control, cursorY, rowHeight));
             cursorY += rowHeight;
         }
         return new MenuBounds(x, y, width, height, List.copyOf(rows));
@@ -518,6 +543,12 @@ public final class GuiOverlay {
         return item.label();
     }
 
+    private record MenuRow(MenuControl control, int y, int height) {
+    }
+
+    private record MenuBounds(int x, int y, int width, int height, List<MenuRow> rows) {
+    }
+
     private DialogBounds dialogBounds(int screenWidth, int screenHeight, Font font) {
         int width = Math.min(320, Math.max(220, screenWidth - 40));
         int messageHeight = Math.max(30, font.split(dialog.message(), width - 24).size() * 10);
@@ -525,18 +556,13 @@ public final class GuiOverlay {
         int x = (screenWidth - width) / 2;
         int y = (screenHeight - height) / 2;
         int buttonWidth = Math.max(70, (width - 36) / 2);
-        int buttonHeight = 20;
-        int buttonY = y + height - 28;
+        int buttonHeight = KineticScreen.STANDARD_CONTROL_HEIGHT;
+        int buttonY = y + height - buttonHeight - 10;
         int confirmX = x + 10;
         int cancelX = x + width - 10 - buttonWidth;
         return new DialogBounds(x, y, width, height, confirmX, cancelX, buttonY, buttonWidth, buttonHeight);
     }
 
-    private record MenuRow(MenuItem item, int y, int height) {
-    }
-
-    private record MenuBounds(int x, int y, int width, int height, List<MenuRow> rows) {
-    }
 
     private record DialogBounds(
             int x,

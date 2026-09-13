@@ -417,7 +417,7 @@ public final class KTConfigScreen extends KineticScreen {
                     if (shouldShowImmediateSavedToast(outcome)) showSavedToast();
                     runAction(entry);
                 },
-                () -> { }
+                () -> runAction(entry)
         );
     }
 
@@ -538,7 +538,7 @@ public final class KTConfigScreen extends KineticScreen {
         if (outcome == SaveOutcome.FAILED) return;
         if (shouldShowImmediateSavedToast(outcome)) showSavedToast();
         commitDraft();
-        Minecraft.getInstance().setScreen(parent);
+        navigateBack();
     }
 
     private SaveOutcome persistPendingValues() {
@@ -738,36 +738,13 @@ public final class KTConfigScreen extends KineticScreen {
             int mouseY,
             float partialTick
     ) {
-        renderSearchPlaceholder(
+        renderTextFieldPlaceholder(
                 graphics,
-                searchBox
+                searchBox,
+                Component.translatable("gui.kineticcore.config.search_fields")
         );
     }
 
-    private void renderSearchPlaceholder(
-            GuiGraphics graphics,
-            EditBox box
-    ) {
-        if (box == null
-                || !box.visible
-                || !box.getValue().isEmpty()
-                || box.isFocused()) {
-            return;
-        }
-
-        String text = font.plainSubstrByWidth(
-                Component.translatable("gui.kineticcore.config.search_fields").getString(),
-                Math.max(0, box.getWidth() - 10)
-        );
-        graphics.drawString(
-                font,
-                text,
-                box.getX() + 5,
-                box.getY() + (box.getHeight() - font.lineHeight) / 2,
-                0xFFAAAAAA,
-                false
-        );
-    }
 
     @Override
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
@@ -806,7 +783,7 @@ public final class KTConfigScreen extends KineticScreen {
     @Override
     public void onClose() {
         discardDraft();
-        Minecraft.getInstance().setScreen(parent);
+        navigateBack();
     }
 
     @Override

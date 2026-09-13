@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.api.client.selector;
 
+import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -31,7 +32,7 @@ public final class HudPositionEditor {
     );
     private static final int ELEMENT_PADDING = 4;
     private static final int BUTTON_WIDTH = 90;
-    private static final int BUTTON_HEIGHT = 20;
+    private static final int BUTTON_HEIGHT = KineticScreen.STANDARD_CONTROL_HEIGHT;
     private static final int BUTTON_GAP = 6;
     private static final double MIN_SCALE = 0.5D;
     private static final int SAFE_MAX_SIZE = 1_000_000_000;

@@ -171,7 +171,7 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
             return;
         }
         if (minecraft != null) {
-            minecraft.setScreen(parent);
+            navigateBack();
         }
     }
 

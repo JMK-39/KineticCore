@@ -48,6 +48,11 @@ public final class GuiTheme {
 
     private static volatile Palette current = DEFAULT;
 
+    public static final int BORDER_NORMAL = 0xFFFFFFFF;
+    public static final int BORDER_HOVER = 0xFF4DA6FF;
+    public static final int BORDER_ERROR = 0xFFFF5555;
+    public static final int BORDER_SELECTED = 0xFFFFD700;
+
     private static final ResourceLocation ITEM_GRID_TEXTURE = new ResourceLocation("kineticcore", "textures/gui/item_selector_checkerboard.png");
     private static final int ITEM_GRID_TEXTURE_WIDTH = 475;
     private static final int ITEM_GRID_TEXTURE_HEIGHT = 304;
@@ -65,6 +70,56 @@ public final class GuiTheme {
 
     public static void reset() {
         current = DEFAULT;
+    }
+
+    public static int stateBorder(boolean selected, boolean hovered, boolean error) {
+        if (selected) return BORDER_SELECTED;
+        if (hovered) return BORDER_HOVER;
+        if (error) return BORDER_ERROR;
+        return BORDER_NORMAL;
+    }
+
+    public static void stateOutline(
+            GuiGraphics graphics,
+            int x,
+            int y,
+            int width,
+            int height,
+            boolean selected,
+            boolean hovered,
+            boolean error
+    ) {
+        if (graphics == null || width <= 0 || height <= 0) return;
+        graphics.renderOutline(x, y, width, height, stateBorder(selected, hovered, error));
+    }
+
+    public static void scrollMask(
+            GuiGraphics graphics,
+            int x,
+            int y,
+            int width,
+            int height
+    ) {
+        scrollMask(graphics, x, y, width, height, 6, current.panel());
+    }
+
+    public static void scrollMask(
+            GuiGraphics graphics,
+            int x,
+            int y,
+            int width,
+            int height,
+            int edgeSize,
+            int backgroundColor
+    ) {
+        if (graphics == null || width <= 0 || height <= 0 || edgeSize <= 0) return;
+        int edge = Math.min(edgeSize, Math.max(1, height / 2));
+        int rgb = backgroundColor & 0x00FFFFFF;
+        int alpha = (backgroundColor >>> 24) & 0xFF;
+        int opaque = (Math.max(alpha, 220) << 24) | rgb;
+        int transparent = rgb;
+        graphics.fillGradient(x, y, x + width, y + edge, opaque, transparent);
+        graphics.fillGradient(x, y + height - edge, x + width, y + height, transparent, opaque);
     }
 
     public static void panel(GuiGraphics graphics, int x, int y, int width, int height) {
@@ -252,9 +307,23 @@ public final class GuiTheme {
             int cellSize,
             boolean hovered
     ) {
+        itemSlot(graphics, x, y, width, height, cellSize, false, hovered, false);
+    }
+
+    public static void itemSlot(
+            GuiGraphics graphics,
+            int x,
+            int y,
+            int width,
+            int height,
+            int cellSize,
+            boolean selected,
+            boolean hovered,
+            boolean error
+    ) {
         if (graphics == null || width <= 0 || height <= 0) return;
         drawItemGridTexture(graphics, x, y, width, height, 0, 0, 18, 18);
-        if (hovered) graphics.renderOutline(x, y, width, height, current.accentHover());
+        stateOutline(graphics, x, y, width, height, selected, hovered, error);
     }
 
     public static void itemSlot(GuiGraphics graphics, ItemStack stack, int x, int y) {
@@ -279,9 +348,19 @@ public final class GuiTheme {
     }
 
     public static void itemSlot(GuiGraphics graphics, int x, int y, int size, boolean hovered) {
-        if (graphics == null || size <= 0) return;
-        drawItemGridTexture(graphics, x, y, size, size, 0, 0, 18, 18);
-        if (hovered) graphics.renderOutline(x, y, size, size, current.accentHover());
+        itemSlot(graphics, x, y, size, size, 4, false, hovered, false);
+    }
+
+    public static void itemSlot(
+            GuiGraphics graphics,
+            int x,
+            int y,
+            int size,
+            boolean selected,
+            boolean hovered,
+            boolean error
+    ) {
+        itemSlot(graphics, x, y, size, size, 4, selected, hovered, error);
     }
 
     public static void itemGrid(

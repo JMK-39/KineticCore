@@ -6,6 +6,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.ObjectSelectionList;
@@ -19,6 +20,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.util.Mth;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
@@ -39,6 +41,156 @@ import java.util.stream.Collectors;
 
 public final class KineticWidgets {
     private KineticWidgets() {
+    }
+
+    public static Button createButton(
+            int x, int y, int width, Component text, Component tooltip, Button.OnPress action
+    ) {
+        return createButton(x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT, text, tooltip, action);
+    }
+
+    public static Button createCompactButton(
+            int x, int y, int width, Component text, Component tooltip, Button.OnPress action
+    ) {
+        return createButton(x, y, width, KineticScreen.COMPACT_CONTROL_HEIGHT, text, tooltip, action);
+    }
+
+    public static MenuButton createMenuButton(
+            Component text,
+            boolean enabled,
+            boolean danger,
+            Button.OnPress action
+    ) {
+        MenuButton button = new MenuButton(
+                0, 0, 1, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                text == null ? Component.empty() : text,
+                action == null ? ignored -> { } : action,
+                danger
+        );
+        button.active = enabled;
+        return button;
+    }
+
+    private static Button createButton(
+            int x, int y, int width, int height, Component text, Component tooltip, Button.OnPress action
+    ) {
+        HighZButton button = new HighZButton(
+                x, y, width, height,
+                text == null ? Component.empty() : text,
+                pressed -> { if (action != null) action.onPress(pressed); },
+                null,
+                0
+        );
+        attachTooltip(button, tooltip);
+        return button;
+    }
+
+    public static EditBox createTextField(
+            Font font, int x, int y, int width, Component message, Component tooltip
+    ) {
+        EditBox box = new KineticEditBox(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message
+        );
+        attachTooltip(box, tooltip);
+        return box;
+    }
+
+    public static EditBox createCompactTextField(
+            Font font, int x, int y, int width, Component message, Component tooltip
+    ) {
+        EditBox box = new KineticEditBox(
+                font, x, y, width, KineticScreen.COMPACT_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message
+        );
+        attachTooltip(box, tooltip);
+        return box;
+    }
+
+    public static ValidationEditBox createValidatingCompactTextField(
+            Font font, int x, int y, int width, Component message, Component tooltip
+    ) {
+        ValidationEditBox box = new ValidationEditBox(
+                font, x, y, width, KineticScreen.COMPACT_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message
+        );
+        attachTooltip(box, tooltip);
+        return box;
+    }
+
+    public static class KineticEditBox extends EditBox {
+        private boolean kineticBordered = true;
+
+        public KineticEditBox(Font font, int x, int y, int width, int height, Component message) {
+            super(font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT, message);
+        }
+
+        @Override
+        public void setBordered(boolean bordered) {
+            super.setBordered(bordered);
+            this.kineticBordered = bordered;
+        }
+
+        public boolean isBordered() {
+            return kineticBordered;
+        }
+
+        @Override
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            if (isBordered()) {
+                GuiTheme.stateOutline(
+                        graphics, getX(), getY(), getWidth(), getHeight(),
+                        isFocused(), isMouseOver(mouseX, mouseY), false
+                );
+            }
+        }
+    }
+
+    public static final class ValidationEditBox extends KineticEditBox {
+        private long errorTime = -1L;
+
+        private ValidationEditBox(Font font, int x, int y, int width, int height, Component message) {
+            super(font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT, message);
+        }
+
+        public void showError() {
+            errorTime = net.minecraft.Util.getMillis();
+            setTextColor(0xFF5555);
+        }
+
+        @Override
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            if (errorTime > 0L) {
+                long elapsed = net.minecraft.Util.getMillis() - errorTime;
+                if (elapsed > 1000L) {
+                    errorTime = -1L;
+                    setTextColor(0xE0E0E0);
+                    setHighlightPos(getCursorPosition());
+                } else if (elapsed > 200L) {
+                    int cycle = (int) ((elapsed - 200L) / 200L);
+                    if (cycle == 0 || cycle == 2) {
+                        setHighlightPos(0);
+                        setCursorPosition(getValue().length());
+                    } else {
+                        setHighlightPos(getCursorPosition());
+                    }
+                }
+            }
+            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            if (isBordered()) {
+                GuiTheme.stateOutline(
+                        graphics, getX(), getY(), getWidth(), getHeight(),
+                        isFocused(), isMouseOver(mouseX, mouseY), errorTime > 0L
+                );
+            }
+        }
+    }
+
+    public static <T extends AbstractWidget> T attachTooltip(T widget, Component tooltip) {
+        if (widget == null) return null;
+        widget.setTooltip(tooltip == null || tooltip.getString().isBlank() ? null : Tooltip.create(tooltip));
+        return widget;
     }
 
     private static final class ScrollUtil {
@@ -513,7 +665,7 @@ public final class KineticWidgets {
         }
 
         private int scrollbarX() {
-            return getScrollbarPosition() + Math.max(0, VANILLA_SCROLLBAR_WIDTH - SCROLLBAR_WIDTH);
+            return this.getLeft() + this.width - 3 - SCROLLBAR_WIDTH;
         }
 
         private int scrollbarTrackHeight() {
@@ -623,12 +775,31 @@ public final class KineticWidgets {
                 graphics.disableScissor();
             }
 
+            GuiTheme.scrollMask(
+                    graphics,
+                    this.getLeft(),
+                    kineticListTop,
+                    Math.max(1, this.width - VANILLA_SCROLLBAR_WIDTH - 3),
+                    Math.max(1, kineticListBottom - kineticListTop),
+                    6,
+                    GuiTheme.current().panel()
+            );
+
             if (max > 0D) {
                 int trackHeight = scrollbarTrackHeight();
+                int barX = scrollbarX();
+                int vanillaBarX = getScrollbarPosition();
                 graphics.fill(
-                        getScrollbarPosition(),
+                        vanillaBarX,
                         kineticListTop,
-                        getScrollbarPosition() + VANILLA_SCROLLBAR_WIDTH,
+                        vanillaBarX + VANILLA_SCROLLBAR_WIDTH,
+                        kineticListBottom,
+                        GuiTheme.current().panel()
+                );
+                graphics.fill(
+                        barX,
+                        kineticListTop,
+                        barX + SCROLLBAR_WIDTH,
                         kineticListBottom,
                         GuiTheme.current().background()
                 );
@@ -636,7 +807,7 @@ public final class KineticWidgets {
                         graphics,
                         mouseX,
                         mouseY,
-                        scrollbarX(),
+                        barX,
                         kineticListTop,
                         SCROLLBAR_WIDTH,
                         trackHeight,
@@ -1353,7 +1524,7 @@ public final class KineticWidgets {
         }
     }
 
-    public static class NumericEditBox extends EditBox {
+    public static class NumericEditBox extends KineticEditBox {
         public enum Type {
             INTEGER,
             LONG,
@@ -1377,7 +1548,7 @@ public final class KineticWidgets {
                 Double minValue,
                 Double maxValue
         ) {
-            super(font, x, y, width, height, message);
+            super(font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT, message);
             this.type = type;
             this.allowNegative = allowNegative;
             this.minValue = minValue;
@@ -1522,7 +1693,7 @@ public final class KineticWidgets {
         }
     }
 
-    public static class AutoCompleteBox extends EditBox {
+    public static class AutoCompleteBox extends KineticEditBox {
         private final Supplier<List<String>> dictionarySupplier;
         private List<String> suggestions = new ArrayList<>();
         private Consumer<String> externalResponder;
@@ -1536,7 +1707,7 @@ public final class KineticWidgets {
         private static final int MAX_VISIBLE = 8;
 
         public AutoCompleteBox(Font font, int x, int y, int width, int height, Component message, Supplier<List<String>> dictionarySupplier) {
-            super(font, x, y, width, height, message);
+            super(font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT, message);
             this.dictionarySupplier = dictionarySupplier;
             this.setMaxLength(1024);
             this.setBordered(true);
@@ -1706,10 +1877,13 @@ public final class KineticWidgets {
 
                 gui.fill(x + 1, top, x + w - 1, top + itemH, (index % 2 == 0) ? 0xFF1C1C1C : 0xFF0A0A0A);
 
-                if ((mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY < y + totalH
-                        && mouseY >= top && mouseY < top + itemH) || index == selectedIndex) {
-                    gui.fill(x + 1, top, x + w - 1, top + itemH, GuiTheme.current().accentHover());
+                boolean hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY < y + totalH
+                        && mouseY >= top && mouseY < top + itemH;
+                boolean selected = index == selectedIndex;
+                if (hovered || selected) {
+                    gui.fill(x + 1, top, x + w - 1, top + itemH, 0xFF202020);
                 }
+                GuiTheme.stateOutline(gui, x + 1, top, w - 2, itemH, selected, hovered, false);
 
                 String[] parts = suggestions.get(index).split(" - ", 2);
                 MutableComponent line = Component.literal(parts[0]).withStyle(ChatFormatting.GOLD);
@@ -1718,6 +1892,7 @@ public final class KineticWidgets {
             }
 
             gui.disableScissor();
+            GuiTheme.scrollMask(gui, x + 1, y + 1, Math.max(1, w - 2), Math.max(1, totalH - 2), 4, 0xFF0A0A0A);
             suggestionScroll.render(
                     gui,
                     mouseX,
@@ -2156,11 +2331,35 @@ public final class KineticWidgets {
         }
     }
 
+    public static final class ColorSwatchButton extends Button {
+        private int rgb;
+
+        public ColorSwatchButton(int x, int y, int size, int rgb, OnPress onPress) {
+            super(x, y, size, size, Component.empty(), onPress, DEFAULT_NARRATION);
+            this.rgb = rgb & 0xFFFFFF;
+        }
+
+        public void setRgb(int rgb) {
+            this.rgb = rgb & 0xFFFFFF;
+        }
+
+        @Override
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            int x = getX();
+            int y = getY();
+            int width = getWidth();
+            int height = getHeight();
+            graphics.fill(x, y, x + width, y + height, 0xFF000000);
+            graphics.fill(x + 2, y + 2, x + width - 2, y + height - 2, 0xFF000000 | rgb);
+            GuiTheme.stateOutline(graphics, x, y, width, height, false, isMouseOver(mouseX, mouseY), false);
+        }
+    }
+
     public static final class ColorPreviewButton extends Button {
         private int rgb;
 
         public ColorPreviewButton(int x, int y, int width, int height, int rgb, Component message, OnPress onPress) {
-            super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
+            super(x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT, message, onPress, DEFAULT_NARRATION);
             this.rgb = rgb & 0xFFFFFF;
         }
 
@@ -2171,11 +2370,63 @@ public final class KineticWidgets {
         @Override
         public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            GuiTheme.stateOutline(
+                    graphics, getX(), getY(), getWidth(), getHeight(),
+                    isFocused(), active && isMouseOver(mouseX, mouseY), false
+            );
             int size = Math.min(12, Math.max(8, getHeight() - 8));
             int x = getX() + 6;
             int y = getY() + (getHeight() - size) / 2;
             graphics.fill(x - 1, y - 1, x + size + 1, y + size + 1, 0xFFFFFFFF);
             graphics.fill(x, y, x + size, y + size, 0xFF000000 | rgb);
+        }
+    }
+
+    public static final class MenuButton extends Button {
+        private static final int NORMAL_BORDER = 0xFFFFFFFF;
+        private static final int HOVER_BORDER = 0xFF4DA6FF;
+        private final boolean danger;
+        private boolean selected;
+        private boolean error;
+
+        private MenuButton(int x, int y, int width, int height, Component message, OnPress onPress, boolean danger) {
+            super(x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT, message, onPress, DEFAULT_NARRATION);
+            this.danger = danger;
+        }
+
+        public void setBounds(int x, int y, int width, int height) {
+            setX(x);
+            setY(y);
+            this.width = Math.max(1, width);
+            this.height = KineticScreen.STANDARD_CONTROL_HEIGHT;
+        }
+
+        public void setSelected(boolean selected) {
+            this.selected = selected;
+        }
+
+        public void setError(boolean error) {
+            this.error = error;
+        }
+
+        @Override
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            int background = GuiTheme.current().panelAlt();
+            int textColor = !active
+                    ? GuiTheme.current().mutedText()
+                    : danger ? GuiTheme.current().danger() : GuiTheme.current().text();
+            graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), background);
+            GuiTheme.stateOutline(
+                    graphics, getX(), getY(), getWidth(), getHeight(),
+                    selected || isFocused(), active && isMouseOver(mouseX, mouseY), error
+            );
+            graphics.drawCenteredString(
+                    Minecraft.getInstance().font,
+                    getMessage(),
+                    getX() + getWidth() / 2,
+                    getY() + (getHeight() - 8) / 2,
+                    textColor
+            );
         }
     }
 
@@ -2187,7 +2438,7 @@ public final class KineticWidgets {
         }
 
         public HighZButton(int x, int y, int w, int h, Component msg, OnPress onPress, Tooltip tooltip, int zLevel) {
-            super(x, y, w, h, msg, onPress, DEFAULT_NARRATION);
+            super(x, y, w, KineticScreen.STANDARD_CONTROL_HEIGHT, msg, onPress, DEFAULT_NARRATION);
             if (tooltip != null) this.setTooltip(tooltip);
             this.zLevel = zLevel;
         }
@@ -2196,7 +2447,19 @@ public final class KineticWidgets {
         public void renderWidget(@NotNull GuiGraphics g, int mx, int my, float pt) {
             g.pose().pushPose();
             g.pose().translate(0, 0, zLevel);
-            super.renderWidget(g, mx, my, pt);
+            int background = active ? GuiTheme.current().panelAlt() : GuiTheme.current().panel();
+            g.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), background);
+            GuiTheme.stateOutline(
+                    g, getX(), getY(), getWidth(), getHeight(),
+                    isFocused(), active && isMouseOver(mx, my), false
+            );
+            int textColor = active ? GuiTheme.current().text() : GuiTheme.current().mutedText();
+            g.drawCenteredString(
+                    Minecraft.getInstance().font, getMessage(),
+                    getX() + getWidth() / 2,
+                    getY() + (getHeight() - Minecraft.getInstance().font.lineHeight) / 2,
+                    textColor
+            );
             g.pose().popPose();
         }
     }
@@ -2602,7 +2865,7 @@ public final class KineticWidgets {
                 Component offText,
                 Consumer<Boolean> responder
         ) {
-            super(x, y, width, height, value ? onText : offText, ignored -> { }, DEFAULT_NARRATION);
+            super(x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT, value ? onText : offText, ignored -> { }, DEFAULT_NARRATION);
             this.value = value;
             this.onText = Objects.requireNonNullElse(onText, Component.empty());
             this.offText = Objects.requireNonNullElse(offText, Component.empty());
@@ -2622,6 +2885,23 @@ public final class KineticWidgets {
         public void onPress() {
             setValue(!value);
             responder.accept(value);
+        }
+
+        @Override
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            int background = active ? GuiTheme.current().panelAlt() : GuiTheme.current().panel();
+            graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), background);
+            GuiTheme.stateOutline(
+                    graphics, getX(), getY(), getWidth(), getHeight(),
+                    value || isFocused(), active && isMouseOver(mouseX, mouseY), false
+            );
+            graphics.drawCenteredString(
+                    Minecraft.getInstance().font,
+                    getMessage(),
+                    getX() + getWidth() / 2,
+                    getY() + (getHeight() - Minecraft.getInstance().font.lineHeight) / 2,
+                    active ? GuiTheme.current().text() : GuiTheme.current().mutedText()
+            );
         }
     }
 
@@ -2653,7 +2933,7 @@ public final class KineticWidgets {
                 Consumer<Integer> responder,
                 Consumer<Dropdown> opener
         ) {
-            super(x, y, width, height, messageAt(options, selectedIndex), ignored -> { }, DEFAULT_NARRATION);
+            super(x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT, messageAt(options, selectedIndex), ignored -> { }, DEFAULT_NARRATION);
             this.options = options == null ? List.of() : List.copyOf(options);
             this.responder = responder == null ? ignored -> { } : responder;
             this.opener = opener;
@@ -2692,6 +2972,23 @@ public final class KineticWidgets {
             } else {
                 choose(selectedIndex + 1);
             }
+        }
+
+        @Override
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            int background = active ? GuiTheme.current().panelAlt() : GuiTheme.current().panel();
+            graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), background);
+            GuiTheme.stateOutline(
+                    graphics, getX(), getY(), getWidth(), getHeight(),
+                    isFocused(), active && isMouseOver(mouseX, mouseY), false
+            );
+            graphics.drawCenteredString(
+                    Minecraft.getInstance().font,
+                    getMessage(),
+                    getX() + getWidth() / 2,
+                    getY() + (getHeight() - Minecraft.getInstance().font.lineHeight) / 2,
+                    active ? GuiTheme.current().text() : GuiTheme.current().mutedText()
+            );
         }
 
         private static int normalizeIndex(int index, int size) {
@@ -2739,10 +3036,24 @@ public final class KineticWidgets {
             for (int index = 0; index < labels.size(); index++) {
                 int width = index == labels.size() - 1 ? totalWidth - used : baseWidth;
                 int buttonIndex = index;
-                Button button = Button.builder(labels.get(index), ignored -> {
-                    selectedIndex = buttonIndex;
-                    if (responder != null) responder.accept(buttonIndex);
-                }).bounds(x + used, y, width, height).build();
+                MenuButton button = new MenuButton(
+                        x + used,
+                        y,
+                        width,
+                        KineticScreen.STANDARD_CONTROL_HEIGHT,
+                        labels.get(index),
+                        ignored -> {
+                            selectedIndex = buttonIndex;
+                            for (int i = 0; i < buttons.size(); i++) {
+                                if (buttons.get(i) instanceof MenuButton menuButton) {
+                                    menuButton.setSelected(i == selectedIndex);
+                                }
+                            }
+                            if (responder != null) responder.accept(buttonIndex);
+                        },
+                        false
+                );
+                button.setSelected(index == selectedIndex);
                 buttons.add(button);
                 used += width;
             }

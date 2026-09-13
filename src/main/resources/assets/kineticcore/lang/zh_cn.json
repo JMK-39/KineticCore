@@ -454,7 +454,7 @@
   "gui.kineticcore.config.search_fields": "点击此处搜索配置项（支持中文、拼音与 ID）……",
   "gui.kineticcore.config.search_plugins": "点击此处搜索已安装插件、模块名称或配置项……",
   "gui.kineticcore.config.server_locked": "§c当前不可编辑",
-  "gui.kineticcore.config.unsaved_action.message": "是否先保存这些修改，再打开专用编辑器？选择“否”将返回当前页继续编辑。",
+  "gui.kineticcore.config.unsaved_action.message": "当前配置尚未保存。选择“是”将先保存修改并继续打开专用编辑器；选择“否”将跳过保存并直接继续。按 ESC 可取消。",
   "gui.kineticcore.config.unsaved_action.title": "配置修改尚未保存",
   "gui.kineticcore.config.unsaved_close.message": "当前配置页存在尚未保存的修改，离开前是否保存？",
   "gui.kineticcore.config.unsaved_list.message": "当前列表存在尚未应用的修改，返回前是否应用？之后仍需在配置页保存。",

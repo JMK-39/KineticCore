@@ -291,7 +291,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 Component.translatable("gui.kineticcore.config.back"),
                 null,
                 () -> {
-                    if (minecraft != null) minecraft.setScreen(parent);
+                    if (minecraft != null) navigateBack();
                 }
         );
 
@@ -684,7 +684,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 onSelect.accept(Selection.mod(activeFilterValue));
             }
         }
-        if (this.minecraft != null) this.minecraft.setScreen(parent);
+        if (this.minecraft != null) this.navigateBack();
     }
 
     @Override
@@ -708,7 +708,11 @@ public class ItemSelectorScreen extends KineticScreen {
                 mouseX,
                 mouseY
         );
-        renderSearchHint(graphics);
+        renderTextFieldPlaceholder(
+                graphics,
+                searchBox,
+                Component.translatable("gui.kineticcore.items.search.hint")
+        );
         if (showAutoComplete && !autoCompleteList.isEmpty() && searchBox != null) renderAutoComplete(graphics, mouseX, mouseY);
     }
 
@@ -1016,14 +1020,6 @@ public class ItemSelectorScreen extends KineticScreen {
         );
     }
 
-    private void renderSearchHint(GuiGraphics graphics) {
-        if (searchBox == null || !searchBox.getValue().isEmpty() || searchBox.isFocused()) return;
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, 300);
-        graphics.drawString(this.font, Component.translatable("gui.kineticcore.items.search.hint"), searchBox.getX() + 6, searchBox.getY() + 6, 0xFFAAAAAA, false);
-        graphics.pose().popPose();
-    }
-
     private void renderAutoComplete(GuiGraphics graphics, int mouseX, int mouseY) {
         int acX = searchBox.getX();
         int acY = searchBox.getY() + searchBox.getHeight() + 2;
@@ -1238,7 +1234,7 @@ public class ItemSelectorScreen extends KineticScreen {
             onSelect.accept(Selection.item(displayList.get(slot.displayIndex()).stack));
         }
         if (this.minecraft != null) {
-            this.minecraft.setScreen(parent);
+            this.navigateBack();
         }
         return true;
     }
