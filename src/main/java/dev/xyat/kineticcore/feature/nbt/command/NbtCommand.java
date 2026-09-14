@@ -3,7 +3,7 @@ package dev.xyat.kineticcore.feature.nbt.command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import dev.xyat.kineticcore.command.CommandUtils;
+import dev.xyat.kineticcore.api.command.CommandText;
 import dev.xyat.kineticcore.feature.nbt.network.NbtNetwork;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -30,10 +30,10 @@ public final class NbtCommand {
     }
 
     private static int sendHelp(CommandSourceStack source) {
-        MutableComponent message = CommandUtils.createHeader("cmd.kineticcore.nbt.desc").append("\n")
-                .append(CommandUtils.createExecutableCommand("/kt nbt hand", "cmd.kineticcore.nbt.hand.desc"))
+        MutableComponent message = CommandText.header("cmd.kineticcore.nbt.desc").append("\n")
+                .append(CommandText.executable("/kt nbt hand", "cmd.kineticcore.nbt.hand.desc"))
                 .append("\n")
-                .append(CommandUtils.createExecutableCommand("/kt nbt entity", "cmd.kineticcore.nbt.entity.desc"));
+                .append(CommandText.executable("/kt nbt entity", "cmd.kineticcore.nbt.entity.desc"));
         source.sendSuccess(() -> message, false);
         return 1;
     }

@@ -1,19 +1,11 @@
 package dev.xyat.kineticcore.feature.effects.client;
 
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.ScreenEvent;
+import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.client.effect.KineticEffectDisplay;
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.config.ModConfig;
 
-@KTClientModule
 public class MiniEffectsFeature {
 
     public static final ForgeConfigSpec CLIENT_SPEC;
@@ -63,13 +55,17 @@ public class MiniEffectsFeature {
     public static void init() {
         if (initialized) return;
         initialized = true;
-        ModLoadingContext.get().registerConfig(
-                ModConfig.Type.CLIENT,
+        KTClientConfigAdapter.registerSpec(
                 CLIENT_SPEC,
-                KineticCore.MODID + "/mini_effects_client.toml"
+                KineticRuntime.MOD_ID + "/mini_effects_client.toml"
         );
         hasEffectsLeft = ModList.get().isLoaded("effectsleft");
-        MinecraftForge.EVENT_BUS.register(new MiniEffectsFeature());
+        KineticEffectDisplay.configure(
+                MiniEffectsFeature::isLeftSide,
+                MiniEffectsFeature::requiresHoldingTab,
+                MiniEffectsFeature::potionItemIcon,
+                availableSpace -> availableSpace < 120
+        );
     }
 
     public static void load() {
@@ -106,11 +102,5 @@ public class MiniEffectsFeature {
 
     public static boolean isLeftSide() {
         return hasEffectsLeft || CLIENT.effectsOnLeft.get();
-    }
-
-    @OnlyIn(Dist.CLIENT)
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public void onPotionSizeEvent(ScreenEvent.RenderInventoryMobEffects event) {
-        event.setCompact(event.getAvailableSpace() < 120);
     }
 }

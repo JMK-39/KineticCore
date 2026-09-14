@@ -1,19 +1,23 @@
 package dev.xyat.kineticcore.feature.bee.event;
 
-import dev.xyat.kineticcore.MixinPlugin;
+import net.minecraftforge.common.MinecraftForge;
+import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.animal.Bee;
 import net.minecraftforge.event.entity.EntityEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = "kineticcore", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class BeeSizeHandler {
+    private static boolean registered;
 
-    @SubscribeEvent
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        MinecraftForge.EVENT_BUS.addListener(BeeSizeHandler::onEntitySize);
+    }
+
+
     public static void onEntitySize(EntityEvent.Size event) {
-        // 如果 feature.bee.BeeMixins 被关闭，则直接返回，不执行后续的体型缩小逻辑
-        if (!MixinPlugin.isFeatureEnabled("feature.bee.BeeMixins")) {
+        if (!KineticFeatureSwitches.isEnabled("entity.bee_logic")) {
             return;
         }
 

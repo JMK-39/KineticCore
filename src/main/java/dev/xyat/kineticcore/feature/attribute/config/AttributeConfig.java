@@ -2,11 +2,11 @@ package dev.xyat.kineticcore.feature.attribute.config;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.MixinPlugin;
-import dev.xyat.kineticcore.feature.attribute.mixin.RangedAttributeAccessor;
-import dev.xyat.kineticcore.config.server.KTServerConfigApi;
-import dev.xyat.kineticcore.config.server.KTServerConfigSpec;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
+import dev.xyat.kineticcore.api.minecraft.MinecraftAttributes;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -63,16 +63,16 @@ public class AttributeConfig {
                 configData.save();
                 readValues();
             } else {
-                KineticCore.LOGGER.info("自动注册表扫描已关闭，配置文件保持不变，仅读取并应用已有数值。");
+                KineticRuntime.logger().info("自动注册表扫描已关闭，配置文件保持不变，仅读取并应用已有数值。");
             }
 
-            if (MixinPlugin.isFeatureEnabled("feature.attribute.RangedAttributeAccessor")) {
+            if (KineticFeatureSwitches.isEnabled("attributes.range_limits")) {
                 applyToAttributes();
             }
             registerServerConfig();
         } catch (Exception e) {
             configData = null;
-            KineticCore.LOGGER.error("AttributeConfig Load Failed", e);
+            KineticRuntime.logger().error("AttributeConfig Load Failed", e);
         }
     }
 
@@ -132,7 +132,7 @@ public class AttributeConfig {
 
         if (changed) {
             configData.save();
-            KineticCore.LOGGER.info("AttributeConfig: 属性中文注释已刷新。");
+            KineticRuntime.logger().info("AttributeConfig: 属性中文注释已刷新。");
         }
     }
 
@@ -359,14 +359,12 @@ public class AttributeConfig {
                 if (configData.contains(pathEnabled) && Boolean.TRUE.equals(configData.get(pathEnabled))) {
                     AttributeSettings settings = getAttributeSettings(entry.getKey().location());
 
-                    RangedAttributeAccessor accessor = (RangedAttributeAccessor) ranged;
-                    accessor.kineticcore$setMinValue(settings.minimum());
-                    accessor.kineticcore$setMaxValue(settings.maximum());
+                    MinecraftAttributes.setRange(ranged, settings.minimum(), settings.maximum());
                     count++;
                 }
             }
         }
-        if (count > 0) KineticCore.LOGGER.info("AttributeFix: 已应用 {} 个属性修改。", count);
+        if (count > 0) KineticRuntime.logger().info("AttributeFix: 已应用 {} 个属性修改。", count);
     }
 
     private static void addDefault(String id, boolean enabled, double min, double max) {

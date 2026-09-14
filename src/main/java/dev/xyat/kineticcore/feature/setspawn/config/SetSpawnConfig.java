@@ -2,16 +2,14 @@ package dev.xyat.kineticcore.feature.setspawn.config;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.bootstrap.annotation.KTModule;
-import dev.xyat.kineticcore.config.server.KTServerConfigApi;
-import dev.xyat.kineticcore.config.server.KTServerConfigSpec;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.nio.file.Path;
 import java.util.*;
 
-@KTModule
 public class SetSpawnConfig {
     private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("kineticcore/setspawn.toml");
     private static CommentedFileConfig configData;
@@ -49,7 +47,7 @@ public class SetSpawnConfig {
             readValues();
             registerServerConfig();
         } catch (Exception e) {
-            KineticCore.LOGGER.error("出生地修改: SetSpawnConfig Load Failed", e);
+            KineticRuntime.logger().error("出生地修改: SetSpawnConfig Load Failed", e);
         }
     }
 

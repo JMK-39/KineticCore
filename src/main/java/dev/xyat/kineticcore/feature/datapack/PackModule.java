@@ -1,17 +1,15 @@
 package dev.xyat.kineticcore.feature.datapack;
 
-import dev.xyat.kineticcore.bootstrap.annotation.KTModule;
+import dev.xyat.kineticcore.api.hook.ServerHooks;
+import dev.xyat.kineticcore.api.resource.KineticPackSources;
+import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.kineticcore.feature.datapack.util.ColorText;
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.config.server.KTServerConfigApi;
-import dev.xyat.kineticcore.config.server.KTServerConfigSpec;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.PackType;
-import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.AddPackFindersEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.File;
@@ -29,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@KTModule
 public class PackModule {
     public static File BASE_PACK_DIR;
     public static Path DATA_PACK_DIR;
@@ -42,6 +39,8 @@ public class PackModule {
 
     private static final Set<String> FAILED_PACK_NAMES = new HashSet<>();
     private static boolean forgeEventsRegistered;
+    private static boolean packSourcesRegistered;
+    private static boolean hookRegistered;
 
     public static final FileFilter PACK_FILTER = file -> {
         if (file.getName().equals("logs")) return false;
@@ -50,6 +49,7 @@ public class PackModule {
 
     public static void load() {
         LAST_ERROR_ID = null;
+        registerHook();
 
         initializePaths();
         syncAndLoadConfig();
@@ -58,6 +58,23 @@ public class PackModule {
                 .onSave(PackModule::saveDatapackOrder)
                 .build());
         PackErrorAppender.register();
+    }
+
+
+    private static void registerHook() {
+        if (hookRegistered) return;
+        hookRegistered = true;
+        ServerHooks.onDataPackOrder(new ServerHooks.DataPackOrderProvider() {
+            @Override
+            public void refresh() {
+                PackModule.refreshDataPacksOnly();
+            }
+
+            @Override
+            public List<String> order() {
+                return PackModule.datapackOrderSnapshot();
+            }
+        });
     }
 
     public static synchronized void refreshDataPacksOnly() {
@@ -80,7 +97,7 @@ public class PackModule {
 
             writeStandardToml();
         } catch (Exception e) {
-            KineticCore.LOGGER.error("kineticcore: Failed to refresh datapack config", e);
+            KineticRuntime.logger().error("kineticcore: Failed to refresh datapack config", e);
         }
     }
 
@@ -123,7 +140,7 @@ public class PackModule {
 
             writeStandardToml();
         } catch (Exception e) {
-            KineticCore.LOGGER.error("kineticcore: Failed to sync datapack config", e);
+            KineticRuntime.logger().error("kineticcore: Failed to sync datapack config", e);
         }
     }
 
@@ -274,34 +291,27 @@ public class PackModule {
 
     private static void ensureDirectory(File directory) {
         if (!directory.exists() && !directory.mkdirs()) {
-            KineticCore.LOGGER.error("Failed to create directory {}", directory.getAbsolutePath());
+            KineticRuntime.logger().error("Failed to create directory {}", directory.getAbsolutePath());
         }
     }
 
-    public static void register(IEventBus modEventBus) {
-
-        modEventBus.addListener(PackModule::addPackFinders);
+    public static void register() {
+        if (!packSourcesRegistered) {
+            packSourcesRegistered = true;
+            KineticPackSources.register(PackType.CLIENT_RESOURCES, () -> {
+                initializePaths();
+                return new RepositorySource(RESOURCE_PACK_DIR, PackType.CLIENT_RESOURCES);
+            });
+            KineticPackSources.register(PackType.SERVER_DATA, () -> {
+                initializePaths();
+                refreshDataPacksOnly();
+                return new RepositorySource(DATA_PACK_DIR, PackType.SERVER_DATA);
+            });
+        }
 
         if (!forgeEventsRegistered) {
-            MinecraftForge.EVENT_BUS.addListener(PackModule::onPlayerLogin);
+            KineticServerEvents.onPlayerLogin(PackModule::onPlayerLogin);
             forgeEventsRegistered = true;
-        }
-    }
-
-    private static void addPackFinders(AddPackFindersEvent event) {
-        initializePaths();
-
-        if (event.getPackType() == PackType.CLIENT_RESOURCES) {
-            event.addRepositorySource(new RepositorySource(
-                    RESOURCE_PACK_DIR,
-                    PackType.CLIENT_RESOURCES
-            ));
-        } else if (event.getPackType() == PackType.SERVER_DATA) {
-            refreshDataPacksOnly();
-            event.addRepositorySource(new RepositorySource(
-                    DATA_PACK_DIR,
-                    PackType.SERVER_DATA
-            ));
         }
     }
 
@@ -312,15 +322,14 @@ public class PackModule {
         FAILED_PACK_COMPONENTS.add(ColorText.translatable("datapack.kineticcore.failed.entry", packName, i18nReason));
     }
 
-    private static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+    private static void onPlayerLogin(ServerPlayer player) {
 
-        Player player = event.getEntity();
         if (FAILED_PACK_COMPONENTS.isEmpty()) return;
 
         player.sendSystemMessage(ColorText.translatable("datapack.kineticcore.failed.title"));
 
         for (Component failedPack : FAILED_PACK_COMPONENTS) {
-            player.sendSystemMessage(Component.literal("- ").append(failedPack));
+            player.sendSystemMessage(Component.translatable("msg.kineticcore.datapack.failed_entry", failedPack));
         }
     }
 

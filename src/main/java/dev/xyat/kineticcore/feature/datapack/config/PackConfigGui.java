@@ -1,16 +1,14 @@
 package dev.xyat.kineticcore.feature.datapack.config;
 
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
-import dev.xyat.kineticcore.config.client.KTConfigApi;
-import dev.xyat.kineticcore.config.client.KTConfigPage;
-import dev.xyat.kineticcore.config.client.KTConfigScope;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.config.client.KTConfigPage;
+import dev.xyat.kineticcore.api.config.client.KTConfigScope;
 import dev.xyat.kineticcore.feature.datapack.PackModule;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
-@KTClientModule
 public final class PackConfigGui {
     public static final String PAGE_ID = "kineticcore:datapack_pack_order";
     public static final String RESOURCE_PAGE_ID = "kineticcore:resourcepack_pack_order";

@@ -2,16 +2,14 @@ package dev.xyat.kineticcore.feature.spawnegg.config;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.bootstrap.annotation.KTModule;
-import dev.xyat.kineticcore.config.server.KTServerConfigApi;
-import dev.xyat.kineticcore.config.server.KTServerConfigSpec;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-@KTModule
 public final class SpawnEggConfig {
     public static final boolean DEFAULT_ENABLED = true;
     public static final double DEFAULT_SPEED = 1.5D;
@@ -41,7 +39,7 @@ public final class SpawnEggConfig {
             readValues();
             registerServerConfig();
         } catch (Exception exception) {
-            KineticCore.LOGGER.error("SpawnEggConfig Load Failed", exception);
+            KineticRuntime.logger().error("SpawnEggConfig Load Failed", exception);
         }
     }
 

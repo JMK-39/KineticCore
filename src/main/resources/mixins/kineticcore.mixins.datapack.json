@@ -1,6 +1,6 @@
 {
   "minVersion": "0.8",
-  "package": "dev.xyat.kineticcore.feature.datapack.mixin",
+  "package": "dev.xyat.kineticcore.internal.mixin.datapack",
   "compatibilityLevel": "JAVA_17",
   "refmap": "kineticcore.mixins.refmap.json",
   "mixins": [

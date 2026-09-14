@@ -1,128 +1,105 @@
 package dev.xyat.kineticcore.feature.flight.client;
 
-import com.mojang.blaze3d.platform.InputConstants;
-import dev.xyat.kineticcore.KineticCore;
+import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
+import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.flight.KineticFlightClient;
 import dev.xyat.kineticcore.feature.flight.network.FlightNetwork;
-import net.minecraft.ChatFormatting;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.RenderBlockScreenEffectEvent;
-import net.minecraftforge.client.settings.KeyConflictContext;
-import net.minecraftforge.client.settings.KeyModifier;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.common.MinecraftForge;
 import org.lwjgl.glfw.GLFW;
 
-public class FlightClient {
-    public static boolean noclipEnabled = false;
-    public static float storedFlightMultiplier = 1.0F;
-    public static boolean inertiaEnabled = false;
+public final class FlightClient {
+    private static boolean registered;
+    private static KineticKeyBindings.Binding speedModifierKey;
 
-    public static final KeyMapping NOCLIP_KEY = new KeyMapping(
-            "key.kineticcore.flying.noclip",
-            KeyConflictContext.IN_GAME,
-            KeyModifier.ALT,
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_K,
-            "key.categories.movement"
-    );
+    private FlightClient() {
+    }
 
-    public static final KeyMapping SPEED_MOD_KEY = new KeyMapping(
-            "key.kineticcore.flying.speed.modifier",
-            KeyConflictContext.IN_GAME,
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_LEFT_SHIFT,
-            "key.categories.movement"
-    );
+    public static void register() {
+        if (registered) return;
+        registered = true;
 
-    public static final KeyMapping INERTIA_KEY = new KeyMapping(
-            "key.kineticcore.flying.inertia",
-            KeyConflictContext.IN_GAME,
-            KeyModifier.SHIFT,
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_F,
-            "key.kineticcore.category"
-    );
+        KineticKeyBindings.builder("key.kineticcore.flying.noclip")
+                .category("key.categories.movement")
+                .context(KineticKeyBindings.Context.IN_GAME)
+                .modifier(KineticKeyBindings.Modifier.ALT)
+                .keyboardKey(GLFW.GLFW_KEY_K)
+                .onPressed(FlightClient::handleNoclipKey)
+                .register();
+
+        speedModifierKey = KineticKeyBindings.builder("key.kineticcore.flying.speed.modifier")
+                .category("key.categories.movement")
+                .context(KineticKeyBindings.Context.IN_GAME)
+                .keyboardKey(GLFW.GLFW_KEY_LEFT_SHIFT)
+                .register();
+
+        KineticKeyBindings.builder("key.kineticcore.flying.inertia")
+                .category("key.kineticcore.category")
+                .context(KineticKeyBindings.Context.IN_GAME)
+                .modifier(KineticKeyBindings.Modifier.SHIFT)
+                .keyboardKey(GLFW.GLFW_KEY_F)
+                .onPressed(() -> {
+                    toggleInertia();
+                    return true;
+                })
+                .register();
+
+        KineticFlightClient.installSpeedModifierState(() -> speedModifierKey != null && speedModifierKey.isDown());
+        KineticFlightClient.installNoclipRequestHandler(FlightClient::setNoclip);
+
+        KineticClientEvents.onLogin(FlightClient::onLogin);
+        MinecraftForge.EVENT_BUS.addListener(FlightClient::onBlockOverlay);
+    }
 
     public static void applyServerNoclip(boolean state) {
-        Minecraft mc = Minecraft.getInstance();
-        noclipEnabled = state;
-        if (mc.player != null) {
-            mc.player.noPhysics = state;
-            mc.player.refreshDimensions();
-        }
+        KineticFlightClient.applyServerNoclip(state);
     }
 
     public static void setNoclip(boolean state) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        if (noclipEnabled == state) return;
+        if (KineticFlightClient.noclipEnabled() == state) return;
 
-        noclipEnabled = state;
-        FlightNetwork.CHANNEL.sendToServer(new FlightNetwork.PacketNoclip(noclipEnabled));
-        mc.player.noPhysics = noclipEnabled;
-        mc.player.refreshDimensions();
+        KineticFlightClient.applyLocalNoclip(state);
+        FlightNetwork.requestNoclip(state);
 
-        Component status = Component.translatable(noclipEnabled ? "options.on" : "options.off")
-                .withStyle(noclipEnabled ? ChatFormatting.GREEN : ChatFormatting.RED);
+        Component status = Component.translatable(
+                state ? "msg.kineticcore.flying.on" : "msg.kineticcore.flying.off"
+        );
         mc.player.displayClientMessage(Component.translatable("msg.kineticcore.flying.noclip_status", status), true);
     }
 
     public static void toggleNoclip() {
-        setNoclip(!noclipEnabled);
+        setNoclip(!KineticFlightClient.noclipEnabled());
     }
 
     public static void toggleInertia() {
-        inertiaEnabled = !inertiaEnabled;
-        Component status = Component.translatable(inertiaEnabled ? "msg.kineticcore.flying.on" : "msg.kineticcore.flying.off")
-                .withStyle(inertiaEnabled ? ChatFormatting.GREEN : ChatFormatting.RED);
+        boolean enabled = !KineticFlightClient.inertiaEnabled();
+        KineticFlightClient.setInertiaEnabled(enabled);
+        Component status = Component.translatable(
+                enabled ? "msg.kineticcore.flying.on" : "msg.kineticcore.flying.off"
+        );
         GuiOverlay.toast("flight_inertia_toggle", Component.translatable("msg.kineticcore.flying.inertia_status", status));
     }
 
-    @Mod.EventBusSubscriber(modid = KineticCore.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
-    public static class ModEvents {
-        @SubscribeEvent
-        public static void registerKeys(RegisterKeyMappingsEvent event) {
-            event.register(NOCLIP_KEY);
-            event.register(SPEED_MOD_KEY);
-            event.register(INERTIA_KEY);
-        }
+    private static boolean handleNoclipKey() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || !mc.player.isCreative()) return false;
+        toggleNoclip();
+        return true;
     }
 
-    @Mod.EventBusSubscriber(modid = KineticCore.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
-    public static class ForgeEvents {
-        @SubscribeEvent
-        public static void onKeyInput(InputEvent.Key event) {
-            if (event.getAction() == GLFW.GLFW_PRESS) {
-                Minecraft mc = Minecraft.getInstance();
-                if (mc.player != null) {
-                    InputConstants.Key inputKey = InputConstants.getKey(event.getKey(), event.getScanCode());
+    private static void onLogin() {
+        KineticFlightClient.applyLocalNoclip(false);
+    }
 
-                    if (NOCLIP_KEY.isActiveAndMatches(inputKey) && mc.player.isCreative()) {
-                        toggleNoclip();
-                    } else if (INERTIA_KEY.isActiveAndMatches(inputKey)) {
-                        toggleInertia();
-                    }
-                }
-            }
-        }
-
-        @SubscribeEvent
-        public static void onLogin(ClientPlayerNetworkEvent.LoggingIn event) {
-            noclipEnabled = false;
-        }
-
-        @SubscribeEvent
-        public static void onBlockOverlay(RenderBlockScreenEffectEvent event) {
-            if (noclipEnabled && event.getOverlayType() == RenderBlockScreenEffectEvent.OverlayType.BLOCK) {
-                event.setCanceled(true);
-            }
+    private static void onBlockOverlay(RenderBlockScreenEffectEvent event) {
+        if (KineticFlightClient.noclipEnabled()
+                && event.getOverlayType() == RenderBlockScreenEffectEvent.OverlayType.BLOCK) {
+            event.setCanceled(true);
         }
     }
 }

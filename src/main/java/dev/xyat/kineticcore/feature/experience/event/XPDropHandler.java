@@ -1,21 +1,26 @@
 package dev.xyat.kineticcore.feature.experience.event;
 
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.feature.mechanics.config.GeneralMechanicsConfig;
+import net.minecraftforge.common.MinecraftForge;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameRules;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = KineticCore.MODID)
 public class XPDropHandler {
+    private static boolean registered;
+
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOW, XPDropHandler::onPlayerDeath);
+    }
+
     private static final String DEATH_RECOVERY_XP_TAG = "kineticcore:death_recovery_xp";
 
-    @SubscribeEvent(priority = EventPriority.LOW)
     public static void onPlayerDeath(LivingDeathEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         if (player.level().isClientSide) return;
@@ -27,7 +32,7 @@ public class XPDropHandler {
         if (!keepInventory) return;
 
         // 2. 检查配置：如果掉落比例 <= 0，则完全保留（原版 keepInventory 行为）
-        int configPercentage = GeneralMechanicsConfig.keepInvXPDropPercentage;
+        int configPercentage = KTServerConfigApi.getInt("kineticcore:general_mechanics", "keep_xp", 50);
         if (configPercentage <= 0) return;
 
         // 3. 检查玩家是否有经验
@@ -56,7 +61,7 @@ public class XPDropHandler {
                 player.giveExperiencePoints(remainingXP);
             }
 
-            KineticCore.LOGGER.debug("Player {} died with keepInventory. Dropped {} XP ({}%), remaining {} XP.",
+            KineticRuntime.logger().debug("Player {} died with keepInventory. Dropped {} XP ({}%), remaining {} XP.",
                     player.getName().getString(), dropAmount, configPercentage, remainingXP);
         }
     }

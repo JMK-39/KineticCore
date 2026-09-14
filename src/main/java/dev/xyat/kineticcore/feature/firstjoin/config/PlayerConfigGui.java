@@ -1,18 +1,15 @@
 package dev.xyat.kineticcore.feature.firstjoin.config;
 
-import dev.xyat.kineticcore.ConfigGui;
-import dev.xyat.kineticcore.config.client.KTConfigApi;
-import dev.xyat.kineticcore.config.client.KTConfigPage;
-import dev.xyat.kineticcore.config.client.KTConfigScope;
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
-import dev.xyat.kineticcore.feature.firstjoin.client.FirstJoinCommandListScreen;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.config.client.KTConfigPage;
+import dev.xyat.kineticcore.api.config.client.KTConfigScope;
+import dev.xyat.kineticcore.api.client.editor.KineticCommandListEditor;
 import dev.xyat.kineticcore.feature.firstjoin.client.FirstJoinEquipmentScreen;
 import dev.xyat.kineticcore.feature.firstjoin.client.FirstJoinRewardItemsScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 
-@KTClientModule
 public final class PlayerConfigGui {
     public static final String PAGE_ID = "kineticcore:first_join";
 
@@ -20,7 +17,7 @@ public final class PlayerConfigGui {
     }
 
     public static void load() {
-        ConfigGui.register(KTConfigPage.builder(PAGE_ID, Component.translatable("cfg.kineticcore.first_join"))
+        KTConfigApi.register(KTConfigPage.builder(PAGE_ID, Component.translatable("cfg.kineticcore.first_join"))
                 .scope(KTConfigScope.SERVER_AUTHORITATIVE)
                 .serverManaged()
                 .applyTiming(KTConfigPage.ApplyTiming.IMMEDIATE)
@@ -37,7 +34,23 @@ public final class PlayerConfigGui {
                         KTConfigApi.screenAction(FirstJoinRewardItemsScreen::new),
                         Component.translatable("cfg.kineticcore.join.items.tooltip"))
                 .action("commands", Component.translatable("cfg.kineticcore.join.commands"),
-                        KTConfigApi.screenAction(FirstJoinCommandListScreen::new),
+                        KTConfigApi.screenAction(parent -> KineticCommandListEditor.create(
+                                parent,
+                                () -> PlayerConfig.firstJoinCommands,
+                                value -> PlayerConfig.firstJoinCommands = value,
+                                PAGE_ID,
+                                "commands",
+                                new KineticCommandListEditor.Text(
+                                        Component.translatable("gui.kineticcore.firstjoin.command_list.title"),
+                                        Component.translatable("gui.kineticcore.firstjoin.command_edit.add_title"),
+                                        Component.translatable("gui.kineticcore.firstjoin.command_edit.edit_title"),
+                                        Component.translatable("gui.kineticcore.firstjoin.command_list.empty"),
+                                        Component.translatable("msg.kineticcore.firstjoin.command_edit.saved"),
+                                        Component.translatable("msg.kineticcore.firstjoin.command_list.deleted"),
+                                        Component.translatable("msg.kineticcore.firstjoin.command_list.save_failed"),
+                                        Component.translatable("gui.kineticcore.firstjoin.command_edit.variables")
+                                )
+                        )),
                         Component.translatable("cfg.kineticcore.join.commands.tooltip"))
                 .section(Component.translatable("cfg.kineticcore.join.equipment"))
                 .action("equipment_editor", Component.translatable("cfg.kineticcore.join.equipment.editor"),
@@ -47,6 +60,6 @@ public final class PlayerConfigGui {
     }
 
     public static Screen create(Screen parent) {
-        return ConfigGui.create(parent, PAGE_ID);
+        return KTConfigApi.createScreen(parent, PAGE_ID);
     }
 }

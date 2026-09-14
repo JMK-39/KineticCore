@@ -1,9 +1,9 @@
 package dev.xyat.kineticcore.feature.setspawn.command;
 
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import dev.xyat.kineticcore.command.CommandUtils;
+import dev.xyat.kineticcore.api.command.CommandText;
 import dev.xyat.kineticcore.feature.setspawn.util.StructureUtils;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.registries.Registries;
@@ -30,10 +30,10 @@ public class SetSpawnCommand {
     }
 
     private static int sendHelp(CommandSourceStack source) {
-        MutableComponent msg = CommandUtils.createHeader("cmd.kineticcore.world.desc").append("\n");
-        msg.append(CommandUtils.createExecutableCommand("/kt world structure", "cmd.kineticcore.world.structure.desc"));
+        MutableComponent msg = CommandText.header("cmd.kineticcore.world.desc").append("\n");
+        msg.append(CommandText.executable("/kt world structure", "cmd.kineticcore.world.structure.desc"));
         if (source.hasPermission(2)) {
-            msg.append("\n").append(CommandUtils.createExecutableCommand("/kt world list-structures", "cmd.kineticcore.world.list_structures.desc"));
+            msg.append("\n").append(CommandText.executable("/kt world list-structures", "cmd.kineticcore.world.list_structures.desc"));
         }
         source.sendSuccess(() -> msg, false);
         return 1;
@@ -45,21 +45,21 @@ public class SetSpawnCommand {
             List<String> structures = StructureUtils.getStructuresAt(player.serverLevel(), player.blockPosition());
 
             if (structures.isEmpty()) {
-                source.sendSuccess(() -> Component.translatable("msg.kineticcore.structure.not_found"), false);
+                source.sendSuccess(() -> KineticI18n.translatable("msg.kineticcore.structure.not_found"), false);
                 return 1;
             }
 
-            MutableComponent msg = Component.translatable("msg.kineticcore.structure.found_simple");
+            MutableComponent msg = KineticI18n.translatable("msg.kineticcore.structure.found_simple");
             for (String id : structures) {
-                msg.append(Component.translatable("msg.kineticcore.structure.entry", Component.literal(id).withStyle(ChatFormatting.AQUA))
+                msg.append(KineticI18n.translatable("msg.kineticcore.structure.entry", Component.literal(id))
                         .withStyle(style -> style
                                 .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, id))
-                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("msg.kineticcore.copy").withStyle(ChatFormatting.GOLD)))
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, KineticI18n.translatable("msg.kineticcore.copy")))
                         ));
             }
             source.sendSuccess(() -> msg, false);
         } catch (Exception e) {
-            source.sendFailure(Component.translatable("msg.kineticcore.structure.check_failed", Component.literal(String.valueOf(e.getMessage())).withStyle(ChatFormatting.RED)));
+            source.sendFailure(KineticI18n.translatable("msg.kineticcore.structure.check_failed", Component.literal(String.valueOf(e.getMessage()))));
         }
         return 1;
     }
@@ -72,20 +72,20 @@ public class SetSpawnCommand {
                     .collect(Collectors.toList());
 
             String allIdsStr = String.join("\n", ids);
-            MutableComponent msg = Component.translatable("msg.kineticcore.list.structures", Component.literal(String.valueOf(ids.size())).withStyle(ChatFormatting.GREEN));
+            MutableComponent msg = KineticI18n.translatable("msg.kineticcore.list.structures", Component.literal(String.valueOf(ids.size())));
             if (!ids.isEmpty()) {
                 msg.append(Component.literal("  "));
-                msg.append(Component.translatable("msg.kineticcore.copy_all").withStyle(ChatFormatting.GOLD)
+                msg.append(KineticI18n.translatable("msg.kineticcore.copy_all")
                         .withStyle(style -> style
                                 .withBold(true)
                                 .withUnderlined(true)
                                 .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, allIdsStr))
-                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("cmd.kineticcore.copy.too_long")))
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, KineticI18n.translatable("cmd.kineticcore.copy.too_long")))
                         ));
             }
             source.sendSuccess(() -> msg, false);
         } catch (Exception e) {
-            source.sendFailure(Component.translatable("msg.kineticcore.structure.list_failed"));
+            source.sendFailure(KineticI18n.translatable("msg.kineticcore.structure.list_failed"));
         }
         return 1;
     }

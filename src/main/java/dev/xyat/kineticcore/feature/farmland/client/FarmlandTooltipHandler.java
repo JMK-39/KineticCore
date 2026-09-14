@@ -1,30 +1,30 @@
 package dev.xyat.kineticcore.feature.farmland.client;
 
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.feature.mechanics.config.GeneralMechanicsConfig;
+import dev.xyat.kineticcore.api.client.tooltip.KineticItemTooltips;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.entity.player.ItemTooltipEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 import java.util.List;
 
-@Mod.EventBusSubscriber(modid = KineticCore.MODID, value = Dist.CLIENT)
 public class FarmlandTooltipHandler {
+    private static boolean registered;
 
-    @SubscribeEvent
-    public static void onTooltip(ItemTooltipEvent event) {
-        if (!GeneralMechanicsConfig.enableFarmlandProtection) return;
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        KineticItemTooltips.onBuild(FarmlandTooltipHandler::onTooltip);
+    }
 
-        ItemStack stack = event.getItemStack();
+
+    public static void onTooltip(ItemStack stack, List<Component> tooltip) {
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "farmland", true)) return;
+
         if (stack.isEmpty()) return;
 
         if (EnchantmentHelper.getEnchantments(stack).containsKey(Enchantments.FALL_PROTECTION)) {
-            List<Component> tooltip = event.getToolTip();
             String targetName = Component.translatable(Enchantments.FALL_PROTECTION.getDescriptionId()).getString();
             boolean inserted = false;
 

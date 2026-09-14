@@ -1,13 +1,11 @@
 package dev.xyat.kineticcore.feature.effects.config;
 
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
-import dev.xyat.kineticcore.config.client.KTClientConfigAdapter;
-import dev.xyat.kineticcore.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.feature.effects.client.MiniEffectsFeature;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-@KTClientModule
 public final class MiniEffectsConfigGui {
     public static final String PAGE_ID = "kineticcore:mini_effects";
 

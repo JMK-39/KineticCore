@@ -1,7 +1,8 @@
 package dev.xyat.kineticcore.feature.nbt.network;
 
+import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
+
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
-import dev.xyat.kineticcore.api.client.selector.NbtEditorScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
@@ -80,11 +81,11 @@ public final class NbtNetworkHandlerClient {
         Minecraft minecraft = Minecraft.getInstance();
         Screen parent = pendingEditorParent != null ? pendingEditorParent : minecraft.screen;
         pendingEditorParent = null;
-        minecraft.setScreen(new NbtEditorScreen(
+        KineticSelectors.openNbtEditor(
+                parent,
                 nbt,
-                value -> NbtNetwork.sendToServer(new NbtNetwork.SaveNbtPacket(value)),
-                parent
-        ));
+                value -> NbtNetwork.sendToServer(new NbtNetwork.SaveNbtPacket(value))
+        );
     }
 
     public static void handleNotify(String translationKey) {

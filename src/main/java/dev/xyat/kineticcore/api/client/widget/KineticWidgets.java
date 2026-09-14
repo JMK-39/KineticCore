@@ -9,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
@@ -20,6 +21,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.util.Mth;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import org.jetbrains.annotations.NotNull;
 
@@ -74,34 +76,119 @@ public final class KineticWidgets {
     private static Button createButton(
             int x, int y, int width, int height, Component text, Component tooltip, Button.OnPress action
     ) {
-        Button button = Button.builder(
-                        text == null ? Component.empty() : text,
-                        pressed -> { if (action != null) action.onPress(pressed); }
-                )
-                .bounds(x, y, width, height)
-                .build();
+        StateButton button = new StateButton(
+                x,
+                y,
+                width,
+                height,
+                text == null ? Component.empty() : text,
+                pressed -> { if (action != null) action.onPress(pressed); }
+        );
         attachTooltip(button, tooltip);
         return button;
     }
 
-    public static EditBox createTextField(
+    public static void setButtonSelected(Button button, boolean selected) {
+        if (button instanceof StateButton stateButton) {
+            stateButton.setSelected(selected);
+        }
+    }
+
+    public static void setButtonError(Button button, boolean error) {
+        if (button instanceof StateButton stateButton) {
+            stateButton.setError(error);
+        }
+    }
+
+    public static boolean isButtonSelected(Button button) {
+        return button instanceof StateButton stateButton && stateButton.isSelectedState();
+    }
+
+    public static boolean isButtonError(Button button) {
+        return button instanceof StateButton stateButton && stateButton.isErrorState();
+    }
+
+    public static KineticEditBox createTextField(
             Font font, int x, int y, int width, Component message, Component tooltip
     ) {
-        EditBox box = new KineticEditBox(
+        return createTextField(font, x, y, width, message, null, null, tooltip);
+    }
+
+    public static KineticEditBox createTextField(
+            Font font, int x, int y, int width,
+            Component message, Component placeholder, Component tooltip
+    ) {
+        return createTextField(font, x, y, width, message, placeholder, null, tooltip);
+    }
+
+    public static KineticEditBox createTextField(
+            Font font, int x, int y, int width,
+            Component message, Component placeholder, Predicate<String> validator, Component tooltip
+    ) {
+        KineticEditBox box = new KineticEditBox(
                 font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
                 message == null ? Component.empty() : message
+        );
+        box.setPlaceholder(placeholder);
+        box.setValidator(validator);
+        attachTooltip(box, tooltip);
+        return box;
+    }
+
+    public static MultiLineEditBox createMultiLineTextField(
+            Font font, int x, int y, int width, int height,
+            Component message, Component placeholder, Component tooltip
+    ) {
+        MultiLineEditBox box = new KineticMultiLineEditBox(
+                font, x, y, width, Math.max(20, height),
+                message == null ? Component.empty() : message,
+                placeholder == null ? Component.empty() : placeholder
         );
         attachTooltip(box, tooltip);
         return box;
     }
 
-    public static EditBox createCompactTextField(
+    public static class KineticMultiLineEditBox extends MultiLineEditBox {
+        private KineticMultiLineEditBox(
+                Font font, int x, int y, int width, int height,
+                Component message, Component placeholder
+        ) {
+            super(font, x, y, width, height, message, placeholder);
+        }
+
+        @Override
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            GuiTheme.stateOutline(
+                    graphics, getX(), getY(), getWidth(), getHeight(),
+                    isFocused(), isHovered(), false
+            );
+        }
+    }
+
+    public static KineticEditBox createCompactTextField(
             Font font, int x, int y, int width, Component message, Component tooltip
     ) {
-        EditBox box = new KineticEditBox(
+        return createCompactTextField(font, x, y, width, message, null, null, tooltip);
+    }
+
+    public static KineticEditBox createCompactTextField(
+            Font font, int x, int y, int width,
+            Component message, Component placeholder, Component tooltip
+    ) {
+        return createCompactTextField(font, x, y, width, message, placeholder, null, tooltip);
+    }
+
+    public static KineticEditBox createCompactTextField(
+            Font font, int x, int y, int width,
+            Component message, Component placeholder, Predicate<String> validator, Component tooltip
+    ) {
+        KineticEditBox box = new KineticEditBox(
                 font, x, y, width, KineticScreen.COMPACT_CONTROL_HEIGHT,
                 message == null ? Component.empty() : message
         );
+        box.setPlaceholder(placeholder);
+        box.setValidator(validator);
         attachTooltip(box, tooltip);
         return box;
     }
@@ -117,11 +204,468 @@ public final class KineticWidgets {
         return box;
     }
 
-    public static class KineticEditBox extends EditBox {
-        private boolean kineticBordered = true;
+    public static AutoCompleteBox createAutoCompleteField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            Component tooltip
+    ) {
+        return createAutoCompleteField(
+                font, x, y, width, message, null, dictionarySupplier, tooltip
+        );
+    }
 
-        public KineticEditBox(Font font, int x, int y, int width, int height, Component message) {
+    public static AutoCompleteBox createAutoCompleteField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            Component placeholder,
+            Supplier<List<String>> dictionarySupplier,
+            Component tooltip
+    ) {
+        AutoCompleteBox box = new AutoCompleteBox(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                dictionarySupplier
+        );
+        box.setPlaceholder(placeholder);
+        attachTooltip(box, tooltip);
+        return box;
+    }
+
+    public static NumericEditBox createIntegerField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Integer minValue,
+            Integer maxValue,
+            Component tooltip
+    ) {
+        return createIntegerField(font, x, y, width, message, allowNegative, minValue, maxValue, null, tooltip);
+    }
+
+    public static NumericEditBox createIntegerField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Integer minValue,
+            Integer maxValue,
+            Predicate<Number> validator,
+            Component tooltip
+    ) {
+        NumericEditBox box = NumericEditBox.integer(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                allowNegative, minValue, maxValue, validator
+        );
+        attachTooltip(box, tooltip);
+        return box;
+    }
+
+    public static NumericEditBox createLongField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Long minValue,
+            Long maxValue,
+            Component tooltip
+    ) {
+        return createLongField(font, x, y, width, message, allowNegative, minValue, maxValue, null, tooltip);
+    }
+
+    public static NumericEditBox createLongField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Long minValue,
+            Long maxValue,
+            Predicate<Number> validator,
+            Component tooltip
+    ) {
+        NumericEditBox box = NumericEditBox.longInteger(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                allowNegative, minValue, maxValue, validator
+        );
+        attachTooltip(box, tooltip);
+        return box;
+    }
+
+    public static NumericEditBox createDecimalField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Double minValue,
+            Double maxValue,
+            Component tooltip
+    ) {
+        return createDecimalField(font, x, y, width, message, allowNegative, minValue, maxValue, null, tooltip);
+    }
+
+    public static NumericEditBox createDecimalField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            boolean allowNegative,
+            Double minValue,
+            Double maxValue,
+            Predicate<Number> validator,
+            Component tooltip
+    ) {
+        NumericEditBox box = NumericEditBox.decimal(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                allowNegative, minValue, maxValue, validator
+        );
+        attachTooltip(box, tooltip);
+        return box;
+    }
+
+    public static NumericAutoCompleteBox createIntegerAutoCompleteField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            boolean allowNegative,
+            Integer minValue,
+            Integer maxValue,
+            Component tooltip
+    ) {
+        return createIntegerAutoCompleteField(font, x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, null, tooltip);
+    }
+
+    public static NumericAutoCompleteBox createIntegerAutoCompleteField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            boolean allowNegative,
+            Integer minValue,
+            Integer maxValue,
+            Predicate<Number> validator,
+            Component tooltip
+    ) {
+        NumericAutoCompleteBox box = NumericAutoCompleteBox.integer(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                dictionarySupplier,
+                allowNegative, minValue, maxValue, validator
+        );
+        attachTooltip(box, tooltip);
+        return box;
+    }
+
+    public static NumericAutoCompleteBox createLongAutoCompleteField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            boolean allowNegative,
+            Long minValue,
+            Long maxValue,
+            Component tooltip
+    ) {
+        return createLongAutoCompleteField(font, x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, null, tooltip);
+    }
+
+    public static NumericAutoCompleteBox createLongAutoCompleteField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            boolean allowNegative,
+            Long minValue,
+            Long maxValue,
+            Predicate<Number> validator,
+            Component tooltip
+    ) {
+        NumericAutoCompleteBox box = NumericAutoCompleteBox.longInteger(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                dictionarySupplier,
+                allowNegative, minValue, maxValue, validator
+        );
+        attachTooltip(box, tooltip);
+        return box;
+    }
+
+    public static NumericAutoCompleteBox createDecimalAutoCompleteField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            boolean allowNegative,
+            Double minValue,
+            Double maxValue,
+            Component tooltip
+    ) {
+        return createDecimalAutoCompleteField(font, x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, null, tooltip);
+    }
+
+    public static NumericAutoCompleteBox createDecimalAutoCompleteField(
+            Font font,
+            int x,
+            int y,
+            int width,
+            Component message,
+            Supplier<List<String>> dictionarySupplier,
+            boolean allowNegative,
+            Double minValue,
+            Double maxValue,
+            Predicate<Number> validator,
+            Component tooltip
+    ) {
+        NumericAutoCompleteBox box = NumericAutoCompleteBox.decimal(
+                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                message == null ? Component.empty() : message,
+                dictionarySupplier,
+                allowNegative, minValue, maxValue, validator
+        );
+        attachTooltip(box, tooltip);
+        return box;
+    }
+
+    public static ToggleButton createToggleButton(
+            int x,
+            int y,
+            int width,
+            boolean value,
+            Component onText,
+            Component offText,
+            Component tooltip,
+            Consumer<Boolean> responder
+    ) {
+        return createToggleButton(
+                x, y, width, value, onText, offText, tooltip,
+                ignored -> true, responder
+        );
+    }
+
+    public static ToggleButton createToggleButton(
+            int x,
+            int y,
+            int width,
+            boolean value,
+            Component onText,
+            Component offText,
+            Component tooltip,
+            Predicate<Boolean> validator,
+            Consumer<Boolean> responder
+    ) {
+        ToggleButton button = new ToggleButton(
+                x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                value,
+                onText == null ? Component.empty() : onText,
+                offText == null ? Component.empty() : offText,
+                validator,
+                responder
+        );
+        attachTooltip(button, tooltip);
+        return button;
+    }
+
+    public static ColorSwatchButton createColorSwatchButton(
+            int x,
+            int y,
+            int rgb,
+            Component tooltip,
+            Runnable action
+    ) {
+        ColorSwatchButton button = new ColorSwatchButton(
+                x, y, KineticScreen.COMPACT_CONTROL_HEIGHT, rgb,
+                ignored -> { if (action != null) action.run(); }
+        );
+        attachTooltip(button, tooltip);
+        return button;
+    }
+
+    public static ColorPreviewButton createColorPreviewButton(
+            int x,
+            int y,
+            int width,
+            int color,
+            Component text,
+            Component tooltip,
+            Runnable action
+    ) {
+        ColorPreviewButton button = new ColorPreviewButton(
+                x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT, color,
+                text == null ? Component.empty() : text,
+                ignored -> { if (action != null) action.run(); }
+        );
+        attachTooltip(button, tooltip);
+        return button;
+    }
+
+    public static HighZButton createHighZButton(
+            int x,
+            int y,
+            int width,
+            Component text,
+            Component tooltip,
+            int zLevel,
+            Button.OnPress action
+    ) {
+        return createHighZButton(
+                x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                text, tooltip, zLevel, action
+        );
+    }
+
+    public static HighZButton createCompactHighZButton(
+            int x,
+            int y,
+            int width,
+            Component text,
+            Component tooltip,
+            int zLevel,
+            Button.OnPress action
+    ) {
+        return createHighZButton(
+                x, y, width, KineticScreen.COMPACT_CONTROL_HEIGHT,
+                text, tooltip, zLevel, action
+        );
+    }
+
+    private static HighZButton createHighZButton(
+            int x,
+            int y,
+            int width,
+            int height,
+            Component text,
+            Component tooltip,
+            int zLevel,
+            Button.OnPress action
+    ) {
+        HighZButton button = new HighZButton(
+                x, y, width, height,
+                text == null ? Component.empty() : text,
+                action == null ? ignored -> { } : action,
+                null,
+                zLevel
+        );
+        attachTooltip(button, tooltip);
+        return button;
+    }
+
+    public static Dropdown createDropdown(
+            int x,
+            int y,
+            int width,
+            List<? extends Component> options,
+            int selectedIndex,
+            Component tooltip,
+            Consumer<Integer> responder,
+            Consumer<Dropdown> opener
+    ) {
+        return createDropdown(
+                x, y, width, options, selectedIndex, tooltip,
+                ignored -> true, responder, opener
+        );
+    }
+
+    public static Dropdown createDropdown(
+            int x,
+            int y,
+            int width,
+            List<? extends Component> options,
+            int selectedIndex,
+            Component tooltip,
+            Predicate<Integer> validator,
+            Consumer<Integer> responder,
+            Consumer<Dropdown> opener
+    ) {
+        List<Component> normalizedOptions = options == null ? List.of() : new ArrayList<>(options);
+        Dropdown dropdown = new Dropdown(
+                x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
+                normalizedOptions, selectedIndex, validator, responder, opener
+        );
+        attachTooltip(dropdown, tooltip);
+        return dropdown;
+    }
+
+    public static TabBar createTabBar(
+            int x,
+            int y,
+            int totalWidth,
+            List<? extends Component> labels,
+            int selectedIndex,
+            Consumer<Integer> responder
+    ) {
+        TabBar tabBar = new TabBar();
+        tabBar.build(x, y, totalWidth, labels, selectedIndex, responder);
+        return tabBar;
+    }
+
+    public static TabBar createTabBar(
+            int x,
+            int y,
+            int totalWidth,
+            List<? extends Component> labels,
+            List<? extends Component> tooltips,
+            int selectedIndex,
+            Consumer<Integer> responder
+    ) {
+        TabBar tabBar = createTabBar(x, y, totalWidth, labels, selectedIndex, responder);
+        List<? extends Component> safeTooltips = tooltips == null ? List.of() : tooltips;
+        List<Button> buttons = tabBar.buttons();
+        for (int index = 0; index < buttons.size(); index++) {
+            Component tooltip = index < safeTooltips.size() ? safeTooltips.get(index) : null;
+            attachTooltip(buttons.get(index), tooltip);
+        }
+        return tabBar;
+    }
+
+    public static class KineticEditBox extends EditBox {
+        private final Font font;
+        private boolean kineticBordered = true;
+        private boolean validationError;
+        private Predicate<String> validator = ignored -> true;
+        private Component placeholder = Component.empty();
+
+        private KineticEditBox(Font font, int x, int y, int width, int height, Component message) {
             super(font, x, y, width, height, message);
+            this.font = font;
+        }
+
+        public void setPlaceholder(Component placeholder) {
+            this.placeholder = placeholder == null ? Component.empty() : placeholder;
+        }
+
+        public Component placeholder() {
+            return placeholder;
         }
 
         @Override
@@ -134,13 +678,41 @@ public final class KineticWidgets {
             return kineticBordered;
         }
 
+        public void setValidationError(boolean validationError) {
+            this.validationError = validationError;
+        }
+
+        public boolean hasValidationError() {
+            return validationError;
+        }
+
+        public void setValidator(Predicate<String> validator) {
+            this.validator = validator == null ? ignored -> true : validator;
+        }
+
+        public boolean isValueValid() {
+            return validator.test(getValue());
+        }
+
         protected boolean hasBorderError() {
-            return false;
+            return validationError || !isValueValid();
         }
 
         @Override
         public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            if (!isFocused() && getValue().isEmpty() && !placeholder.getString().isBlank()) {
+                KineticText.drawScrollingLeft(
+                        graphics,
+                        font,
+                        placeholder,
+                        getX() + 5,
+                        getY() + (getHeight() - font.lineHeight) / 2,
+                        Math.max(0, getWidth() - 10),
+                        GuiTheme.current().mutedText(),
+                        false
+                );
+            }
             if (!kineticBordered) return;
 
             boolean focused = isFocused();
@@ -170,7 +742,6 @@ public final class KineticWidgets {
 
         public void showError() {
             errorTime = net.minecraft.Util.getMillis();
-            setTextColor(0xFF5555);
         }
 
         @Override
@@ -179,7 +750,6 @@ public final class KineticWidgets {
                 long elapsed = net.minecraft.Util.getMillis() - errorTime;
                 if (elapsed > 1000L) {
                     errorTime = -1L;
-                    setTextColor(0xE0E0E0);
                     setHighlightPos(getCursorPosition());
                 } else if (elapsed > 200L) {
                     int cycle = (int) ((elapsed - 200L) / 200L);
@@ -196,7 +766,7 @@ public final class KineticWidgets {
 
         @Override
         protected boolean hasBorderError() {
-            return errorTime > 0L;
+            return super.hasBorderError() || errorTime > 0L;
         }
     }
 
@@ -1533,10 +2103,11 @@ public final class KineticWidgets {
 
         private final Type type;
         private final boolean allowNegative;
-        private final Double minValue;
-        private final Double maxValue;
+        private final Number minValue;
+        private final Number maxValue;
+        private final Predicate<Number> validator;
 
-        public NumericEditBox(
+        private NumericEditBox(
                 Font font,
                 int x,
                 int y,
@@ -1545,18 +2116,35 @@ public final class KineticWidgets {
                 Component message,
                 Type type,
                 boolean allowNegative,
-                Double minValue,
-                Double maxValue
+                Number minValue,
+                Number maxValue
+        ) {
+            this(font, x, y, width, height, message, type, allowNegative, minValue, maxValue, null);
+        }
+
+        private NumericEditBox(
+                Font font,
+                int x,
+                int y,
+                int width,
+                int height,
+                Component message,
+                Type type,
+                boolean allowNegative,
+                Number minValue,
+                Number maxValue,
+                Predicate<Number> validator
         ) {
             super(font, x, y, width, height, message);
             this.type = type;
             this.allowNegative = allowNegative;
             this.minValue = minValue;
             this.maxValue = maxValue;
+            this.validator = validator == null ? ignored -> true : validator;
             setFilter(this::isAllowedText);
         }
 
-        public static NumericEditBox integer(
+        private static NumericEditBox integer(
                 Font font,
                 int x,
                 int y,
@@ -1567,15 +2155,28 @@ public final class KineticWidgets {
                 Integer minValue,
                 Integer maxValue
         ) {
+            return integer(font, x, y, width, height, message, allowNegative, minValue, maxValue, null);
+        }
+
+        private static NumericEditBox integer(
+                Font font,
+                int x,
+                int y,
+                int width,
+                int height,
+                Component message,
+                boolean allowNegative,
+                Integer minValue,
+                Integer maxValue,
+                Predicate<Number> validator
+        ) {
             return new NumericEditBox(
                     font, x, y, width, height, message,
-                    Type.INTEGER, allowNegative,
-                    minValue == null ? null : minValue.doubleValue(),
-                    maxValue == null ? null : maxValue.doubleValue()
+                    Type.INTEGER, allowNegative, minValue, maxValue, validator
             );
         }
 
-        public static NumericEditBox longInteger(
+        private static NumericEditBox longInteger(
                 Font font,
                 int x,
                 int y,
@@ -1586,15 +2187,28 @@ public final class KineticWidgets {
                 Long minValue,
                 Long maxValue
         ) {
+            return longInteger(font, x, y, width, height, message, allowNegative, minValue, maxValue, null);
+        }
+
+        private static NumericEditBox longInteger(
+                Font font,
+                int x,
+                int y,
+                int width,
+                int height,
+                Component message,
+                boolean allowNegative,
+                Long minValue,
+                Long maxValue,
+                Predicate<Number> validator
+        ) {
             return new NumericEditBox(
                     font, x, y, width, height, message,
-                    Type.LONG, allowNegative,
-                    minValue == null ? null : minValue.doubleValue(),
-                    maxValue == null ? null : maxValue.doubleValue()
+                    Type.LONG, allowNegative, minValue, maxValue, validator
             );
         }
 
-        public static NumericEditBox decimal(
+        private static NumericEditBox decimal(
                 Font font,
                 int x,
                 int y,
@@ -1605,9 +2219,24 @@ public final class KineticWidgets {
                 Double minValue,
                 Double maxValue
         ) {
+            return decimal(font, x, y, width, height, message, allowNegative, minValue, maxValue, null);
+        }
+
+        private static NumericEditBox decimal(
+                Font font,
+                int x,
+                int y,
+                int width,
+                int height,
+                Component message,
+                boolean allowNegative,
+                Double minValue,
+                Double maxValue,
+                Predicate<Number> validator
+        ) {
             return new NumericEditBox(
                     font, x, y, width, height, message,
-                    Type.DECIMAL, allowNegative, minValue, maxValue
+                    Type.DECIMAL, allowNegative, minValue, maxValue, validator
             );
         }
 
@@ -1617,7 +2246,7 @@ public final class KineticWidgets {
 
             try {
                 int value = Integer.parseInt(raw);
-                return isInRange(value) ? value : null;
+                return isInLongRange(value) && validator.test(value) ? value : null;
             } catch (NumberFormatException ignored) {
                 return null;
             }
@@ -1629,7 +2258,7 @@ public final class KineticWidgets {
 
             try {
                 long value = Long.parseLong(raw);
-                return isInRange(value) ? value : null;
+                return isInLongRange(value) && validator.test(value) ? value : null;
             } catch (NumberFormatException ignored) {
                 return null;
             }
@@ -1641,10 +2270,18 @@ public final class KineticWidgets {
 
             try {
                 double value = Double.parseDouble(raw);
-                return Double.isFinite(value) && isInRange(value) ? value : null;
+                return Double.isFinite(value) && isInDoubleRange(value) && validator.test(value) ? value : null;
             } catch (NumberFormatException ignored) {
                 return null;
             }
+        }
+
+        public boolean isValueValid() {
+            return switch (type) {
+                case INTEGER -> getIntValue() != null;
+                case LONG -> getLongValue() != null;
+                case DECIMAL -> getDoubleValue() != null;
+            };
         }
 
         public void setIntValue(int value) {
@@ -1653,6 +2290,10 @@ public final class KineticWidgets {
 
         public void setLongValue(long value) {
             setValue(Long.toString(value));
+        }
+
+        public void setDoubleValue(double value) {
+            setValue(format(value));
         }
 
         public static String format(double value) {
@@ -1667,7 +2308,7 @@ public final class KineticWidgets {
             int start = value.charAt(0) == '-' ? 1 : 0;
             if (start == 1 && !allowNegative) return false;
 
-            if (type == Type.INTEGER || type == Type.LONG) {
+            if (type != Type.DECIMAL) {
                 for (int i = start; i < value.length(); i++) {
                     if (!Character.isDigit(value.charAt(i))) return false;
                 }
@@ -1687,9 +2328,19 @@ public final class KineticWidgets {
             return true;
         }
 
-        private boolean isInRange(double value) {
-            if (minValue != null && value < minValue) return false;
-            return maxValue == null || value <= maxValue;
+        private boolean isInLongRange(long value) {
+            if (minValue != null && value < minValue.longValue()) return false;
+            return maxValue == null || value <= maxValue.longValue();
+        }
+
+        private boolean isInDoubleRange(double value) {
+            if (minValue != null && value < minValue.doubleValue()) return false;
+            return maxValue == null || value <= maxValue.doubleValue();
+        }
+
+        @Override
+        protected boolean hasBorderError() {
+            return super.hasBorderError() || !isValueValid();
         }
     }
 
@@ -1706,7 +2357,7 @@ public final class KineticWidgets {
         private int maxSuggestionWidth = 0;
         private static final int MAX_VISIBLE = 8;
 
-        public AutoCompleteBox(Font font, int x, int y, int width, int height, Component message, Supplier<List<String>> dictionarySupplier) {
+        private AutoCompleteBox(Font font, int x, int y, int width, int height, Component message, Supplier<List<String>> dictionarySupplier) {
             super(font, x, y, width, height, message);
             this.dictionarySupplier = dictionarySupplier;
             this.setMaxLength(1024);
@@ -1886,9 +2537,12 @@ public final class KineticWidgets {
                 GuiTheme.stateOutline(gui, x + 1, top, w - 2, itemH, selected, hovered, false);
 
                 String[] parts = suggestions.get(index).split(" - ", 2);
-                MutableComponent line = Component.literal(parts[0]).withStyle(ChatFormatting.GOLD);
-                if (parts.length > 1) line.append(Component.literal(" - " + parts[1]).withStyle(ChatFormatting.WHITE));
-                gui.drawString(Minecraft.getInstance().font, line, x + 4, top + 2, 0xFFFFFF);
+                Font font = Minecraft.getInstance().font;
+                gui.drawString(font, parts[0], x + 4, top + 2, GuiTheme.current().text(), false);
+                if (parts.length > 1) {
+                    int detailX = x + 4 + font.width(parts[0]);
+                    gui.drawString(font, " - " + parts[1], detailX, top + 2, GuiTheme.current().mutedText(), false);
+                }
             }
 
             gui.disableScissor();
@@ -2104,15 +2758,17 @@ public final class KineticWidgets {
     public static class NumericAutoCompleteBox extends AutoCompleteBox {
         public enum Type {
             INTEGER,
+            LONG,
             DECIMAL
         }
 
         private final Type type;
         private final boolean allowNegative;
-        private final Double minValue;
-        private final Double maxValue;
+        private final Number minValue;
+        private final Number maxValue;
+        private final Predicate<Number> validator;
 
-        public NumericAutoCompleteBox(
+        private NumericAutoCompleteBox(
                 Font font,
                 int x,
                 int y,
@@ -2122,27 +2778,36 @@ public final class KineticWidgets {
                 Supplier<List<String>> dictionarySupplier,
                 Type type,
                 boolean allowNegative,
-                Double minValue,
-                Double maxValue
+                Number minValue,
+                Number maxValue
         ) {
-            super(
-                    font,
-                    x,
-                    y,
-                    width,
-                    height,
-                    message,
-                    dictionarySupplier
-            );
+            this(font, x, y, width, height, message, dictionarySupplier, type, allowNegative, minValue, maxValue, null);
+        }
 
+        private NumericAutoCompleteBox(
+                Font font,
+                int x,
+                int y,
+                int width,
+                int height,
+                Component message,
+                Supplier<List<String>> dictionarySupplier,
+                Type type,
+                boolean allowNegative,
+                Number minValue,
+                Number maxValue,
+                Predicate<Number> validator
+        ) {
+            super(font, x, y, width, height, message, dictionarySupplier);
             this.type = type;
             this.allowNegative = allowNegative;
             this.minValue = minValue;
             this.maxValue = maxValue;
+            this.validator = validator == null ? ignored -> true : validator;
             setFilter(this::isAllowedText);
         }
 
-        public static NumericAutoCompleteBox integer(
+        private static NumericAutoCompleteBox integer(
                 Font font,
                 int x,
                 int y,
@@ -2154,26 +2819,63 @@ public final class KineticWidgets {
                 Integer minValue,
                 Integer maxValue
         ) {
+            return integer(font, x, y, width, height, message, dictionarySupplier, allowNegative, minValue, maxValue, null);
+        }
+
+        private static NumericAutoCompleteBox integer(
+                Font font,
+                int x,
+                int y,
+                int width,
+                int height,
+                Component message,
+                Supplier<List<String>> dictionarySupplier,
+                boolean allowNegative,
+                Integer minValue,
+                Integer maxValue,
+                Predicate<Number> validator
+        ) {
             return new NumericAutoCompleteBox(
-                    font,
-                    x,
-                    y,
-                    width,
-                    height,
-                    message,
-                    dictionarySupplier,
-                    Type.INTEGER,
-                    allowNegative,
-                    minValue == null
-                            ? null
-                            : minValue.doubleValue(),
-                    maxValue == null
-                            ? null
-                            : maxValue.doubleValue()
+                    font, x, y, width, height, message, dictionarySupplier,
+                    Type.INTEGER, allowNegative, minValue, maxValue, validator
             );
         }
 
-        public static NumericAutoCompleteBox decimal(
+        private static NumericAutoCompleteBox longInteger(
+                Font font,
+                int x,
+                int y,
+                int width,
+                int height,
+                Component message,
+                Supplier<List<String>> dictionarySupplier,
+                boolean allowNegative,
+                Long minValue,
+                Long maxValue
+        ) {
+            return longInteger(font, x, y, width, height, message, dictionarySupplier, allowNegative, minValue, maxValue, null);
+        }
+
+        private static NumericAutoCompleteBox longInteger(
+                Font font,
+                int x,
+                int y,
+                int width,
+                int height,
+                Component message,
+                Supplier<List<String>> dictionarySupplier,
+                boolean allowNegative,
+                Long minValue,
+                Long maxValue,
+                Predicate<Number> validator
+        ) {
+            return new NumericAutoCompleteBox(
+                    font, x, y, width, height, message, dictionarySupplier,
+                    Type.LONG, allowNegative, minValue, maxValue, validator
+            );
+        }
+
+        private static NumericAutoCompleteBox decimal(
                 Font font,
                 int x,
                 int y,
@@ -2185,35 +2887,47 @@ public final class KineticWidgets {
                 Double minValue,
                 Double maxValue
         ) {
+            return decimal(font, x, y, width, height, message, dictionarySupplier, allowNegative, minValue, maxValue, null);
+        }
+
+        private static NumericAutoCompleteBox decimal(
+                Font font,
+                int x,
+                int y,
+                int width,
+                int height,
+                Component message,
+                Supplier<List<String>> dictionarySupplier,
+                boolean allowNegative,
+                Double minValue,
+                Double maxValue,
+                Predicate<Number> validator
+        ) {
             return new NumericAutoCompleteBox(
-                    font,
-                    x,
-                    y,
-                    width,
-                    height,
-                    message,
-                    dictionarySupplier,
-                    Type.DECIMAL,
-                    allowNegative,
-                    minValue,
-                    maxValue
+                    font, x, y, width, height, message, dictionarySupplier,
+                    Type.DECIMAL, allowNegative, minValue, maxValue, validator
             );
         }
 
         public Integer getIntValue() {
             String raw = getValue().trim();
-
-            if (raw.isEmpty()
-                    || "-".equals(raw)) {
-                return null;
-            }
+            if (raw.isEmpty() || "-".equals(raw)) return null;
 
             try {
                 int value = Integer.parseInt(raw);
+                return isInLongRange(value) && validator.test(value) ? value : null;
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
 
-                return isInRange(value)
-                        ? value
-                        : null;
+        public Long getLongValue() {
+            String raw = getValue().trim();
+            if (raw.isEmpty() || "-".equals(raw)) return null;
+
+            try {
+                long value = Long.parseLong(raw);
+                return isInLongRange(value) && validator.test(value) ? value : null;
             } catch (NumberFormatException ignored) {
                 return null;
             }
@@ -2221,31 +2935,30 @@ public final class KineticWidgets {
 
         public Double getDoubleValue() {
             String raw = getValue().trim();
-
-            if (raw.isEmpty()
-                    || "-".equals(raw)
-                    || ".".equals(raw)
-                    || "-.".equals(raw)) {
-                return null;
-            }
+            if (raw.isEmpty() || "-".equals(raw) || ".".equals(raw) || "-.".equals(raw)) return null;
 
             try {
-                double value =
-                        Double.parseDouble(raw);
-
-                if (!Double.isFinite(value)
-                        || !isInRange(value)) {
-                    return null;
-                }
-
-                return value;
+                double value = Double.parseDouble(raw);
+                return Double.isFinite(value) && isInDoubleRange(value) && validator.test(value) ? value : null;
             } catch (NumberFormatException ignored) {
                 return null;
             }
         }
 
+        public boolean isValueValid() {
+            return switch (type) {
+                case INTEGER -> getIntValue() != null;
+                case LONG -> getLongValue() != null;
+                case DECIMAL -> getDoubleValue() != null;
+            };
+        }
+
         public void setIntValue(int value) {
             setValue(Integer.toString(value));
+        }
+
+        public void setLongValue(long value) {
+            setValue(Long.toString(value));
         }
 
         public void setDoubleValue(double value) {
@@ -2253,87 +2966,101 @@ public final class KineticWidgets {
         }
 
         public static String format(double value) {
-            if (!Double.isFinite(value)) {
-                return Double.toString(value);
-            }
-
-            return BigDecimal.valueOf(value)
-                    .stripTrailingZeros()
-                    .toPlainString();
+            if (!Double.isFinite(value)) return Double.toString(value);
+            return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
         }
 
         private boolean isAllowedText(String value) {
-            if (value == null
-                    || value.isEmpty()) {
-                return true;
-            }
+            if (value == null || value.isEmpty()) return true;
+            if ("-".equals(value)) return allowNegative;
 
-            if ("-".equals(value)) {
-                return allowNegative;
-            }
+            int start = value.charAt(0) == '-' ? 1 : 0;
+            if (start == 1 && !allowNegative) return false;
 
-            int start =
-                    value.charAt(0) == '-'
-                            ? 1
-                            : 0;
-
-            if (start == 1 && !allowNegative) {
-                return false;
-            }
-
-            if (type == Type.INTEGER) {
-                for (int i = start;
-                     i < value.length();
-                     i++) {
-                    if (!Character.isDigit(
-                            value.charAt(i)
-                    )) {
-                        return false;
-                    }
+            if (type != Type.DECIMAL) {
+                for (int i = start; i < value.length(); i++) {
+                    if (!Character.isDigit(value.charAt(i))) return false;
                 }
-
                 return true;
             }
 
             boolean dotSeen = false;
-
-            for (int i = start;
-                 i < value.length();
-                 i++) {
+            for (int i = start; i < value.length(); i++) {
                 char c = value.charAt(i);
-
                 if (c == '.') {
-                    if (dotSeen) {
-                        return false;
-                    }
-
+                    if (dotSeen) return false;
                     dotSeen = true;
-                    continue;
-                }
-
-                if (!Character.isDigit(c)) {
+                } else if (!Character.isDigit(c)) {
                     return false;
                 }
             }
-
             return true;
         }
 
-        private boolean isInRange(double value) {
-            if (minValue != null
-                    && value < minValue) {
-                return false;
-            }
+        private boolean isInLongRange(long value) {
+            if (minValue != null && value < minValue.longValue()) return false;
+            return maxValue == null || value <= maxValue.longValue();
+        }
 
-            return maxValue == null
-                    || value <= maxValue;
+        private boolean isInDoubleRange(double value) {
+            if (minValue != null && value < minValue.doubleValue()) return false;
+            return maxValue == null || value <= maxValue.doubleValue();
+        }
+    }
+
+    public static class StateButton extends Button {
+        private boolean selected;
+        private boolean error;
+
+        private StateButton(
+                int x,
+                int y,
+                int width,
+                int height,
+                Component message,
+                OnPress onPress
+        ) {
+            super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
+        }
+
+        public void setSelected(boolean selected) {
+            this.selected = selected;
+        }
+
+        public void setError(boolean error) {
+            this.error = error;
+        }
+
+        public boolean isSelectedState() {
+            return selected;
+        }
+
+        public boolean isErrorState() {
+            return error;
+        }
+
+        @Override
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            if (selected || error) {
+                GuiTheme.stateOutline(
+                        graphics,
+                        getX(),
+                        getY(),
+                        getWidth(),
+                        getHeight(),
+                        selected,
+                        isHovered(),
+                        error
+                );
+            }
         }
     }
 
     public static final class ColorSwatchButton extends Button {
         private int rgb;
 
-        public ColorSwatchButton(int x, int y, int size, int rgb, OnPress onPress) {
+        private ColorSwatchButton(int x, int y, int size, int rgb, OnPress onPress) {
             super(x, y, size, size, Component.empty(), onPress, DEFAULT_NARRATION);
             this.rgb = rgb & 0xFFFFFF;
         }
@@ -2356,11 +3083,11 @@ public final class KineticWidgets {
         }
     }
 
-    public static final class ColorPreviewButton extends Button {
+    public static final class ColorPreviewButton extends StateButton {
         private int rgb;
 
-        public ColorPreviewButton(int x, int y, int width, int height, int rgb, Component message, OnPress onPress) {
-            super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
+        private ColorPreviewButton(int x, int y, int width, int height, int rgb, Component message, OnPress onPress) {
+            super(x, y, width, height, message, onPress);
             this.rgb = rgb & 0xFFFFFF;
         }
 
@@ -2379,12 +3106,10 @@ public final class KineticWidgets {
         }
     }
 
-    public static final class MenuButton extends Button {
-        private boolean selected;
-        private boolean error;
-
+    public static final class MenuButton extends StateButton {
         private MenuButton(int x, int y, int width, int height, Component message, OnPress onPress, boolean danger) {
-            super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
+            super(x, y, width, height, message, onPress);
+            setError(danger);
         }
 
         public void setBounds(int x, int y, int width, int height) {
@@ -2393,32 +3118,17 @@ public final class KineticWidgets {
             this.width = Math.max(1, width);
             this.height = Math.max(1, height);
         }
-
-        public void setSelected(boolean selected) {
-            this.selected = selected;
-            setFocused(selected || error);
-        }
-
-        public void setError(boolean error) {
-            this.error = error;
-            setFocused(selected || error);
-        }
-
-        @Override
-        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            super.renderWidget(graphics, mouseX, mouseY, partialTick);
-        }
     }
 
-    public static class HighZButton extends Button {
+    public static class HighZButton extends StateButton {
         private final int zLevel;
 
-        public HighZButton(int x, int y, int w, int h, Component msg, OnPress onPress, Tooltip tooltip) {
+        private HighZButton(int x, int y, int w, int h, Component msg, OnPress onPress, Tooltip tooltip) {
             this(x, y, w, h, msg, onPress, tooltip, 200);
         }
 
-        public HighZButton(int x, int y, int w, int h, Component msg, OnPress onPress, Tooltip tooltip, int zLevel) {
-            super(x, y, w, h, msg, onPress, DEFAULT_NARRATION);
+        private HighZButton(int x, int y, int w, int h, Component msg, OnPress onPress, Tooltip tooltip, int zLevel) {
+            super(x, y, w, h, msg, onPress);
             if (tooltip != null) this.setTooltip(tooltip);
             this.zLevel = zLevel;
         }
@@ -2820,13 +3530,14 @@ public final class KineticWidgets {
         }
     }
 
-    public static final class ToggleButton extends Button {
+    public static final class ToggleButton extends StateButton {
         private boolean value;
         private final Component onText;
         private final Component offText;
+        private final Predicate<Boolean> validator;
         private final Consumer<Boolean> responder;
 
-        public ToggleButton(
+        private ToggleButton(
                 int x,
                 int y,
                 int width,
@@ -2834,13 +3545,16 @@ public final class KineticWidgets {
                 boolean value,
                 Component onText,
                 Component offText,
+                Predicate<Boolean> validator,
                 Consumer<Boolean> responder
         ) {
-            super(x, y, width, height, value ? onText : offText, ignored -> { }, DEFAULT_NARRATION);
+            super(x, y, width, height, value ? onText : offText, ignored -> { });
             this.value = value;
             this.onText = Objects.requireNonNullElse(onText, Component.empty());
             this.offText = Objects.requireNonNullElse(offText, Component.empty());
+            this.validator = validator == null ? ignored -> true : validator;
             this.responder = responder == null ? ignored -> { } : responder;
+            setError(!this.validator.test(value));
         }
 
         public boolean value() {
@@ -2850,6 +3564,7 @@ public final class KineticWidgets {
         public void setValue(boolean value) {
             this.value = value;
             setMessage(value ? onText : offText);
+            setError(!validator.test(value));
         }
 
         @Override
@@ -2864,13 +3579,14 @@ public final class KineticWidgets {
         }
     }
 
-    public static final class Dropdown extends Button {
+    public static final class Dropdown extends StateButton {
         private final List<Component> options;
+        private final Predicate<Integer> validator;
         private final Consumer<Integer> responder;
         private final Consumer<Dropdown> opener;
         private int selectedIndex;
 
-        public Dropdown(
+        private Dropdown(
                 int x,
                 int y,
                 int width,
@@ -2879,25 +3595,28 @@ public final class KineticWidgets {
                 int selectedIndex,
                 Consumer<Integer> responder
         ) {
-            this(x, y, width, height, options, selectedIndex, responder, null);
+            this(x, y, width, height, options, selectedIndex, ignored -> true, responder, null);
         }
 
-        public Dropdown(
+        private Dropdown(
                 int x,
                 int y,
                 int width,
                 int height,
                 List<Component> options,
                 int selectedIndex,
+                Predicate<Integer> validator,
                 Consumer<Integer> responder,
                 Consumer<Dropdown> opener
         ) {
-            super(x, y, width, height, messageAt(options, selectedIndex), ignored -> { }, DEFAULT_NARRATION);
+            super(x, y, width, height, messageAt(options, selectedIndex), ignored -> { });
             this.options = options == null ? List.of() : List.copyOf(options);
+            this.validator = validator == null ? ignored -> true : validator;
             this.responder = responder == null ? ignored -> { } : responder;
             this.opener = opener;
             this.selectedIndex = normalizeIndex(selectedIndex, this.options.size());
             setMessage(messageAt(this.options, this.selectedIndex));
+            setError(!this.options.isEmpty() && !this.validator.test(this.selectedIndex));
         }
 
         public List<Component> options() {
@@ -2915,6 +3634,7 @@ public final class KineticWidgets {
         public void setSelectedIndex(int index) {
             selectedIndex = normalizeIndex(index, options.size());
             setMessage(messageAt(options, selectedIndex));
+            setError(!options.isEmpty() && !validator.test(selectedIndex));
         }
 
         public void choose(int index) {
@@ -2955,6 +3675,9 @@ public final class KineticWidgets {
         private final List<Button> buttons = new ArrayList<>();
         private int selectedIndex;
 
+        private TabBar() {
+        }
+
         public List<Button> buttons() {
             return List.copyOf(buttons);
         }
@@ -2963,12 +3686,11 @@ public final class KineticWidgets {
             return selectedIndex;
         }
 
-        public void build(
+        private void build(
                 int x,
                 int y,
                 int totalWidth,
-                int height,
-                List<Component> labels,
+                List<? extends Component> labels,
                 int selected,
                 Consumer<Integer> responder
         ) {

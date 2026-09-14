@@ -1,10 +1,13 @@
 package dev.xyat.kineticcore.feature.defaultoptions;
 
+import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
+import dev.xyat.kineticcore.api.hook.ClientHooks;
+import dev.xyat.kineticcore.api.minecraft.MinecraftKeys;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
-import net.minecraftforge.client.settings.KeyModifier;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.*;
@@ -15,11 +18,21 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class OptionsManager {
+    private static boolean hookRegistered;
+
+    public static void registerHook() {
+        if (hookRegistered) return;
+        hookRegistered = true;
+        ClientHooks.onOptionsLoading(options -> {
+            OptionsManager.enforceDefaultOptions();
+            OptionsManager.applyCustomKeyDefaults(options);
+        });
+    }
     private static final File CUSTOM_DEFAULTS_FILE = FMLPaths.CONFIGDIR.get().resolve("kineticcore/defaultoptions.txt").toFile();
 
     public static class KeyData {
         public InputConstants.Key key = null;
-        public KeyModifier modifier = KeyModifier.NONE;
+        public KineticKeyBindings.Modifier modifier = KineticKeyBindings.Modifier.NONE;
     }
 
     public static void enforceDefaultOptions() {
@@ -53,9 +66,7 @@ public class OptionsManager {
         for (KeyMapping mapping : options.keyMappings) {
             KeyData newData = newDefaults.get(mapping.getName());
             if (newData != null && newData.key != null) {
-                IKineticKeyAccess access = (IKineticKeyAccess) mapping;
-                access.setkineticcore$defaultKey(newData.key);
-                access.setkineticcore$keyModifierDefault(newData.modifier);
+                MinecraftKeys.setDefault(mapping, newData.key, newData.modifier);
                 changed = true;
             }
         }
@@ -76,13 +87,13 @@ public class OptionsManager {
                             String name = line.substring(4, firstColon);
                             String payload = line.substring(firstColon + 1);
                             String keyCodeStr;
-                            KeyModifier modifier = KeyModifier.NONE;
+                            KineticKeyBindings.Modifier modifier = KineticKeyBindings.Modifier.NONE;
 
                             int secondColon = payload.indexOf(':');
                             if (secondColon != -1) {
                                 keyCodeStr = payload.substring(0, secondColon);
                                 try {
-                                    modifier = KeyModifier.valueOf(payload.substring(secondColon + 1));
+                                    modifier = KineticKeyBindings.Modifier.valueOf(payload.substring(secondColon + 1));
                                 } catch (Exception ignored) {}
                             } else {
                                 keyCodeStr = payload;
@@ -91,7 +102,7 @@ public class OptionsManager {
                             InputConstants.Key key = InputConstants.getKey(keyCodeStr);
                             KeyData data = defaultKeys.computeIfAbsent(name, k -> new KeyData());
                             data.key = key;
-                            if (modifier != KeyModifier.NONE || data.modifier == null) {
+                            if (modifier != KineticKeyBindings.Modifier.NONE || data.modifier == null) {
                                 data.modifier = modifier;
                             }
                         }
@@ -100,7 +111,7 @@ public class OptionsManager {
                         if (firstColon != -1) {
                             String name = line.substring(12, firstColon);
                             try {
-                                KeyModifier modifier = KeyModifier.valueOf(line.substring(firstColon + 1));
+                                KineticKeyBindings.Modifier modifier = KineticKeyBindings.Modifier.valueOf(line.substring(firstColon + 1));
                                 KeyData data = defaultKeys.computeIfAbsent(name, k -> new KeyData());
                                 data.modifier = modifier;
                             } catch (Exception ignored) {}

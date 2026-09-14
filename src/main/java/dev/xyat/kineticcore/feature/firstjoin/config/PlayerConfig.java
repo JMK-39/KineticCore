@@ -2,10 +2,9 @@ package dev.xyat.kineticcore.feature.firstjoin.config;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.bootstrap.annotation.KTModule;
-import dev.xyat.kineticcore.config.server.KTServerConfigApi;
-import dev.xyat.kineticcore.config.server.KTServerConfigSpec;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -20,7 +19,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@KTModule
 public class PlayerConfig {
     public static final String DEFAULT_HELMET = "1x minecraft:leather_helmet{Enchantments:[{id:\"minecraft:unbreaking\",lvl:2s},{id:\"minecraft:protection\",lvl:2s},{id:\"minecraft:respiration\",lvl:1s}]}";
     public static final String DEFAULT_CHESTPLATE = "1x minecraft:leather_chestplate{Enchantments:[{id:\"minecraft:unbreaking\",lvl:2s},{id:\"minecraft:protection\",lvl:2s}]}";
@@ -61,7 +59,7 @@ public class PlayerConfig {
             readValues();
             registerServerConfig();
         } catch (Exception e) {
-            KineticCore.LOGGER.error("PlayerConfig Load Failed", e);
+            KineticRuntime.logger().error("PlayerConfig Load Failed", e);
         }
     }
 
@@ -233,7 +231,7 @@ public class PlayerConfig {
                 }
             }
         } catch (Exception e) {
-            KineticCore.LOGGER.error("[FirstJoin] 物品解析失败: {} | 错误: {}", input, e.getMessage());
+            KineticRuntime.logger().error("[FirstJoin] 物品解析失败: {} | 错误: {}", input, e.getMessage());
         }
         return ItemStack.EMPTY;
     }

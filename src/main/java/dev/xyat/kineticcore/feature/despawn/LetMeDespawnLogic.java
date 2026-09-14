@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.feature.despawn;
 
-import dev.xyat.kineticcore.feature.mechanics.config.GeneralMechanicsConfig;
+import dev.xyat.kineticcore.api.hook.CommonHooks;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -17,6 +18,34 @@ import java.util.regex.Pattern;
 
 public class LetMeDespawnLogic {
 
+    private static boolean hooksRegistered;
+
+    public static void registerHooks() {
+        if (hooksRegistered) return;
+        hooksRegistered = true;
+        CommonHooks.onMobPersistence(new CommonHooks.MobPersistenceHandler() {
+            @Override
+            public boolean enabled() {
+                return KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "let_me_despawn", true);
+            }
+
+            @Override
+            public boolean shouldForceDespawn(Mob mob) {
+                return LetMeDespawnLogic.shouldForceDespawn(mob);
+            }
+
+            @Override
+            public void processPersistence(Mob mob, EquipmentSlot slot) {
+                LetMeDespawnLogic.processPersistence(mob, slot);
+            }
+
+            @Override
+            public void dropPickedEquipment(Mob mob) {
+                LetMeDespawnLogic.dropPickedEquipment(mob);
+            }
+        });
+    }
+
     private static final Pattern IGNORE_NAME_PATTERN = Pattern.compile(".* x\\d+");
     private static final ConcurrentHashMap<net.minecraft.world.entity.EntityType<?>, Boolean> WHITELIST_CACHE = new ConcurrentHashMap<>();
     private static int lastConfigHash = -1;
@@ -24,7 +53,7 @@ public class LetMeDespawnLogic {
     private static final Set<String> whitelistMods = new HashSet<>();
 
     private static void updateCacheIfNeeded() {
-        List<String> currentList = GeneralMechanicsConfig.despawnWhiteList;
+        List<String> currentList = KTServerConfigApi.getStringList("kineticcore:general_mechanics", "despawn_whitelist", List.of());
         int currentHash = currentList != null ? currentList.hashCode() : 0;
         if (currentHash != lastConfigHash) {
             lastConfigHash = currentHash;
@@ -50,7 +79,7 @@ public class LetMeDespawnLogic {
     }
 
     public static boolean shouldForceDespawn(Mob entity) {
-        if (!GeneralMechanicsConfig.enableLetMeDespawn) return false;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "let_me_despawn", true)) return false;
 
         boolean isEnderman = entity instanceof EnderMan;
         boolean hasPickedUp = entity.getTags().contains("kt_picked_up_entity");
@@ -79,7 +108,7 @@ public class LetMeDespawnLogic {
     }
 
     public static void processPersistence(Mob entity, EquipmentSlot slot) {
-        if (!GeneralMechanicsConfig.enableLetMeDespawn) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "let_me_despawn", true)) return;
         ItemStack itemStack = entity.getItemBySlot(slot);
         if (itemStack.isEmpty()) return;
 

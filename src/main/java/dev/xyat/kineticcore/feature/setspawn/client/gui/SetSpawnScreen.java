@@ -1,7 +1,6 @@
 package dev.xyat.kineticcore.feature.setspawn.client.gui;
 
 import dev.xyat.kineticcore.api.client.text.KineticText;
-import net.minecraft.ChatFormatting;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -58,7 +57,6 @@ public class SetSpawnScreen extends KineticScreen {
 
     public SetSpawnScreen(SetSpawnNetwork.OpenSetSpawnGuiPacket packet) {
         super(Component.translatable("gui.kineticcore.setspawn.title"));
-        useStandardCanvas();
 
         this.globalEnable = packet.globalEnable();
         this.dimEnable = packet.dimEnable();
@@ -112,7 +110,7 @@ public class SetSpawnScreen extends KineticScreen {
                 startX + panelW - 145, topY, 80,
                 Component.translatable("gui.kineticcore.hud_editor.save"),
                 null,
-                () -> SetSpawnNetwork.CHANNEL.sendToServer(new SetSpawnNetwork.SaveSetSpawnPacket(
+                () -> SetSpawnNetwork.saveToServer(new SetSpawnNetwork.SaveSetSpawnPacket(
                         globalEnable, dimEnable, dims, biomeEnable, biomes, structEnable, structs
                 ))
         );
@@ -127,15 +125,23 @@ public class SetSpawnScreen extends KineticScreen {
         int switchesW = 270;
         int inputW = panelW - switchesW - 5;
 
+        Component inputPlaceholder = Component.translatable(
+                currentTab == 0
+                        ? "gui.kineticcore.setspawn.hint_dim"
+                        : (currentTab == 1
+                                ? "gui.kineticcore.setspawn.hint_biome"
+                                : "gui.kineticcore.setspawn.hint_struct")
+        );
         activeInput = addAutoCompleteField(
                 startX, searchY, inputW,
                 Component.empty(),
+                inputPlaceholder,
                 this::getActiveDict,
                 null
         );
 
-        Component enabled = Component.translatable("gui.kineticcore.setspawn.enable").withStyle(ChatFormatting.GREEN);
-        Component disabled = Component.translatable("gui.kineticcore.setspawn.disable").withStyle(ChatFormatting.RED);
+        Component enabled = Component.translatable("gui.kineticcore.setspawn.enable");
+        Component disabled = Component.translatable("gui.kineticcore.setspawn.disable");
         addToggleButton(
                 startX + inputW + 5, searchY, 85,
                 globalEnable,
@@ -406,17 +412,13 @@ public class SetSpawnScreen extends KineticScreen {
     @Override
     protected void renderCanvasForeground(@NotNull GuiGraphics g, int mx, int my, float pt) {
         if (activeInput == null) return;
-        String hintKey = currentTab == 0
-                ? "gui.kineticcore.setspawn.hint_dim"
-                : (currentTab == 1 ? "gui.kineticcore.setspawn.hint_biome" : "gui.kineticcore.setspawn.hint_struct");
-        renderTextFieldPlaceholder(g, activeInput, Component.translatable(hintKey));
         activeInput.renderSuggestions(g, mx, my);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 257 || keyCode == 335) {
-            if (activeInput != null && activeInput.isFocused() && !activeInput.getValue().isEmpty()) {
+            if (activeInput != null && isControlFocused(activeInput) && !activeInput.getValue().isEmpty()) {
                 addToList(activeInput.getValue());
                 activeInput.setValue("");
                 return true;
@@ -430,10 +432,9 @@ public class SetSpawnScreen extends KineticScreen {
     protected boolean canvasMouseClicked(double mx, double my, int btn) {
         if (activeInput != null) {
             if (!activeInput.isMouseOver(mx, my)) {
-                activeInput.setFocused(false);
-                if (this.getFocused() == activeInput) this.setFocused(null);
+                blurControl(activeInput);
             } else {
-                this.setFocused(activeInput);
+                focusControl(activeInput);
             }
             if (activeInput.handleMouseClick(mx, my)) return true;
         }

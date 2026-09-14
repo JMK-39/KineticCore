@@ -1,20 +1,26 @@
 package dev.xyat.kineticcore.feature.cobweb.event;
 
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.feature.mechanics.config.GeneralMechanicsConfig;
+import net.minecraftforge.common.MinecraftForge;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = KineticCore.MODID)
 public class AxesEventHandler {
+    private static boolean registered;
 
-    @SubscribeEvent
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        MinecraftForge.EVENT_BUS.addListener(AxesEventHandler::onHarvestCheck);
+        MinecraftForge.EVENT_BUS.addListener(AxesEventHandler::onBreakSpeed);
+    }
+
+
     public static void onHarvestCheck(PlayerEvent.HarvestCheck event) {
-        if (!GeneralMechanicsConfig.fastCobWebBreaking) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "fast_web", true)) return;
 
         if (event.getTargetBlock().getBlock() == Blocks.COBWEB) {
             ItemStack stack = event.getEntity().getMainHandItem();
@@ -24,9 +30,8 @@ public class AxesEventHandler {
         }
     }
 
-    @SubscribeEvent
     public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
-        if (!GeneralMechanicsConfig.fastCobWebBreaking) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "fast_web", true)) return;
 
         if (event.getState().getBlock() == Blocks.COBWEB) {
             ItemStack stack = event.getEntity().getMainHandItem();

@@ -1,21 +1,34 @@
 package dev.xyat.kineticcore.feature.entityfix.event;
 
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.feature.mechanics.config.GeneralMechanicsConfig;
+import net.minecraftforge.common.MinecraftForge;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
+import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.level.LevelEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = KineticCore.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class EntityAttributeFixer {
+    private static boolean registered;
+
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        MinecraftForge.EVENT_BUS.addListener(EntityAttributeFixer::onEntityJoinWorld);
+        MinecraftForge.EVENT_BUS.addListener(EntityAttributeFixer::onLivingAttack);
+        MinecraftForge.EVENT_BUS.addListener(EntityAttributeFixer::onLivingDeath);
+        MinecraftForge.EVENT_BUS.addListener(EntityAttributeFixer::onLevelLoad);
+        KineticServerEvents.onPlayerLogout(EntityAttributeFixer::onPlayerLogout);
+        KineticServerEvents.onPlayerChangedDimension(EntityAttributeFixer::onPlayerDimensionChange);
+    }
+
 
     private static final String NBT_KEY_HP = "kt_saved_hp";
 
@@ -42,9 +55,8 @@ public class EntityAttributeFixer {
         }
     }
 
-    @SubscribeEvent
     public static void onEntityJoinWorld(EntityJoinLevelEvent event) {
-        if (!GeneralMechanicsConfig.enableEntityAttributeFixer) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "entity_fixer", true)) return;
         if (event.getLevel().isClientSide()) return;
 
         if (event.getEntity() instanceof LivingEntity livingEntity) {
@@ -56,21 +68,18 @@ public class EntityAttributeFixer {
         }
     }
 
-    @SubscribeEvent
     public static void onLivingAttack(LivingAttackEvent event) {
-        if (!GeneralMechanicsConfig.enableEntityAttributeFixer) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "entity_fixer", true)) return;
         fixGhostEntity(event.getEntity());
     }
 
-    @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
-        if (!GeneralMechanicsConfig.enableEntityAttributeFixer) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "entity_fixer", true)) return;
         fixGhostEntity(event.getEntity());
     }
 
-    @SubscribeEvent
     public static void onLevelLoad(LevelEvent.Load event) {
-        if (!GeneralMechanicsConfig.enableEntityAttributeFixer) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "entity_fixer", true)) return;
         if (event.getLevel().isClientSide() || !(event.getLevel() instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -82,10 +91,8 @@ public class EntityAttributeFixer {
         });
     }
 
-    @SubscribeEvent
-    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-        if (!GeneralMechanicsConfig.enableEntityAttributeFixer) return;
-        Player player = event.getEntity();
+    public static void onPlayerLogout(ServerPlayer player) {
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "entity_fixer", true)) return;
         if (player.isAlive()) {
             float health = player.getHealth();
             // 确保保存的不是 NaN
@@ -110,13 +117,8 @@ public class EntityAttributeFixer {
     }
 
     // 修复跨维度传送后的状态同步 (通过经验值微调触发同步)
-    @SubscribeEvent
-    public static void onPlayerDimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
-        if (!GeneralMechanicsConfig.enableEntityAttributeFixer) return;
-        Player player = event.getEntity();
-        if (player == null || player.level().isClientSide) {
-            return;
-        }
+    public static void onPlayerDimensionChange(ServerPlayer player, ResourceKey<Level> from, ResourceKey<Level> to) {
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "entity_fixer", true)) return;
         player.giveExperiencePoints(1);
         player.giveExperiencePoints(-1);
     }

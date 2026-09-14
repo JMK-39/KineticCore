@@ -1,29 +1,100 @@
 package dev.xyat.kineticcore.bootstrap.client;
 
-import dev.xyat.kineticcore.config.client.KTConfigApi;
+import dev.xyat.kineticcore.feature.worldmanagement.AsyncWorldDeleter;
+import dev.xyat.kineticcore.feature.worldmanagement.client.NotificationOverlay;
+import dev.xyat.kineticcore.feature.mining.event.MiningInputHandler;
+import dev.xyat.kineticcore.feature.mining.client.MiningModeClient;
+import dev.xyat.kineticcore.feature.flight.client.FlightClient;
+import dev.xyat.kineticcore.feature.farmland.client.FarmlandTooltipHandler;
+import dev.xyat.kineticcore.feature.copyitem.client.ItemCopyManager;
+import dev.xyat.kineticcore.feature.attribute.event.AttributeFixHandler;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.bootstrap.config.client.StartupFeatureConfigGui;
+import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
+import dev.xyat.kineticcore.feature.attribute.config.AttributeConfigGui;
+import dev.xyat.kineticcore.feature.crawl.client.PlayerCrawlHandler;
+import dev.xyat.kineticcore.feature.datapack.config.PackConfigGui;
+import dev.xyat.kineticcore.feature.defaultoptions.OptionsManager;
+import dev.xyat.kineticcore.feature.defaultoptions.config.DefaultOptionsConfigGui;
+import dev.xyat.kineticcore.feature.datapack.ResourcePackReloadNotifier;
+import dev.xyat.kineticcore.feature.effects.client.MiniEffectsFeature;
+import dev.xyat.kineticcore.feature.effects.config.MiniEffectsConfigGui;
+import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfigGui;
+import dev.xyat.kineticcore.feature.fps.client.FpsRenderer;
 import dev.xyat.kineticcore.feature.fps.config.FpsClientConfig;
+import dev.xyat.kineticcore.feature.fps.config.FpsConfigGui;
+import dev.xyat.kineticcore.feature.logcleaner.config.LogCleanerConfigGui;
+import dev.xyat.kineticcore.feature.mechanics.config.GeneralMechanicsConfigGui;
+import dev.xyat.kineticcore.feature.networklimit.config.NetworkConfigGui;
+import dev.xyat.kineticcore.feature.setspawn.config.SetSpawnConfigGui;
+import dev.xyat.kineticcore.feature.spawnegg.client.SpawnEggClient;
+import dev.xyat.kineticcore.feature.spawnegg.config.SpawnEggConfigGui;
+import dev.xyat.kineticcore.feature.startup.client.StartupClientModule;
 import dev.xyat.kineticcore.feature.startup.config.StartupConfig;
+import dev.xyat.kineticcore.feature.startup.config.StartupConfigGui;
+import dev.xyat.kineticcore.feature.tps.client.TpsRenderer;
 import dev.xyat.kineticcore.feature.tps.config.TpsClientConfig;
+import dev.xyat.kineticcore.feature.tps.config.TpsConfigGui;
+import dev.xyat.kineticcore.feature.worldinit.config.WorldInitConfigGui;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.ModContainer;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @OnlyIn(Dist.CLIENT)
 public final class KineticCoreClientBootstrap {
+    private static boolean infrastructureRegistered;
+    private static boolean modulesRegistered;
+
     private KineticCoreClientBootstrap() {
     }
 
-    public static void beforeModuleScan(FMLJavaModLoadingContext context, IEventBus modEventBus) {
-        context.registerConfig(ModConfig.Type.CLIENT, TpsClientConfig.SPEC, "kineticcore/tps_client.toml");
-        context.registerConfig(ModConfig.Type.CLIENT, FpsClientConfig.SPEC, "kineticcore/fps_client.toml");
-        context.registerConfig(ModConfig.Type.CLIENT, StartupConfig.SPEC, "kineticcore/startup.toml");
-        KineticCoreConfigKeyBinding.register(modEventBus);
+    public static void registerInfrastructure() {
+        if (infrastructureRegistered) return;
+        infrastructureRegistered = true;
+
+        KTClientConfigAdapter.registerSpec(TpsClientConfig.SPEC, "kineticcore/tps_client.toml");
+        KTClientConfigAdapter.registerSpec(FpsClientConfig.SPEC, "kineticcore/fps_client.toml");
+        KTClientConfigAdapter.registerSpec(StartupConfig.SPEC, "kineticcore/startup.toml");
+        KineticCoreConfigKeyBinding.register();
     }
 
-    public static void afterModuleScan(ModContainer modContainer) {
-        KTConfigApi.installForgeConfigHub(modContainer);
+    public static void registerModules() {
+        if (modulesRegistered) return;
+        modulesRegistered = true;
+
+        OptionsManager.registerHook();
+        ResourcePackReloadNotifier.registerHook();
+        AsyncWorldDeleter.registerHook();
+        AttributeFixHandler.registerClient();
+        ItemCopyManager.register();
+        FarmlandTooltipHandler.register();
+        FlightClient.register();
+        MiningModeClient.register();
+        MiningInputHandler.register();
+        NotificationOverlay.register();
+
+        StartupFeatureConfigGui.load();
+        AttributeConfigGui.register();
+        PlayerCrawlHandler.load();
+        PackConfigGui.load();
+        DefaultOptionsConfigGui.load();
+        MiniEffectsFeature.load();
+        MiniEffectsConfigGui.load();
+        PlayerConfigGui.load();
+        FpsRenderer.register();
+        FpsConfigGui.load();
+        LogCleanerConfigGui.load();
+        GeneralMechanicsConfigGui.load();
+        NetworkConfigGui.load();
+        SetSpawnConfigGui.load();
+        SpawnEggClient.register();
+        SpawnEggConfigGui.load();
+        StartupClientModule.register();
+        StartupConfigGui.load();
+        TpsRenderer.register();
+        TpsConfigGui.load();
+        WorldInitConfigGui.load();
+
+        KTConfigApi.installConfigHub(KineticRuntime.MOD_ID);
     }
 }

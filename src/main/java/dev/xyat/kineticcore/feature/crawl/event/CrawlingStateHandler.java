@@ -1,16 +1,15 @@
 package dev.xyat.kineticcore.feature.crawl.event;
 
-import dev.xyat.kineticcore.MixinPlugin;
-import dev.xyat.kineticcore.bootstrap.annotation.KTModule;
+import dev.xyat.kineticcore.api.hook.CommonHooks;
+import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
+import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.kineticcore.feature.crawl.network.PlayerNetwork;
 import dev.xyat.kineticcore.feature.crawl.util.PlayerCrawlStateUtil;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerWakeUpEvent;
 
-@KTModule
 public final class CrawlingStateHandler {
     private static boolean registered;
 
@@ -21,38 +20,44 @@ public final class CrawlingStateHandler {
         if (registered) return;
 
         registered = true;
-        MinecraftForge.EVENT_BUS.addListener(CrawlingStateHandler::onRespawn);
-        MinecraftForge.EVENT_BUS.addListener(CrawlingStateHandler::onLogin);
-        MinecraftForge.EVENT_BUS.addListener(CrawlingStateHandler::onChangedDimension);
+        CommonHooks.onCrawlPose(player -> {
+            if (!PlayerCrawlStateUtil.hasManualCrawlFlag(player)) return false;
+            if (PlayerCrawlStateUtil.shouldReleaseToVanilla(player)) {
+                PlayerCrawlStateUtil.releaseToVanilla(player);
+                return false;
+            }
+            PlayerCrawlStateUtil.applyManualCrawlPose(player);
+            return true;
+        });
+        KineticServerEvents.onPlayerRespawn((player, endConquered) -> onRespawn(player));
+        KineticServerEvents.onPlayerLogin(CrawlingStateHandler::onLogin);
+        KineticServerEvents.onPlayerChangedDimension((player, from, to) -> onChangedDimension(player));
         MinecraftForge.EVENT_BUS.addListener(CrawlingStateHandler::onWakeUp);
     }
 
-    private static void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        if (!MixinPlugin.isFeatureEnabled("feature.crawl.PlayerCrawlPoseMixin")) return;
+    private static void onRespawn(ServerPlayer player) {
+        if (!KineticFeatureSwitches.isEnabled("player.crawling")) return;
 
-        Player player = event.getEntity();
         PlayerCrawlStateUtil.clearCrawling(player);
         syncToClient(player);
     }
 
-    private static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!MixinPlugin.isFeatureEnabled("feature.crawl.PlayerCrawlPoseMixin")) return;
+    private static void onLogin(ServerPlayer player) {
+        if (!KineticFeatureSwitches.isEnabled("player.crawling")) return;
 
-        Player player = event.getEntity();
         PlayerCrawlStateUtil.clearCrawling(player);
         syncToClient(player);
     }
 
-    private static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
-        if (!MixinPlugin.isFeatureEnabled("feature.crawl.PlayerCrawlPoseMixin")) return;
+    private static void onChangedDimension(ServerPlayer player) {
+        if (!KineticFeatureSwitches.isEnabled("player.crawling")) return;
 
-        Player player = event.getEntity();
         PlayerCrawlStateUtil.clearCrawling(player);
         syncToClient(player);
     }
 
     private static void onWakeUp(PlayerWakeUpEvent event) {
-        if (!MixinPlugin.isFeatureEnabled("feature.crawl.PlayerCrawlPoseMixin")) return;
+        if (!KineticFeatureSwitches.isEnabled("player.crawling")) return;
 
         Player player = event.getEntity();
         PlayerCrawlStateUtil.clearCrawling(player);

@@ -1,24 +1,23 @@
 package dev.xyat.kineticcore.feature.mechanics.config;
 
-import dev.xyat.kineticcore.ConfigGui;
-import dev.xyat.kineticcore.config.client.KTConfigPage;
-import dev.xyat.kineticcore.config.client.KTConfigScope;
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.config.client.KTConfigPage;
+import dev.xyat.kineticcore.api.config.client.KTConfigScope;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
-@KTClientModule
 public class GeneralMechanicsConfigGui {
     public static final String PAGE_ID = "kineticcore:general_mechanics";
 
     public static void load() {
-        ConfigGui.register(buildPage());
+        KTConfigApi.register(buildPage());
     }
 
     public static Screen create(Screen parent) {
-        return ConfigGui.create(parent, PAGE_ID);
+        return KTConfigApi.createScreen(parent, PAGE_ID);
     }
 
     private static KTConfigPage buildPage() {
@@ -106,7 +105,7 @@ public class GeneralMechanicsConfigGui {
                         "despawn_whitelist",
                         Component.translatable("cfg.kineticcore.mech.despawn_whitelist"),
                         () -> GeneralMechanicsConfig.despawnWhiteList,
-                        value -> GeneralMechanicsConfig.despawnWhiteList = value,
+                        value -> GeneralMechanicsConfig.despawnWhiteList = new ArrayList<>(value),
                         List.of(),
                         Component.translatable("cfg.kineticcore.mech.despawn_whitelist.tooltip")
                 )
@@ -122,7 +121,7 @@ public class GeneralMechanicsConfigGui {
                         "void_damage_whitelist",
                         Component.translatable("cfg.kineticcore.mech.void_damage_whitelist"),
                         () -> GeneralMechanicsConfig.voidDamageWhiteList,
-                        value -> GeneralMechanicsConfig.voidDamageWhiteList = value,
+                        value -> GeneralMechanicsConfig.voidDamageWhiteList = new ArrayList<>(value),
                         List.of(),
                         Component.translatable("cfg.kineticcore.mech.void_damage_whitelist.tooltip")
                 )

@@ -1,13 +1,11 @@
 package dev.xyat.kineticcore.feature.logcleaner.config;
 
-import dev.xyat.kineticcore.ConfigGui;
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
-import dev.xyat.kineticcore.config.client.KTConfigPage;
-import dev.xyat.kineticcore.config.client.KTConfigScope;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.config.client.KTConfigPage;
+import dev.xyat.kineticcore.api.config.client.KTConfigScope;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-@KTClientModule
 public final class LogCleanerConfigGui {
     public static final String PAGE_ID = "kineticcore:log_cleaner";
 
@@ -15,11 +13,11 @@ public final class LogCleanerConfigGui {
     }
 
     public static void load() {
-        ConfigGui.register(buildPage());
+        KTConfigApi.register(buildPage());
     }
 
     public static Screen create(Screen parent) {
-        return ConfigGui.create(parent, PAGE_ID);
+        return KTConfigApi.createScreen(parent, PAGE_ID);
     }
 
     private static KTConfigPage buildPage() {
@@ -43,7 +41,7 @@ public final class LogCleanerConfigGui {
                         true,
                         Component.translatable("cfg.kineticcore.logcleaner.deduplication.tooltip")
                 )
-                .stringValue(
+                .longTextValue(
                         "filtered_keywords",
                         Component.translatable("cfg.kineticcore.logcleaner.filtered_keywords"),
                         () -> LogCleanerConfig.rawFilteredKeywords,

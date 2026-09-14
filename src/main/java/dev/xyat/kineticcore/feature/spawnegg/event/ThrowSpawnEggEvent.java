@@ -1,6 +1,5 @@
 package dev.xyat.kineticcore.feature.spawnegg.event;
 
-import dev.xyat.kineticcore.bootstrap.annotation.KTModule;
 import dev.xyat.kineticcore.feature.spawnegg.config.SpawnEggConfig;
 import dev.xyat.kineticcore.feature.spawnegg.entity.ThrowSpawnEgg;
 import net.minecraft.nbt.CompoundTag;
@@ -13,7 +12,6 @@ import net.minecraft.world.item.SpawnEggItem;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
-@KTModule
 public final class ThrowSpawnEggEvent {
     private static final String MODE_KEY = "DisableEggThrow";
     private static boolean registered;

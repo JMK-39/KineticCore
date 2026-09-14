@@ -1,12 +1,11 @@
 package dev.xyat.kineticcore.feature.tps.client;
 
-import net.minecraft.ChatFormatting;
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.selector.HudPositionEditor;
-import dev.xyat.kineticcore.config.client.KTConfigApi;
-import dev.xyat.kineticcore.config.client.KTConfigScreen;
+import dev.xyat.kineticcore.api.client.screen.KineticNativeScreen;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.feature.tps.config.TpsClientConfig;
 import dev.xyat.kineticcore.feature.tps.config.TpsConfigGui;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -14,19 +13,19 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public final class TpsHudEditorScreen extends Screen {
+public final class TpsHudEditorScreen extends KineticNativeScreen {
     private final Screen parent;
     private final List<Component> previewLines;
     private final HudPositionEditor editor = new HudPositionEditor();
 
     public TpsHudEditorScreen(Screen parent) {
-        super(Component.translatable("screen.kineticcore.tps.editor.title"));
+        super(KineticText.translatable("screen.kineticcore.tps.editor.title"));
         this.parent = parent;
         this.previewLines = TpsRenderer.createPreviewLines();
     }
 
     @Override
-    protected void init() {
+    protected void buildUi() {
         int previewWidth = TpsRenderer.getContentWidth(font, previewLines);
         int previewHeight = TpsRenderer.getContentHeight(font, previewLines.size());
         double initialScale = TpsClientConfig.getHudScale();
@@ -51,10 +50,10 @@ public final class TpsHudEditorScreen extends Screen {
         );
 
         editor.addControlButtons(
-                this::addRenderableWidget,
-                Component.translatable("gui.kineticcore.hud_editor.save"),
-                Component.translatable("gui.kineticcore.hud_editor.reset"),
-                Component.translatable("gui.kineticcore.hud_editor.cancel"),
+                widget -> addControl(widget, null),
+                KineticText.translatable("gui.kineticcore.hud_editor.save"),
+                KineticText.translatable("gui.kineticcore.hud_editor.reset"),
+                KineticText.translatable("gui.kineticcore.hud_editor.cancel"),
                 this::saveAndClose,
                 this::closeWithoutSaving
         );
@@ -69,12 +68,12 @@ public final class TpsHudEditorScreen extends Screen {
                 mouseX,
                 mouseY,
                 title,
-                Component.translatable("screen.kineticcore.hud_editor.instruction_scale"),
-                Component.translatable(
+                KineticText.translatable("screen.kineticcore.hud_editor.instruction_scale"),
+                KineticText.translatable(
                         "screen.kineticcore.hud_editor.position_scale",
-                        Component.literal(String.valueOf(currentOffsetX())).withStyle(ChatFormatting.AQUA),
-                        Component.literal(String.valueOf(currentOffsetY())).withStyle(ChatFormatting.AQUA),
-                        Component.literal(String.valueOf(Math.round(editor.getScale() * 100.0D))).withStyle(ChatFormatting.YELLOW)
+                        Component.literal(String.valueOf(currentOffsetX())),
+                        Component.literal(String.valueOf(currentOffsetY())),
+                        Component.literal(String.valueOf(Math.round(editor.getScale() * 100.0D)))
                 ),
                 (g, x, y, mx, my) -> TpsRenderer.renderLines(g, font, previewLines, x, y)
         );
@@ -124,9 +123,7 @@ public final class TpsHudEditorScreen extends Screen {
     private void saveAndClose() {
         TpsClientConfig.setHudLayout(currentOffsetX(), currentOffsetY(), editor.getScale());
         KTConfigApi.notifySaved(TpsConfigGui.PAGE_ID);
-        if (parent instanceof KTConfigScreen configScreen) {
-            configScreen.refreshFromSource();
-        }
+        KTConfigApi.refreshScreenFromSource(parent);
         closeScreen();
     }
 
@@ -135,7 +132,7 @@ public final class TpsHudEditorScreen extends Screen {
     }
 
     private void closeScreen() {
-        Minecraft.getInstance().setScreen(parent);
+        navigateBack();
     }
 
     private int currentOffsetX() {

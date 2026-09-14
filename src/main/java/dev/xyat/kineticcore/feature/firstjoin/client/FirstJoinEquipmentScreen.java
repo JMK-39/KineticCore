@@ -1,12 +1,11 @@
 package dev.xyat.kineticcore.feature.firstjoin.client;
 
+import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
+
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
-import dev.xyat.kineticcore.api.client.search.ItemSearchIndex;
-import dev.xyat.kineticcore.api.client.selector.ItemSelectorScreen;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.selector.NbtEditorScreen;
-import dev.xyat.kineticcore.config.client.KTServerConfigClient;
+import dev.xyat.kineticcore.api.config.client.KTServerConfigClient;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfigGui;
 import net.minecraft.client.Minecraft;
@@ -51,7 +50,6 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
     public FirstJoinEquipmentScreen(Screen parent) {
         super(Component.translatable("gui.kineticcore.firstjoin.equipment.title"));
         this.parent = parent;
-        useStandardCanvas();
         loadStacks();
     }
 
@@ -122,14 +120,11 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
     }
 
     private void openItemSelector(String slotKey) {
-        ItemSearchIndex.prepareCache(() -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            minecraft.setScreen(new ItemSelectorScreen(this, selection -> {
+        KineticSelectors.openItemSelector(this, selection -> {
                 if (selection == null || !selection.isItem()) {
                     return;
                 }
                 stacks.put(slotKey, selection.stack().copy());
-            }));
         });
     }
 
@@ -143,7 +138,7 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
                 ? stack.getTag().toString()
                 : "";
 
-        Minecraft.getInstance().setScreen(new NbtEditorScreen(initialNbt, value -> {
+        KineticSelectors.openNbtEditor(this, initialNbt, value -> {
             if (value == null || value.isBlank()) {
                 stack.setTag(null);
                 return;
@@ -152,7 +147,7 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
                 stack.setTag(TagParser.parseTag(value));
             } catch (Exception ignored) {
             }
-        }, this));
+        });
     }
 
     private void clearSlot(String slotKey) {

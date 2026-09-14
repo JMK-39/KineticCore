@@ -2,7 +2,7 @@ package dev.xyat.kineticcore.feature.logcleaner.config;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
-import dev.xyat.kineticcore.KineticCore;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.nio.file.Files;
@@ -36,7 +36,7 @@ public class LogCleanerConfig {
             configData.save();
             readValues();
         } catch (Exception e) {
-            KineticCore.LOGGER.error("LogCleanerConfig Load Failed", e);
+            KineticRuntime.logger().error("LogCleanerConfig Load Failed", e);
         }
     }
 

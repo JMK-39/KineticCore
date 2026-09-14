@@ -1,7 +1,7 @@
 package dev.xyat.kineticcore.feature.tps.client;
 
-import net.minecraft.ChatFormatting;
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
+import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
 import dev.xyat.kineticcore.feature.tps.config.TpsClientConfig;
 import dev.xyat.kineticcore.feature.tps.network.TpsNetwork;
 import net.minecraft.client.Minecraft;
@@ -9,15 +9,10 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
-import net.minecraftforge.common.MinecraftForge;
 
 import java.util.List;
 import java.util.Locale;
 
-@KTClientModule
 public final class TpsRenderer {
     private static final long DATA_TIMEOUT_MILLIS = 5000L;
 
@@ -32,12 +27,12 @@ public final class TpsRenderer {
 
     public static void register() {
         if (registered) return;
-        MinecraftForge.EVENT_BUS.addListener(TpsRenderer::onRenderOverlay);
-        MinecraftForge.EVENT_BUS.addListener(TpsRenderer::onClientLogin);
+        KineticClientEvents.onHudRender(KineticClientEvents.HudStage.AFTER_CHAT, TpsRenderer::onRenderOverlay);
+        KineticClientEvents.onLogin(TpsRenderer::onClientLogin);
         registered = true;
     }
 
-    private static void onClientLogin(ClientPlayerNetworkEvent.LoggingIn event) {
+    private static void onClientLogin() {
         TpsNetwork.sendSubscription(TpsClientConfig.isHudEnabled());
     }
 
@@ -72,9 +67,7 @@ public final class TpsRenderer {
         }
     }
 
-    private static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-        if (event.getOverlay() != VanillaGuiOverlay.CHAT_PANEL.type()) return;
-
+    private static void onRenderOverlay(GuiGraphics graphics, float partialTick) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.screen instanceof TpsHudEditorScreen) return;
         if (!TpsClientConfig.isHudEnabled()
@@ -93,7 +86,6 @@ public final class TpsRenderer {
         int x = Mth.clamp(screenWidth - scaledWidth - 2 - TpsClientConfig.getHudOffsetX(), 0, Math.max(0, screenWidth - scaledWidth));
         int y = Mth.clamp(screenHeight - scaledHeight - 2 - TpsClientConfig.getHudOffsetY(), 0, Math.max(0, screenHeight - scaledHeight));
 
-        GuiGraphics graphics = event.getGuiGraphics();
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0.0F);
         graphics.pose().scale((float) scale, (float) scale, 1.0F);
@@ -111,21 +103,21 @@ public final class TpsRenderer {
     }
 
     private static Component formatTpsValue(String value, double tps) {
-        ChatFormatting color;
-        if (tps >= 18.0D) color = ChatFormatting.GREEN;
-        else if (tps >= 15.0D) color = ChatFormatting.YELLOW;
-        else if (tps >= 10.0D) color = ChatFormatting.GOLD;
-        else color = ChatFormatting.RED;
-        return Component.literal(value).withStyle(color);
+        String key;
+        if (tps >= 18.0D) key = "msg.kineticcore.metric.good";
+        else if (tps >= 15.0D) key = "msg.kineticcore.metric.warning";
+        else if (tps >= 10.0D) key = "msg.kineticcore.metric.caution";
+        else key = "msg.kineticcore.metric.bad";
+        return KineticText.translatable(key, Component.literal(value));
     }
 
     private static Component formatMsptValue(String value, double mspt) {
-        ChatFormatting color;
-        if (mspt < 30.0D) color = ChatFormatting.GREEN;
-        else if (mspt < 40.0D) color = ChatFormatting.YELLOW;
-        else if (mspt < 50.0D) color = ChatFormatting.GOLD;
-        else color = ChatFormatting.RED;
-        return Component.literal(value).withStyle(color);
+        String key;
+        if (mspt < 30.0D) key = "msg.kineticcore.metric.good";
+        else if (mspt < 40.0D) key = "msg.kineticcore.metric.warning";
+        else if (mspt < 50.0D) key = "msg.kineticcore.metric.caution";
+        else key = "msg.kineticcore.metric.bad";
+        return KineticText.translatable(key, Component.literal(value));
     }
 
     private static int scaledSize(int baseSize, double scale) {

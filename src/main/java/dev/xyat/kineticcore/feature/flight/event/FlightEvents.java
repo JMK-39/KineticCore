@@ -1,20 +1,28 @@
 package dev.xyat.kineticcore.feature.flight.event;
 
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.feature.flight.api.FlightAPI;
+import dev.xyat.kineticcore.api.text.KineticI18n;
+import net.minecraftforge.common.MinecraftForge;
+import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
+import dev.xyat.kineticcore.api.flight.KineticFlight;
 import dev.xyat.kineticcore.feature.flight.network.FlightNetwork;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
 import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = KineticCore.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class FlightEvents {
-    @SubscribeEvent
+    private static boolean registered;
+
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        MinecraftForge.EVENT_BUS.addListener(FlightEvents::onGameModeChange);
+        KineticServerEvents.onPlayerLogin(FlightEvents::onPlayerLogin);
+        KineticServerEvents.onPlayerChangedDimension((player, from, to) -> onDimensionChange(player));
+        KineticServerEvents.onPlayerRespawn((player, endConquered) -> onPlayerRespawn(player));
+    }
+
     public static void onGameModeChange(PlayerEvent.PlayerChangeGameModeEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             GameType newMode = event.getNewGameMode();
@@ -29,79 +37,66 @@ public class FlightEvents {
 
                 // 穿墙状态
                 boolean noclip = player.getPersistentData().getBoolean("kt_noclip");
-                MutableComponent statusText = Component.translatable(noclip ? "options.on" : "options.off")
-                        .withStyle(noclip ? ChatFormatting.GREEN : ChatFormatting.RED, ChatFormatting.BOLD);
+                MutableComponent statusText = KineticI18n.translatable(
+                        noclip ? "msg.kineticcore.flying.on" : "msg.kineticcore.flying.off"
+                );
 
                 // 构建动态按键组件（带黄色加粗样式）
-                MutableComponent speedKey = Component.keybind("key.kineticcore.flying.speed.modifier")
-                        .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD);
-                MutableComponent noclipKey = Component.keybind("key.kineticcore.flying.noclip")
-                        .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD);
+                MutableComponent speedKey = Component.keybind("key.kineticcore.flying.speed.modifier");
+                MutableComponent noclipKey = Component.keybind("key.kineticcore.flying.noclip");
 
                 // 2. 发送动态提示消息
                 // 提示第一行：微调
                 player.displayClientMessage(
-                        Component.literal("> ").withStyle(ChatFormatting.GRAY)
-                                .append(Component.translatable("msg.kineticcore.flying.fine.tune", speedKey)),
+                        KineticI18n.translatable("msg.kineticcore.flying.fine.tune", speedKey),
                         false
                 );
 
                 // 提示第二行：快调
                 player.displayClientMessage(
-                        Component.literal("> ").withStyle(ChatFormatting.GRAY)
-                                .append(Component.translatable("msg.kineticcore.flying.fast.tune", speedKey)),
+                        KineticI18n.translatable("msg.kineticcore.flying.fast.tune", speedKey),
                         false
                 );
 
                 // 提示第三行：穿墙状态与按键
                 player.displayClientMessage(
-                        Component.literal("> ").withStyle(ChatFormatting.GRAY)
-                                .append(Component.translatable("msg.kineticcore.flying.noclip.status", statusText, noclipKey)),
+                        KineticI18n.translatable("msg.kineticcore.flying.noclip.status", statusText, noclipKey),
                         false
                 );
             }
         }
     }
 
-    @SubscribeEvent
-    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            player.server.execute(() -> {
-                FlightNetwork.applyServerNoclip(player, false);
-                resyncFlightAbilities(player);
-            });
-        }
+    public static void onPlayerLogin(ServerPlayer player) {
+        player.server.execute(() -> {
+            FlightNetwork.applyServerNoclip(player, false);
+            resyncFlightAbilities(player);
+        });
     }
 
-    @SubscribeEvent
-    public static void onDimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            player.server.execute(() -> {
-                resyncFlightAbilities(player);
-                FlightNetwork.syncNoclipState(player);
-            });
-        }
+    public static void onDimensionChange(ServerPlayer player) {
+        player.server.execute(() -> {
+            resyncFlightAbilities(player);
+            FlightNetwork.syncNoclipState(player);
+        });
     }
 
-    @SubscribeEvent
-    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            player.server.execute(() -> {
-                resyncFlightAbilities(player);
-                FlightNetwork.syncNoclipState(player);
-            });
-        }
+    public static void onPlayerRespawn(ServerPlayer player) {
+        player.server.execute(() -> {
+            resyncFlightAbilities(player);
+            FlightNetwork.syncNoclipState(player);
+        });
     }
 
     private static void resyncFlightAbilities(ServerPlayer player) {
-        boolean forceFly = FlightAPI.shouldForceAllowFlight(player);
-        boolean wasFlying = FlightAPI.getLastKnownFlying(player);
+        boolean forceFly = KineticFlight.isFlightAllowed(player);
+        boolean wasFlying = KineticFlight.lastKnownFlying(player);
         if (forceFly || player.getAbilities().mayfly) {
             player.getAbilities().mayfly = true;
             if (wasFlying) player.getAbilities().flying = true;
         }
-        FlightAPI.isInternalUpdate = true;
+        KineticFlight.isInternalUpdate = true;
         player.onUpdateAbilities();
-        FlightAPI.isInternalUpdate = false;
+        KineticFlight.isInternalUpdate = false;
     }
 }

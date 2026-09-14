@@ -1,0 +1,230 @@
+import java.util.regex.Pattern
+
+def kineticJavaRoot = file('src/main/java/dev/xyat/kineticcore')
+def kineticApiRoot = file('src/main/java/dev/xyat/kineticcore/api')
+def kineticInternalPackage = 'dev.xyat.kineticcore.internal'
+def kineticFeaturePackage = 'dev.xyat.kineticcore.feature'
+def kineticApiPackage = 'dev.xyat.kineticcore.api'
+
+def kineticImportPattern = Pattern.compile('(?m)^\\s*import\\s+(dev\\.xyat\\.kineticcore\\.[A-Za-z0-9_$.*]+)\\s*;')
+
+def declarationPattern = Pattern.compile('(?s)\\b(public|protected)\\b[^;{]*(?:[;{])')
+def internalImportPattern = Pattern.compile('(?m)^\\s*import\\s+dev\\.xyat\\.kineticcore\\.internal(?:\\.[A-Za-z0-9_$.*]+)?\\s*;')
+
+def forbiddenBusinessPatterns = [
+        'Button.builder',
+        'new EditBox',
+        'new MultiLineEditBox',
+        'new ConfirmScreen',
+        'Tooltip.create',
+        'addRenderableWidget(',
+        'addWidget(',
+        '.enableScissor(',
+        '.disableScissor(',
+        'clearWidgets(',
+        'rebuildWidgets(',
+        'this.init()',
+        '.setFocused(',
+        '.getFocused()',
+        '.isFocused()',
+        '.setScreen(',
+        'Minecraft.getInstance().execute(',
+        'SimpleChannel',
+        'FriendlyByteBuf',
+        'PacketDistributor',
+        'NetworkEvent.Context',
+        'NetworkRegistry',
+        'GZIPInputStream',
+        'GZIPOutputStream',
+        'Deflater',
+        'Inflater',
+        '@Mod.EventBusSubscriber',
+        '@SubscribeEvent',
+        'Class.forName(',
+        'getAllScanData()',
+        'new KeyMapping',
+        'RegisterKeyMappingsEvent',
+        'InputEvent.Key',
+        'ScreenEvent.KeyPressed',
+        'ScreenEvent.MouseButtonPressed',
+        'TickEvent.ClientTickEvent',
+        'ClientPlayerNetworkEvent.LoggingIn',
+        'ClientPlayerNetworkEvent.LoggingOut',
+        'ScreenEvent.Init.Pre',
+        'ScreenEvent.Init.Post',
+        'ScreenEvent.Render.Post',
+        'RenderGuiOverlayEvent.Post',
+        'RenderGuiEvent.Post',
+        'TickEvent.ServerTickEvent',
+        'ServerStartedEvent',
+        'PlayerEvent.PlayerLoggedInEvent',
+        'PlayerEvent.PlayerLoggedOutEvent',
+        'PlayerEvent.PlayerRespawnEvent',
+        'PlayerEvent.PlayerChangedDimensionEvent',
+        'RenderTooltipEvent.Pre',
+        'ItemTooltipEvent',
+        'ScreenEvent.RenderInventoryMobEffects',
+        'RegisterCommandsEvent'
+]
+
+def internalSimpleNames = { String source ->
+    def names = [] as Set
+    def matcher = internalImportPattern.matcher(source)
+    while (matcher.find()) {
+        String line = matcher.group()
+        if (!line.contains('.*')) {
+            String qualified = line.replaceFirst('(?s)^\\s*import\\s+', '').replaceFirst('\\s*;\\s*$', '')
+            names.add(qualified.substring(qualified.lastIndexOf('.') + 1))
+        }
+    }
+    names
+}
+
+tasks.register('checkKineticArchitecture') {
+    group = 'verification'
+    description = 'Rejects invalid API/internal/feature dependency directions and internal type leaks from the public API.'
+
+    inputs.files(fileTree('src/main/java') { include '**/*.java' })
+
+    doLast {
+        def violations = []
+
+        if (kineticJavaRoot.exists()) {
+            fileTree(kineticJavaRoot) {
+                include '**/*.java'
+            }.files.each { File javaFile ->
+                String normalized = javaFile.absolutePath.replace('\\', '/')
+                boolean isApi = normalized.contains('/dev/xyat/kineticcore/api/')
+                boolean isInternal = normalized.contains('/dev/xyat/kineticcore/internal/')
+                boolean isFeature = normalized.contains('/dev/xyat/kineticcore/feature/')
+                boolean isMixinImplementation = normalized.contains('/dev/xyat/kineticcore/internal/mixin/')
+                String source = javaFile.getText('UTF-8')
+
+                if (!isMixinImplementation && source.contains('dev.xyat.kineticcore.internal.mixin')) {
+                    violations.add("RUNTIME -> MIXIN PACKAGE direct reference is forbidden: ${project.relativePath(javaFile)}")
+                }
+
+                if (!isApi && !isInternal && source.contains(kineticInternalPackage)) {
+                    violations.add("BUSINESS -> INTERNAL is forbidden: ${project.relativePath(javaFile)}")
+                }
+
+                if (isInternal && source.contains(kineticFeaturePackage)) {
+                    violations.add("INTERNAL -> FEATURE is forbidden: ${project.relativePath(javaFile)}")
+                }
+
+                if (isApi && source.contains(kineticFeaturePackage)) {
+                    violations.add("API -> FEATURE is forbidden: ${project.relativePath(javaFile)}")
+                }
+
+                if (isApi && (source.contains('import net.minecraftforge.client.event.')
+                        || source.contains('import net.minecraftforge.event.')
+                        || source.contains('import net.minecraftforge.fml.event.'))) {
+                    violations.add("API must not expose Forge event implementation types: ${project.relativePath(javaFile)}")
+                }
+
+
+                def imports = []
+                def importMatcher = kineticImportPattern.matcher(source)
+                while (importMatcher.find()) imports.add(importMatcher.group(1))
+
+                if (isApi) {
+                    imports.each { String imported ->
+                        if (!imported.startsWith(kineticApiPackage + '.')
+                                && !imported.startsWith(kineticInternalPackage + '.')) {
+                            violations.add("API -> NON-API KINETIC TYPE is forbidden: ${project.relativePath(javaFile)} -> ${imported}")
+                        }
+                    }
+                }
+
+                if (isFeature) {
+                    def featureMatch = (normalized =~ /\/feature\/([^\/]+)\//)
+                    String ownFeature = featureMatch.find() ? featureMatch.group(1) : null
+                    imports.each { String imported ->
+                        if (imported.startsWith(kineticApiPackage + '.')) return
+                        String ownPrefix = ownFeature == null ? '' : kineticFeaturePackage + '.' + ownFeature + '.'
+                        if (!ownPrefix.isEmpty() && imported.startsWith(ownPrefix)) return
+                        violations.add("FEATURE -> NON-API/CROSS-FEATURE is forbidden: ${project.relativePath(javaFile)} -> ${imported}")
+                    }
+                }
+
+                if (!isApi && !isInternal) {
+                    forbiddenBusinessPatterns.each { String pattern ->
+                        if (source.contains(pattern)) {
+                            violations.add("BUSINESS BYPASS is forbidden: ${project.relativePath(javaFile)} -> ${pattern}")
+                        }
+                    }
+                }
+
+                if (isFeature && (source =~ /\bextends\s+(?:Screen|AbstractContainerScreen)\b/).find()) {
+                    violations.add("FEATURE RAW SCREEN is forbidden: ${project.relativePath(javaFile)}")
+                }
+            }
+        }
+
+        if (kineticApiRoot.exists()) {
+            fileTree(kineticApiRoot) {
+                include '**/*.java'
+            }.files.each { File javaFile ->
+                String source = javaFile.getText('UTF-8')
+                Set<String> importedInternalTypes = internalSimpleNames(source)
+
+                def fqLeak = Pattern.compile('(?s)\\b(public|protected)\\b[^;{]*dev\\.xyat\\.kineticcore\\.internal[^;{]*(?:[;{])').matcher(source)
+                while (fqLeak.find()) {
+                    violations.add("API exposes an internal type: ${project.relativePath(javaFile)} -> ${fqLeak.group().replaceAll('\\s+', ' ').trim()}")
+                }
+
+                def declarations = declarationPattern.matcher(source)
+                while (declarations.find()) {
+                    String declaration = declarations.group()
+                    importedInternalTypes.each { String simpleName ->
+                        if (declaration.matches("(?s).*\\b${Pattern.quote(simpleName)}\\b.*")) {
+                            violations.add("API signature exposes internal type '${simpleName}': ${project.relativePath(javaFile)} -> ${declaration.replaceAll('\\s+', ' ').trim()}")
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            throw new GradleException(
+                    "Kinetic architecture check failed:\n - " + violations.unique().join('\n - ')
+                            + "\n\nRules:\n"
+                            + "  feature/config/other business code -> api only (internal is invisible)\n"
+                            + "  api may use internal privately, but public/protected API types must never expose internal\n"
+                            + "  internal -> feature and api -> feature are forbidden\n"
+                            + "  feature code may depend only on public api and its own feature package\n"
+                            + "  public api may depend only on api/internal plus Minecraft/Forge/external libraries\n"
+                            + "  Mixin/Hook implementations are allowed when the public API does not already provide the capability; do not duplicate shared capabilities"
+            )
+        }
+    }
+}
+
+tasks.matching { it.name == 'compileJava' }.configureEach {
+    dependsOn tasks.named('checkKineticArchitecture')
+}
+
+tasks.register('apiSourceZip', Zip) {
+    group = 'distribution'
+    description = 'Packages only the public Kinetic API sources and API reference for addon/AI development.'
+    archiveFileName.set("${project.name}-api-sources-${project.version}.zip")
+    destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+
+    from('src/main/java/dev/xyat/kineticcore/api') {
+        into 'src/main/java/dev/xyat/kineticcore/api'
+    }
+    from('README.md')
+    from('API_REFERENCE.md')
+    from('API_ARCHITECTURE.md')
+    from('API_TUTORIAL.md')
+}
+
+tasks.register('apiJar', Jar) {
+    group = 'distribution'
+    description = 'Packages only compiled public API classes. Use as addon compile dependency; use full KineticCore at runtime.'
+    archiveClassifier.set('api')
+    from(sourceSets.main.output) {
+        include 'dev/xyat/kineticcore/api/**'
+    }
+    dependsOn tasks.named('classes')
+}

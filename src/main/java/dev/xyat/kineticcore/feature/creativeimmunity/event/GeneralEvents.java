@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.feature.creativeimmunity.event;
 
-import dev.xyat.kineticcore.feature.mechanics.config.GeneralMechanicsConfig;
+import net.minecraftforge.common.MinecraftForge;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -9,15 +10,21 @@ import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Mod.EventBusSubscriber(modid = "kineticcore")
 public class GeneralEvents {
+    private static boolean registered;
+
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        MinecraftForge.EVENT_BUS.addListener(GeneralEvents::onCommand);
+        MinecraftForge.EVENT_BUS.addListener(GeneralEvents::onLivingAttack);
+    }
+
 
     // 定义虚空伤害和 Kill 指令的资源键
     private static final ResourceKey<DamageType> OUT_OF_WORLD = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("out_of_world"));
@@ -29,10 +36,9 @@ public class GeneralEvents {
     /**
      * 拦截命令执行事件，判断玩家是否在显式自杀
      */
-    @SubscribeEvent
     public static void onCommand(CommandEvent event) {
         // 检查配置是否开启
-        if (!GeneralMechanicsConfig.enableCreativeVoidImmunity) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "void_immunity", true)) return;
 
         CommandSourceStack source = event.getParseResults().getContext().getSource();
 
@@ -62,10 +68,9 @@ public class GeneralEvents {
      * 拦截生物受到攻击的事件
      * Intercept the event where a living entity is attacked
      */
-    @SubscribeEvent
     public static void onLivingAttack(LivingAttackEvent event) {
         // 检查配置是否开启
-        if (!GeneralMechanicsConfig.enableCreativeVoidImmunity) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "void_immunity", true)) return;
 
         // 检查目标是否为创造模式玩家[cite: 1]
         if (event.getEntity() instanceof Player player && player.isCreative()) {

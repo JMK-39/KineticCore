@@ -1,7 +1,8 @@
 package dev.xyat.kineticcore.feature.worldinit.event;
 
-import net.minecraft.ChatFormatting;
-import dev.xyat.kineticcore.KineticCore;
+import dev.xyat.kineticcore.api.text.KineticI18n;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.kineticcore.feature.worldinit.config.WorldInitConfig;
 import dev.xyat.kineticcore.feature.worldinit.data.WorldInitData;
 
@@ -10,31 +11,33 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Mod.EventBusSubscriber(modid = KineticCore.MODID)
 public class WorldInitHandler {
+    private static boolean registered;
+
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        KineticServerEvents.onStarted(WorldInitHandler::onServerStarted);
+        KineticServerEvents.onPlayerLogin(WorldInitHandler::onPlayerLoggedIn);
+    }
+
     private static final List<Component> PENDING_ADMIN_MESSAGES = new ArrayList<>();
 
-    @SubscribeEvent
-    public static void onServerStarted(ServerStartedEvent event) {
+    public static void onServerStarted(MinecraftServer server) {
         PENDING_ADMIN_MESSAGES.clear();
 
         if (!WorldInitConfig.enableWorldInit) {
             return;
         }
 
-        MinecraftServer server = event.getServer();
         WorldInitData data = WorldInitData.get(server.overworld());
 
         if (data.isCommandsExecuted()) {
-            KineticCore.LOGGER.debug("World init commands already executed, skipping.");
+            KineticRuntime.logger().debug("World init commands already executed, skipping.");
             return;
         }
 
@@ -44,34 +47,30 @@ public class WorldInitHandler {
         int successCount = 0;
         int failedCount = 0;
 
-        KineticCore.LOGGER.info("kineticcore world init command count={}", commands.size());
+        KineticRuntime.logger().info("kineticcore world init command count={}", commands.size());
 
         for (String command : commands) {
             try {
                 executeCommand(server, source, command);
                 successCount++;
-                KineticCore.LOGGER.info("World init command executed: {}", command);
+                KineticRuntime.logger().info("World init command executed: {}", command);
             } catch (Exception e) {
                 failedCount++;
                 String reason = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
                 broadcastAdminFailure(server, command, reason);
-                KineticCore.LOGGER.error("Failed to execute world init command: {}", command, e);
+                KineticRuntime.logger().error("Failed to execute world init command: {}", command, e);
             }
         }
 
         data.setCommandsExecuted(true);
-        KineticCore.LOGGER.info("kineticcore world init completed. success={}, failed={}", successCount, failedCount);
+        KineticRuntime.logger().info("kineticcore world init completed. success={}, failed={}", successCount, failedCount);
 
         if (failedCount > 0) {
-            broadcastOrQueueAdmins(server, Component.translatable("msg.kineticcore.worldinit.completed_with_failures", Component.literal(String.valueOf(successCount)).withStyle(ChatFormatting.GREEN), Component.literal(String.valueOf(failedCount)).withStyle(ChatFormatting.RED)));
+            broadcastOrQueueAdmins(server, KineticI18n.translatable("msg.kineticcore.worldinit.completed_with_failures", Component.literal(String.valueOf(successCount)), Component.literal(String.valueOf(failedCount))));
         }
     }
 
-    @SubscribeEvent
-    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) {
-            return;
-        }
+    public static void onPlayerLoggedIn(ServerPlayer player) {
         if (!player.hasPermissions(2)) {
             return;
         }
@@ -117,7 +116,7 @@ public class WorldInitHandler {
     }
 
     private static void broadcastAdminFailure(MinecraftServer server, String command, String reason) {
-        broadcastOrQueueAdmins(server, Component.translatable("msg.kineticcore.worldinit.command_failed.admin", Component.literal(command).withStyle(ChatFormatting.GOLD), Component.literal(reason).withStyle(ChatFormatting.RED)));
+        broadcastOrQueueAdmins(server, KineticI18n.translatable("msg.kineticcore.worldinit.command_failed.admin", Component.literal(command), Component.literal(reason)));
     }
 
     private static void broadcastOrQueueAdmins(MinecraftServer server, Component message) {

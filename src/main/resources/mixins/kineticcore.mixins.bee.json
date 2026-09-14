@@ -1,8 +1,8 @@
 {
-  "package": "dev.xyat.kineticcore.feature.bee.mixin",
+  "package": "dev.xyat.kineticcore.internal.mixin.bee",
   "minVersion": "0.8",
   "compatibilityLevel": "JAVA_17",
-  "plugin": "dev.xyat.kineticcore.MixinPlugin",
+  "plugin": "dev.xyat.kineticcore.internal.mixin.KineticMixinPlugin",
   "refmap": "kineticcore.mixins.refmap.json",
   "mixins": [
     "BeeMixins$BeeMixin",

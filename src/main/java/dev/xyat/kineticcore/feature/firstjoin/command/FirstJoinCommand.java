@@ -2,7 +2,6 @@ package dev.xyat.kineticcore.feature.firstjoin.command;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -42,7 +41,7 @@ public class FirstJoinCommand {
                     // 保存至磁盘
                     PlayerConfig.save();
 
-                    ctx.getSource().sendSuccess(() -> Component.translatable("cmd.kineticcore.setfirstjoin.success").withStyle(ChatFormatting.GREEN), true);
+                    ctx.getSource().sendSuccess(() -> Component.translatable("cmd.kineticcore.setfirstjoin.success"), true);
                     return 1;
                 })
         );

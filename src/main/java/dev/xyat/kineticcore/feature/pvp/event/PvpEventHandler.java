@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.feature.pvp.event;
 
-import dev.xyat.kineticcore.feature.mechanics.config.GeneralMechanicsConfig;
+import net.minecraftforge.common.MinecraftForge;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.feature.pvp.command.PvpCommand;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,11 +12,17 @@ import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber
 public class PvpEventHandler {
+    private static boolean registered;
+
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        MinecraftForge.EVENT_BUS.addListener(PvpEventHandler::onLivingAttack);
+        MinecraftForge.EVENT_BUS.addListener(PvpEventHandler::onSetTarget);
+    }
+
 
     private static ServerPlayer getPlayerOwner(Entity entity) {
         if (entity instanceof ServerPlayer player) {
@@ -40,9 +47,8 @@ public class PvpEventHandler {
         return PvpCommand.isPvpProtected(player);
     }
 
-    @SubscribeEvent
     public static void onLivingAttack(LivingAttackEvent event) {
-        if (!GeneralMechanicsConfig.enablePvpProtection) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "pvp_protection", true)) return;
         if (event.getSource() == null) return;
 
         Entity trueSource = event.getSource().getEntity();
@@ -59,9 +65,8 @@ public class PvpEventHandler {
         }
     }
 
-    @SubscribeEvent
     public static void onSetTarget(LivingChangeTargetEvent event) {
-        if (!GeneralMechanicsConfig.enablePvpProtection) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "pvp_protection", true)) return;
 
         LivingEntity attacker = event.getEntity();
         LivingEntity newTarget = event.getNewTarget();
@@ -79,7 +84,7 @@ public class PvpEventHandler {
     }
 
     public static void clearConflictingTargets(ServerPlayer changedPlayer) {
-        if (!GeneralMechanicsConfig.enablePvpProtection || changedPlayer == null || !isPvpProtected(changedPlayer)) {
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "pvp_protection", true) || changedPlayer == null || !isPvpProtected(changedPlayer)) {
             return;
         }
 

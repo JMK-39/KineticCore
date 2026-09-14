@@ -1,12 +1,10 @@
 package dev.xyat.kineticcore.feature.fps.config;
 
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
-import dev.xyat.kineticcore.config.client.KTClientConfigAdapter;
-import dev.xyat.kineticcore.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.feature.fps.client.FpsHudEditorScreen;
 import net.minecraft.network.chat.Component;
 
-@KTClientModule
 public final class FpsConfigGui {
     public static final String PAGE_ID = "kineticcore:fps";
 

@@ -1,12 +1,10 @@
 package dev.xyat.kineticcore.feature.spawnegg.config;
 
-import dev.xyat.kineticcore.ConfigGui;
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
-import dev.xyat.kineticcore.config.client.KTConfigPage;
-import dev.xyat.kineticcore.config.client.KTConfigScope;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.config.client.KTConfigPage;
+import dev.xyat.kineticcore.api.config.client.KTConfigScope;
 import net.minecraft.network.chat.Component;
 
-@KTClientModule
 public final class SpawnEggConfigGui {
     public static final String PAGE_ID = "kineticcore:spawn_egg";
 
@@ -14,7 +12,7 @@ public final class SpawnEggConfigGui {
     }
 
     public static void load() {
-        ConfigGui.register(KTConfigPage.builder(PAGE_ID, Component.translatable("cfg.kineticcore.spawnegg.title"))
+        KTConfigApi.register(KTConfigPage.builder(PAGE_ID, Component.translatable("cfg.kineticcore.spawnegg.title"))
                 .scope(KTConfigScope.SERVER_AUTHORITATIVE)
                 .serverManaged()
                 .applyTiming(KTConfigPage.ApplyTiming.IMMEDIATE)

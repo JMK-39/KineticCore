@@ -1,0 +1,19 @@
+package dev.xyat.kineticcore.internal.mixin.copyitem.client;
+
+import dev.xyat.kineticcore.api.minecraft.MinecraftContainers;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.world.inventory.Slot;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.gen.Accessor;
+
+@Mixin(AbstractContainerScreen.class)
+public interface AbstractContainerScreenAccessor extends MinecraftContainers.Access {
+    @Accessor("hoveredSlot")
+    Slot kineticcore$getHoveredSlot();
+
+    @Accessor("leftPos")
+    int kineticcore$getLeftPos();
+
+    @Accessor("topPos")
+    int kineticcore$getTopPos();
+}

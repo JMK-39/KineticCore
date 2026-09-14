@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.feature.firstjoin.event;
 
-import dev.xyat.kineticcore.KineticCore;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
@@ -12,10 +13,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
@@ -25,18 +22,24 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Mod.EventBusSubscriber(modid = KineticCore.MODID)
 public class FirstJoinHandler {
+    private static boolean registered;
+
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        KineticServerEvents.onPlayerLogin(FirstJoinHandler::onPlayerLogin);
+        KineticServerEvents.onTick(KineticServerEvents.TickPhase.END, FirstJoinHandler::onServerTick);
+    }
+
 
     private static final String NBT_KEY = "kineticcore:first_join_received";
     private static final String PENDING_NBT_KEY = "kineticcore:first_join_pending";
     private static final String DATA_NAME = "kineticcore_first_join_received";
     private static final Map<UUID, Integer> PENDING_REWARDS = new ConcurrentHashMap<>();
 
-    @SubscribeEvent
-    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!PlayerConfig.enableFirstJoin || event.getEntity().level().isClientSide) return;
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+    public static void onPlayerLogin(ServerPlayer player) {
+        if (!PlayerConfig.enableFirstJoin) return;
 
         UUID uuid = player.getUUID();
         CompoundTag persistentData = player.getPersistentData();
@@ -57,9 +60,8 @@ public class FirstJoinHandler {
         scheduleOrGrant(player, rewardData);
     }
 
-    @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || PENDING_REWARDS.isEmpty()) return;
+    public static void onServerTick(MinecraftServer server) {
+        if (PENDING_REWARDS.isEmpty()) return;
 
         Iterator<Map.Entry<UUID, Integer>> iterator = PENDING_REWARDS.entrySet().iterator();
         while (iterator.hasNext()) {
@@ -67,9 +69,9 @@ public class FirstJoinHandler {
             int ticksLeft = entry.getValue() - 1;
 
             if (ticksLeft <= 0) {
-                ServerPlayer player = event.getServer().getPlayerList().getPlayer(entry.getKey());
+                ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
                 if (player != null && player.isAlive()) {
-                    grantAndMark(player, getRewardData(event.getServer()));
+                    grantAndMark(player, getRewardData(server));
                 }
                 iterator.remove();
             } else {
@@ -94,7 +96,7 @@ public class FirstJoinHandler {
             markReceived(player, rewardData);
             PENDING_REWARDS.remove(player.getUUID());
         } catch (Throwable throwable) {
-            KineticCore.LOGGER.error("首次进服奖励发放失败，保留待发放状态: {}", player.getGameProfile().getName(), throwable);
+            KineticRuntime.logger().error("首次进服奖励发放失败，保留待发放状态: {}", player.getGameProfile().getName(), throwable);
             markPending(player, rewardData);
         }
     }
@@ -143,7 +145,7 @@ public class FirstJoinHandler {
                         player.server.getCommands().performPrefixedCommand(source, parsedCmd);
                     }
                 } catch (Exception e) {
-                    KineticCore.LOGGER.error("首次进服指令执行失败: {}", cmd, e);
+                    KineticRuntime.logger().error("首次进服指令执行失败: {}", cmd, e);
                 }
             }
         }

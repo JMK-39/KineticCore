@@ -1,20 +1,25 @@
 package dev.xyat.kineticcore.feature.food.event;
 
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.feature.mechanics.config.GeneralMechanicsConfig;
+import net.minecraftforge.common.MinecraftForge;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = KineticCore.MODID)
 public class FoodAndToolTweaks {
+    private static boolean registered;
 
-    @SubscribeEvent
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        MinecraftForge.EVENT_BUS.addListener(FoodAndToolTweaks::onRightClickItem);
+    }
+
+
     public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
-        if (!GeneralMechanicsConfig.enableAlwaysEdible) return;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "always_edible", true)) return;
         ItemStack stack = event.getItemStack();
         if (!stack.isEdible()) return;
 

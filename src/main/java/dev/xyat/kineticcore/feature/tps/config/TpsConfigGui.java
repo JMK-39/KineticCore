@@ -1,14 +1,12 @@
 package dev.xyat.kineticcore.feature.tps.config;
 
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
-import dev.xyat.kineticcore.config.client.KTClientConfigAdapter;
-import dev.xyat.kineticcore.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.feature.tps.client.TpsHudEditorScreen;
 import dev.xyat.kineticcore.feature.tps.network.TpsNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
-@KTClientModule
 public final class TpsConfigGui {
     public static final String PAGE_ID = "kineticcore:tps";
 

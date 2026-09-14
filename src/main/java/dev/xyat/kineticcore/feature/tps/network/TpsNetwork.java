@@ -1,116 +1,65 @@
 package dev.xyat.kineticcore.feature.tps.network;
 
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.api.KTNetworkProtocol;
-import dev.xyat.kineticcore.bootstrap.annotation.KTNetwork;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.network.ClientboundSender;
+import dev.xyat.kineticcore.api.network.KineticNetwork;
+import dev.xyat.kineticcore.api.network.NetworkChannel;
+import dev.xyat.kineticcore.api.network.NetworkCodec;
+import dev.xyat.kineticcore.api.network.ServerboundSender;
 import dev.xyat.kineticcore.feature.tps.client.TpsRenderer;
 import dev.xyat.kineticcore.feature.tps.logic.TpsHudManager;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkDirection;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
 
-import java.util.function.Supplier;
-
-@KTNetwork
 public final class TpsNetwork {
-    private static final String PROTOCOL_VERSION = "1";
-    private static int packetId;
+    private static final NetworkChannel CHANNEL = KineticNetwork.channel(
+            new ResourceLocation(KineticRuntime.MOD_ID, "tps")
+    );
 
-    private static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
-            .named(new ResourceLocation(KineticCore.MODID, "tps"))
-            .networkProtocolVersion(() -> PROTOCOL_VERSION)
-            .clientAcceptedVersions(KTNetworkProtocol::acceptsAnyVersion)
-            .serverAcceptedVersions(KTNetworkProtocol::acceptsAnyVersion)
-            .simpleChannel();
+    private static ClientboundSender<TpsData> tpsDataSender;
+    private static ServerboundSender<SubscriptionData> subscriptionSender;
 
     private TpsNetwork() {
     }
 
     public static void register() {
-        CHANNEL.messageBuilder(TpsData.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .decoder(TpsData::new)
-                .encoder(TpsData::encode)
-                .consumerMainThread(TpsData::handle)
-                .add();
+        tpsDataSender = CHANNEL.registerClientbound(
+                TpsData.class,
+                NetworkCodec.of(
+                        (buffer, message) -> {
+                            buffer.writeDouble(message.tps());
+                            buffer.writeDouble(message.mspt());
+                        },
+                        buffer -> new TpsData(buffer.readDouble(), buffer.readDouble())
+                ),
+                message -> TpsRenderer.updateData(message.tps(), message.mspt())
+        );
 
-        CHANNEL.messageBuilder(SubscriptionData.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(SubscriptionData::new)
-                .encoder(SubscriptionData::encode)
-                .consumerMainThread(SubscriptionData::handle)
-                .add();
+        subscriptionSender = CHANNEL.registerServerbound(
+                SubscriptionData.class,
+                NetworkCodec.of(
+                        (buffer, message) -> buffer.writeBoolean(message.enabled()),
+                        buffer -> new SubscriptionData(buffer.readBoolean())
+                ),
+                (message, context) -> TpsHudManager.setEnabled(context.sender(), message.enabled())
+        );
     }
 
-    public static void sendToPlayer(Object message, ServerPlayer player) {
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
+    public static void sendToPlayer(TpsData message, ServerPlayer player) {
+        if (tpsDataSender != null) {
+            tpsDataSender.send(player, message);
+        }
     }
 
     public static void sendSubscription(boolean enabled) {
-        CHANNEL.sendToServer(new SubscriptionData(enabled));
-    }
-
-    private static int id() {
-        return packetId++;
-    }
-
-    public static final class TpsData {
-        private final double tps;
-        private final double mspt;
-
-        public TpsData(double tps, double mspt) {
-            this.tps = tps;
-            this.mspt = mspt;
-        }
-
-        private TpsData(FriendlyByteBuf buf) {
-            this(buf.readDouble(), buf.readDouble());
-        }
-
-        private void encode(FriendlyByteBuf buf) {
-            buf.writeDouble(tps);
-            buf.writeDouble(mspt);
-        }
-
-        private boolean handle(Supplier<NetworkEvent.Context> supplier) {
-            NetworkEvent.Context context = supplier.get();
-            context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
-                    Dist.CLIENT,
-                    () -> () -> TpsRenderer.updateData(tps, mspt)
-            ));
-            context.setPacketHandled(true);
-            return true;
+        if (subscriptionSender != null) {
+            subscriptionSender.send(new SubscriptionData(enabled));
         }
     }
 
-    public static final class SubscriptionData {
-        private final boolean enabled;
+    public record TpsData(double tps, double mspt) {
+    }
 
-        public SubscriptionData(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        private SubscriptionData(FriendlyByteBuf buf) {
-            this(buf.readBoolean());
-        }
-
-        private void encode(FriendlyByteBuf buf) {
-            buf.writeBoolean(enabled);
-        }
-
-        private boolean handle(Supplier<NetworkEvent.Context> supplier) {
-            NetworkEvent.Context context = supplier.get();
-            ServerPlayer player = context.getSender();
-            if (player != null) {
-                context.enqueueWork(() -> TpsHudManager.setEnabled(player, enabled));
-            }
-            context.setPacketHandled(true);
-            return true;
-        }
+    public record SubscriptionData(boolean enabled) {
     }
 }

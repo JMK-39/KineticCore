@@ -1,10 +1,9 @@
 package dev.xyat.kineticcore.api.client.selector;
 
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.HighZButton;
+import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -32,7 +31,6 @@ public final class HudPositionEditor {
     );
     private static final int ELEMENT_PADDING = 4;
     private static final int BUTTON_WIDTH = 90;
-    private static final int BUTTON_HEIGHT = KineticScreen.STANDARD_CONTROL_HEIGHT;
     private static final int BUTTON_GAP = 6;
     private static final double MIN_SCALE = 0.5D;
     private static final int SAFE_MAX_SIZE = 1_000_000_000;
@@ -206,19 +204,19 @@ public final class HudPositionEditor {
         int startX = (screenWidth - totalWidth) / 2;
         int buttonY = screenHeight - 30;
 
-        buttonAdder.accept(new HighZButton(
-                startX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT,
-                saveText, ignored -> saveAction.run(), null, 0
+        buttonAdder.accept(KineticWidgets.createHighZButton(
+                startX, buttonY, BUTTON_WIDTH,
+                saveText, null, 0, ignored -> saveAction.run()
         ));
 
-        buttonAdder.accept(new HighZButton(
-                startX + BUTTON_WIDTH + BUTTON_GAP, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT,
-                resetText, ignored -> reset(), null, 0
+        buttonAdder.accept(KineticWidgets.createHighZButton(
+                startX + BUTTON_WIDTH + BUTTON_GAP, buttonY, BUTTON_WIDTH,
+                resetText, null, 0, ignored -> reset()
         ));
 
-        buttonAdder.accept(new HighZButton(
-                startX + (BUTTON_WIDTH + BUTTON_GAP) * 2, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT,
-                cancelText, ignored -> cancelAction.run(), null, 0
+        buttonAdder.accept(KineticWidgets.createHighZButton(
+                startX + (BUTTON_WIDTH + BUTTON_GAP) * 2, buttonY, BUTTON_WIDTH,
+                cancelText, null, 0, ignored -> cancelAction.run()
         ));
     }
 

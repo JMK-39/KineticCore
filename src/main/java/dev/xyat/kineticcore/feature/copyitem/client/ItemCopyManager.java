@@ -1,12 +1,14 @@
 package dev.xyat.kineticcore.feature.copyitem.client;
 
-import net.minecraft.ChatFormatting;
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.tooltip.KineticItemTooltips;
+import dev.xyat.kineticcore.api.minecraft.MinecraftContainers;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.feature.copyitem.compat.jei.ItemCopyJeiPlugin;
-import dev.xyat.kineticcore.feature.copyitem.mixin.client.AbstractContainerScreenAccessor;
 import net.minecraft.Util;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -14,73 +16,68 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import dev.xyat.kineticcore.KineticCore;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.client.event.RenderTooltipEvent;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.client.settings.KeyConflictContext;
-import net.minecraftforge.client.settings.KeyModifier;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.ForgeRegistries;
 
-public class ItemCopyManager {
-    public static KeyMapping KEY_COPY_ITEM_ID;
-    public static KeyMapping KEY_SHOW_DETAIL;
-
+public final class ItemCopyManager {
     private static final long TOOLTIP_FALLBACK_KEEP_MS = 750L;
-    private static ItemStack tooltipFallbackStack = ItemStack.EMPTY;
-    private static long tooltipFallbackTimeMs = 0L;
 
-    @Mod.EventBusSubscriber(modid = KineticCore.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-    public static class ModBusEvents {
-        @SubscribeEvent
-        public static void registerKeys(RegisterKeyMappingsEvent event) {
-            event.register(KEY_COPY_ITEM_ID = new KeyMapping("key.kineticcore.copyitem.copy_item_id", KeyConflictContext.GUI, KeyModifier.ALT, InputConstants.Type.KEYSYM, InputConstants.KEY_C, "key.kineticcore.category"));
-            event.register(KEY_SHOW_DETAIL = new KeyMapping("key.kineticcore.copyitem.copy_item_info", KeyConflictContext.GUI, KeyModifier.ALT, InputConstants.Type.KEYSYM, InputConstants.KEY_F, "key.kineticcore.category"));
-        }
+    private static boolean registered;
+    private static ItemStack tooltipFallbackStack = ItemStack.EMPTY;
+    private static long tooltipFallbackTimeMs;
+
+    private ItemCopyManager() {
     }
 
-    @Mod.EventBusSubscriber(modid = KineticCore.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
-    public static class ForgeBusEvents {
-        @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
-        public static void onRenderTooltip(RenderTooltipEvent.Pre event) {
-            ItemStack stack = event.getItemStack();
-            if (stack.isEmpty()) return;
+    public static void register() {
+        if (registered) return;
+        registered = true;
 
-            tooltipFallbackStack = stack.copy();
-            tooltipFallbackTimeMs = Util.getMillis();
-        }
+        KineticKeyBindings.builder("key.kineticcore.copyitem.copy_item_id")
+                .category("key.kineticcore.category")
+                .context(KineticKeyBindings.Context.GUI)
+                .modifier(KineticKeyBindings.Modifier.ALT)
+                .keyboardKey(InputConstants.KEY_C)
+                .onPressed(ItemCopyManager::copyHoveredItem)
+                .register();
 
-        @SubscribeEvent
-        public static void onKeyInput(ScreenEvent.KeyPressed.Pre event) {
-            InputConstants.Key inputKey = InputConstants.getKey(event.getKeyCode(), event.getScanCode());
+        KineticKeyBindings.builder("key.kineticcore.copyitem.copy_item_info")
+                .category("key.kineticcore.category")
+                .context(KineticKeyBindings.Context.GUI)
+                .modifier(KineticKeyBindings.Modifier.ALT)
+                .keyboardKey(InputConstants.KEY_F)
+                .onPressed(ItemCopyManager::showHoveredItemDetails)
+                .register();
 
-            boolean copyKey = KEY_COPY_ITEM_ID != null && KEY_COPY_ITEM_ID.isActiveAndMatches(inputKey);
-            boolean detailKey = KEY_SHOW_DETAIL != null && KEY_SHOW_DETAIL.isActiveAndMatches(inputKey);
+        KineticItemTooltips.onRender(ItemCopyManager::onRenderTooltip);
+    }
 
-            if (!copyKey && !detailKey) return;
+    private static void onRenderTooltip(ItemStack stack) {
+        if (stack.isEmpty()) return;
 
-            Minecraft mc = Minecraft.getInstance();
-            ItemStack stack = resolveHoveredStack(event.getScreen());
+        tooltipFallbackStack = stack.copy();
+        tooltipFallbackTimeMs = Util.getMillis();
+    }
 
-            if (stack.isEmpty()) return;
+    private static boolean copyHoveredItem() {
+        Minecraft mc = Minecraft.getInstance();
+        ItemStack stack = resolveHoveredStack(KineticClientRuntime.currentScreen());
+        if (stack.isEmpty()) return false;
 
-            if (copyKey) {
-                copyItem(mc, stack);
-                event.setCanceled(true);
-                return;
-            }
+        copyItem(mc, stack);
+        return true;
+    }
 
-            if (mc.player != null) {
-                ItemDetailPrinter.showItemInfo(mc.player, stack);
-                GuiOverlay.toast(Component.translatable("msg.kineticcore.copyitem.copy.chat_output.success"));
-                event.setCanceled(true);
-            }
-        }
+    private static boolean showHoveredItemDetails() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return false;
+
+        ItemStack stack = resolveHoveredStack(KineticClientRuntime.currentScreen());
+        if (stack.isEmpty()) return false;
+
+        ItemDetailPrinter.showItemInfo(mc.player, stack);
+        GuiOverlay.toast(KineticText.translatable("msg.kineticcore.copyitem.copy.chat_output.success"));
+        return true;
     }
 
     private static ItemStack resolveHoveredStack(Screen screen) {
@@ -110,14 +107,12 @@ public class ItemCopyManager {
             return ItemStack.EMPTY;
         }
 
-        AbstractContainerScreenAccessor accessor = (AbstractContainerScreenAccessor) containerScreen;
-
-        Slot hoveredSlot = accessor.kineticcore$getHoveredSlot();
+        Slot hoveredSlot = MinecraftContainers.hoveredSlot(containerScreen);
         if (isValidSlot(hoveredSlot)) {
             return hoveredSlot.getItem().copy();
         }
 
-        Slot mouseSlot = findSlotByMouse(containerScreen, accessor);
+        Slot mouseSlot = findSlotByMouse(containerScreen);
         if (isValidSlot(mouseSlot)) {
             return mouseSlot.getItem().copy();
         }
@@ -130,14 +125,14 @@ public class ItemCopyManager {
         return ItemStack.EMPTY;
     }
 
-    private static Slot findSlotByMouse(AbstractContainerScreen<?> screen, AbstractContainerScreenAccessor accessor) {
+    private static Slot findSlotByMouse(AbstractContainerScreen<?> screen) {
         Minecraft mc = Minecraft.getInstance();
 
         double mouseX = mc.mouseHandler.xpos() * (double) mc.getWindow().getGuiScaledWidth() / (double) mc.getWindow().getScreenWidth();
         double mouseY = mc.mouseHandler.ypos() * (double) mc.getWindow().getGuiScaledHeight() / (double) mc.getWindow().getScreenHeight();
 
-        int left = accessor.kineticcore$getLeftPos();
-        int top = accessor.kineticcore$getTopPos();
+        int left = MinecraftContainers.left(screen);
+        int top = MinecraftContainers.top(screen);
 
         for (Slot slot : screen.getMenu().slots) {
             if (!slot.isActive()) continue;
@@ -172,6 +167,6 @@ public class ItemCopyManager {
         }
 
         mc.keyboardHandler.setClipboard(result);
-        GuiOverlay.toast(Component.translatable("msg.kineticcore.copyitem.copy.item_id.success", Component.literal(result).withStyle(ChatFormatting.AQUA)));
+        GuiOverlay.toast(KineticText.translatable("msg.kineticcore.copyitem.copy.item_id.success", Component.literal(result)));
     }
 }

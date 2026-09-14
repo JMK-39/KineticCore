@@ -1,5 +1,3 @@
-import java.text.SimpleDateFormat
-
 buildscript {
     repositories {
         maven { url = 'https://litesy.bmclapi2.bangbang93.com/maven/' }
@@ -17,8 +15,12 @@ buildscript {
 plugins {
     id 'eclipse'
     id 'idea'
-    id 'maven-publish'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+def requiredGradleVersion = org.gradle.util.GradleVersion.version('8.8')
+if (org.gradle.util.GradleVersion.current() != requiredGradleVersion) {
+    throw new GradleException("KineticCore requires Gradle 8.8 exactly. Current Gradle: ${org.gradle.util.GradleVersion.current().version}")
 }
 
 apply plugin: 'net.minecraftforge.gradle'
@@ -37,7 +39,7 @@ configurations.configureEach {
 def getDynamicVersion() {
     def useAuto = project.findProperty('use_auto_version')?.toString() ?: 'false'
     if (useAuto.toBoolean()) {
-        return new SimpleDateFormat("yy.M.d").format(new Date())
+        return new java.text.SimpleDateFormat("yy.M.d").format(new Date())
     } else {
         return project.findProperty('mod_version')?.toString() ?: "0.0.0"
     }
@@ -291,4 +293,5 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs.addAll(['-nowarn', '-Xlint:none', '-Amixin.target.allowUnresolvedTarget=true', '-Amixin.suppressTargetWarnings=true'])
 }
 
-apply from: 'gradle/github-release.gradle'
+
+apply from: 'gradle/kinetic-architecture.gradle'

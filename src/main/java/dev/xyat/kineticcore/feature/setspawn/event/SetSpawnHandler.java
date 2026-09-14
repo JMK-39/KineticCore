@@ -1,10 +1,11 @@
 package dev.xyat.kineticcore.feature.setspawn.event;
 
+import dev.xyat.kineticcore.api.hook.ServerHooks;
 import dev.xyat.kineticcore.feature.setspawn.config.SetSpawnConfig;
 import dev.xyat.kineticcore.feature.setspawn.data.SetSpawnData;
 
 import com.mojang.authlib.GameProfile;
-import dev.xyat.kineticcore.KineticCore;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -47,6 +48,78 @@ import java.util.stream.Stream;
 public class SetSpawnHandler {
 
     public static boolean isInternalModifying = false;
+    private static boolean hooksRegistered;
+
+    public static void registerHooks() {
+        if (hooksRegistered) return;
+        hooksRegistered = true;
+        ServerHooks.onSpawnOverride(new ServerHooks.SpawnOverride() {
+            @Override
+            public void beforePrepareLevels(MinecraftServer server) {
+                SetSpawnHandler.applyCachedOverworldSpawnBeforeVanillaSpawnChunks(server);
+            }
+
+            @Override
+            public Optional<Pair<ServerLevel, BlockPos>> globalSpawn(MinecraftServer server) {
+                return SetSpawnHandler.getOrCreateGlobalSpawn(server);
+            }
+
+            @Override
+            public Optional<ServerPlayer> createFreshLoginPlayer(MinecraftServer server, GameProfile profile) {
+                return SetSpawnHandler.createFreshLoginPlayer(server, profile);
+            }
+
+            @Override
+            public boolean isFreshLoginPlayer(ServerPlayer player) {
+                return SetSpawnHandler.isFreshLoginPlayer(player);
+            }
+
+            @Override
+            public Optional<ServerLevel> ensureFreshPlayerPlacement(MinecraftServer server, ServerPlayer player) {
+                return SetSpawnHandler.ensureFreshPlayerPlacement(server, player);
+            }
+
+            @Override
+            public void finishFreshPlayerPlacement(ServerPlayer player) {
+                SetSpawnHandler.finishFreshPlayerPlacement(player);
+            }
+
+            @Override
+            public void clearPendingRespawnPlacement() {
+                SetSpawnHandler.clearPendingRespawnPlacement();
+            }
+
+            @Override
+            public Optional<Pair<ServerLevel, BlockPos>> respawnSpawn(MinecraftServer server) {
+                return SetSpawnHandler.getOrCreateRespawnSpawn(server);
+            }
+
+            @Override
+            public void markPendingRespawnPlacement(Pair<ServerLevel, BlockPos> spawn) {
+                SetSpawnHandler.markPendingRespawnPlacement(spawn);
+            }
+
+            @Override
+            public void applyPendingRespawnPlacement(ServerPlayer player) {
+                SetSpawnHandler.applyPendingRespawnPlacement(player);
+            }
+
+            @Override
+            public void syncAppliedRespawnPlacement(ServerPlayer player) {
+                SetSpawnHandler.syncAppliedRespawnPlacement(player);
+            }
+
+            @Override
+            public void onDefaultSpawnChanged(ServerLevel level, BlockPos pos, float angle) {
+                SetSpawnHandler.onDefaultSpawnChanged(level, pos, angle);
+            }
+
+            @Override
+            public Optional<BlockPos> sharedSpawn(MinecraftServer server, ServerLevel level) {
+                return SetSpawnHandler.getSavedSpawnPosForLevel(server, level);
+            }
+        });
+    }
 
     private static final int SAFE_SEARCH_RADIUS = 96;
     private static final int PLATFORM_RADIUS = 1;
@@ -204,6 +277,25 @@ public class SetSpawnHandler {
         }
 
         syncPlayerExactPosition(player, pos);
+    }
+
+    public static void onDefaultSpawnChanged(ServerLevel level, BlockPos pos, float angle) {
+        if (isInternalModifying || !SetSpawnConfig.enableCustomSpawn) return;
+
+        MinecraftServer server = level.getServer();
+        SetSpawnData data = SetSpawnData.get(server.overworld());
+        data.setSetSpawnWorldChecked(true);
+        data.setSetSpawnWorldEnabled(true);
+        data.setSpawnCalculated(true);
+        data.setAdminSpawn(true);
+        data.setAutomaticSpawnWorld(false);
+        data.setDataVersion(SetSpawnData.CURRENT_DATA_VERSION);
+        data.setInitialized(true);
+        data.setSpawnDim(level.dimension().location().toString());
+        data.setSpawnX(pos.getX());
+        data.setSpawnY(pos.getY());
+        data.setSpawnZ(pos.getZ());
+        data.setDirty();
     }
 
     public static Optional<BlockPos> getSavedSpawnPosForLevel(MinecraftServer server, ServerLevel level) {
@@ -1068,8 +1160,8 @@ public class SetSpawnHandler {
 
 
     private static void debug(String message) {
-        if (KineticCore.LOGGER.isDebugEnabled()) {
-            KineticCore.LOGGER.debug("{} {}", LOG_PREFIX, message);
+        if (KineticRuntime.logger().isDebugEnabled()) {
+            KineticRuntime.logger().debug("{} {}", LOG_PREFIX, message);
         }
     }
 

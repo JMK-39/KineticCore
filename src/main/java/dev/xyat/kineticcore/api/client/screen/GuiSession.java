@@ -1,16 +1,12 @@
 package dev.xyat.kineticcore.api.client.screen;
 
-import dev.xyat.kineticcore.KineticCore;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import org.lwjgl.glfw.GLFW;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 import java.util.Map;
 import java.util.Objects;
@@ -22,7 +18,6 @@ import java.util.function.Supplier;
  * Kinetic GUI 会话管理器。
  * 统一负责父界面导航、未保存草稿回滚和保存边界。
  */
-@Mod.EventBusSubscriber(modid = KineticCore.MODID, value = Dist.CLIENT)
 public final class GuiSession {
     private static final Map<Screen, Screen> PARENTS = new WeakHashMap<>();
 
@@ -46,10 +41,7 @@ public final class GuiSession {
     private GuiSession() {
     }
 
-    @SubscribeEvent
-    public static void onScreenOpening(ScreenEvent.Opening event) {
-        Screen next = event.getNewScreen();
-        Screen current = event.getCurrentScreen();
+    public static void handleScreenOpening(Screen current, Screen next) {
         if (current == next) return;
 
         if (current != null && isKineticScreen(next)) {
@@ -111,14 +103,12 @@ public final class GuiSession {
         return null;
     }
 
-    @SubscribeEvent
-    public static void onPlainScreenEscape(ScreenEvent.KeyPressed.Pre event) {
-        Screen screen = event.getScreen();
-        if (event.getKeyCode() != GLFW.GLFW_KEY_ESCAPE) return;
-        if (!isKineticScreen(screen)) return;
-        if (screen instanceof KineticScreen || screen instanceof KineticContainerScreen<?> || screen instanceof KineticNativeScreen) return;
-        event.setCanceled(true);
+    public static boolean handlePlainScreenEscape(Screen screen, int keyCode) {
+        if (keyCode != GLFW.GLFW_KEY_ESCAPE) return false;
+        if (!isKineticScreen(screen)) return false;
+        if (screen instanceof KineticScreen || screen instanceof KineticContainerScreen<?> || screen instanceof KineticNativeScreen) return false;
         back(screen);
+        return true;
     }
 
     public static void setParent(Screen screen, Screen parent) {
@@ -142,7 +132,7 @@ public final class GuiSession {
         if (screen instanceof AbstractContainerScreen<?> && minecraft.player != null) {
             minecraft.player.closeContainer();
         }
-        minecraft.setScreen(parent);
+        KineticClientRuntime.openScreen(parent);
     }
 
     public static boolean isKineticScreen(Screen screen) {

@@ -1,7 +1,6 @@
 package dev.xyat.kineticcore.feature.logcleaner;
 
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.bootstrap.annotation.KTModule;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.feature.logcleaner.config.LogCleanerConfig;
 import net.minecraftforge.fml.loading.FMLPaths;
 
@@ -14,7 +13,6 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-@KTModule
 public class LogCleanerModule {
     private static boolean shutdownHookInstalled;
 
@@ -72,7 +70,7 @@ public class LogCleanerModule {
                 }
             }
         } catch (IOException e) {
-            KineticCore.LOGGER.error("[LogCleaner] Failed to access directory: {}", targetDir, e);
+            KineticRuntime.logger().error("[LogCleaner] Failed to access directory: {}", targetDir, e);
         }
     }
 }

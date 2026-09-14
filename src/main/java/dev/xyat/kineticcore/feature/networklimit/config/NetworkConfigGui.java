@@ -1,13 +1,11 @@
 package dev.xyat.kineticcore.feature.networklimit.config;
 
-import dev.xyat.kineticcore.ConfigGui;
-import dev.xyat.kineticcore.config.client.KTConfigPage;
-import dev.xyat.kineticcore.config.client.KTConfigScope;
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.config.client.KTConfigPage;
+import dev.xyat.kineticcore.api.config.client.KTConfigScope;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-@KTClientModule
 public final class NetworkConfigGui {
     public static final String PAGE_ID = "kineticcore:network";
 
@@ -15,7 +13,7 @@ public final class NetworkConfigGui {
     }
 
     public static void load() {
-        ConfigGui.register(KTConfigPage.builder(PAGE_ID, Component.translatable("cfg.kineticcore.network"))
+        KTConfigApi.register(KTConfigPage.builder(PAGE_ID, Component.translatable("cfg.kineticcore.network"))
                 .scope(KTConfigScope.LOCAL_INSTALLATION)
                 .applyTiming(KTConfigPage.ApplyTiming.MIXED)
                 .applyNotice(Component.translatable("cfg.kineticcore.network.apply_notice"))
@@ -56,6 +54,6 @@ public final class NetworkConfigGui {
     }
 
     public static Screen create(Screen parent) {
-        return ConfigGui.create(parent, PAGE_ID);
+        return KTConfigApi.createScreen(parent, PAGE_ID);
     }
 }

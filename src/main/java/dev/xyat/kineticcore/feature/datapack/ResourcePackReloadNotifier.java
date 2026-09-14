@@ -1,11 +1,39 @@
 package dev.xyat.kineticcore.feature.datapack;
 
+import dev.xyat.kineticcore.api.hook.ClientHooks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
 public class ResourcePackReloadNotifier {
+    private static boolean hookRegistered;
+
+    public static void registerHook() {
+        if (hookRegistered) return;
+        hookRegistered = true;
+        ClientHooks.onResourceReloadUi(new ClientHooks.ResourceReloadUi() {
+            @Override
+            public void setPackScreenClosing(boolean closing) {
+                ResourcePackReloadNotifier.isClosing = closing;
+            }
+
+            @Override
+            public boolean interceptReloadStart() {
+                if (ResourcePackReloadNotifier.isClosing) {
+                    ResourcePackReloadNotifier.showTextUntil = System.currentTimeMillis() + 3000L;
+                    return true;
+                }
+                ResourcePackReloadNotifier.showTextUntil = 0L;
+                return false;
+            }
+
+            @Override
+            public void render(GuiGraphics graphics, int width, int height) {
+                ResourcePackReloadNotifier.render(graphics, width, height);
+            }
+        });
+    }
     // 拦截标志，当处于 PackSelectionScreen 退出期间时为 true
     public static boolean isClosing = false;
     // 文本显示的截止时间戳

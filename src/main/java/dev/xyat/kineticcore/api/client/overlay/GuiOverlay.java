@@ -1,9 +1,11 @@
 package dev.xyat.kineticcore.api.client.overlay;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import dev.xyat.kineticcore.KineticCore;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
+import dev.xyat.kineticcore.api.client.screen.KineticContainerScreen;
+import dev.xyat.kineticcore.api.client.screen.KineticNativeScreen;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -13,19 +15,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGuiEvent;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-@Mod.EventBusSubscriber(modid = KineticCore.MODID, value = Dist.CLIENT)
 public final class GuiOverlay {
     private static final int TOOLTIP_Z = 1200;
 
@@ -201,11 +196,13 @@ public final class GuiOverlay {
     }
 
     public static void requestTooltip(Component line, int mouseX, int mouseY) {
+        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
         if (line == null) return;
         pendingScreenTooltip = new GlobalTooltipRequest(new TextTooltip(List.of(line)), mouseX, mouseY);
     }
 
     public static void requestTooltip(List<? extends Component> lines, int mouseX, int mouseY) {
+        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
         if (lines == null || lines.isEmpty()) return;
         List<Component> clean = lines.stream().filter(Objects::nonNull).map(Component.class::cast).toList();
         if (!clean.isEmpty()) pendingScreenTooltip = new GlobalTooltipRequest(new TextTooltip(clean), mouseX, mouseY);
@@ -217,6 +214,7 @@ public final class GuiOverlay {
     }
 
     public static void requestTooltip(List<? extends Component> lines, int maxWidth, int mouseX, int mouseY) {
+        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
         if (lines == null || lines.isEmpty()) return;
         List<Component> clean = lines.stream().filter(Objects::nonNull).map(Component.class::cast).toList();
         if (!clean.isEmpty()) {
@@ -229,12 +227,14 @@ public final class GuiOverlay {
     }
 
     public static void requestFormattedTooltip(List<FormattedCharSequence> lines, int mouseX, int mouseY) {
+        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
         if (lines == null || lines.isEmpty()) return;
         List<FormattedCharSequence> clean = lines.stream().filter(Objects::nonNull).toList();
         if (!clean.isEmpty()) pendingScreenTooltip = new GlobalTooltipRequest(new FormattedTooltip(clean), mouseX, mouseY);
     }
 
     public static void requestItemTooltip(ItemStack stack, int mouseX, int mouseY) {
+        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
         if (stack == null || stack.isEmpty()) return;
         pendingScreenTooltip = new GlobalTooltipRequest(new ItemTooltip(stack.copy()), mouseX, mouseY);
     }
@@ -312,6 +312,30 @@ public final class GuiOverlay {
                 cancelButton
         );
         contextMenu = null;
+    }
+
+    public static boolean openCurrentDialog(
+            Component title,
+            Component message,
+            Component confirmText,
+            Component cancelText,
+            Runnable onConfirm,
+            Runnable onCancel
+    ) {
+        net.minecraft.client.gui.screens.Screen screen = Minecraft.getInstance().screen;
+        if (screen instanceof KineticScreen kineticScreen) {
+            kineticScreen.openDialog(title, message, confirmText, cancelText, onConfirm, onCancel);
+            return true;
+        }
+        if (screen instanceof KineticContainerScreen<?> kineticContainerScreen) {
+            kineticContainerScreen.openDialog(title, message, confirmText, cancelText, onConfirm, onCancel);
+            return true;
+        }
+        if (screen instanceof KineticNativeScreen kineticNativeScreen) {
+            kineticNativeScreen.openDialog(title, message, confirmText, cancelText, onConfirm, onCancel);
+            return true;
+        }
+        return false;
     }
 
     public void closeDialog() {
@@ -546,7 +570,7 @@ public final class GuiOverlay {
 
     private static Component displayMenuLabel(MenuItem item) {
         if (Boolean.TRUE.equals(item.checked())) {
-            return Component.literal("✓ ").append(item.label());
+            return Component.translatable("gui.kineticcore.symbol.checked").append(item.label());
         }
         return item.label();
     }
@@ -602,6 +626,7 @@ public final class GuiOverlay {
             int offsetX,
             int offsetY
     ) {
+        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
         if (id == null || message == null) return;
         Position safePosition = position == null ? Position.BOTTOM_CENTER : position;
         ACTIVE_TOASTS.removeIf(toast -> toast.id.equals(id) && toast.position == safePosition);
@@ -710,12 +735,11 @@ public final class GuiOverlay {
         }
     }
 
-    @SubscribeEvent
-    public static void onRenderGui(RenderGuiEvent.Post event) {
+    public static void renderHudLayer(GuiGraphics graphics) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.screen == null) {
             renderToasts(
-                    event.getGuiGraphics(),
+                    graphics,
                     minecraft.font,
                     minecraft.getWindow().getGuiScaledWidth(),
                     minecraft.getWindow().getGuiScaledHeight()
@@ -723,18 +747,16 @@ public final class GuiOverlay {
         }
     }
 
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onRenderScreenPre(ScreenEvent.Render.Pre event) {
+    public static void beginScreenLayer() {
         pendingScreenTooltip = null;
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onRenderScreen(ScreenEvent.Render.Post event) {
+    public static void renderScreenLayer(GuiGraphics graphics, int width, int height) {
         Minecraft minecraft = Minecraft.getInstance();
-        renderToasts(event.getGuiGraphics(), minecraft.font, event.getScreen().width, event.getScreen().height);
+        renderToasts(graphics, minecraft.font, width, height);
         GlobalTooltipRequest request = pendingScreenTooltip;
         if (request != null) {
-            renderTooltipRequest(event.getGuiGraphics(), minecraft.font, request.tooltip(), request.mouseX(), request.mouseY());
+            renderTooltipRequest(graphics, minecraft.font, request.tooltip(), request.mouseX(), request.mouseY());
             pendingScreenTooltip = null;
         }
     }

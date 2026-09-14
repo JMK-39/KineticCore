@@ -2,13 +2,13 @@ package dev.xyat.kineticcore.feature.networklimit.config;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.bootstrap.annotation.KTModule;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.network.KineticNetwork;
+import dev.xyat.kineticcore.api.network.NetworkTransportLimits;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.nio.file.Path;
 
-@KTModule
 public class NetworkConfig {
     private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("kineticcore/network.toml");
     private static CommentedFileConfig configData;
@@ -34,7 +34,7 @@ public class NetworkConfig {
             System.setProperty("forge.disablePacketCompressionDebug", "true");
             System.setProperty("forge.readTimeout", String.valueOf(timeout));
         } catch (Exception e) {
-            KineticCore.LOGGER.error("NetworkConfig Load Failed", e);
+            KineticRuntime.logger().error("NetworkConfig Load Failed", e);
         }
     }
 
@@ -150,6 +150,17 @@ public class NetworkConfig {
         varInt = getIntSafe("varInt", 5, 5, 10);
         varLong = getIntSafe("varLong", 10, 10, 20);
         varInt21 = getIntSafe("varInt21", 8, 3, 16);
+        KineticNetwork.configureTransportLimits(new NetworkTransportLimits(
+                timeout,
+                packetSize,
+                decoderSize,
+                chunkPacketData,
+                nbtMaxSize,
+                stringSize,
+                varInt,
+                varLong,
+                varInt21
+        ));
     }
 
     public static void save() {

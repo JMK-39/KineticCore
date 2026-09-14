@@ -1,14 +1,13 @@
 package dev.xyat.kineticcore.feature.firstjoin.client;
 
+import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
+
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
-import dev.xyat.kineticcore.api.client.search.ItemSearchIndex;
-import dev.xyat.kineticcore.api.client.selector.ItemSelectorScreen;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
-import dev.xyat.kineticcore.api.client.selector.NbtEditorScreen;
-import dev.xyat.kineticcore.config.client.KTServerConfigClient;
+import dev.xyat.kineticcore.api.config.client.KTServerConfigClient;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfigGui;
 import net.minecraft.client.Minecraft;
@@ -89,7 +88,6 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
             }
             defaultSlot++;
         }
-        useStandardCanvas();
     }
 
     @Override
@@ -124,14 +122,14 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
 
             upButtons.add(addScrollableButton(
                     upX, y, MOVE_BUTTON_W,
-                    Component.literal("↑"), null,
+                    Component.translatable("gui.kineticcore.symbol.up"), null,
                     () -> moveIndex(entryIndex, -1),
                     LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
                     () -> scroll.smoothOffset() * ROW_H
             ));
             downButtons.add(addScrollableButton(
                     downX, y, MOVE_BUTTON_W,
-                    Component.literal("↓"), null,
+                    Component.translatable("gui.kineticcore.symbol.down"), null,
                     () -> moveIndex(entryIndex, 1),
                     LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
                     () -> scroll.smoothOffset() * ROW_H
@@ -180,11 +178,11 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                 countField.setEditable(stackable);
                 if (stackable) {
                     String value = String.valueOf(entries.get(index).stack().getCount());
-                    if (!countField.isFocused() && !value.equals(countField.getValue())) {
+                    if (!isControlFocused(countField) && !value.equals(countField.getValue())) {
                         countField.setValue(value);
                     }
                 } else {
-                    countField.setFocused(false);
+                    blurControl(countField);
                     if (!countField.getValue().isEmpty()) {
                         countField.setValue("");
                     }
@@ -236,15 +234,13 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
 
     private void clearCountFieldFocus() {
         for (EditBox countField : countFields) {
-            countField.setFocused(false);
+            blurControl(countField);
         }
     }
 
     private void addEntry() {
         clearCountFieldFocus();
-        ItemSearchIndex.prepareCache(() -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            minecraft.setScreen(new ItemSelectorScreen(this, selection -> {
+        KineticSelectors.openItemSelector(this, selection -> {
                 if (selection == null || !selection.isItem()) return;
                 entries.add(new RewardEntry(firstFreeInventorySlot(), selection.stack().copy()));
                 updateScrollRange();
@@ -253,7 +249,6 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                     scroll.setOffset(last - VISIBLE_ROWS + 1);
                 }
                 updateRowButtons();
-            }));
         });
     }
 
@@ -274,9 +269,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
     private void openItemSelector(int index) {
         clearCountFieldFocus();
         if (index < 0 || index >= entries.size()) return;
-        ItemSearchIndex.prepareCache(() -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            minecraft.setScreen(new ItemSelectorScreen(this, selection -> {
+        KineticSelectors.openItemSelector(this, selection -> {
                 if (selection == null || !selection.isItem() || index >= entries.size()) return;
                 ItemStack selected = selection.stack().copy();
                 int oldCount = entries.get(index).stack().getCount();
@@ -287,7 +280,6 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                 }
                 entries.set(index, new RewardEntry(entries.get(index).slot(), selected));
                 updateRowButtons();
-            }));
         });
     }
 
@@ -297,7 +289,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
         ItemStack stack = entries.get(index).stack();
         if (stack.isEmpty()) return;
         String initialNbt = stack.hasTag() && stack.getTag() != null ? stack.getTag().toString() : "";
-        Minecraft.getInstance().setScreen(new NbtEditorScreen(initialNbt, value -> {
+        KineticSelectors.openNbtEditor(this, initialNbt, value -> {
             if (value == null || value.isBlank()) {
                 stack.setTag(null);
                 return;
@@ -306,7 +298,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                 stack.setTag(TagParser.parseTag(value));
             } catch (Exception ignored) {
             }
-        }, this));
+        });
     }
 
     private void saveAndClose() {
@@ -396,7 +388,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
         double smoothOffset = scroll.smoothOffset();
         int first = Math.max(0, (int) Math.floor(smoothOffset));
         int end = Math.min(entries.size(), first + VISIBLE_ROWS + 2);
-        enableCanvasScissor(graphics, LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H);
+        enableUiScissor(graphics, LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H);
         try {
             for (int index = first; index < end; index++) {
                 int y = LIST_Y + (int) Math.round((index - smoothOffset) * ROW_H);
@@ -434,7 +426,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                 );
             }
         } finally {
-            disableCanvasScissor(graphics);
+            disableUiScissor(graphics);
         }
 
         GuiTheme.scrollbar(scroll, graphics, mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18);

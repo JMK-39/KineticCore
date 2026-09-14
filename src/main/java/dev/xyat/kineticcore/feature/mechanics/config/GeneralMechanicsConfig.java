@@ -2,17 +2,15 @@ package dev.xyat.kineticcore.feature.mechanics.config;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
-import dev.xyat.kineticcore.KineticCore;
-import dev.xyat.kineticcore.bootstrap.annotation.KTModule;
-import dev.xyat.kineticcore.config.server.KTServerConfigApi;
-import dev.xyat.kineticcore.config.server.KTServerConfigSpec;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-@KTModule
 public class GeneralMechanicsConfig {
     private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("kineticcore/general.toml");
     private static CommentedFileConfig configData;
@@ -41,7 +39,7 @@ public class GeneralMechanicsConfig {
             readValues();
             registerServerConfig();
         } catch (Exception e) {
-            KineticCore.LOGGER.error("GeneralMechanicsConfig Load Failed", e);
+            KineticRuntime.logger().error("GeneralMechanicsConfig Load Failed", e);
         }
     }
 

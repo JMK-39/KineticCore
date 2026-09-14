@@ -1,9 +1,12 @@
 package dev.xyat.kineticcore.feature.worldmanagement;
 
 import com.sun.jna.platform.FileUtils;
-import dev.xyat.kineticcore.KineticCore;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.api.hook.ServerHooks;
+import dev.xyat.kineticcore.api.minecraft.MinecraftScreens;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.feature.worldmanagement.client.NotificationOverlay;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
@@ -16,6 +19,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class AsyncWorldDeleter {
+    private static boolean hookRegistered;
+
+    public static void registerHook() {
+        if (hookRegistered) return;
+        hookRegistered = true;
+        ServerHooks.onWorldDeletion(new ServerHooks.WorldDeletionHandler() {
+            @Override
+            public boolean shouldRecycle(Path worldPath) {
+                return KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "recycle_bin", true);
+            }
+
+            @Override
+            public void recycle(Path worldPath) {
+                AsyncWorldDeleter.moveToTrash(worldPath);
+            }
+        });
+    }
     private static final AtomicBoolean IS_DELETING = new AtomicBoolean(false);
     private static final AtomicBoolean SHUTDOWN_HOOK_REGISTERED = new AtomicBoolean(false);
     private static final AtomicReference<Thread> ACTIVE_DELETE_THREAD = new AtomicReference<>();
@@ -37,10 +57,9 @@ public class AsyncWorldDeleter {
     }
 
     private static void showDeletingNotification() {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-            Minecraft mc = Minecraft.getInstance();
-            mc.execute(() -> NotificationOverlay.addNotification(DELETING_MSG, true));
-        });
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
+                KineticClientRuntime.execute(() -> NotificationOverlay.addNotification(DELETING_MSG, true))
+        );
     }
 
     private static Thread createDeleteThread(Path worldPath) {
@@ -58,10 +77,10 @@ public class AsyncWorldDeleter {
                 handleCompletion(true);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                KineticCore.LOGGER.error("World recycle operation was interrupted: {}", worldPath, e);
+                KineticRuntime.logger().error("World recycle operation was interrupted: {}", worldPath, e);
                 handleCompletion(false);
             } catch (Exception e) {
-                KineticCore.LOGGER.error("Failed to move world to system recycle bin: {}", worldPath, e);
+                KineticRuntime.logger().error("Failed to move world to system recycle bin: {}", worldPath, e);
                 handleCompletion(false);
             } finally {
                 ACTIVE_DELETE_THREAD.compareAndSet(Thread.currentThread(), null);
@@ -71,21 +90,20 @@ public class AsyncWorldDeleter {
     }
 
     private static void handleCompletion(boolean success) {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-            Minecraft mc = Minecraft.getInstance();
-            mc.execute(() -> {
-                NotificationOverlay.removeNotification(DELETING_MSG);
-                Screen currentScreen = mc.screen;
-                if (currentScreen instanceof SelectWorldScreen sws) {
-                    Screen parentScreen = ((ISelectWorldScreen) sws).kineticcore$getLastScreen();
-                    mc.setScreen(new SelectWorldScreen(parentScreen));
-                }
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
+                KineticClientRuntime.execute(() -> {
+                    NotificationOverlay.removeNotification(DELETING_MSG);
+                    Screen currentScreen = KineticClientRuntime.currentScreen();
+                    if (currentScreen instanceof SelectWorldScreen sws) {
+                        Screen parentScreen = MinecraftScreens.parent(sws);
+                        KineticClientRuntime.openScreen(new SelectWorldScreen(parentScreen));
+                    }
 
-                NotificationOverlay.addNotification(Component.translatable(
-                        success ? "msg.kineticcore.archive_deleted" : "msg.kineticcore.archive_delete_failed"
-                ));
-            });
-        });
+                    NotificationOverlay.addNotification(Component.translatable(
+                            success ? "msg.kineticcore.archive_deleted" : "msg.kineticcore.archive_delete_failed"
+                    ));
+                })
+        );
     }
 
     private static void registerShutdownHookOnce() {

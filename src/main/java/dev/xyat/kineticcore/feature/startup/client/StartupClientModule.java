@@ -1,21 +1,19 @@
 package dev.xyat.kineticcore.feature.startup.client;
 
-import net.minecraft.ChatFormatting;
+import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
 import com.mojang.blaze3d.systems.RenderSystem;
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
 import dev.xyat.kineticcore.feature.startup.config.StartupConfig;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.User;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.lang.management.ManagementFactory;
 
-@KTClientModule
 public final class StartupClientModule {
     private static long totalStartupTime = -1L;
     private static long firstTitleScreenRenderTime = -1L;
@@ -25,29 +23,28 @@ public final class StartupClientModule {
     }
 
     public static void register() {
-        MinecraftForge.EVENT_BUS.register(new StartupClientModule());
+        KineticClientEvents.onScreenInitBefore(StartupClientModule::onScreenInit);
+        KineticClientEvents.onScreenRenderAfter(StartupClientModule::onScreenRender);
     }
 
-    @SubscribeEvent
-    public void onScreenInit(ScreenEvent.Init.Pre event) {
+    private static void onScreenInit(Screen screen) {
         if (calculated) return;
         calculated = true;
         long jvmStartTime = ManagementFactory.getRuntimeMXBean().getStartTime();
         totalStartupTime = System.currentTimeMillis() - jvmStartTime;
     }
 
-    @SubscribeEvent
-    public void onScreenRender(ScreenEvent.Render.Post event) {
-        if (!(event.getScreen() instanceof TitleScreen)) return;
+    private static void onScreenRender(Screen screen, GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        if (!(screen instanceof TitleScreen)) return;
         Minecraft minecraft = Minecraft.getInstance();
         int currentY = StartupConfig.anchorY();
         int spacing = 2;
 
         if (StartupConfig.showLoginInfo()) {
             User user = minecraft.getUser();
-            event.getGuiGraphics().drawString(
+            graphics.drawString(
                     minecraft.font,
-                    Component.translatable("msg.kineticcore.startup.account_id", Component.literal(user.getName()).withStyle(ChatFormatting.GOLD)),
+                    KineticText.translatable("msg.kineticcore.startup.account_id", Component.literal(user.getName())),
                     StartupConfig.anchorX(),
                     currentY,
                     0xFFFFFF
@@ -69,9 +66,9 @@ public final class StartupClientModule {
 
         String seconds = String.format(java.util.Locale.ROOT, "%.2f", totalStartupTime / 1000.0D);
         RenderSystem.enableBlend();
-        event.getGuiGraphics().drawString(
+        graphics.drawString(
                 minecraft.font,
-                Component.translatable("msg.kineticcore.startup.startup_time", Component.literal(seconds).withStyle(ChatFormatting.GREEN)),
+                KineticText.translatable("msg.kineticcore.startup.startup_time", Component.literal(seconds)),
                 StartupConfig.anchorX(),
                 currentY,
                 (alphaInt << 24) | 0xFFFFFF

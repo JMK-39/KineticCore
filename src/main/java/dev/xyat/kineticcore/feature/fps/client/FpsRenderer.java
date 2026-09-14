@@ -1,7 +1,7 @@
 package dev.xyat.kineticcore.feature.fps.client;
 
-import net.minecraft.ChatFormatting;
-import dev.xyat.kineticcore.bootstrap.annotation.KTClientModule;
+import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
 import dev.xyat.kineticcore.feature.fps.config.FpsClientConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -9,14 +9,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FrameTimer;
 import net.minecraft.util.Mth;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
-import net.minecraftforge.common.MinecraftForge;
 
 import java.util.Arrays;
 import java.util.List;
 
-@KTClientModule
 public final class FpsRenderer {
     private static final long REFRESH_INTERVAL_NANOS = 500_000_000L;
     private static final long MINIMUM_WINDOW_NANOS = 1_000_000_000L;
@@ -37,7 +33,7 @@ public final class FpsRenderer {
 
     public static void register() {
         if (registered) return;
-        MinecraftForge.EVENT_BUS.addListener(FpsRenderer::onRenderOverlay);
+        KineticClientEvents.onHudRender(KineticClientEvents.HudStage.AFTER_CHAT, FpsRenderer::onRenderOverlay);
         registered = true;
     }
 
@@ -66,9 +62,7 @@ public final class FpsRenderer {
         }
     }
 
-    private static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-        if (event.getOverlay() != VanillaGuiOverlay.CHAT_PANEL.type()) return;
-
+    private static void onRenderOverlay(GuiGraphics graphics, float partialTick) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.screen instanceof FpsHudEditorScreen) return;
         if (!FpsClientConfig.isHudEnabled()
@@ -88,7 +82,6 @@ public final class FpsRenderer {
         int x = Mth.clamp(screenWidth - scaledWidth - 2 - FpsClientConfig.getHudOffsetX(), 0, Math.max(0, screenWidth - scaledWidth));
         int y = Mth.clamp(screenHeight - scaledHeight - 2 - FpsClientConfig.getHudOffsetY(), 0, Math.max(0, screenHeight - scaledHeight));
 
-        GuiGraphics graphics = event.getGuiGraphics();
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0.0F);
         graphics.pose().scale((float) scale, (float) scale, 1.0F);
@@ -107,12 +100,12 @@ public final class FpsRenderer {
     }
 
     private static Component formatFpsValue(int fps) {
-        ChatFormatting color;
-        if (fps >= 60) color = ChatFormatting.GREEN;
-        else if (fps >= 40) color = ChatFormatting.YELLOW;
-        else if (fps >= 20) color = ChatFormatting.GOLD;
-        else color = ChatFormatting.RED;
-        return Component.literal(String.valueOf(fps)).withStyle(color);
+        String key;
+        if (fps >= 60) key = "msg.kineticcore.metric.good";
+        else if (fps >= 40) key = "msg.kineticcore.metric.warning";
+        else if (fps >= 20) key = "msg.kineticcore.metric.caution";
+        else key = "msg.kineticcore.metric.bad";
+        return KineticText.translatable(key, Component.literal(String.valueOf(fps)));
     }
 
     private static FpsStats getFpsStats(Minecraft minecraft) {

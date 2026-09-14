@@ -1,20 +1,26 @@
 package dev.xyat.kineticcore.feature.tps.logic;
 
-import dev.xyat.kineticcore.KineticCore;
+import dev.xyat.kineticcore.api.monitoring.KineticServerPerformance;
+import dev.xyat.kineticcore.api.monitoring.ServerTickTracker;
+import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.kineticcore.feature.tps.network.TpsNetwork;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-@Mod.EventBusSubscriber(modid = KineticCore.MODID)
 public final class TpsHudManager {
+    private static boolean registered;
+
+    public static void register() {
+        if (registered) return;
+        registered = true;
+        KineticServerEvents.onTick(KineticServerEvents.TickPhase.END, TpsHudManager::onServerTick);
+        KineticServerEvents.onPlayerLogout(TpsHudManager::onPlayerLogout);
+    }
+
     private static final Set<UUID> SUBSCRIBERS = new HashSet<>();
     private static int tickCounter;
 
@@ -25,20 +31,17 @@ public final class TpsHudManager {
         updateSubscription(player, enabled);
     }
 
-    @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || SUBSCRIBERS.isEmpty()) return;
+    public static void onServerTick(MinecraftServer server) {
+        if (SUBSCRIBERS.isEmpty()) return;
 
         tickCounter++;
         if (tickCounter < 20) return;
         tickCounter = 0;
 
-        MinecraftServer server = event.getServer();
-        if (!(server instanceof ITpsServer tpsServer)) return;
-
-        TpsTracker tracker = tpsServer.kineticcore$getTpsTracker();
+        ServerTickTracker tracker = KineticServerPerformance.tracker(server).orElse(null);
+        if (tracker == null) return;
         double mspt = tracker.getStats(2, 0);
-        TpsNetwork.TpsData packet = new TpsNetwork.TpsData(TpsTracker.tps(mspt), mspt);
+        TpsNetwork.TpsData packet = new TpsNetwork.TpsData(KineticServerPerformance.tps(mspt), mspt);
 
         for (UUID uuid : Set.copyOf(SUBSCRIBERS)) {
             ServerPlayer player = server.getPlayerList().getPlayer(uuid);
@@ -48,9 +51,8 @@ public final class TpsHudManager {
         }
     }
 
-    @SubscribeEvent
-    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-        SUBSCRIBERS.remove(event.getEntity().getUUID());
+    public static void onPlayerLogout(ServerPlayer player) {
+        SUBSCRIBERS.remove(player.getUUID());
     }
 
     private static void updateSubscription(ServerPlayer player, boolean enabled) {
