@@ -1,0 +1,10 @@
+tasks.register('checkKineticWidgetState', JavaExec) {
+    group = 'verification'
+    description = 'Checks the current public widget state implementations without starting Minecraft.'
+    dependsOn tasks.named('testClasses')
+    classpath = files(sourceSets.test.output, sourceSets.main.output)
+    mainClass.set('dev.xyat.kineticcore.api.client.widget.WidgetStateRegression')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+}
+
+tasks.named('check').configure { dependsOn tasks.named('checkKineticWidgetState') }
