@@ -33,6 +33,31 @@ public final class KineticSelectors {
         ITEMS_TAGS_MODS
     }
 
+    public record ItemSelectorPreset(
+            int mode,
+            int filterType,
+            String filterValue,
+            String categoryKey,
+            String search
+    ) {
+        public ItemSelectorPreset {
+            mode = mode == 1 ? 1 : 0;
+            filterType = Math.max(0, filterType);
+            filterValue = filterValue == null ? "" : filterValue;
+            categoryKey = categoryKey == null ? "" : categoryKey;
+            search = search == null ? "" : search;
+        }
+
+        public static ItemSelectorPreset defaults() {
+            return new ItemSelectorPreset(0, 0, "", "", "");
+        }
+
+        public static ItemSelectorPreset modCategory(String namespace) {
+            String value = namespace == null ? "" : namespace.trim();
+            return new ItemSelectorPreset(0, 0, "", value.isEmpty() ? "" : "mod:" + value, value.isEmpty() ? "" : "@" + value);
+        }
+    }
+
     public record ItemSelection(ItemSelectionType type, ItemStack stack, String value) {
         public ItemSelection {
             type = Objects.requireNonNull(type, "type");
@@ -62,7 +87,24 @@ public final class KineticSelectors {
     }
 
     public static void openItemSelector(Screen parent, Consumer<ItemSelection> onSelect) {
+        openItemSelector(parent, null, onSelect);
+    }
+
+    public static void openItemSelector(
+            Screen parent,
+            ItemSelectorPreset preset,
+            Consumer<ItemSelection> onSelect
+    ) {
         Objects.requireNonNull(onSelect, "onSelect");
+        if (preset != null) {
+            ItemSelectorScreen.configureInitialState(
+                    preset.mode(),
+                    preset.filterType(),
+                    preset.filterValue(),
+                    preset.categoryKey(),
+                    preset.search()
+            );
+        }
         prepareItems(() -> KineticClientRuntime.openScreen(new ItemSelectorScreen(parent, selection -> {
             ItemSelectionType type = switch (selection.type()) {
                 case ITEM -> ItemSelectionType.ITEM;
@@ -100,9 +142,7 @@ public final class KineticSelectors {
     }
 
     public static void openColorPicker(Screen parent, Component title, int initialRgb, Consumer<Integer> onApply) {
-        KineticClientRuntime.openScreen(
-                ColorPickerScreen.single(parent, title, initialRgb, onApply)
-        );
+        KineticClientRuntime.openScreen(ColorPickerScreen.single(parent, title, initialRgb, onApply));
     }
 
     public static void openPalette(
@@ -114,9 +154,7 @@ public final class KineticSelectors {
     ) {
         List<Integer> safeColors = initialColors == null ? List.of() : List.copyOf(initialColors);
         int safeMax = Math.max(1, Math.min(DEFAULT_MAX_PALETTE_COLORS, maxColors));
-        KineticClientRuntime.openScreen(
-                ColorPickerScreen.palette(parent, title, safeColors, safeMax, onApply)
-        );
+        KineticClientRuntime.openScreen(ColorPickerScreen.palette(parent, title, safeColors, safeMax, onApply));
     }
 
     public static void openPalette(

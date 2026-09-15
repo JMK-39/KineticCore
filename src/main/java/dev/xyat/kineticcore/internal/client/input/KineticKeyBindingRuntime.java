@@ -5,6 +5,7 @@ import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.settings.KeyConflictContext;
@@ -62,6 +63,13 @@ public final class KineticKeyBindingRuntime {
         if (entry == null || entry.mapping == null) return false;
         if (!entry.definition.enabledWhen().getAsBoolean()) return false;
         return entry.mapping.isDown();
+    }
+
+    public static synchronized Component translatedKeyMessage(long id) {
+        Entry entry = ENTRIES.get(id);
+        if (entry == null) return Component.empty();
+        if (entry.mapping != null) return entry.mapping.getTranslatedKeyMessage();
+        return Component.translatable(entry.definition.translationKey());
     }
 
     private static synchronized void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {

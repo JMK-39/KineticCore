@@ -149,6 +149,10 @@ public final class KTConfigApi {
         ForgeConfigScreenIntegration.installOwnerScreen(ownerModId);
     }
 
+    public static void installConfigScreen(String ownerModId, Function<Screen, ? extends Screen> screenFactory) {
+        ForgeConfigScreenIntegration.installScreen(ownerModId, Objects.requireNonNull(screenFactory, "screenFactory"));
+    }
+
     /** Builds an action that opens a specialized editor with the current page as its parent. */
     public static Runnable screenAction(Function<Screen, ? extends Screen> screenFactory) {
         Objects.requireNonNull(screenFactory, "screenFactory");

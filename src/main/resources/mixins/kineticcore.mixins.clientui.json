@@ -5,6 +5,7 @@
   "plugin": "dev.xyat.kineticcore.internal.mixin.KineticMixinPlugin",
   "refmap": "kineticcore.mixins.refmap.json",
   "client": [
+    "client.ChatComponentAccess",
     "client.ClientInterfaceMixins$CreateWorldTweaks",
     "client.ClientInterfaceMixins$ForgePingTweaks",
     "client.ClientInterfaceMixins$LevelDataTweaks",

@@ -15,21 +15,53 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 public final class KineticCommands {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<String, CommandExtension> EXTENSIONS = new LinkedHashMap<>();
+    private static final Map<String, Consumer<CommandDispatcher<CommandSourceStack>>> TOP_LEVEL_COMMANDS = new LinkedHashMap<>();
 
     private KineticCommands() {
     }
 
     public static synchronized void registerExtension(String id, CommandExtension extension) {
-        KineticCommandRuntime.initialize(KineticCommands::registerRoot);
+        ensureRuntime();
         EXTENSIONS.put(Objects.requireNonNull(id, "id"), Objects.requireNonNull(extension, "extension"));
     }
 
     public static synchronized void unregisterExtension(String id) {
         EXTENSIONS.remove(id);
+    }
+
+    public static synchronized void registerTopLevel(
+            String id,
+            Consumer<CommandDispatcher<CommandSourceStack>> registrar
+    ) {
+        ensureRuntime();
+        TOP_LEVEL_COMMANDS.put(
+                Objects.requireNonNull(id, "id"),
+                Objects.requireNonNull(registrar, "registrar")
+        );
+    }
+
+    public static synchronized void unregisterTopLevel(String id) {
+        TOP_LEVEL_COMMANDS.remove(id);
+    }
+
+    private static void ensureRuntime() {
+        KineticCommandRuntime.initialize(KineticCommands::registerAll);
+    }
+
+    private static void registerAll(CommandDispatcher<CommandSourceStack> dispatcher) {
+        registerRoot(dispatcher);
+        for (Map.Entry<String, Consumer<CommandDispatcher<CommandSourceStack>>> entry : topLevelSnapshot()) {
+            try {
+                entry.getValue().accept(dispatcher);
+            } catch (Throwable throwable) {
+                logFailure(entry.getKey(), "top-level command registration", throwable);
+            }
+        }
     }
 
     private static void registerRoot(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -101,6 +133,10 @@ public final class KineticCommands {
 
     private static synchronized List<Map.Entry<String, CommandExtension>> snapshot() {
         return List.copyOf(EXTENSIONS.entrySet());
+    }
+
+    private static synchronized List<Map.Entry<String, Consumer<CommandDispatcher<CommandSourceStack>>>> topLevelSnapshot() {
+        return List.copyOf(TOP_LEVEL_COMMANDS.entrySet());
     }
 
     private static void logFailure(String id, String phase, Throwable throwable) {

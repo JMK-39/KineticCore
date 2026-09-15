@@ -5,6 +5,9 @@ import net.minecraftforge.client.ConfigScreenHandler;
 import net.minecraftforge.fml.ModContainer;
 import net.minecraftforge.fml.ModList;
 
+import java.util.Objects;
+import java.util.function.Function;
+
 public final class ForgeConfigScreenIntegration {
     private ForgeConfigScreenIntegration() {
     }
@@ -25,6 +28,18 @@ public final class ForgeConfigScreenIntegration {
                 ConfigScreenHandler.ConfigScreenFactory.class,
                 () -> new ConfigScreenHandler.ConfigScreenFactory(
                         (minecraft, parent) -> KTConfigApi.createScreenForOwner(parent, ownerModId)
+                )
+        );
+    }
+
+    public static void installScreen(String ownerModId, Function<net.minecraft.client.gui.screens.Screen, ? extends net.minecraft.client.gui.screens.Screen> screenFactory) {
+        ModContainer owner = requireContainer(ownerModId);
+        Function<net.minecraft.client.gui.screens.Screen, ? extends net.minecraft.client.gui.screens.Screen> factory =
+                Objects.requireNonNull(screenFactory, "screenFactory");
+        owner.registerExtensionPoint(
+                ConfigScreenHandler.ConfigScreenFactory.class,
+                () -> new ConfigScreenHandler.ConfigScreenFactory(
+                        (minecraft, parent) -> Objects.requireNonNull(factory.apply(parent), "screenFactory returned null")
                 )
         );
     }

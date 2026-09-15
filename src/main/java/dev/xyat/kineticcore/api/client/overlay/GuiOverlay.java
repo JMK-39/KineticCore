@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.api.client.overlay;
 
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.MenuButton;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
@@ -110,7 +111,7 @@ public final class GuiOverlay {
     private record ItemTooltip(ItemStack stack) implements TooltipRequest {
     }
 
-    private record MenuControl(MenuItem item, KineticWidgets.MenuButton button) {
+    private record MenuControl(MenuItem item, MenuButton button) {
     }
 
     private record ContextMenu(int x, int y, List<MenuControl> controls) {
@@ -123,8 +124,8 @@ public final class GuiOverlay {
             Component cancelText,
             Runnable onConfirm,
             Runnable onCancel,
-            KineticWidgets.MenuButton confirmButton,
-            KineticWidgets.MenuButton cancelButton
+            MenuButton confirmButton,
+            MenuButton cancelButton
     ) {
     }
 
@@ -196,13 +197,13 @@ public final class GuiOverlay {
     }
 
     public static void requestTooltip(Component line, int mouseX, int mouseY) {
-        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
+        dev.xyat.kineticcore.api.runtime.KineticClientRuntime.ensureReady();
         if (line == null) return;
         pendingScreenTooltip = new GlobalTooltipRequest(new TextTooltip(List.of(line)), mouseX, mouseY);
     }
 
     public static void requestTooltip(List<? extends Component> lines, int mouseX, int mouseY) {
-        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
+        dev.xyat.kineticcore.api.runtime.KineticClientRuntime.ensureReady();
         if (lines == null || lines.isEmpty()) return;
         List<Component> clean = lines.stream().filter(Objects::nonNull).map(Component.class::cast).toList();
         if (!clean.isEmpty()) pendingScreenTooltip = new GlobalTooltipRequest(new TextTooltip(clean), mouseX, mouseY);
@@ -214,7 +215,7 @@ public final class GuiOverlay {
     }
 
     public static void requestTooltip(List<? extends Component> lines, int maxWidth, int mouseX, int mouseY) {
-        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
+        dev.xyat.kineticcore.api.runtime.KineticClientRuntime.ensureReady();
         if (lines == null || lines.isEmpty()) return;
         List<Component> clean = lines.stream().filter(Objects::nonNull).map(Component.class::cast).toList();
         if (!clean.isEmpty()) {
@@ -227,14 +228,14 @@ public final class GuiOverlay {
     }
 
     public static void requestFormattedTooltip(List<FormattedCharSequence> lines, int mouseX, int mouseY) {
-        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
+        dev.xyat.kineticcore.api.runtime.KineticClientRuntime.ensureReady();
         if (lines == null || lines.isEmpty()) return;
         List<FormattedCharSequence> clean = lines.stream().filter(Objects::nonNull).toList();
         if (!clean.isEmpty()) pendingScreenTooltip = new GlobalTooltipRequest(new FormattedTooltip(clean), mouseX, mouseY);
     }
 
     public static void requestItemTooltip(ItemStack stack, int mouseX, int mouseY) {
-        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
+        dev.xyat.kineticcore.api.runtime.KineticClientRuntime.ensureReady();
         if (stack == null || stack.isEmpty()) return;
         pendingScreenTooltip = new GlobalTooltipRequest(new ItemTooltip(stack.copy()), mouseX, mouseY);
     }
@@ -251,7 +252,7 @@ public final class GuiOverlay {
                 controls.add(new MenuControl(item, null));
                 continue;
             }
-            KineticWidgets.MenuButton button = KineticWidgets.createMenuButton(
+            MenuButton button = KineticWidgets.createMenuButton(
                     displayMenuLabel(item),
                     item.enabled(),
                     item.style() == MenuItemStyle.DANGER,
@@ -289,13 +290,13 @@ public final class GuiOverlay {
         Component safeCancelText = Objects.requireNonNullElse(cancelText, Component.empty());
         Runnable safeConfirm = onConfirm == null ? () -> { } : onConfirm;
         Runnable safeCancel = onCancel == null ? () -> { } : onCancel;
-        KineticWidgets.MenuButton confirmButton = KineticWidgets.createMenuButton(
+        MenuButton confirmButton = KineticWidgets.createMenuButton(
                 safeConfirmText, true, false, ignored -> {
                     dialog = null;
                     safeConfirm.run();
                 }
         );
-        KineticWidgets.MenuButton cancelButton = KineticWidgets.createMenuButton(
+        MenuButton cancelButton = KineticWidgets.createMenuButton(
                 safeCancelText, true, false, ignored -> {
                     dialog = null;
                     safeCancel.run();
@@ -364,7 +365,7 @@ public final class GuiOverlay {
         }
 
         for (MenuRow row : bounds.rows()) {
-            KineticWidgets.MenuButton menuButton = row.control().button();
+            MenuButton menuButton = row.control().button();
             if (menuButton != null && menuButton.mouseClicked(mouseX, mouseY, button)) {
                 return true;
             }
@@ -462,7 +463,7 @@ public final class GuiOverlay {
                 graphics.fill(bounds.x + 5, lineY, bounds.x + bounds.width - 5, lineY + 1, GuiTheme.current().border());
                 continue;
             }
-            KineticWidgets.MenuButton button = control.button();
+            MenuButton button = control.button();
             if (button == null) continue;
             button.render(graphics, mouseX, mouseY, 0f);
             if (button.isMouseOver(mouseX, mouseY)) {
@@ -484,7 +485,7 @@ public final class GuiOverlay {
 
     private void layoutMenuButtons(MenuBounds bounds) {
         for (MenuRow row : bounds.rows()) {
-            KineticWidgets.MenuButton button = row.control().button();
+            MenuButton button = row.control().button();
             if (button == null) continue;
             button.setBounds(bounds.x + 3, row.y(), bounds.width - 6, row.height());
         }
@@ -626,7 +627,7 @@ public final class GuiOverlay {
             int offsetX,
             int offsetY
     ) {
-        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
+        dev.xyat.kineticcore.api.runtime.KineticClientRuntime.ensureReady();
         if (id == null || message == null) return;
         Position safePosition = position == null ? Position.BOTTOM_CENTER : position;
         ACTIVE_TOASTS.removeIf(toast -> toast.id.equals(id) && toast.position == safePosition);

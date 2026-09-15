@@ -25,6 +25,10 @@ public final class CommandText {
                         ));
     }
 
+    public static MutableComponent createSuggestCommand(String display, String commandPrefix, String descriptionKey) {
+        return suggest(display, commandPrefix, descriptionKey);
+    }
+
     public static MutableComponent suggest(String display, String commandPrefix, String descriptionKey) {
         return Component.translatable("gui.kineticcore.symbol.command_prefix")
                 .append(Component.literal(display)

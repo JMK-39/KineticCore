@@ -18,7 +18,7 @@ public final class KineticEffectDisplay {
             BooleanSupplier potionItemIconSupplier,
             IntPredicate compactPredicate
     ) {
-        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
+        dev.xyat.kineticcore.api.runtime.KineticClientRuntime.ensureReady();
         leftSide = leftSideSupplier == null ? () -> false : leftSideSupplier;
         holdTabToExpand = holdTabSupplier == null ? () -> false : holdTabSupplier;
         potionItemIcon = potionItemIconSupplier == null ? () -> false : potionItemIconSupplier;

@@ -3,7 +3,7 @@ package dev.xyat.kineticcore.internal.client.selector;
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.Scroll;
+import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
@@ -181,7 +181,7 @@ public class NbtEditorScreen extends KineticScreen {
         private int selectPos = 0;
         public boolean isFocused = false;
         private double scrollOffset = 0D;
-        private final Scroll.State smoothScroll = new Scroll.State();
+        private final KineticScroll.State smoothScroll = new KineticScroll.State();
         private Consumer<String> responder;
         private final Font font;
 

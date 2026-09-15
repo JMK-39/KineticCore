@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.runtime;
 
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
@@ -12,6 +14,15 @@ public final class KineticModLifecycleRuntime {
     private static boolean loadComplete;
 
     private KineticModLifecycleRuntime() {
+    }
+
+
+    public static void onCommonSetup(Runnable action) {
+        FMLJavaModLoadingContext.get().getModEventBus().addListener((FMLCommonSetupEvent event) -> event.enqueueWork(action));
+    }
+
+    public static void onClientSetup(Runnable action) {
+        FMLJavaModLoadingContext.get().getModEventBus().addListener((FMLClientSetupEvent event) -> event.enqueueWork(action));
     }
 
     public static synchronized void onLoadComplete(Runnable action) {

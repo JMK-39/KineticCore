@@ -6,7 +6,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +62,18 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
     }
 
     @Override
+    public <E extends Enum<E>> void writeEnum(E value) {
+        if (value == null) throw new IllegalArgumentException("value");
+        buffer.writeEnum(value);
+    }
+
+    @Override
+    public <E extends Enum<E>> E readEnum(Class<E> enumType) {
+        if (enumType == null) throw new IllegalArgumentException("enumType");
+        return buffer.readEnum(enumType);
+    }
+
+    @Override
     public void writeLong(long value) {
         buffer.writeLong(value);
     }
@@ -67,6 +81,16 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
     @Override
     public long readLong() {
         return buffer.readLong();
+    }
+
+    @Override
+    public void writeVarLong(long value) {
+        buffer.writeVarLong(value);
+    }
+
+    @Override
+    public long readVarLong() {
+        return buffer.readVarLong();
     }
 
     @Override
@@ -136,6 +160,42 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
     }
 
     @Override
+    public void writeVarIntArray(int[] values) {
+        writeVarIntArray(values, NetworkProtocolLimits.DEFAULT.maxCollectionEntries());
+    }
+
+    @Override
+    public void writeVarIntArray(int[] values, int maxEntries) {
+        if (maxEntries < 0) throw new IllegalArgumentException("maxEntries must be non-negative");
+        int[] safe = values == null ? new int[0] : values;
+        if (safe.length > maxEntries) {
+            throw new IllegalArgumentException("Network int array exceeds entry limit");
+        }
+        buffer.writeVarIntArray(safe);
+    }
+
+    @Override
+    public int[] readVarIntArray() {
+        return readVarIntArray(NetworkProtocolLimits.DEFAULT.maxCollectionEntries());
+    }
+
+    @Override
+    public int[] readVarIntArray(int maxEntries) {
+        if (maxEntries < 0) throw new IllegalArgumentException("maxEntries must be non-negative");
+        return buffer.readVarIntArray(maxEntries);
+    }
+
+    @Override
+    public void writeComponent(Component value) {
+        buffer.writeComponent(value == null ? Component.empty() : value);
+    }
+
+    @Override
+    public Component readComponent() {
+        return buffer.readComponent();
+    }
+
+    @Override
     public void writeResourceLocation(ResourceLocation value) {
         buffer.writeResourceLocation(value);
     }
@@ -183,6 +243,17 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
     @Override
     public ItemStack readItemStack() {
         return buffer.readItem();
+    }
+
+    @Override
+    public void writeIngredient(Ingredient value) {
+        if (value == null) throw new IllegalArgumentException("value");
+        value.toNetwork(buffer);
+    }
+
+    @Override
+    public Ingredient readIngredient() {
+        return Ingredient.fromNetwork(buffer);
     }
 
     @Override

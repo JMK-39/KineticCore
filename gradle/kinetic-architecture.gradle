@@ -6,7 +6,7 @@ def kineticInternalPackage = 'dev.xyat.kineticcore.internal'
 def kineticFeaturePackage = 'dev.xyat.kineticcore.feature'
 def kineticApiPackage = 'dev.xyat.kineticcore.api'
 
-def kineticImportPattern = Pattern.compile('(?m)^\\s*import\\s+(dev\\.xyat\\.kineticcore\\.[A-Za-z0-9_$.*]+)\\s*;')
+def kineticImportPattern = Pattern.compile('(?m)^\\s*import\\s+(?:static\\s+)?(dev\\.xyat\\.kineticcore\\.[A-Za-z0-9_$.*]+)\\s*;')
 
 def declarationPattern = Pattern.compile('(?s)\\b(public|protected)\\b[^;{]*(?:[;{])')
 def internalImportPattern = Pattern.compile('(?m)^\\s*import\\s+dev\\.xyat\\.kineticcore\\.internal(?:\\.[A-Za-z0-9_$.*]+)?\\s*;')
@@ -148,6 +148,9 @@ tasks.register('checkKineticArchitecture') {
                 }
 
                 if (!isApi && !isInternal) {
+                    if ((source =~ /\bnew\s+(?:[\w$]+\.)*(?:EditBox|MultiLineEditBox|NumericEditBox|NumericAutoCompleteBox|KineticEditBox|ValidationEditBox)\s*\(/).find()) {
+                        violations.add("BUSINESS RAW KINETIC INPUT is forbidden; use addXxx/createXxx: ${project.relativePath(javaFile)}")
+                    }
                     forbiddenBusinessPatterns.each { String pattern ->
                         if (source.contains(pattern)) {
                             violations.add("BUSINESS BYPASS is forbidden: ${project.relativePath(javaFile)} -> ${pattern}")
@@ -190,7 +193,8 @@ tasks.register('checkKineticArchitecture') {
                     "Kinetic architecture check failed:\n - " + violations.unique().join('\n - ')
                             + "\n\nRules:\n"
                             + "  feature/config/other business code -> api only (internal is invisible)\n"
-                            + "  api may use internal privately, but public/protected API types must never expose internal\n"
+                            + "  public api -> internal; business must never call internal\n"
+                            + "  public/protected API signatures must never expose internal types\n"
                             + "  internal -> feature and api -> feature are forbidden\n"
                             + "  feature code may depend only on public api and its own feature package\n"
                             + "  public api may depend only on api/internal plus Minecraft/Forge/external libraries\n"
@@ -217,6 +221,8 @@ tasks.register('apiSourceZip', Zip) {
     from('API_REFERENCE.md')
     from('API_ARCHITECTURE.md')
     from('API_TUTORIAL.md')
+    from('KINETIC_API_GUIDE.md')
+    from('AGENTS.md')
 }
 
 tasks.register('apiJar', Jar) {

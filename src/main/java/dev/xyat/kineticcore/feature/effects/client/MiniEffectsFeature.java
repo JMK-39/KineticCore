@@ -1,31 +1,31 @@
 package dev.xyat.kineticcore.feature.effects.client;
 
-import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
-import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.client.effect.KineticEffectDisplay;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.ModList;
+import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
+import dev.xyat.kineticcore.api.config.client.KTClientConfigSpec;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 
 public class MiniEffectsFeature {
 
-    public static final ForgeConfigSpec CLIENT_SPEC;
+    public static final KTClientConfigSpec CLIENT_SPEC;
     public static final ClientConfig CLIENT;
 
     public static boolean hasEffectsLeft;
     private static boolean initialized;
 
     static {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        KTClientConfigSpec.Builder builder = KTClientConfigSpec.builder();
         CLIENT = new ClientConfig(builder);
         CLIENT_SPEC = builder.build();
     }
 
     public static class ClientConfig {
-        public final ForgeConfigSpec.BooleanValue effectsOnLeft;
-        public final ForgeConfigSpec.BooleanValue requiresHoldingTab;
-        public final ForgeConfigSpec.BooleanValue potionItemIcon;
+        public final KTClientConfigSpec.BooleanValue effectsOnLeft;
+        public final KTClientConfigSpec.BooleanValue requiresHoldingTab;
+        public final KTClientConfigSpec.BooleanValue potionItemIcon;
 
-        public ClientConfig(ForgeConfigSpec.Builder builder) {
+        public ClientConfig(KTClientConfigSpec.Builder builder) {
             builder.comment(
                     "紧凑状态效果的客户端显示设置。",
                     "Client display settings for compact status effects."
@@ -35,19 +35,19 @@ public class MiniEffectsFeature {
                             "Display effects on the left side of the inventory."
                     )
                     .translation("cfg.kineticcore.mini_effects.left")
-                    .define("effectsOnLeft", false);
+                    .defineBoolean("effectsOnLeft", false);
             requiresHoldingTab = builder.comment(
                             "仅在按住 TAB 时展开状态效果。",
                             "Require holding TAB to show expanded effects."
                     )
                     .translation("cfg.kineticcore.mini_effects.hold_tab")
-                    .define("requiresHoldingTab", false);
+                    .defineBoolean("requiresHoldingTab", false);
             potionItemIcon = builder.comment(
                             "紧凑模式使用药水物品图标，而不是效果纹理。",
                             "Use potion items instead of effect textures in compact mode."
                     )
                     .translation("cfg.kineticcore.mini_effects.potion_icon")
-                    .define("potionItemIcon", false);
+                    .defineBoolean("potionItemIcon", false);
             builder.pop();
         }
     }
@@ -59,7 +59,7 @@ public class MiniEffectsFeature {
                 CLIENT_SPEC,
                 KineticRuntime.MOD_ID + "/mini_effects_client.toml"
         );
-        hasEffectsLeft = ModList.get().isLoaded("effectsleft");
+        hasEffectsLeft = KineticPlatform.isModLoaded("effectsleft");
         KineticEffectDisplay.configure(
                 MiniEffectsFeature::isLeftSide,
                 MiniEffectsFeature::requiresHoldingTab,

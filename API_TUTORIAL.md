@@ -1,5 +1,7 @@
 # KineticCore API Tutorial
 
+开发前先读 [Kinetic 开发地图](KINETIC_API_GUIDE.md)：标准入口、实现位置、草稿生命周期和 API → internal 边界。
+
 本教程面向编写 Kinetic 附属的开发者。示例只使用公开 `dev.xyat.kineticcore.api.*`。
 
 ## 源码构建环境
@@ -330,6 +332,31 @@ KTConfigApi.installConfigScreen("example");
 KTConfigApi.installConfigHub("example");
 ```
 
+如果附属需要本地 CLIENT 配置文件，不要自己声明 `ForgeConfigSpec`。使用 `KTClientConfigSpec`：
+
+```java
+private static final KTClientConfigSpec.BooleanValue ENABLED;
+private static final KTClientConfigSpec.IntValue RANGE;
+private static final KTClientConfigSpec SPEC;
+
+static {
+    KTClientConfigSpec.Builder builder = KTClientConfigSpec.builder();
+    builder.push("general");
+    ENABLED = builder
+            .translation("cfg.example.enabled")
+            .defineBoolean("enabled", true);
+    RANGE = builder
+            .translation("cfg.example.range")
+            .defineInt("range", 16, 1, 128);
+    builder.pop();
+    SPEC = builder.build();
+
+    KTClientConfigAdapter.registerSpec(SPEC, "example-client.toml");
+}
+```
+
+范围与 validator 会同时用于底层持久化和 Kinetic 配置 GUI，附属不需要接触具体配置加载器。
+
 ## 9. 服务端权威配置
 
 服务端必须定义最终校验规则。
@@ -470,6 +497,20 @@ SEND_TO_CLIENT.send(player, new ExampleMessage(5, "minecraft:stone"));
 
 业务不直接操作 `SimpleChannel`、`FriendlyByteBuf` 或 `NetworkEvent.Context`。
 
+需要按消息类型自动保存 Sender 时可以使用更高层的 `PacketChannel`：
+
+```java
+private static final PacketChannel PACKETS = PacketChannel.create(
+        new ResourceLocation("example", "main"),
+        "1"
+);
+
+PACKETS.registerServerbound(ExampleMessage.class, CODEC, ExampleNetwork::handleServer);
+PACKETS.sendToServer(new ExampleMessage(5, "minecraft:stone"));
+```
+
+需要把一段临时协议数据编码成 `byte[]` 时使用 `NetworkBuffers.encode(...) / decode(...)`，不要自己创建 `FriendlyByteBuf`。
+
 ## 11. 压缩
 
 ```java
@@ -511,6 +552,12 @@ mouseButton
 exactModifiers(true)
 ```
 
+需要在 Tooltip 中显示当前实际按键名称时：
+
+```java
+Component keyName = OPEN_KEY.translatedKeyMessage();
+```
+
 ## 13. 客户端生命周期
 
 ```java
@@ -527,12 +574,36 @@ KineticClientEvents.onScreenInitAfter(screen -> {
 });
 ```
 
+需要安全读取、添加或移除原版/第三方 Screen 控件时：
+
+```java
+KineticClientEvents.onScreenInitAfterWithControls(context -> {
+    context.listeners().stream()
+            .filter(this::shouldRemove)
+            .findFirst()
+            .ifPresent(context::removeListener);
+});
+```
+
 HUD：
 
 ```java
 KineticClientEvents.onHudRender(
         KineticClientEvents.HudStage.END,
         (graphics, partialTick) -> renderHud(graphics)
+);
+```
+
+鼠标按键预处理和世界渲染同样走 API：
+
+```java
+KineticClientEvents.onMouseButtonBefore(context -> {
+    if (context.button() == 1 && shouldBlockRightClick()) context.cancel();
+});
+
+KineticClientEvents.onLevelRender(
+        KineticClientEvents.LevelRenderStage.AFTER_ENTITIES,
+        context -> renderWorld(context.poseStack(), context.camera())
 );
 ```
 
@@ -549,12 +620,33 @@ KineticServerEvents.onTick(
 );
 ```
 
-重生和切维度使用：
+完整生命周期包括：
 
 ```text
+onAboutToStart
+onStarted
+onStopping
+onStopped
+onPlayerTick
+onPlayerLogin
+onPlayerLogout
+onPlayerClone
 onPlayerRespawn
 onPlayerChangedDimension
+onDatapackSync
+onChat
 ```
+
+需要保留 Forge 原事件执行顺序时使用 `Priority` 重载：
+
+```java
+KineticServerEvents.onPlayerLogout(
+        KineticServerEvents.Priority.LOWEST,
+        ExampleServer::onLogout
+);
+```
+
+聊天拦截使用 `ChatContext.cancel()`，附属不需要拿到 `ServerChatEvent`。
 
 ## 15. 物品 Tooltip
 
@@ -567,6 +659,8 @@ KineticItemTooltips.onBuild((stack, lines) -> {
 ```
 
 需要观察当前 Tooltip 渲染时使用 `onRender(...)`。
+
+需要修改高级 Tooltip 组件列表时使用 `onGather(...)`；自定义 `TooltipComponent` 的客户端渲染器通过 `registerComponentFactory(...)` 注册，不需要附属直接监听 Forge Tooltip 事件。
 
 ## 16. Hook
 
@@ -604,6 +698,16 @@ KineticCommands.registerExtension("example", new CommandExtension() {
 ```
 
 附属不需要直接监听 `RegisterCommandsEvent`。
+
+如果必须保留独立顶层命令路径，例如 `/example reload`，使用：
+
+```java
+KineticCommands.registerTopLevel("example", dispatcher -> {
+    dispatcher.register(Commands.literal("example")
+            .then(Commands.literal("reload")
+                    .executes(context -> reload(context.getSource()))));
+});
+```
 
 ## 18. 选择器
 
@@ -645,7 +749,9 @@ if (KineticFeatureSwitches.isEnabled("example.feature")) {
 
 功能 ID 描述实际业务能力，不使用具体 Mixin 类名作为玩家可见功能名。
 
-## 20. 实体与渲染器注册
+附属自己的 `IMixinConfigPlugin` 也应使用同一功能 ID：在插件 `onLoad` 中注册 Descriptor，在 `shouldApplyMixin` 内把内部 Mixin 类映射到稳定功能 ID，再调用 `KineticFeatureSwitches.isEnabled(...)`。不要再生成以 Mixin 类名为键的独立配置文件。
+
+## 20. 注册表、物品、菜单与创造模式 Tab
 
 实体类型：
 
@@ -670,6 +776,38 @@ KineticClientRenderers.registerEntityRenderer(
 );
 ```
 
+物品注册：
+
+```java
+KineticRegistryHandle<Item> MY_ITEM = KineticItems.register(
+        "example",
+        "my_item",
+        () -> new Item(new Item.Properties())
+);
+```
+
+MenuType 注册和客户端 Screen 注册分别使用 `KineticMenuTypes`、`KineticClientMenus`；附加数据通过 `NetworkBuffer` 读取。
+
+只读注册表查询：
+
+```java
+Item item = KineticRegistries.items().get(new ResourceLocation("minecraft", "stone"));
+ResourceLocation id = KineticRegistries.items().id(item);
+boolean tagged = KineticRegistries.items().isInTag(item, someTag);
+KineticRegistryView<MyType> custom = KineticRegistries.<MyType>custom(registryId).orElseThrow();
+```
+
+创造模式 Tab 不直接访问 `BuiltInRegistries.CREATIVE_MODE_TAB`：
+
+```java
+for (KineticCreativeTabs.TabEntry entry : KineticCreativeTabs.entries()) {
+    ResourceLocation tabId = entry.key().location();
+    CreativeModeTab tab = entry.tab();
+}
+
+KineticCreativeTabs.refreshSearch(searchableItems);
+```
+
 ## 21. 资源包 / 数据包源
 
 ```java
@@ -679,15 +817,61 @@ KineticPackSources.register(
 );
 ```
 
-## 22. Load Complete
+## 22. 模组生命周期、运行环境与路径
 
 ```java
+KineticModLifecycle.onCommonSetup(ExampleAddon::commonSetup);
+KineticModLifecycle.onClientSetup(ExampleClient::clientSetup);
 KineticModLifecycle.onLoadComplete(ExampleAddon::finishSetup);
 ```
 
-调用方不需要直接持有 Forge Mod Event Bus。
+侧别判断和延迟执行：
 
-## 23. I18N
+```java
+if (KineticEnvironment.isClient()) {
+}
+
+KineticEnvironment.runOnClient(() -> ExampleClient::init);
+```
+
+模组检测与配置目录：
+
+```java
+boolean loaded = KineticPlatform.isModLoaded("example_dependency");
+Path configDir = KineticPaths.configDirectory().resolve("example");
+```
+
+调用方不需要直接持有 Forge Mod Event Bus、`DistExecutor`、`FMLEnvironment`、`ModList` 或 `FMLPaths`。
+
+## 23. 世界、实体和背包事件
+
+世界事件：
+
+```java
+KineticWorldEvents.onEntityJoin(context -> {
+    if (shouldReject(context.entity())) context.cancel();
+});
+
+KineticWorldEvents.onChunkLoad(context -> handleChunk(context.level(), context.chunk()));
+```
+
+Living 事件：
+
+```java
+KineticLivingEvents.onHurt(context -> {
+    if (shouldReduce(context.entity())) context.amount(context.amount() * 0.5F);
+});
+
+KineticLivingEvents.onPotionApplicable(context -> {
+    if (immune(context.entity(), context.effectInstance())) {
+        context.applicability(KineticLivingEvents.Applicability.DENY);
+    }
+});
+```
+
+强制区块加载使用 `KineticChunkLoading.setForced(...)`；判断某个 Slot/Handler 是否属于玩家背包使用 `KineticInventorySlots`。
+
+## 24. I18N
 
 所有固定玩家文本使用语言键：
 
@@ -732,7 +916,7 @@ KineticI18n.translatableIn("examplemod", "custom.translation.key", value)
 
 配置中存储的固定值可以继续保持英文业务值，GUI 使用 `translatedChoice(...)` 显示翻译。
 
-## 24. 开发检查清单
+## 25. 开发检查清单
 
 提交一个附属功能前检查：
 
@@ -746,3 +930,6 @@ KineticI18n.translatableIn("examplemod", "custom.translation.key", value)
 8. 是否为同一能力重复创建了 Mixin。
 9. 完全通用的新能力是否应该先进入 KineticCore API。
 10. 是否把业务专用规则错误塞进了通用 API。
+11. 是否还直接使用 `ForgeRegistries` / `BuiltInRegistries` / `DeferredRegister`，而核心已经提供对应注册或查询 API。
+12. 是否还直接使用 `DistExecutor`、`ModList`、`FMLPaths` 或通用 Forge 生命周期事件。
+13. 功能开关是否使用稳定业务 ID，而不是把 Mixin 类名暴露给玩家。

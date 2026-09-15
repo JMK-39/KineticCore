@@ -6,7 +6,7 @@ import dev.xyat.kineticcore.internal.client.search.ItemSearchIndex;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
+import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -174,6 +174,14 @@ public class ItemSelectorScreen extends KineticScreen {
     private int activeFilterType = rememberedFilterType;
     private Button applyFilterBtn = null;
     private int btnAreaStartX;
+
+    public static void configureInitialState(int mode, int filterType, String filterValue, String categoryKey, String search) {
+        rememberedMode = mode == 1 ? 1 : 0;
+        rememberedFilterType = Math.max(0, filterType);
+        rememberedFilterValue = filterValue == null || filterValue.isBlank() ? null : filterValue;
+        rememberedCategoryKey = categoryKey == null || categoryKey.isBlank() ? null : categoryKey;
+        rememberedSearch = search == null ? "" : search;
+    }
 
     public ItemSelectorScreen(Screen parent, Consumer<Selection> onSelect) {
         super(KineticText.translatable("gui.kineticcore.items.item_selector.title"));

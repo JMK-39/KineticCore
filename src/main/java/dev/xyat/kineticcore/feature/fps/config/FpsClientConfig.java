@@ -1,18 +1,18 @@
 package dev.xyat.kineticcore.feature.fps.config;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import dev.xyat.kineticcore.api.config.client.KTClientConfigSpec;
 
 public final class FpsClientConfig {
     public static final int DEFAULT_OFFSET_Y = 12;
-    public static final ForgeConfigSpec SPEC;
+    public static final KTClientConfigSpec SPEC;
 
-    private static final ForgeConfigSpec.BooleanValue HUD_ENABLED;
-    private static final ForgeConfigSpec.IntValue HUD_OFFSET_X;
-    private static final ForgeConfigSpec.IntValue HUD_OFFSET_Y;
-    private static final ForgeConfigSpec.ConfigValue<Double> HUD_SCALE;
+    private static final KTClientConfigSpec.BooleanValue HUD_ENABLED;
+    private static final KTClientConfigSpec.IntValue HUD_OFFSET_X;
+    private static final KTClientConfigSpec.IntValue HUD_OFFSET_Y;
+    private static final KTClientConfigSpec.DoubleValue HUD_SCALE;
 
     static {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        KTClientConfigSpec.Builder builder = KTClientConfigSpec.builder();
         builder.comment(
                 "FPS HUD 客户端显示设置。",
                 "Client-side FPS HUD settings."
@@ -21,19 +21,19 @@ public final class FpsClientConfig {
         HUD_ENABLED = builder.comment(
                 "是否显示 FPS HUD。",
                 "Whether to display the FPS HUD."
-        ).translation("cfg.kineticcore.fps.enabled").define("enabled", true);
+        ).translation("cfg.kineticcore.fps.enabled").defineBoolean("enabled", true);
         HUD_OFFSET_X = builder.comment(
                 "横向位置偏移，正数向左移动，负数向右移动。",
                 "Horizontal position offset. Positive values move left; negative values move right."
-        ).translation("cfg.kineticcore.hud.offset_x").defineInRange("offsetX", 0, -10000, 10000);
+        ).translation("cfg.kineticcore.hud.offset_x").defineInt("offsetX", 0, -10000, 10000);
         HUD_OFFSET_Y = builder.comment(
                 "纵向位置偏移，正数向上移动，负数向下移动。",
                 "Vertical position offset. Positive values move up; negative values move down."
-        ).translation("cfg.kineticcore.hud.offset_y").defineInRange("offsetY", DEFAULT_OFFSET_Y, -10000, 10000);
+        ).translation("cfg.kineticcore.hud.offset_y").defineInt("offsetY", DEFAULT_OFFSET_Y, -10000, 10000);
         HUD_SCALE = builder.comment(
                 "HUD 缩放比例；编辑界面可用鼠标滚轮调整。",
                 "HUD scale; use the mouse wheel in the editor to adjust it."
-        ).translation("cfg.kineticcore.hud.scale").define("scale", 1.0D, FpsClientConfig::isValidScale);
+        ).translation("cfg.kineticcore.hud.scale").defineDouble("scale", 1.0D, FpsClientConfig::isValidScale);
 
         builder.pop();
         SPEC = builder.build();

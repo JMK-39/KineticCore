@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.api.client.input;
 
 import dev.xyat.kineticcore.internal.client.input.KineticKeyBindingRuntime;
+import net.minecraft.network.chat.Component;
 
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
@@ -85,6 +86,10 @@ public final class KineticKeyBindings {
 
         public boolean isDown() {
             return KineticKeyBindingRuntime.isDown(id);
+        }
+
+        public Component translatedKeyMessage() {
+            return KineticKeyBindingRuntime.translatedKeyMessage(id);
         }
     }
 

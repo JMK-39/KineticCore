@@ -1,5 +1,7 @@
 # KineticCore API Architecture
 
+开发前先读 [Kinetic 开发地图](KINETIC_API_GUIDE.md)：标准入口、实现位置、草稿生命周期和 internal 边界。
+
 本文档定义 KineticCore 当前源码必须遵守的长期架构边界。目标是让公共 API 可以被核心自身和外部附属共同使用，同时把 Forge/Mixin/具体 Screen/网络实现隐藏在私有实现层。
 
 ## 1. 包职责
@@ -27,7 +29,7 @@ API 的私有实现层。
 
 可以包含：
 
-- Forge Event Bridge。
+- Forge 事件适配层。
 - Mixin / Accessor。
 - Forge 网络 Channel。
 - 具体选择器 Screen。
@@ -72,7 +74,7 @@ feature A -> feature B
 addon -> internal
 ```
 
-`api -> internal` 只允许作为私有实现调用。任何 `public` / `protected` API 签名都不能出现 internal 类型。
+`api -> internal` 是唯一的实现连接方向。只有公开 API 的实现代码可以引用 internal；附属、Feature 与 Bootstrap 业务不得直接访问 internal。任何 `public` / `protected` API 签名都不能出现 internal 类型。
 
 ## 3. 判断通用能力是否应该进入 API
 
@@ -272,7 +274,7 @@ Mixin 可以使用，不要求附属放弃业务 Mixin。
 2. 能被无关附属原样复用的底层注入能力，应由 KineticCore 提供公开 API/Hook。
 3. 明确业务专用的注入可以留在业务模组。
 4. 已经存在通用 API 的能力不要再通过另一套 Mixin 重复实现。
-5. 普通运行时代码不得直接 import 或强转 `internal.mixin` 包中的类型；需要暴露访问能力时，由正常 API/Bridge 接口定义契约，Mixin 仅负责实现。
+5. 普通运行时代码不得直接 import 或强转 `internal.mixin` 包中的类型；需要暴露访问能力时，由正常 API 接口定义契约，Mixin 仅负责实现。
 
 公开 Hook 注册使用 `HookRegistration`，调用方在不再需要时可以 `close()` 取消注册。
 
@@ -320,6 +322,7 @@ GUI 主题颜色、边框、背景、遮罩属于渲染主题，不等同于玩�
 它检查：
 
 - 业务代码直接访问 `internal`。
+- Feature、Bootstrap 业务或附属绕过公开 API 直接访问 internal。
 - `internal` 依赖 Feature。
 - API 依赖 Feature。
 - Feature 跨 Feature import。
@@ -330,6 +333,8 @@ GUI 主题颜色、边框、背景、遮罩属于渲染主题，不等同于玩�
 - 业务重复注册已经统一的按键、生命周期、Tooltip、命令事件。
 
 Mixin/Hook 是否属于真正重复业务能力需要结合语义判断，不用简单“禁止 Mixin”的方式处理。
+
+`check` 只验证当前正式 API 的架构边界和状态行为。API 重构时同步迁移核心与全部附属，不保留旧类型、旧成员或旧继承关系的兼容基线。
 
 ## 13. 公共 API 文档
 

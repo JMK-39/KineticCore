@@ -295,3 +295,4 @@ tasks.withType(JavaCompile).configureEach {
 
 
 apply from: 'gradle/kinetic-architecture.gradle'
+apply from: 'gradle/kinetic-api-verification.gradle'

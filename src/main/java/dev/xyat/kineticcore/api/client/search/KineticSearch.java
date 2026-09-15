@@ -1,11 +1,11 @@
 package dev.xyat.kineticcore.api.client.search;
 
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import com.github.promeg.pinyinhelper.Pinyin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -143,9 +143,10 @@ public final class KineticSearch {
 
     public static List<String> attributeDictionary() {
         if (attributeDictionary == null) {
-            attributeDictionary = ForgeRegistries.ATTRIBUTES.getEntries().stream().map(entry -> {
-                String id = entry.getKey().location().toString();
-                String translated = cleanTranslatedName(entry.getValue().getDescriptionId());
+            attributeDictionary = KineticRegistries.attributes().values().stream().map(value -> {
+                ResourceLocation registryId = KineticRegistries.attributes().id(value);
+                String id = registryId == null ? "" : registryId.toString();
+                String translated = cleanTranslatedName(value.getDescriptionId());
                 return translated != null ? id + " - " + translated : id;
             }).collect(Collectors.toList());
         }
@@ -154,9 +155,10 @@ public final class KineticSearch {
 
     public static List<String> potionDictionary() {
         if (potionDictionary == null) {
-            potionDictionary = ForgeRegistries.MOB_EFFECTS.getEntries().stream().map(entry -> {
-                String id = entry.getKey().location().toString();
-                String translated = cleanTranslatedName(entry.getValue().getDescriptionId());
+            potionDictionary = KineticRegistries.mobEffects().values().stream().map(value -> {
+                ResourceLocation registryId = KineticRegistries.mobEffects().id(value);
+                String id = registryId == null ? "" : registryId.toString();
+                String translated = cleanTranslatedName(value.getDescriptionId());
                 return translated != null ? id + " - " + translated : id;
             }).collect(Collectors.toList());
         }

@@ -3,6 +3,7 @@ package dev.xyat.kineticcore.internal.network;
 import dev.xyat.kineticcore.api.network.ClientboundSender;
 import dev.xyat.kineticcore.api.network.NetworkChannel;
 import dev.xyat.kineticcore.api.network.NetworkCodec;
+import dev.xyat.kineticcore.api.network.NetworkVersionPolicy;
 import dev.xyat.kineticcore.api.network.ServerPacketContext;
 import dev.xyat.kineticcore.api.network.ServerboundPacketHandler;
 import dev.xyat.kineticcore.api.network.ServerboundSender;
@@ -27,18 +28,31 @@ public final class ForgeNetworkChannel implements NetworkChannel {
     private final Set<Class<?>> clientboundTypes = new HashSet<>();
     private int nextPacketId;
 
-    public ForgeNetworkChannel(ResourceLocation id, String protocolVersion) {
+    public ForgeNetworkChannel(
+            ResourceLocation id,
+            String protocolVersion,
+            NetworkVersionPolicy versionPolicy
+    ) {
         this.id = Objects.requireNonNull(id, "id");
         String version = Objects.requireNonNull(protocolVersion, "protocolVersion").trim();
+        NetworkVersionPolicy policy = Objects.requireNonNull(versionPolicy, "versionPolicy");
         if (version.isEmpty()) {
             throw new IllegalArgumentException("protocolVersion cannot be blank");
         }
         this.channel = NetworkRegistry.ChannelBuilder
                 .named(id)
                 .networkProtocolVersion(() -> version)
-                .clientAcceptedVersions(version::equals)
-                .serverAcceptedVersions(version::equals)
+                .clientAcceptedVersions(remoteVersion -> acceptsVersion(policy, version, remoteVersion))
+                .serverAcceptedVersions(remoteVersion -> acceptsVersion(policy, version, remoteVersion))
                 .simpleChannel();
+    }
+
+    private static boolean acceptsVersion(
+            NetworkVersionPolicy policy,
+            String localVersion,
+            String remoteVersion
+    ) {
+        return policy == NetworkVersionPolicy.ANY || localVersion.equals(remoteVersion);
     }
 
     @Override
@@ -101,6 +115,21 @@ public final class ForgeNetworkChannel implements NetworkChannel {
                 })
                 .add();
 
-        return (player, message) -> channel.send(PacketDistributor.PLAYER.with(() -> player), message);
+        return new ClientboundSender<>() {
+            @Override
+            public void send(net.minecraft.server.level.ServerPlayer player, T message) {
+                channel.send(PacketDistributor.PLAYER.with(() -> player), message);
+            }
+
+            @Override
+            public void broadcast(T message) {
+                channel.send(PacketDistributor.ALL.noArg(), message);
+            }
+
+            @Override
+            public void sendToTrackingAndSelf(net.minecraft.world.entity.Entity entity, T message) {
+                channel.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> entity), message);
+            }
+        };
     }
 }

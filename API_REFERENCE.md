@@ -1,5 +1,7 @@
 # KineticCore API Reference
 
+开发前先读 [Kinetic 开发地图](KINETIC_API_GUIDE.md)：标准入口、实现位置、草稿生命周期和 API → internal 边界。
+
 公开包根路径：
 
 ```text
@@ -177,7 +179,20 @@ translatableIn
 
 ### `KineticSearch`
 
-通用搜索与文本匹配辅助能力。
+通用搜索与文本匹配辅助能力。注册表字典通过 `KineticRegistries` 读取，不要求附属直接接触 Forge 注册表。
+
+### `KineticItemSearch`
+
+统一物品搜索缓存。保留物品 ID、Tag、NBT 唯一键和缓存准备状态，供选择器、自动补全和附属编辑器共同使用。
+
+```text
+getUniqueKey
+getRegistryTagIds
+getItems
+isReady
+clear
+prepareCache
+```
 
 ## 2. Client / Widgets
 
@@ -191,6 +206,8 @@ translatableIn
 createButton
 createCompactButton
 createMenuButton
+createTextureButton
+renderTextureButtonIcon
 createTextField
 createCompactTextField
 createValidatingCompactTextField
@@ -394,6 +411,7 @@ register
 translationKey
 isRegistered
 isDown
+translatedKeyMessage
 ```
 
 ### `KineticClientEvents`
@@ -406,9 +424,14 @@ onLogin
 onLogout
 onScreenInitBefore
 onScreenInitAfter
+onScreenInitAfterWithControls
 onScreenRenderAfter
-onHudRender(AFTER_CHAT/END)
+onMouseButtonBefore
+onLevelRender
+onHudRender(HOTBAR/AFTER_CHAT/END)
 ```
+
+`ScreenInitContext` 可以读取、添加和移除原版/第三方 Screen 的现有 `GuiEventListener`；附属不需要直接调用 Screen 的原生控件管理方法。
 
 所有注册返回 `HookRegistration`。
 
@@ -419,7 +442,11 @@ onHudRender(AFTER_CHAT/END)
 ```text
 onBuild
 onRender
+onGather
+registerComponentFactory
 ```
+
+`onGather` 可修改高级 Tooltip 元素列表；`registerComponentFactory` 用于把自定义 `TooltipComponent` 映射为客户端渲染组件。
 
 ## 6. Configuration
 
@@ -518,9 +545,36 @@ shortTranslationKey
 detailTranslationKey
 ```
 
+### `KTClientConfigSpec`
+
+公开的客户端本地配置规格。附属只声明配置结构、范围和 validator；底层配置加载器、持久化与 GUI 适配由 KineticCore internal 负责。公开签名不暴露 `ForgeConfigSpec`。
+
+Builder：
+
+```text
+comment
+translation
+push / pop
+defineBoolean
+defineInt
+defineLong
+defineDouble
+defineString
+defineEnum
+build
+```
+
+值对象：
+
+```text
+get
+set
+defaultValue
+```
+
 ### `KTClientConfigAdapter`
 
-Forge CLIENT Config 与 `KTConfigPage` 的明确适配层。
+`KTClientConfigSpec` 与 `KTConfigPage` 的统一适配层。
 
 主要能力：
 
@@ -531,7 +585,7 @@ appendEntries
 inferApplyTiming
 ```
 
-会尽量继承 Forge `ValueSpec` 的范围、枚举与业务校验规则。
+范围、枚举和业务 validator 会继续传递到实际配置存储与 Kinetic 配置 GUI。
 
 ### `KTServerConfigSpec`
 
@@ -626,12 +680,35 @@ registerServerbound
 registerClientbound
 ```
 
+### `PacketChannel`
+
+按消息类型保存发送器的高层 Channel。适合不希望在业务层长期保存多个 Sender 的附属。
+
+```text
+create
+id
+registerServerbound
+registerClientbound
+sendToServer
+sendToPlayer
+broadcast
+```
+
 ### `NetworkCodec<T>`
 
 ```text
 encode
 decode
 of
+```
+
+### `NetworkBuffers`
+
+在内存 byte[] 与 `NetworkBuffer` 之间编码/解码：
+
+```text
+encode
+decode
 ```
 
 ### `NetworkBuffer`
@@ -751,9 +828,11 @@ onDataPackOrder
 ```text
 registerExtension
 unregisterExtension
+registerTopLevel
+unregisterTopLevel
 ```
 
-统一维护 `/kt` 根命令、帮助和 reload 聚合。
+`registerExtension` 统一维护 `/kt` 根命令、帮助和 reload 聚合；`registerTopLevel` 用于必须保持原独立命令路径的业务命令，不需要附属直接监听 Forge `RegisterCommandsEvent`。
 
 ### `CommandExtension`
 
@@ -782,14 +861,78 @@ register(namespace, path, Supplier<EntityType<T>>)
 
 返回 `KineticRegistryHandle<EntityType<T>>`。
 
+### `KineticItems`
+
+通用 Item 注册，返回 `KineticRegistryHandle<T>`。
+
+```text
+register(ResourceLocation, Supplier<T>)
+register(namespace, path, Supplier<T>)
+```
+
+### `KineticMenuTypes`
+
+通用 `MenuType` 注册。附加打开数据通过公开 `NetworkBuffer` 传入，不向附属暴露 `FriendlyByteBuf` / `IForgeMenuType`。
+
+```text
+register(ResourceLocation, Factory<T>)
+register(namespace, path, Factory<T>)
+```
+
 ### `KineticRegistryHandle<T>`
 
 注册句柄，同时是 `Supplier<T>`；提供稳定注册 ID 与最终对象访问。
+
+### `KineticRegistries` / `KineticRegistryView<T>`
+
+只读注册表访问层。当前提供：
+
+```text
+items
+entityTypes
+blocks
+mobEffects
+attributes
+enchantments
+custom
+```
+
+每个 View 提供：
+
+```text
+get
+id
+values
+ids
+contains
+tagIds
+valuesInTag
+isInTag
+holder
+```
+
+附属不再直接依赖 `ForgeRegistries`；第三方自定义 Forge 注册表通过 `custom(registryId)` 获取类型安全视图。
 
 ### `KineticClientRenderers`
 
 ```text
 registerEntityRenderer
+```
+
+### `KineticClientMenus`
+
+客户端容器 Screen 注册：
+
+```text
+register(menuTypeSupplier, screenFactory)
+```
+
+### `KineticItemProperties`
+
+客户端物品模型属性注册：
+
+```text
+register(itemSupplier, propertyId, propertyFunction)
 ```
 
 ### `KineticPackSources`
@@ -804,17 +947,66 @@ register(PackType, Supplier<? extends RepositorySource>)
 ### `KineticClientRuntime`
 
 ```text
+ensureReady
 execute
 currentScreen
 currentScreen(Class<T>)
 openScreen(Screen)
 openScreen(Supplier<? extends Screen>)
+refreshScreen
+refreshCurrentScreen
 ```
 
 ### `KineticModLifecycle`
 
 ```text
+onCommonSetup
+onClientSetup
 onLoadComplete
+```
+
+### `KineticEnvironment`
+
+```text
+isClient
+isDedicatedServer
+runOnClient
+runOnDedicatedServer
+```
+
+统一替代附属中的 `DistExecutor` / `FMLEnvironment` 侧别判断。
+
+### `KineticPlatform`
+
+```text
+isModLoaded
+loadedMods
+```
+
+### `KineticPaths`
+
+```text
+configDirectory
+```
+
+### `KineticCreativeTabs`
+
+创造模式 Tab 的构建事件、只读查询与客户端搜索索引刷新：
+
+```text
+onBuildContents
+entries
+values
+get
+id
+contains
+refreshSearch
+```
+
+### `KineticServerRuntime`
+
+```text
+currentServer
 ```
 
 ### `KineticRuntime`
@@ -845,16 +1037,78 @@ descriptors
 
 ```text
 onTick(START/END)
+onPlayerTick(START/END)
+onAboutToStart
 onStarted
+onStopping
+onStopped
 onPlayerLogin
 onPlayerLogout
+onPlayerClone
 onPlayerRespawn
 onPlayerChangedDimension
+onDatapackSync
+onChat
 ```
 
-注册返回 `HookRegistration`。
+所有入口都支持 `Priority` 重载；聊天上下文支持取消消息。注册返回 `HookRegistration`。
 
-## 14. Minecraft Bridges
+## 14. World / Living / Inventory
+
+### `KineticWorldEvents`
+
+通用世界事件，均支持 `Priority`：
+
+```text
+onLevelLoad
+onLevelUnload
+onEntityJoin
+onEntityLeave
+onChunkLoad
+onChunkUnload
+onBlockBreak
+onBlockPlace
+onItemPickup
+onMobFinalizeSpawn
+onBabySpawn
+```
+
+可取消的上下文只暴露业务需要的数据与 `cancel()`，不把 Forge Event 对象泄漏给附属。
+
+### `KineticLivingEvents`
+
+通用 Living 生命周期与数值事件：
+
+```text
+onTick
+onEquipmentChange
+onDeath
+onHurt
+onDamage
+onAttack
+onPotionApplicable
+```
+
+支持优先级、取消、伤害数值修改，以及药水 `DEFAULT / ALLOW / DENY` 结果。
+
+### `KineticChunkLoading`
+
+```text
+setForced
+```
+
+统一处理模组拥有者的强制区块加载/释放。
+
+### `KineticInventorySlots`
+
+```text
+isPlayerInventorySlot
+isPlayerInventoryHandler
+```
+
+用于业务判断玩家背包 Slot/Handler，不要求附属识别 Forge wrapper 实现类。
+
+## 15. Minecraft Helpers
 
 ### `MinecraftAttributes`
 
@@ -886,7 +1140,7 @@ modifier
 parent
 ```
 
-## 15. Flight
+## 16. Flight
 
 ### `KineticFlight`
 
@@ -928,7 +1182,7 @@ inertiaEnabled
 setInertiaEnabled
 ```
 
-## 16. Monitoring
+## 17. Monitoring
 
 ### `KineticServerPerformance`
 

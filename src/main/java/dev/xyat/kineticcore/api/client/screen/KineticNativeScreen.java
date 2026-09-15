@@ -1,8 +1,17 @@
 package dev.xyat.kineticcore.api.client.screen;
 
+import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.TabBar;
+import dev.xyat.kineticcore.api.client.widget.selection.KineticDropdowns.Dropdown;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.ToggleButton;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.HighZButton;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.ColorPreviewButton;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.ColorSwatchButton;
+import dev.xyat.kineticcore.api.client.widget.input.KineticAutoComplete.NumericAutoCompleteBox;
+import dev.xyat.kineticcore.api.client.widget.input.KineticAutoComplete.AutoCompleteBox;
+import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
 import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -18,10 +27,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -32,12 +38,16 @@ import java.util.function.Supplier;
  */
 public abstract class KineticNativeScreen extends Screen {
     private final GuiOverlay overlays = new GuiOverlay();
-    private final Map<AbstractWidget, Component> widgetTooltips = new IdentityHashMap<>();
+    private final KineticScreenControls controls = new KineticScreenControls(
+            () -> font, overlays, this::addRenderableWidget, this::addWidget,
+            this::removeWidget, this::openContextMenu
+    );
+    private final KineticScreenFocus focus = new KineticScreenFocus(this);
     private GuiSession.DraftSession draftSession = new GuiSession.DraftSession();
 
     protected KineticNativeScreen(Component title) {
         super(title);
-        dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.initialize();
+        dev.xyat.kineticcore.api.runtime.KineticClientRuntime.ensureReady();
     }
 
     protected final GuiOverlay overlays() {
@@ -68,47 +78,67 @@ public abstract class KineticNativeScreen extends Screen {
         return (int) Math.ceil(virtualY);
     }
 
+    public final void enableCanvasScissor(GuiGraphics graphics, int left, int top, int right, int bottom) {
+        enableUiScissor(graphics, left, top, right, bottom);
+    }
+
+    public final void disableCanvasScissor(GuiGraphics graphics) {
+        disableUiScissor(graphics);
+    }
+
+    public final void renderTextFieldPlaceholder(GuiGraphics graphics, EditBox field, Component placeholder) {
+        if (field == null || placeholder == null) return;
+        if (field instanceof KineticEditBox kineticField) {
+            kineticField.setPlaceholder(placeholder);
+            return;
+        }
+        if (field.isFocused() || !field.getValue().isEmpty() || placeholder.getString().isBlank()) return;
+        graphics.drawString(
+                font,
+                placeholder,
+                field.getX() + 5,
+                field.getY() + (field.getHeight() - font.lineHeight) / 2,
+                GuiTheme.current().mutedText(),
+                false
+        );
+    }
+
+    /** 按当前 Screen 的 UI 坐标启用裁剪；与 disableUiScissor 配对使用。 */
     public final void enableUiScissor(GuiGraphics graphics, int left, int top, int right, int bottom) {
         if (graphics == null) return;
         graphics.enableScissor(left, top, right, bottom);
     }
 
+    /** 结束通过 enableUiScissor 开启的裁剪，建议放在 finally 中。 */
     public final void disableUiScissor(GuiGraphics graphics) {
         if (graphics == null) return;
         graphics.disableScissor();
     }
 
-    public final KineticWidgets.KineticEditBox addTextField(int x, int y, int width, Component message) {
-        return addTextField(x, y, width, message, null);
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final KineticEditBox addTextField(int x, int y, int width, Component message) {
+        return controls.addTextField(x, y, width, message);
     }
 
-    public final KineticWidgets.KineticEditBox addTextField(int x, int y, int width, Component message, Component tooltip) {
-        return addTextField(x, y, width, message, null, tooltip);
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final KineticEditBox addTextField(int x, int y, int width, Component message, Component tooltip) {
+        return controls.addTextField(x, y, width, message, tooltip);
     }
 
-    public final KineticWidgets.KineticEditBox addTextField(
-            int x, int y, int width, Component message, Component placeholder, Component tooltip
-    ) {
-        KineticWidgets.KineticEditBox box = KineticWidgets.createTextField(
-                font, x, y, width, message, placeholder, null
-        );
-        addRenderableWidget(box);
-        registerWidgetTooltip(box, tooltip);
-        return box;
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final KineticEditBox addTextField( int x, int y, int width, Component message, Component placeholder, Component tooltip ) {
+        return controls.addTextField(x, y, width, message, placeholder, tooltip);
     }
 
-    public final KineticWidgets.KineticEditBox addTextField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final KineticEditBox addTextField(
             int x, int y, int width, Component message, Component placeholder,
             Predicate<String> validator, Component tooltip
     ) {
-        KineticWidgets.KineticEditBox box = KineticWidgets.createTextField(
-                font, x, y, width, message, placeholder, validator, null
-        );
-        addRenderableWidget(box);
-        registerWidgetTooltip(box, tooltip);
-        return box;
+        return controls.addTextField(x, y, width, message, placeholder, validator, tooltip);
     }
 
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
     public final MultiLineEditBox addMultiLineTextField(
             int x,
             int y,
@@ -118,35 +148,26 @@ public abstract class KineticNativeScreen extends Screen {
             Component placeholder,
             Component tooltip
     ) {
-        MultiLineEditBox box = KineticWidgets.createMultiLineTextField(
-                font, x, y, width, height, message, placeholder, null
-        );
-        addRenderableWidget(box);
-        registerWidgetTooltip(box, tooltip);
-        return box;
+        return controls.addMultiLineTextField(x, y, width, height, message, placeholder, tooltip);
     }
 
-    public final KineticWidgets.AutoCompleteBox addAutoCompleteField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final AutoCompleteBox addAutoCompleteField(
             int x, int y, int width, Component message, Supplier<java.util.List<String>> dictionarySupplier, Component tooltip
     ) {
-        return addAutoCompleteField(
-                x, y, width, message, null, dictionarySupplier, tooltip
-        );
+        return controls.addAutoCompleteField(x, y, width, message, dictionarySupplier, tooltip);
     }
 
-    public final KineticWidgets.AutoCompleteBox addAutoCompleteField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final AutoCompleteBox addAutoCompleteField(
             int x, int y, int width, Component message, Component placeholder,
             Supplier<java.util.List<String>> dictionarySupplier, Component tooltip
     ) {
-        KineticWidgets.AutoCompleteBox box = KineticWidgets.createAutoCompleteField(
-                font, x, y, width, message, placeholder, dictionarySupplier, null
-        );
-        addRenderableWidget(box);
-        registerWidgetTooltip(box, tooltip);
-        return box;
+        return controls.addAutoCompleteField(x, y, width, message, placeholder, dictionarySupplier, tooltip);
     }
 
-    public final KineticWidgets.NumericAutoCompleteBox addIntegerAutoCompleteField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericAutoCompleteBox addIntegerAutoCompleteField(
             int x,
             int y,
             int width,
@@ -157,13 +178,11 @@ public abstract class KineticNativeScreen extends Screen {
             Integer maxValue,
             Component tooltip
     ) {
-        return addIntegerAutoCompleteField(
-                x, y, width, message, dictionarySupplier,
-                allowNegative, minValue, maxValue, null, tooltip
-        );
+        return controls.addIntegerAutoCompleteField(x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, tooltip);
     }
 
-    public final KineticWidgets.NumericAutoCompleteBox addIntegerAutoCompleteField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericAutoCompleteBox addIntegerAutoCompleteField(
             int x,
             int y,
             int width,
@@ -175,16 +194,11 @@ public abstract class KineticNativeScreen extends Screen {
             Predicate<Number> validator,
             Component tooltip
     ) {
-        KineticWidgets.NumericAutoCompleteBox box = KineticWidgets.createIntegerAutoCompleteField(
-                font, x, y, width, message, dictionarySupplier,
-                allowNegative, minValue, maxValue, validator, null
-        );
-        addRenderableWidget(box);
-        registerWidgetTooltip(box, tooltip);
-        return box;
+        return controls.addIntegerAutoCompleteField(x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, validator, tooltip);
     }
 
-    public final KineticWidgets.NumericAutoCompleteBox addLongAutoCompleteField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericAutoCompleteBox addLongAutoCompleteField(
             int x,
             int y,
             int width,
@@ -195,13 +209,11 @@ public abstract class KineticNativeScreen extends Screen {
             Long maxValue,
             Component tooltip
     ) {
-        return addLongAutoCompleteField(
-                x, y, width, message, dictionarySupplier,
-                allowNegative, minValue, maxValue, null, tooltip
-        );
+        return controls.addLongAutoCompleteField(x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, tooltip);
     }
 
-    public final KineticWidgets.NumericAutoCompleteBox addLongAutoCompleteField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericAutoCompleteBox addLongAutoCompleteField(
             int x,
             int y,
             int width,
@@ -213,16 +225,11 @@ public abstract class KineticNativeScreen extends Screen {
             Predicate<Number> validator,
             Component tooltip
     ) {
-        KineticWidgets.NumericAutoCompleteBox box = KineticWidgets.createLongAutoCompleteField(
-                font, x, y, width, message, dictionarySupplier,
-                allowNegative, minValue, maxValue, validator, null
-        );
-        addRenderableWidget(box);
-        registerWidgetTooltip(box, tooltip);
-        return box;
+        return controls.addLongAutoCompleteField(x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, validator, tooltip);
     }
 
-    public final KineticWidgets.NumericAutoCompleteBox addDecimalAutoCompleteField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericAutoCompleteBox addDecimalAutoCompleteField(
             int x,
             int y,
             int width,
@@ -233,13 +240,11 @@ public abstract class KineticNativeScreen extends Screen {
             Double maxValue,
             Component tooltip
     ) {
-        return addDecimalAutoCompleteField(
-                x, y, width, message, dictionarySupplier,
-                allowNegative, minValue, maxValue, null, tooltip
-        );
+        return controls.addDecimalAutoCompleteField(x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, tooltip);
     }
 
-    public final KineticWidgets.NumericAutoCompleteBox addDecimalAutoCompleteField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericAutoCompleteBox addDecimalAutoCompleteField(
             int x,
             int y,
             int width,
@@ -251,16 +256,11 @@ public abstract class KineticNativeScreen extends Screen {
             Predicate<Number> validator,
             Component tooltip
     ) {
-        KineticWidgets.NumericAutoCompleteBox box = KineticWidgets.createDecimalAutoCompleteField(
-                font, x, y, width, message, dictionarySupplier,
-                allowNegative, minValue, maxValue, validator, null
-        );
-        addRenderableWidget(box);
-        registerWidgetTooltip(box, tooltip);
-        return box;
+        return controls.addDecimalAutoCompleteField(x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, validator, tooltip);
     }
 
-    public final KineticWidgets.NumericEditBox addIntegerField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericEditBox addIntegerField(
             int x,
             int y,
             int width,
@@ -270,10 +270,11 @@ public abstract class KineticNativeScreen extends Screen {
             Integer maxValue,
             Component tooltip
     ) {
-        return addIntegerField(x, y, width, message, allowNegative, minValue, maxValue, null, tooltip);
+        return controls.addIntegerField(x, y, width, message, allowNegative, minValue, maxValue, tooltip);
     }
 
-    public final KineticWidgets.NumericEditBox addIntegerField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericEditBox addIntegerField(
             int x,
             int y,
             int width,
@@ -284,16 +285,11 @@ public abstract class KineticNativeScreen extends Screen {
             Predicate<Number> validator,
             Component tooltip
     ) {
-        KineticWidgets.NumericEditBox box = KineticWidgets.createIntegerField(
-                font, x, y, width, message,
-                allowNegative, minValue, maxValue, validator, null
-        );
-        addRenderableWidget(box);
-        registerWidgetTooltip(box, tooltip);
-        return box;
+        return controls.addIntegerField(x, y, width, message, allowNegative, minValue, maxValue, validator, tooltip);
     }
 
-    public final KineticWidgets.NumericEditBox addLongField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericEditBox addLongField(
             int x,
             int y,
             int width,
@@ -303,10 +299,11 @@ public abstract class KineticNativeScreen extends Screen {
             Long maxValue,
             Component tooltip
     ) {
-        return addLongField(x, y, width, message, allowNegative, minValue, maxValue, null, tooltip);
+        return controls.addLongField(x, y, width, message, allowNegative, minValue, maxValue, tooltip);
     }
 
-    public final KineticWidgets.NumericEditBox addLongField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericEditBox addLongField(
             int x,
             int y,
             int width,
@@ -317,16 +314,11 @@ public abstract class KineticNativeScreen extends Screen {
             Predicate<Number> validator,
             Component tooltip
     ) {
-        KineticWidgets.NumericEditBox box = KineticWidgets.createLongField(
-                font, x, y, width, message,
-                allowNegative, minValue, maxValue, validator, null
-        );
-        addRenderableWidget(box);
-        registerWidgetTooltip(box, tooltip);
-        return box;
+        return controls.addLongField(x, y, width, message, allowNegative, minValue, maxValue, validator, tooltip);
     }
 
-    public final KineticWidgets.NumericEditBox addDecimalField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericEditBox addDecimalField(
             int x,
             int y,
             int width,
@@ -336,10 +328,11 @@ public abstract class KineticNativeScreen extends Screen {
             Double maxValue,
             Component tooltip
     ) {
-        return addDecimalField(x, y, width, message, allowNegative, minValue, maxValue, null, tooltip);
+        return controls.addDecimalField(x, y, width, message, allowNegative, minValue, maxValue, tooltip);
     }
 
-    public final KineticWidgets.NumericEditBox addDecimalField(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final NumericEditBox addDecimalField(
             int x,
             int y,
             int width,
@@ -350,16 +343,11 @@ public abstract class KineticNativeScreen extends Screen {
             Predicate<Number> validator,
             Component tooltip
     ) {
-        KineticWidgets.NumericEditBox box = KineticWidgets.createDecimalField(
-                font, x, y, width, message,
-                allowNegative, minValue, maxValue, validator, null
-        );
-        addRenderableWidget(box);
-        registerWidgetTooltip(box, tooltip);
-        return box;
+        return controls.addDecimalField(x, y, width, message, allowNegative, minValue, maxValue, validator, tooltip);
     }
 
-    public final KineticWidgets.TabBar addTabBar(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final TabBar addTabBar(
             int x,
             int y,
             int totalWidth,
@@ -367,10 +355,11 @@ public abstract class KineticNativeScreen extends Screen {
             int selectedIndex,
             Consumer<Integer> responder
     ) {
-        return addTabBar(x, y, totalWidth, labels, List.of(), selectedIndex, responder);
+        return controls.addTabBar(x, y, totalWidth, labels, selectedIndex, responder);
     }
 
-    public final KineticWidgets.TabBar addTabBar(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final TabBar addTabBar(
             int x,
             int y,
             int totalWidth,
@@ -379,89 +368,57 @@ public abstract class KineticNativeScreen extends Screen {
             int selectedIndex,
             Consumer<Integer> responder
     ) {
-        KineticWidgets.TabBar tabBar = KineticWidgets.createTabBar(
-                x, y, totalWidth, labels, selectedIndex, responder
-        );
-        List<? extends Component> safeTooltips = tooltips == null ? List.of() : tooltips;
-        List<Button> buttons = tabBar.buttons();
-        for (int index = 0; index < buttons.size(); index++) {
-            Button button = buttons.get(index);
-            addRenderableWidget(button);
-            Component tooltip = index < safeTooltips.size() ? safeTooltips.get(index) : null;
-            registerWidgetTooltip(button, tooltip);
-        }
-        return tabBar;
+        return controls.addTabBar(x, y, totalWidth, labels, tooltips, selectedIndex, responder);
     }
 
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
     public final Button addButton(int x, int y, int width, Component text, Component tooltip, Runnable action) {
-        return addButton(x, y, width, text, tooltip, action == null ? null : ignored -> action.run());
+        return controls.addButton(x, y, width, text, tooltip, action);
     }
 
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
     public final Button addButton(int x, int y, int width, Component text, Component tooltip, Button.OnPress action) {
-        Button button = KineticWidgets.createButton(x, y, width, text, null, action);
-        addRenderableWidget(button);
-        registerWidgetTooltip(button, tooltip);
-        return button;
+        return controls.addButton(x, y, width, text, tooltip, action);
     }
 
-    public final Button addCompactButton(
-            int x, int y, int width, Component text, Component tooltip, Runnable action
-    ) {
-        return addCompactButton(x, y, width, text, tooltip, action == null ? null : ignored -> action.run());
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final Button addCompactButton( int x, int y, int width, Component text, Component tooltip, Runnable action ) {
+        return controls.addCompactButton(x, y, width, text, tooltip, action);
     }
 
-    public final Button addCompactButton(
-            int x, int y, int width, Component text, Component tooltip, Button.OnPress action
-    ) {
-        Button button = KineticWidgets.createCompactButton(x, y, width, text, null, action);
-        addRenderableWidget(button);
-        registerWidgetTooltip(button, tooltip);
-        return button;
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final Button addCompactButton( int x, int y, int width, Component text, Component tooltip, Button.OnPress action ) {
+        return controls.addCompactButton(x, y, width, text, tooltip, action);
     }
 
-    public final KineticWidgets.ColorSwatchButton addColorSwatchButton(
-            int x, int y, int rgb, Component tooltip, Runnable action
-    ) {
-        KineticWidgets.ColorSwatchButton button = KineticWidgets.createColorSwatchButton(
-                x, y, rgb, null, action
-        );
-        addRenderableWidget(button);
-        registerWidgetTooltip(button, tooltip);
-        return button;
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final ColorSwatchButton addColorSwatchButton( int x, int y, int rgb, Component tooltip, Runnable action ) {
+        return controls.addColorSwatchButton(x, y, rgb, tooltip, action);
     }
 
-    public final KineticWidgets.HighZButton addHighZButton(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final HighZButton addHighZButton(
             int x, int y, int width, Component text, Component tooltip, int zLevel, Button.OnPress action
     ) {
-        KineticWidgets.HighZButton button = KineticWidgets.createHighZButton(
-                x, y, width, text, null, zLevel, action
-        );
-        addRenderableWidget(button);
-        registerWidgetTooltip(button, tooltip);
-        return button;
+        return controls.addHighZButton(x, y, width, text, tooltip, zLevel, action);
     }
 
-    public final KineticWidgets.HighZButton addCompactHighZButton(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final HighZButton addCompactHighZButton(
             int x, int y, int width, Component text, Component tooltip, int zLevel, Runnable action
     ) {
-        return addCompactHighZButton(
-                x, y, width, text, tooltip, zLevel,
-                action == null ? null : ignored -> action.run()
-        );
+        return controls.addCompactHighZButton(x, y, width, text, tooltip, zLevel, action);
     }
 
-    public final KineticWidgets.HighZButton addCompactHighZButton(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final HighZButton addCompactHighZButton(
             int x, int y, int width, Component text, Component tooltip, int zLevel, Button.OnPress action
     ) {
-        KineticWidgets.HighZButton button = KineticWidgets.createCompactHighZButton(
-                x, y, width, text, null, zLevel, action
-        );
-        addRenderableWidget(button);
-        registerWidgetTooltip(button, tooltip);
-        return button;
+        return controls.addCompactHighZButton(x, y, width, text, tooltip, zLevel, action);
     }
 
-    public final KineticWidgets.ToggleButton addToggleButton(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final ToggleButton addToggleButton(
             int x,
             int y,
             int width,
@@ -471,10 +428,11 @@ public abstract class KineticNativeScreen extends Screen {
             Component tooltip,
             Consumer<Boolean> responder
     ) {
-        return addToggleButton(x, y, width, value, onText, offText, tooltip, ignored -> true, responder);
+        return controls.addToggleButton(x, y, width, value, onText, offText, tooltip, responder);
     }
 
-    public final KineticWidgets.ToggleButton addToggleButton(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final ToggleButton addToggleButton(
             int x,
             int y,
             int width,
@@ -485,15 +443,11 @@ public abstract class KineticNativeScreen extends Screen {
             Predicate<Boolean> validator,
             Consumer<Boolean> responder
     ) {
-        KineticWidgets.ToggleButton button = KineticWidgets.createToggleButton(
-                x, y, width, value, onText, offText, null, validator, responder
-        );
-        addRenderableWidget(button);
-        registerWidgetTooltip(button, tooltip);
-        return button;
+        return controls.addToggleButton(x, y, width, value, onText, offText, tooltip, validator, responder);
     }
 
-    public final KineticWidgets.ColorPreviewButton addColorPreviewButton(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final ColorPreviewButton addColorPreviewButton(
             int x,
             int y,
             int width,
@@ -502,110 +456,93 @@ public abstract class KineticNativeScreen extends Screen {
             Component tooltip,
             Runnable action
     ) {
-        KineticWidgets.ColorPreviewButton button = KineticWidgets.createColorPreviewButton(
-                x, y, width, color, text, null, action
-        );
-        addRenderableWidget(button);
-        registerWidgetTooltip(button, tooltip);
-        return button;
+        return controls.addColorPreviewButton(x, y, width, color, text, tooltip, action);
     }
 
+    /** 注册已有控件并加入渲染和输入列表；非空 Tooltip 交由 Screen Overlay 显示。null Tooltip 保留控件自带 Tooltip。 */
     public final <T extends AbstractWidget> T addControl(T widget, Component tooltip) {
-        if (widget == null) return null;
-        addRenderableWidget(widget);
-        if (tooltip != null && !tooltip.getString().isBlank()) registerWidgetTooltip(widget, tooltip);
-        return widget;
+        return controls.addControl(widget, tooltip);
     }
 
+    /** 移除控件及其 Screen Tooltip；固定画布 Screen 同时解除滚动视口绑定。 */
     public final void removeControl(AbstractWidget widget) {
-        if (widget == null) return;
-        widgetTooltips.remove(widget);
-        removeWidget(widget);
+        controls.removeControl(widget);
     }
 
+    /** 仅注册列表的输入事件；调用方负责通过对应 Screen 的列表渲染 API 绘制。 */
     public final <T extends ObjectSelectionList<?>> T addEventListWidget(T list) {
-        addWidget(list);
-        return list;
+        return controls.addEventListWidget(list);
     }
 
+    /** 为控件登记 Screen Overlay Tooltip；null 或空文本移除登记，不修改控件自带 Tooltip。 */
     public final <T extends AbstractWidget> T registerWidgetTooltip(T widget, Component tooltip) {
-        if (widget == null) return null;
-        if (tooltip == null || tooltip.getString().isBlank()) widgetTooltips.remove(widget);
-        else widgetTooltips.put(widget, tooltip);
-        return widget;
+        return controls.registerWidgetTooltip(widget, tooltip);
     }
 
     private void requestWidgetTooltip(double mouseX, double mouseY) {
-        for (Map.Entry<AbstractWidget, Component> entry : widgetTooltips.entrySet()) {
-            AbstractWidget widget = entry.getKey();
-            if (widget == null || !widget.visible) continue;
-            if (mouseX >= widget.getX() && mouseX < widget.getX() + widget.getWidth()
-                    && mouseY >= widget.getY() && mouseY < widget.getY() + widget.getHeight()) {
-                overlays.tooltip(entry.getValue(), 320);
-                return;
-            }
-        }
+        controls.requestWidgetTooltip(mouseX, mouseY);
     }
 
+    /** 请求本帧的统一 Tooltip；在渲染阶段调用，无须自行创建原版 Tooltip。 */
     public final void showTooltip(Component component) {
-        overlays.tooltip(component);
+        controls.showTooltip(component);
     }
 
+    /** 请求本帧的统一 Tooltip；在渲染阶段调用，无须自行创建原版 Tooltip。 */
     public final void showTooltip(List<? extends Component> lines) {
-        overlays.tooltip(lines);
+        controls.showTooltip(lines);
     }
 
+    /** 请求本帧的统一 Tooltip；在渲染阶段调用，无须自行创建原版 Tooltip。 */
     public final void showTooltip(Component component, int maxWidth) {
-        overlays.tooltip(component, maxWidth);
+        controls.showTooltip(component, maxWidth);
     }
 
+    /** 请求本帧的统一 Tooltip；在渲染阶段调用，无须自行创建原版 Tooltip。 */
     public final void showTooltip(List<? extends Component> lines, int maxWidth) {
-        overlays.tooltip(lines, maxWidth);
+        controls.showTooltip(lines, maxWidth);
     }
 
+    /** 请求本帧的格式化 Tooltip，由统一 Overlay 渲染。 */
     public final void showFormattedTooltip(List<FormattedCharSequence> lines) {
-        overlays.formattedTooltip(lines);
+        controls.showFormattedTooltip(lines);
     }
 
+    /** 请求本帧的物品 Tooltip，由统一 Overlay 渲染。 */
     public final void showItemTooltip(ItemStack stack) {
-        overlays.itemTooltip(stack);
+        controls.showItemTooltip(stack);
     }
 
     public final void closeContextMenu() {
-        overlays.closeMenu();
+        controls.closeContextMenu();
     }
 
+    /** 转移焦点并清除旧控件的焦点状态；传 null 等同 clearControlFocus。 */
     public final void focusControl(GuiEventListener control) {
-        if (control == null) {
-            clearControlFocus();
-            return;
-        }
-        GuiEventListener current = getFocused();
-        if (current != null && current != control) current.setFocused(false);
-        setFocused(control);
-        control.setFocused(true);
+        focus.focusControl(control);
     }
 
+    /** 清除指定控件的焦点；仅当它是当前焦点时解除 Screen 焦点。 */
     public final void blurControl(GuiEventListener control) {
-        if (control == null) return;
-        control.setFocused(false);
-        if (getFocused() == control) setFocused(null);
+        focus.blurControl(control);
     }
 
+    /** 同时清除 Screen 当前焦点和该控件的焦点状态。 */
     public final void clearControlFocus() {
-        GuiEventListener current = getFocused();
-        if (current != null) current.setFocused(false);
-        setFocused(null);
+        focus.clearControlFocus();
     }
 
+    /** 判断 Screen 当前焦点和控件自身焦点是否一致。 */
     public final boolean isControlFocused(GuiEventListener control) {
-        return control != null && getFocused() == control && control.isFocused();
+        return focus.isControlFocused(control);
     }
 
+    /** 在当前 Screen 的 UI 坐标处打开统一菜单；Screen 负责坐标转换。 */
     public final void openContextMenu(double x, double y, List<GuiOverlay.MenuItem> items) {
         overlays.openMenu((int) Math.round(x), (int) Math.round(y), items);
     }
 
+    /** 打开统一模态确认框；保存或回滚动作由 onConfirm/onCancel 回调决定。 */
     public final void openDialog(
             Component title,
             Component message,
@@ -614,10 +551,11 @@ public abstract class KineticNativeScreen extends Screen {
             Runnable onConfirm,
             Runnable onCancel
     ) {
-        overlays.openDialog(title, message, confirmText, cancelText, onConfirm, onCancel);
+        controls.openDialog(title, message, confirmText, cancelText, onConfirm, onCancel);
     }
 
-    public final KineticWidgets.Dropdown addDropdown(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final Dropdown addDropdown(
             int x,
             int y,
             int width,
@@ -626,10 +564,11 @@ public abstract class KineticNativeScreen extends Screen {
             Component tooltip,
             Consumer<Integer> responder
     ) {
-        return addDropdown(x, y, width, options, List.of(), selectedIndex, tooltip, ignored -> true, responder);
+        return controls.addDropdown(x, y, width, options, selectedIndex, tooltip, responder);
     }
 
-    public final KineticWidgets.Dropdown addDropdown(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final Dropdown addDropdown(
             int x,
             int y,
             int width,
@@ -639,10 +578,11 @@ public abstract class KineticNativeScreen extends Screen {
             Predicate<Integer> validator,
             Consumer<Integer> responder
     ) {
-        return addDropdown(x, y, width, options, List.of(), selectedIndex, tooltip, validator, responder);
+        return controls.addDropdown(x, y, width, options, selectedIndex, tooltip, validator, responder);
     }
 
-    public final KineticWidgets.Dropdown addDropdown(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final Dropdown addDropdown(
             int x,
             int y,
             int width,
@@ -652,10 +592,11 @@ public abstract class KineticNativeScreen extends Screen {
             Component tooltip,
             Consumer<Integer> responder
     ) {
-        return addDropdown(x, y, width, options, optionTooltips, selectedIndex, tooltip, ignored -> true, responder);
+        return controls.addDropdown(x, y, width, options, optionTooltips, selectedIndex, tooltip, responder);
     }
 
-    public final KineticWidgets.Dropdown addDropdown(
+    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
+    public final Dropdown addDropdown(
             int x,
             int y,
             int width,
@@ -666,64 +607,38 @@ public abstract class KineticNativeScreen extends Screen {
             Predicate<Integer> validator,
             Consumer<Integer> responder
     ) {
-        List<Component> normalizedOptions = options == null ? new ArrayList<>() : new ArrayList<>(options);
-        List<Component> normalizedTooltips = optionTooltips == null ? new ArrayList<>() : new ArrayList<>(optionTooltips);
-        KineticWidgets.Dropdown control = KineticWidgets.createDropdown(
-                x, y, width, normalizedOptions, selectedIndex, null, validator, responder, dropdown -> {
-                    List<GuiOverlay.MenuItem> entries = new ArrayList<>();
-                    List<Component> values = dropdown.options();
-                    for (int index = 0; index < values.size(); index++) {
-                        int optionIndex = index;
-                        Component optionTooltip = index < normalizedTooltips.size()
-                                && normalizedTooltips.get(index) != null
-                                && !normalizedTooltips.get(index).getString().isBlank()
-                                ? normalizedTooltips.get(index)
-                                : values.get(index);
-                        entries.add(GuiOverlay.MenuItem.toggle(
-                                values.get(index),
-                                optionTooltip,
-                                optionIndex == dropdown.selectedIndex(),
-                                () -> dropdown.choose(optionIndex)
-                        ));
-                    }
-                    openContextMenu(x, y + KineticScreen.STANDARD_CONTROL_HEIGHT, entries);
-                }
-        );
-        addRenderableWidget(control);
-        registerWidgetTooltip(control, tooltip);
-        return control;
+        return controls.addDropdown(x, y, width, options, optionTooltips, selectedIndex, tooltip, validator, responder);
     }
 
+    /** 在打开前预留独立草稿边界，避免继承父界面的草稿会话。 */
     protected final void reserveStandaloneDraft() {
         draftSession.reserveStandaloneOwner(this);
     }
 
+    /** 设置草稿快照与恢复函数。离开共享草稿会话时回滚；capture 应返回独立且可按 equals 比较的快照。 */
     protected final <T> void configureDraft(java.util.function.Supplier<T> capture, java.util.function.Consumer<T> restore) {
         draftSession.configureDraft(this, capture, restore, false);
     }
 
+    /** 建立独立草稿保存边界，不继承父界面草稿；离开该边界时回滚未提交修改。 */
     protected final <T> void configureStandaloneDraft(java.util.function.Supplier<T> capture, java.util.function.Consumer<T> restore) {
         draftSession.configureDraft(this, capture, restore, true);
     }
 
-
-
-
-
-
-
+    /** 仅草稿所有者可更新已保存基线；先完成业务持久化，再调用本方法。本方法不写入配置。 */
     protected final void commitDraft() {
         draftSession.commitBaseline(this);
     }
 
+    /** 恢复最近保存的草稿基线；不负责关闭界面。 */
     protected final void discardDraft() {
         draftSession.discardToBaseline();
     }
 
+    /** 比较当前快照与保存基线，判断是否有未提交修改。 */
     protected final boolean hasUnsavedEdits() {
         return draftSession.isDirty();
     }
-
 
     @Override
     protected final void init() {
@@ -731,9 +646,10 @@ public abstract class KineticNativeScreen extends Screen {
         rebuildUi();
     }
 
+    /** 通过 buildUi 重建并重新注册控件，清理旧 Tooltip 和视口绑定；不要直接调用 this.init() 或 clearWidgets。 */
     public final void rebuildUi() {
         clearWidgets();
-        widgetTooltips.clear();
+        controls.clear();
         buildUi();
     }
 
@@ -823,6 +739,7 @@ public abstract class KineticNativeScreen extends Screen {
         draftSession.discardToBaseline();
     }
 
+    /** 返回父界面；离开共享草稿会话时回滚未提交修改，容器界面同时关闭容器。 */
     public final void navigateBack() {
         GuiSession.back(this);
     }

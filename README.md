@@ -1,6 +1,8 @@
 # KineticCore
 
-KineticCore 是面向 **Minecraft 1.20.1 / Forge 47.4.x / Java 17** 的核心基础模组与公共开发 API。它为 Kinetic 系列及其他附属提供统一的 GUI、配置、网络、压缩、输入、生命周期、Hook、命令扩展、选择器、Minecraft 桥接与运行时基础设施。
+开发前先读 [Kinetic 开发地图](KINETIC_API_GUIDE.md)：标准入口、实现位置、草稿生命周期和 internal 边界。
+
+KineticCore 是面向 **Minecraft 1.20.1 / Forge 47.4.x / Java 17** 的核心基础模组与公共开发 API。它为 Kinetic 系列及其他附属提供统一的 GUI、配置、网络、压缩、输入、生命周期、Hook、命令扩展、选择器、注册表访问、Minecraft 辅助能力与运行时基础设施。
 
 核心约束：**业务代码只调用公开 `dev.xyat.kineticcore.api.*`。** `internal/` 只负责实现，不属于附属调用面。
 
@@ -25,7 +27,7 @@ KineticCore 是面向 **Minecraft 1.20.1 / Forge 47.4.x / Java 17** 的核心基
 ```text
 src/main/java/dev/xyat/kineticcore/
 ├─ api/         对附属公开的稳定能力
-├─ internal/    API 的私有实现、Mixin、Bridge、具体 Screen 与运行时
+├─ internal/    API 的私有实现、Mixin、具体 Screen 与运行时
 ├─ feature/     KineticCore 自身业务功能
 └─ bootstrap/   核心启动与功能装配
 ```
@@ -100,6 +102,7 @@ KTConfigApi
 KTConfigPage
 KTConfigEntry
 KTConfigScope
+KTClientConfigSpec
 KTClientConfigAdapter
 KTServerConfigApi
 KTServerConfigSpec
@@ -114,9 +117,11 @@ KTServerConfigClient
 
 ```text
 KineticNetwork
+PacketChannel
 NetworkChannel
 NetworkCodec<T>
 NetworkBuffer
+NetworkBuffers
 ServerboundSender<T>
 ClientboundSender<T>
 ServerPacketContext
@@ -151,21 +156,31 @@ decompressBytes
 
 - Client Tick START / END。
 - 登录、退出。
-- Screen Init Before / After。
+- Screen Init Before / After，以及外部 Screen 控件的查看、添加、移除。
 - Screen Render After。
-- HUD AFTER_CHAT / END。
+- Mouse Button Before。
+- Level Render Stage。
+- HUD AFTER_CHAT / HOTBAR / END。
 
 `KineticServerEvents` 提供：
 
 - Server Tick START / END。
-- Server Started。
-- 玩家登录、退出、重生、切换维度。
+- Player Tick START / END。
+- Server AboutToStart / Started / Stopping / Stopped。
+- 玩家登录、退出、Clone、重生、切换维度。
+- Datapack Sync。
+- 可取消的服务端聊天事件。
+- `HIGHEST` 到 `LOWEST` 的稳定优先级。
 
-附属不需要直接监听这些对应的 Forge 生命周期事件。
+`KineticWorldEvents` 提供世界加载/卸载、实体加入/离开、区块加载/卸载、方块破坏/放置、物品拾取、Mob Finalize Spawn 与幼体生成。
+
+`KineticLivingEvents` 提供 Living Tick、装备变化、死亡、Hurt、Damage、Attack 与药水适用性事件，并为需要修改数值或取消事件的场景提供专用上下文。
+
+附属不需要直接监听这些对应的 Forge 通用生命周期和世界事件。第三方模组自己的事件契约仍留在附属。
 
 ## Tooltip、Overlay 与状态效果
 
-- `KineticItemTooltips`：统一物品 Tooltip 构建与渲染观察入口。
+- `KineticItemTooltips`：统一物品 Tooltip 构建、GatherComponents、自定义 `TooltipComponent` 客户端工厂与渲染观察入口。
 - `GuiOverlay`：Tooltip、右键菜单、确认框、Toast 和高层覆盖。
 - `KineticEffectDisplay`：状态效果区域、紧凑布局、Tab 展开和图标策略。
 
@@ -204,28 +219,56 @@ HookRegistration
 
 ## 命令扩展
 
-`KineticCommands` 维护统一 `/kt` 根命令。附属通过 `CommandExtension` 注册自己的子命令、帮助项和 reload 回调，不需要自己接管 Forge 命令注册事件。
+`KineticCommands` 维护统一 `/kt` 根命令。附属通过 `CommandExtension` 注册自己的子命令、帮助项和 reload 回调；需要保持独立命令路径时使用 `registerTopLevel(...)`。两种方式都不需要附属自己接管 Forge 命令注册事件。
 
 ## 注册与运行时
 
-通用注册入口包括：
+通用注册与运行时入口包括：
 
 ```text
+KineticItems
+KineticMenuTypes
 KineticEntityTypes
 KineticRegistryHandle
+KineticRegistries
+KineticRegistryView
+KineticClientMenus
+KineticItemProperties
 KineticClientRenderers
 KineticPackSources
+KineticCreativeTabs
 KineticModLifecycle
 KineticClientRuntime
+KineticServerRuntime
+KineticEnvironment
+KineticPlatform
+KineticPaths
 KineticFeatureSwitches
 KineticRuntime
 ```
 
-`KineticClientRuntime` 负责统一客户端线程执行和 Screen 导航；附属不需要管理 KC 内部初始化顺序。
+`KineticRegistries` 提供物品、实体类型、方块、药水效果、属性和附魔的 ID ↔ 对象查询、枚举与 Tag 查询，也可通过 `custom(...)` 访问第三方自定义注册表。
+`KineticItems` / `KineticMenuTypes` 负责通用注册；客户端菜单绑定和物品属性分别通过 `KineticClientMenus` / `KineticItemProperties`。
+`KineticCreativeTabs` 负责创造模式 Tab 枚举、查询、BuildContents 回调与客户端搜索树刷新。
+`KineticEnvironment`、`KineticPlatform`、`KineticPaths` 统一物理端判断、模组检测和配置目录。
+`KineticClientRuntime` 负责统一客户端线程执行、Screen 打开与刷新；附属不需要管理 KC 内部初始化顺序。
 
-## Minecraft 桥接
+`KineticFeatureSwitches` 使用稳定的功能 ID、名称和说明管理功能开关。Mixin 类名只允许作为实现层映射，不能成为玩家配置键或 GUI 文案。
 
-公开桥接：
+## 世界与背包基础能力
+
+```text
+KineticChunkLoading
+KineticInventorySlots
+KineticItemSearch
+KineticSelectors
+```
+
+`KineticChunkLoading` 统一强加载/释放区块；`KineticInventorySlots` 提供玩家背包 Slot/Handler 判定；`KineticItemSearch` 提供共享物品搜索索引快照；选择器统一通过 `KineticSelectors` 打开。
+
+## Minecraft 辅助能力
+
+公开辅助入口：
 
 ```text
 MinecraftAttributes

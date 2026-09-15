@@ -3,6 +3,7 @@ package dev.xyat.kineticcore.internal.network;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -11,7 +12,14 @@ public final class GzipCompression {
     }
 
     public static byte[] compress(byte[] data) {
-        try (ByteArrayOutputStream output = new ByteArrayOutputStream();
+        return compress(data, Integer.MAX_VALUE);
+    }
+
+    public static byte[] compress(byte[] data, int maxCompressedBytes) {
+        if (maxCompressedBytes < 0) {
+            throw new IllegalArgumentException("maxCompressedBytes must be non-negative");
+        }
+        try (LimitedByteArrayOutputStream output = new LimitedByteArrayOutputStream(maxCompressedBytes);
              GZIPOutputStream gzip = new GZIPOutputStream(output)) {
             gzip.write(data);
             gzip.finish();
@@ -40,6 +48,40 @@ public final class GzipCompression {
             return output.toByteArray();
         } catch (IOException exception) {
             throw new IllegalArgumentException("Unable to decompress network payload", exception);
+        }
+    }
+
+    private static final class LimitedByteArrayOutputStream extends OutputStream {
+        private final ByteArrayOutputStream delegate = new ByteArrayOutputStream();
+        private final int limit;
+        private int count;
+
+        private LimitedByteArrayOutputStream(int limit) {
+            this.limit = limit;
+        }
+
+        @Override
+        public void write(int value) throws IOException {
+            ensureCapacity(1);
+            delegate.write(value);
+            count++;
+        }
+
+        @Override
+        public void write(byte[] bytes, int offset, int length) throws IOException {
+            ensureCapacity(length);
+            delegate.write(bytes, offset, length);
+            count += length;
+        }
+
+        private void ensureCapacity(int additional) throws IOException {
+            if (additional < 0 || count > limit - additional) {
+                throw new IOException("Compressed network payload exceeds limit");
+            }
+        }
+
+        private byte[] toByteArray() {
+            return delegate.toByteArray();
         }
     }
 }

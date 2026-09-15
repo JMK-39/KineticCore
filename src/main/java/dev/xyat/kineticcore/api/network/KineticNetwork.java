@@ -14,7 +14,15 @@ public final class KineticNetwork {
     }
 
     public static NetworkChannel channel(ResourceLocation id, String protocolVersion) {
-        return KineticNetworkRuntime.channel(id, protocolVersion);
+        return channel(id, protocolVersion, NetworkVersionPolicy.EXACT);
+    }
+
+    public static NetworkChannel channel(
+            ResourceLocation id,
+            String protocolVersion,
+            NetworkVersionPolicy versionPolicy
+    ) {
+        return KineticNetworkRuntime.channel(id, protocolVersion, versionPolicy);
     }
 
     public static NetworkTransportLimits transportLimits() {

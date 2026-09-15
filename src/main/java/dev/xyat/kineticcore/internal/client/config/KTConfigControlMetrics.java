@@ -2,7 +2,7 @@ package dev.xyat.kineticcore.internal.client.config;
 
 import dev.xyat.kineticcore.api.config.client.*;
 
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.NumericEditBox;
+import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
 import net.minecraft.client.gui.Font;
 
 final class KTConfigControlMetrics {

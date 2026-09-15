@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.internal.client.config;
 
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.config.client.*;
 
@@ -12,8 +13,8 @@ import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.GridScrollController;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.NumericEditBox;
+import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
+import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -281,7 +282,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
                 editor = box;
             }
             case STRING -> {
-                KineticWidgets.KineticEditBox box = addTextField(
+                KineticEditBox box = addTextField(
                         editorX, y, editorWidth, entry.label(), null,
                         value -> entry.accepts(value), null
                 );
@@ -532,7 +533,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
         rebuildUi();
     }
 
-    private void setParsedValue(String key, KTConfigEntry<?> entry, Object value, KineticWidgets.KineticEditBox box) {
+    private void setParsedValue(String key, KTConfigEntry<?> entry, Object value, KineticEditBox box) {
         rawTextValues.put(key, box.getValue());
         boolean valid = value != null && entry.accepts(value);
         box.setValidationError(!valid);
