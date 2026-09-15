@@ -68,8 +68,9 @@ public final class KTCommonConfigRuntime {
         if (handle.built) {
             throw new IllegalStateException("Config builder has already been built");
         }
+        ForgeConfigSpec builtSpec = builder(handle).build();
         handle.built = true;
-        return new SpecHandle(builder(handle).build());
+        return new SpecHandle(builtSpec);
     }
 
     public static void registerCommon(SpecHandle handle, String fileName) {
