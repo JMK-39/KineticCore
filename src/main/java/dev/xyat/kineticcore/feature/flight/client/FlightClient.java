@@ -137,17 +137,34 @@ public final class FlightClient {
         int centerY = graphics.guiHeight() / 2;
         float roll = KineticFlightClient.superFlightRoll(partialTick);
 
+        int referenceColor = 0x6640FF80;
+        int currentColor = 0xFF52FF7A;
+        int centerColor = 0xCC8CFFAA;
+
         PoseStack pose = graphics.pose();
+
+        pose.pushPose();
+        pose.translate(centerX, centerY, 0.0F);
+
+        graphics.fill(-26, 0, -10, 1, referenceColor);
+        graphics.fill(10, 0, 26, 1, referenceColor);
+        graphics.fill(-26, -4, -25, 5, centerColor);
+        graphics.fill(25, -4, 26, 5, centerColor);
+        graphics.fill(-4, -1, -2, 1, centerColor);
+        graphics.fill(2, -1, 4, 1, centerColor);
+
+        pose.popPose();
+
         pose.pushPose();
         pose.translate(centerX, centerY, 0.0F);
         pose.mulPose(Axis.ZP.rotationDegrees(-roll));
 
-        int horizon = 0xE6FFFFFF;
-        int marker = 0xB8FFFFFF;
-        graphics.fill(-24, -1, -7, 1, horizon);
-        graphics.fill(7, -1, 24, 1, horizon);
-        graphics.fill(-24, -4, -22, 5, marker);
-        graphics.fill(22, -4, 24, 5, marker);
+        graphics.fill(-18, 0, -5, 1, currentColor);
+        graphics.fill(5, 0, 18, 1, currentColor);
+        graphics.fill(-18, -2, -17, 3, currentColor);
+        graphics.fill(17, -2, 18, 3, currentColor);
+        graphics.fill(-1, -6, 0, 6, currentColor);
+        graphics.fill(1, -6, 2, 6, currentColor);
 
         pose.popPose();
     }
