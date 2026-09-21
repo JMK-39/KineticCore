@@ -1,10 +1,10 @@
 package dev.xyat.kineticcore.feature.flight.mixin.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import com.mojang.authlib.GameProfile;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import dev.xyat.kineticcore.api.flight.KineticFlightClient;
 import dev.xyat.kineticcore.feature.flight.config.SuperFlightClientConfig;
 import net.minecraft.client.Camera;
@@ -15,8 +15,8 @@ import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -255,20 +255,21 @@ public class FlightClientMixins {
     }
 
 
+
     @Mixin(PlayerRenderer.class)
-    public static class PlayerRendererTweaks {
+    public static abstract class PlayerRendererTweaks {
         @Inject(method = "setupRotations", at = @At("TAIL"))
-        private void kineticcore$applySuperFlightBodyPose(
+        private void kineticcore$applyPhysicalSuperFlightRoll(
                 AbstractClientPlayer player,
                 PoseStack poseStack,
                 float ageInTicks,
-                float rotationYaw,
-                float partialTicks,
+                float bodyYaw,
+                float partialTick,
                 CallbackInfo ci
         ) {
-            if (!(player instanceof LocalPlayer localPlayer)) return;
-            if (!KineticFlightClient.superFlightManeuvering() || !localPlayer.isFallFlying()) return;
-            poseStack.mulPose(Axis.ZP.rotationDegrees(KineticFlightClient.superFlightRoll(partialTicks)));
+            float roll = KineticFlightClient.superFlightPlayerRoll(player, partialTick);
+            if (Math.abs(roll) < 0.001F || !player.isFallFlying()) return;
+            poseStack.mulPose(Axis.YP.rotationDegrees(roll));
         }
     }
 

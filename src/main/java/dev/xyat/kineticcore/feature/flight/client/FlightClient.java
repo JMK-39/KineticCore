@@ -66,6 +66,7 @@ public final class FlightClient {
                 () -> KineticFlightClient.installSpeedModifierState(() -> speedModifierKey != null && speedModifierKey.isDown()),
                 () -> KineticFlightClient.installSuperFlightFreeLookState(() -> superFlightFreeLookKey != null && superFlightFreeLookKey.isDown()),
                 () -> KineticFlightClient.installSuperFlightFallFlyingRequestHandler(FlightNetwork::requestSuperFlightFallFlying),
+                () -> KineticFlightClient.installSuperFlightRollRequestHandler(FlightNetwork::requestSuperFlightRoll),
                 () -> KineticFlightClient.setSuperFlightSelectedSpeedMultiplier(SuperFlightClientConfig.selectedSpeed()),
                 () -> KineticFlightClient.installNoclipRequestHandler(FlightClient::setNoclip),
                 () -> KineticClientEvents.onLogin(FlightClient::onLogin),

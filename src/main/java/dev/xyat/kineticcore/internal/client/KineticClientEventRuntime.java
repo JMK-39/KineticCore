@@ -323,8 +323,10 @@ public final class KineticClientEventRuntime {
 
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         if (CAMERA_ANGLES.isEmpty()) return;
+
         CameraAnglesContextImpl context = new CameraAnglesContextImpl(event);
         KineticCallbackBatch.runAll(CAMERA_ANGLES, listener -> listener.handle(context));
+        event.setRoll(context.roll());
     }
 
     private static KineticClientEvents.LevelRenderStage mapLevelRenderStage(RenderLevelStageEvent.Stage stage) {
@@ -628,7 +630,15 @@ public final class KineticClientEventRuntime {
         }
     }
 
-    private record CameraAnglesContextImpl(ViewportEvent.ComputeCameraAngles event) implements KineticClientEvents.CameraAnglesContext {
+    private static final class CameraAnglesContextImpl implements KineticClientEvents.CameraAnglesContext {
+        private final ViewportEvent.ComputeCameraAngles event;
+        private float roll;
+
+        private CameraAnglesContextImpl(ViewportEvent.ComputeCameraAngles event) {
+            this.event = event;
+            this.roll = event.getRoll();
+        }
+
         @Override
         public net.minecraft.client.Camera camera() {
             return event.getCamera();
@@ -661,12 +671,12 @@ public final class KineticClientEventRuntime {
 
         @Override
         public float roll() {
-            return event.getRoll();
+            return roll;
         }
 
         @Override
         public void setRoll(float roll) {
-            event.setRoll(roll);
+            this.roll = roll;
         }
     }
 

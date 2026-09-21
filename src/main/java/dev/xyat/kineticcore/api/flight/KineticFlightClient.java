@@ -3,6 +3,7 @@ package dev.xyat.kineticcore.api.flight;
 import dev.xyat.kineticcore.internal.flight.KineticFlightClientRuntime;
 import dev.xyat.kineticcore.internal.flight.KineticSuperFlightClientRuntime;
 
+import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
@@ -34,6 +35,16 @@ public final class KineticFlightClient {
     /** Installs the client-to-server sender used to synchronize the real fall-flying pose. */
     public static void installSuperFlightFallFlyingRequestHandler(Consumer<Boolean> handler) {
         KineticSuperFlightClientRuntime.installFallFlyingRequestHandler(handler);
+    }
+
+    /** Installs the client-to-server sender used to synchronize the physical super-flight roll. */
+    public static void installSuperFlightRollRequestHandler(Consumer<Float> handler) {
+        KineticSuperFlightClientRuntime.installRollSyncRequestHandler(handler);
+    }
+
+    /** Applies one server-broadcast roll sample for another rendered player. */
+    public static void applySuperFlightRemoteRoll(UUID playerId, float roll) {
+        KineticSuperFlightClientRuntime.applyRemoteRoll(playerId, roll);
     }
 
     /**
@@ -183,9 +194,14 @@ public final class KineticFlightClient {
         return KineticSuperFlightClientRuntime.cameraPitchOffset(partialTick);
     }
 
-    /** Returns the frame-interpolated persistent camera/body roll angle. */
+    /** Returns the frame-interpolated persistent camera roll angle. */
     public static float superFlightRoll(float partialTick) {
         return KineticSuperFlightClientRuntime.roll(partialTick);
+    }
+
+    /** Returns the interpolated physical roll used to render the supplied player. */
+    public static float superFlightPlayerRoll(net.minecraft.world.entity.player.Player player, float partialTick) {
+        return KineticSuperFlightClientRuntime.playerRoll(player, partialTick);
     }
 
     /** Returns the current speed-dependent FOV boost. */

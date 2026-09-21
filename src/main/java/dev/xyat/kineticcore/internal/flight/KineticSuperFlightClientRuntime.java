@@ -7,6 +7,9 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
@@ -34,6 +37,10 @@ public final class KineticSuperFlightClientRuntime {
     private static boolean requestedFallFlyingPose;
     private static double currentSpeed = CREATIVE_SPRINT_SPEED;
     private static double selectedSpeedMultiplier = 20.0D;
+    private static double accelerationStartSpeed = CREATIVE_SPRINT_SPEED;
+    private static double accelerationTargetSpeed = CREATIVE_SPRINT_SPEED;
+    private static double accelerationTicks;
+    private static boolean accelerating;
     private static float flightYaw;
     private static float flightPitch;
     private static float visualYaw;
@@ -46,6 +53,10 @@ public final class KineticSuperFlightClientRuntime {
     private static float fovBoost;
     private static BooleanSupplier freeLookDown = () -> false;
     private static Consumer<Boolean> fallFlyingRequestHandler = ignored -> { };
+    private static Consumer<Float> rollSyncRequestHandler = ignored -> { };
+    private static final Map<UUID, RemoteRollState> REMOTE_ROLLS = new ConcurrentHashMap<>();
+    private static int rollSyncTicks;
+    private static float lastSyncedRoll = Float.NaN;
 
     private KineticSuperFlightClientRuntime() {
     }
@@ -58,9 +69,38 @@ public final class KineticSuperFlightClientRuntime {
         fallFlyingRequestHandler = handler == null ? ignored -> { } : handler;
     }
 
+    public static void installRollSyncRequestHandler(Consumer<Float> handler) {
+        rollSyncRequestHandler = handler == null ? ignored -> { } : handler;
+    }
+
+    public static void applyRemoteRoll(UUID playerId, float value) {
+        if (playerId == null || !Float.isFinite(value)) return;
+        Player localPlayer = Minecraft.getInstance().player;
+        if (localPlayer != null && playerId.equals(localPlayer.getUUID())) return;
+        float wrapped = Mth.wrapDegrees(value);
+        if (Math.abs(wrapped) < 0.001F) {
+            REMOTE_ROLLS.remove(playerId);
+            return;
+        }
+        REMOTE_ROLLS.compute(playerId, (ignored, state) -> {
+            if (state == null) return new RemoteRollState(wrapped);
+            state.update(wrapped);
+            return state;
+        });
+    }
+
+    public static float playerRoll(Player player, float partialTick) {
+        if (player == null) return 0.0F;
+        Player localPlayer = Minecraft.getInstance().player;
+        if (localPlayer == player) return roll(partialTick);
+        RemoteRollState state = REMOTE_ROLLS.get(player.getUUID());
+        return state == null ? 0.0F : state.value(partialTick);
+    }
+
     public static void setSelectedSpeedMultiplier(double multiplier) {
         selectedSpeedMultiplier = Mth.clamp(multiplier, MIN_SELECTED_SPEED_MULTIPLIER, MAX_SELECTED_SPEED_MULTIPLIER);
         currentSpeed = Math.min(currentSpeed, targetSpeed());
+        resetAccelerationPhase();
     }
 
     public static double selectedSpeedMultiplier() {
@@ -171,14 +211,8 @@ public final class KineticSuperFlightClientRuntime {
         player.startFallFlying();
         player.fallDistance = 0.0F;
         updateRoll();
-
-        if (KineticClientRuntime.controlModifierDown() && hasMovementInput()) {
-            currentSpeed = targetSpeed();
-        } else if (KineticClientRuntime.shiftKeyDown()) {
-            double target = targetSpeed();
-            double accelerationPerTick = Math.max(0.0D, target - CREATIVE_SPRINT_SPEED) / ACCELERATION_TICKS;
-            currentSpeed = approach(currentSpeed, target, accelerationPerTick);
-        }
+        syncRoll(false);
+        updateManeuverSpeed();
 
         currentSpeed = Math.max(CREATIVE_SPRINT_SPEED, Math.min(currentSpeed, targetSpeed()));
         float targetFov = fovForSpeed(currentSpeed);
@@ -188,7 +222,7 @@ public final class KineticSuperFlightClientRuntime {
     public static void applyTravel(Player player) {
         if (!active || player == null || Minecraft.getInstance().player != player) return;
 
-        boolean instantBoost = KineticClientRuntime.controlModifierDown() && hasMovementInput();
+        boolean instantBoost = instantBoostRequested();
         if (!maneuvering) {
             if (instantBoost && !spaceStopLatch) {
                 startManeuver(player);
@@ -214,8 +248,10 @@ public final class KineticSuperFlightClientRuntime {
         player.startFallFlying();
         player.fallDistance = 0.0F;
         moving = hasMovementInput();
-        if (instantBoost && moving) {
+        if (instantBoost) {
             currentSpeed = targetSpeed();
+            accelerating = false;
+            accelerationTicks = ACCELERATION_TICKS;
         }
 
         if (!moving) {
@@ -314,8 +350,12 @@ public final class KineticSuperFlightClientRuntime {
         maneuvering = true;
         moving = false;
         currentSpeed = CREATIVE_SPRINT_SPEED;
+        resetAccelerationPhase();
         roll = 0.0F;
         previousRoll = 0.0F;
+        rollSyncTicks = 0;
+        lastSyncedRoll = Float.NaN;
+        syncRoll(true);
         initializeDirection(player);
         visualYaw = player.getYRot();
         player.setDeltaMovement(Vec3.ZERO);
@@ -328,11 +368,15 @@ public final class KineticSuperFlightClientRuntime {
         maneuvering = false;
         moving = false;
         currentSpeed = CREATIVE_SPRINT_SPEED;
+        resetAccelerationPhase();
         directionInitialized = false;
         rollLeftDown = false;
         rollRightDown = false;
         roll = 0.0F;
         previousRoll = 0.0F;
+        syncRoll(true);
+        rollSyncTicks = 0;
+        lastSyncedRoll = Float.NaN;
         cameraYawOffset = 0.0F;
         previousCameraYawOffset = 0.0F;
         cameraPitchOffset = 0.0F;
@@ -363,30 +407,82 @@ public final class KineticSuperFlightClientRuntime {
     }
 
     private static void updateRoll() {
-        if (rollLeftDown == rollRightDown) return;
-        float step = rollLeftDown ? -ROLL_DEGREES_PER_TICK : ROLL_DEGREES_PER_TICK;
+        boolean left = rollLeftDown || KineticClientRuntime.leftKeyDown();
+        boolean right = rollRightDown || KineticClientRuntime.rightKeyDown();
+        if (left == right) return;
+        float step = left ? -ROLL_DEGREES_PER_TICK : ROLL_DEGREES_PER_TICK;
         roll = Mth.wrapDegrees(roll + step);
     }
 
+    private static void syncRoll(boolean force) {
+        if (!active) return;
+        rollSyncTicks++;
+        float wrapped = Mth.wrapDegrees(roll);
+        boolean changed = !Float.isFinite(lastSyncedRoll)
+                || Math.abs(Mth.wrapDegrees(wrapped - lastSyncedRoll)) >= 0.01F;
+        if (!force && !changed && rollSyncTicks < 10) return;
+        rollSyncRequestHandler.accept(wrapped);
+        lastSyncedRoll = wrapped;
+        rollSyncTicks = 0;
+    }
+
     private static boolean hasMovementInput() {
-        return KineticClientRuntime.forwardKeyDown()
-                || KineticClientRuntime.backKeyDown()
-                || KineticClientRuntime.leftKeyDown()
-                || KineticClientRuntime.rightKeyDown();
+        return KineticClientRuntime.forwardKeyDown() != KineticClientRuntime.backKeyDown();
+    }
+
+    private static boolean instantBoostRequested() {
+        return KineticClientRuntime.controlModifierDown()
+                && KineticClientRuntime.forwardKeyDown()
+                && !KineticClientRuntime.backKeyDown();
     }
 
     private static Vec3 movementDirection(boolean freeLook) {
         double forwardInput = (KineticClientRuntime.forwardKeyDown() ? 1.0D : 0.0D)
                 - (KineticClientRuntime.backKeyDown() ? 1.0D : 0.0D);
-        double strafeInput = (KineticClientRuntime.rightKeyDown() ? 1.0D : 0.0D)
-                - (KineticClientRuntime.leftKeyDown() ? 1.0D : 0.0D);
+        if (Math.abs(forwardInput) < 1.0E-7D) return Vec3.ZERO;
 
         float pitch = freeLook ? 0.0F : flightPitch;
-        Vec3 forward = Vec3.directionFromRotation(pitch, flightYaw);
-        double yawRadians = Math.toRadians(flightYaw);
-        Vec3 right = new Vec3(-Math.cos(yawRadians), 0.0D, -Math.sin(yawRadians));
-        Vec3 direction = forward.scale(forwardInput).add(right.scale(strafeInput));
+        Vec3 direction = Vec3.directionFromRotation(pitch, flightYaw).scale(forwardInput);
         return direction.lengthSqr() < 1.0E-7D ? Vec3.ZERO : direction.normalize();
+    }
+
+    private static void updateManeuverSpeed() {
+        if (instantBoostRequested()) {
+            currentSpeed = targetSpeed();
+            accelerating = false;
+            accelerationTicks = ACCELERATION_TICKS;
+            return;
+        }
+
+        boolean accelerateNow = moving && KineticClientRuntime.shiftKeyDown();
+        double target = targetSpeed();
+        if (!accelerateNow || currentSpeed >= target) {
+            accelerating = false;
+            return;
+        }
+
+        if (!accelerating || Math.abs(accelerationTargetSpeed - target) > 1.0E-7D) {
+            accelerating = true;
+            accelerationStartSpeed = currentSpeed;
+            accelerationTargetSpeed = target;
+            accelerationTicks = 0.0D;
+        }
+
+        accelerationTicks = Math.min(ACCELERATION_TICKS, accelerationTicks + 1.0D);
+        double progress = accelerationTicks / ACCELERATION_TICKS;
+        double eased = progress * progress * (3.0D - 2.0D * progress);
+        currentSpeed = accelerationStartSpeed + (accelerationTargetSpeed - accelerationStartSpeed) * eased;
+        if (accelerationTicks >= ACCELERATION_TICKS) {
+            currentSpeed = accelerationTargetSpeed;
+            accelerating = false;
+        }
+    }
+
+    private static void resetAccelerationPhase() {
+        accelerating = false;
+        accelerationTicks = 0.0D;
+        accelerationStartSpeed = currentSpeed;
+        accelerationTargetSpeed = targetSpeed();
     }
 
     private static void applyVisualYaw(Player player, float yaw) {
@@ -418,12 +514,15 @@ public final class KineticSuperFlightClientRuntime {
         rollLeftDown = false;
         rollRightDown = false;
         currentSpeed = CREATIVE_SPRINT_SPEED;
+        resetAccelerationPhase();
         previousCameraYawOffset = 0.0F;
         previousCameraPitchOffset = 0.0F;
         cameraYawOffset = 0.0F;
         cameraPitchOffset = 0.0F;
         previousRoll = 0.0F;
         roll = 0.0F;
+        rollSyncTicks = 0;
+        lastSyncedRoll = Float.NaN;
         fovBoost = 0.0F;
     }
 
@@ -484,4 +583,24 @@ public final class KineticSuperFlightClientRuntime {
         float t = Mth.clamp(partialTick, 0.0F, 1.0F);
         return t * t * (3.0F - 2.0F * t);
     }
+    private static final class RemoteRollState {
+        private float previous;
+        private float current;
+
+        private RemoteRollState(float value) {
+            this.previous = value;
+            this.current = value;
+        }
+
+        private void update(float value) {
+            this.previous = this.current;
+            this.current = value;
+        }
+
+        private float value(float partialTick) {
+            float delta = Mth.wrapDegrees(this.current - this.previous);
+            return Mth.wrapDegrees(this.previous + delta * smoothPartial(partialTick));
+        }
+    }
+
 }
