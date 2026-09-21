@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.internal.flight;
 
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.internal.player.KineticCrawlingRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.MoverType;
@@ -114,15 +115,30 @@ public final class KineticSuperFlightClientRuntime {
 
     public static void applyServerState(boolean enabled) {
         Player player = Minecraft.getInstance().player;
+        if (enabled && !active && player != null) KineticCrawlingRuntime.clearCrawling(player);
         active = enabled;
         if (!enabled) {
-            if (player != null && maneuvering) {
-                player.stopFallFlying();
+            if (player != null) {
+                if (maneuvering || requestedFallFlyingPose) player.stopFallFlying();
                 player.setDeltaMovement(Vec3.ZERO);
+                player.refreshDimensions();
             }
             requestFallFlyingPose(false);
             resetAllState();
         }
+    }
+
+    public static void resetTransientStateFromServer() {
+        Player player = Minecraft.getInstance().player;
+        boolean ownedPose = maneuvering || requestedFallFlyingPose;
+        requestedFallFlyingPose = false;
+        if (player != null) {
+            if (ownedPose) player.stopFallFlying();
+            player.setDeltaMovement(Vec3.ZERO);
+            player.refreshDimensions();
+            player.fallDistance = 0.0F;
+        }
+        resetAllState();
     }
 
     public static boolean active() {
@@ -355,6 +371,7 @@ public final class KineticSuperFlightClientRuntime {
     }
 
     private static void startManeuver(Player player) {
+        KineticCrawlingRuntime.clearCrawling(player);
         maneuvering = true;
         moving = false;
         currentSpeed = CREATIVE_SPRINT_SPEED;
@@ -370,6 +387,7 @@ public final class KineticSuperFlightClientRuntime {
         visualYaw = player.getYRot();
         player.setDeltaMovement(Vec3.ZERO);
         player.startFallFlying();
+        player.refreshDimensions();
         player.fallDistance = 0.0F;
         requestFallFlyingPose(true);
     }
@@ -396,6 +414,7 @@ public final class KineticSuperFlightClientRuntime {
         if (stoppedBySpace) spaceStopLatch = true;
         player.setDeltaMovement(Vec3.ZERO);
         player.stopFallFlying();
+        player.refreshDimensions();
         player.fallDistance = 0.0F;
         player.setYBodyRot(player.getYRot());
         player.setYHeadRot(player.getYRot());

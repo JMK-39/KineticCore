@@ -6,6 +6,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /** Public server/common API for Kinetic's attribute-driven super-flight mode. */
 public final class KineticSuperFlight {
@@ -85,5 +86,10 @@ public final class KineticSuperFlight {
     /** Installs the core network sender used to clear synchronized physical roll when flight ends. */
     public static void installRollSyncSender(BiConsumer<ServerPlayer, Float> sender) {
         KineticSuperFlightRuntime.installRollSyncSender(sender);
+    }
+
+    /** Installs the owner-client reset sender used for lifecycle-safe transient pose cleanup. */
+    public static void installTransientResetSender(Consumer<ServerPlayer> sender) {
+        KineticSuperFlightRuntime.installTransientResetSender(sender);
     }
 }

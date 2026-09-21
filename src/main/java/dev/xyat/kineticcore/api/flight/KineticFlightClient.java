@@ -109,6 +109,11 @@ public final class KineticFlightClient {
         KineticSuperFlightClientRuntime.applyServerState(active);
     }
 
+    /** Clears only local transient maneuver state after a lifecycle boundary while preserving the active flag. */
+    public static void resetSuperFlightTransientState() {
+        KineticSuperFlightClientRuntime.resetTransientStateFromServer();
+    }
+
     /** Returns whether attribute-driven super flight is currently active on the local player. */
     public static boolean superFlightActive() {
         return KineticSuperFlightClientRuntime.active();

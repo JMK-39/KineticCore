@@ -67,6 +67,7 @@ public class FlightEvents {
 
     public static void onDimensionChange(ServerPlayer player) {
         player.server.execute(() -> {
+            KineticSuperFlight.resetTransientState(player);
             resyncFlightAbilities(player);
             FlightNetwork.syncNoclipState(player);
             KineticSuperFlight.sync(player);
@@ -75,6 +76,7 @@ public class FlightEvents {
 
     public static void onPlayerRespawn(ServerPlayer player) {
         player.server.execute(() -> {
+            KineticSuperFlight.resetTransientState(player);
             KineticSuperFlight.setActive(player, false);
             resyncFlightAbilities(player);
             FlightNetwork.syncNoclipState(player);

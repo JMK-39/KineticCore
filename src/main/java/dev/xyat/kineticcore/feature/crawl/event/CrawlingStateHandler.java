@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.feature.crawl.event;
 
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.flight.KineticSuperFlight;
 import dev.xyat.kineticcore.api.event.KineticEventPriority;
 import dev.xyat.kineticcore.api.hook.CommonHooks;
 import dev.xyat.kineticcore.api.player.event.KineticPlayerEvents;
@@ -20,6 +21,10 @@ public final class CrawlingStateHandler {
     public static void load() {
         REGISTRATION.run(
                 () -> CommonHooks.onCrawlPose(player -> {
+                    if (KineticSuperFlight.fallFlyingPose(player)) {
+                        PlayerCrawlStateUtil.clearCrawling(player);
+                        return false;
+                    }
                     if (!PlayerCrawlStateUtil.hasManualCrawlFlag(player)) return false;
                     if (PlayerCrawlStateUtil.shouldReleaseToVanilla(player)) {
                         PlayerCrawlStateUtil.releaseToVanilla(player);

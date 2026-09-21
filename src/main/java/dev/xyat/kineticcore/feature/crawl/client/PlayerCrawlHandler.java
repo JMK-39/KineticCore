@@ -2,6 +2,7 @@ package dev.xyat.kineticcore.feature.crawl.client;
 
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
+import dev.xyat.kineticcore.api.flight.KineticFlightClient;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.runtime.KineticFeatures;
 import dev.xyat.kineticcore.feature.crawl.network.PlayerNetwork;
@@ -39,6 +40,14 @@ public final class PlayerCrawlHandler {
     private static boolean toggleCrawl() {
         Player player = KineticClientRuntime.localPlayer();
         if (player == null) return false;
+
+        if (KineticFlightClient.superFlightManeuvering()) {
+            if (PlayerCrawlStateUtil.hasManualCrawlFlag(player)) {
+                PlayerCrawlStateUtil.clearCrawling(player);
+                PlayerNetwork.sendToServer(new PlayerNetwork.ToggleCrawl(false));
+            }
+            return true;
+        }
 
         boolean newState = !PlayerCrawlStateUtil.hasManualCrawlFlag(player);
         PlayerCrawlStateUtil.setCrawling(player, newState);

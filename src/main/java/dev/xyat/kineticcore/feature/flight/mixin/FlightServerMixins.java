@@ -45,6 +45,10 @@ public class FlightServerMixins {
             Player player = (Player) (Object) this;
             if (player.isCreative() && FlightState.noclipEnabled(player)) {
                 cir.setReturnValue(EntityDimensions.scalable(0.0F, 0.0F));
+                return;
+            }
+            if (!player.level().isClientSide && KineticSuperFlight.fallFlyingPose(player) && player.isFallFlying()) {
+                cir.setReturnValue(EntityDimensions.scalable(0.6F, 1.0F));
             }
         }
 

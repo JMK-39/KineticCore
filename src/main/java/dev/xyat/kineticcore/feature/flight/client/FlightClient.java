@@ -138,18 +138,16 @@ public final class FlightClient {
         float roll = KineticFlightClient.superFlightRoll(partialTick);
         boolean level = Math.abs(Mth.wrapDegrees(roll)) <= 1.0F;
 
-        int white = 0xFFFFFFFF;
-        int levelGreen = 0xFF55FF55;
+        int fixedColor = level ? 0xFF55FF55 : 0xFFFFFFFF;
+        int movingColor = level ? 0xFF55FF55 : 0xFFFFFF55;
 
         PoseStack pose = graphics.pose();
 
         pose.pushPose();
         pose.translate(centerX, centerY, 0.0F);
 
-        graphics.fill(-28, 0, -8, 1, white);
-        graphics.fill(8, 0, 28, 1, white);
-        graphics.fill(-28, -3, -27, 4, white);
-        graphics.fill(27, -3, 28, 4, white);
+        graphics.fill(-20, 0, -6, 1, fixedColor);
+        graphics.fill(6, 0, 20, 1, fixedColor);
 
         pose.popPose();
 
@@ -157,22 +155,10 @@ public final class FlightClient {
         pose.translate(centerX, centerY, 0.0F);
         pose.mulPose(Axis.ZP.rotationDegrees(-roll));
 
-        graphics.fill(-18, 0, -5, 1, white);
-        graphics.fill(5, 0, 18, 1, white);
-        graphics.fill(-18, -2, -17, 3, white);
-        graphics.fill(17, -2, 18, 3, white);
+        graphics.fill(-13, 0, -4, 1, movingColor);
+        graphics.fill(4, 0, 13, 1, movingColor);
 
         pose.popPose();
-
-        if (level) {
-            pose.pushPose();
-            pose.translate(centerX, centerY, 0.0F);
-
-            graphics.fill(-18, 0, -8, 1, levelGreen);
-            graphics.fill(8, 0, 18, 1, levelGreen);
-
-            pose.popPose();
-        }
     }
 
     private static void onCameraAngles(KineticClientEvents.CameraAnglesContext context) {

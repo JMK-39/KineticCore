@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.internal.flight;
 
+import dev.xyat.kineticcore.internal.player.KineticCrawlingRuntime;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -8,6 +9,7 @@ import net.minecraft.world.entity.player.Player;
 
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /** Authoritative server state for Kinetic super flight. */
 public final class KineticSuperFlightRuntime {
@@ -18,6 +20,7 @@ public final class KineticSuperFlightRuntime {
     private static final double COMMAND_SPEED_VALUE = 20.0D;
     private static volatile BiConsumer<ServerPlayer, Boolean> stateSyncSender = (player, active) -> { };
     private static volatile BiConsumer<ServerPlayer, Float> rollSyncSender = (player, roll) -> { };
+    private static volatile Consumer<ServerPlayer> transientResetSender = player -> { };
 
     private KineticSuperFlightRuntime() {
     }
@@ -28,6 +31,10 @@ public final class KineticSuperFlightRuntime {
 
     public static void installRollSyncSender(BiConsumer<ServerPlayer, Float> sender) {
         rollSyncSender = sender == null ? (player, roll) -> { } : sender;
+    }
+
+    public static void installTransientResetSender(Consumer<ServerPlayer> sender) {
+        transientResetSender = sender == null ? player -> { } : sender;
     }
 
     public static boolean available(LivingEntity entity) {
@@ -46,12 +53,14 @@ public final class KineticSuperFlightRuntime {
 
     public static boolean setActive(ServerPlayer player, boolean requested) {
         if (player == null) return false;
+        if (requested && available(player)) KineticCrawlingRuntime.clearCrawling(player);
         boolean actual = requested && available(player) && compatible(player);
         boolean ownedFallFlying = fallFlyingPose(player);
         player.getPersistentData().putBoolean(NBT_ACTIVE, actual);
         if (!actual) {
             player.getPersistentData().putBoolean(NBT_FALL_FLYING_POSE, false);
             if (ownedFallFlying) player.stopFallFlying();
+            player.refreshDimensions();
             rollSyncSender.accept(player, 0.0F);
         } else {
             player.setShiftKeyDown(false);
@@ -70,8 +79,10 @@ public final class KineticSuperFlightRuntime {
         boolean ownedFallFlying = player.getPersistentData().getBoolean(NBT_FALL_FLYING_POSE);
         player.getPersistentData().putBoolean(NBT_FALL_FLYING_POSE, false);
         if (ownedFallFlying) player.stopFallFlying();
+        player.refreshDimensions();
         player.fallDistance = 0.0F;
         rollSyncSender.accept(player, 0.0F);
+        transientResetSender.accept(player);
     }
 
     public static void sync(ServerPlayer player) {
@@ -104,14 +115,17 @@ public final class KineticSuperFlightRuntime {
 
     public static boolean setFallFlyingPose(ServerPlayer player, boolean requested) {
         if (player == null) return false;
+        if (requested && active(player)) KineticCrawlingRuntime.clearCrawling(player);
         boolean actual = requested && active(player) && available(player) && baseCompatible(player);
         boolean previous = player.getPersistentData().getBoolean(NBT_FALL_FLYING_POSE);
         player.getPersistentData().putBoolean(NBT_FALL_FLYING_POSE, actual);
         if (actual) {
             player.startFallFlying();
+            player.refreshDimensions();
             player.fallDistance = 0.0F;
         } else if (previous) {
             player.stopFallFlying();
+            player.refreshDimensions();
             player.fallDistance = 0.0F;
         }
         return actual;

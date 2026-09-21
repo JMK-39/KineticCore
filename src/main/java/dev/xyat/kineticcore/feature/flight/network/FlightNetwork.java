@@ -17,7 +17,7 @@ import net.minecraft.util.Mth;
 import java.util.UUID;
 
 public final class FlightNetwork {
-    private static final NetworkChannel CHANNEL = KineticNetwork.channel(KineticRuntime.id("flight_channel"), "4", NetworkVersionPolicy.EXACT);
+    private static final NetworkChannel CHANNEL = KineticNetwork.channel(KineticRuntime.id("flight_channel"), "5", NetworkVersionPolicy.EXACT);
 
     private static ServerboundSender<PacketNoclip> noclipRequestSender;
     private static ClientboundSender<PacketNoclipState> noclipStateSender;
@@ -26,6 +26,7 @@ public final class FlightNetwork {
     private static ServerboundSender<PacketSuperFlightFallFlying> superFlightFallFlyingSender;
     private static ServerboundSender<PacketSuperFlightRollRequest> superFlightRollRequestSender;
     private static ClientboundSender<PacketSuperFlightRollState> superFlightRollStateSender;
+    private static ClientboundSender<PacketSuperFlightTransientReset> superFlightTransientResetSender;
     private static boolean syncSenderInstalled;
 
     private FlightNetwork() {
@@ -131,7 +132,16 @@ public final class FlightNetwork {
             }
         },
         () -> {
-            if (!syncSenderInstalled && noclipStateSender != null && superFlightStateSender != null && superFlightRollStateSender != null) {
+            if (superFlightTransientResetSender == null) {
+                superFlightTransientResetSender = CHANNEL.registerClientbound(7,
+                        PacketSuperFlightTransientReset.class,
+                        NetworkCodec.of((buffer, message) -> { }, buffer -> new PacketSuperFlightTransientReset()),
+                        message -> KineticFlightClient.resetSuperFlightTransientState()
+                );
+            }
+        },
+        () -> {
+            if (!syncSenderInstalled && noclipStateSender != null && superFlightStateSender != null && superFlightRollStateSender != null && superFlightTransientResetSender != null) {
                 KineticFlight.installNoclipSyncSender((player, enabled) -> {
                     if (noclipStateSender != null) {
                         noclipStateSender.send(player, new PacketNoclipState(enabled));
@@ -143,6 +153,11 @@ public final class FlightNetwork {
                     }
                 });
                 KineticSuperFlight.installRollSyncSender(FlightNetwork::broadcastSuperFlightRoll);
+                KineticSuperFlight.installTransientResetSender(player -> {
+                    if (superFlightTransientResetSender != null) {
+                        superFlightTransientResetSender.send(player, new PacketSuperFlightTransientReset());
+                    }
+                });
                 syncSenderInstalled = true;
             }
         }
@@ -208,5 +223,8 @@ public final class FlightNetwork {
     }
 
     public record PacketSuperFlightRollState(UUID playerId, float roll) {
+    }
+
+    public record PacketSuperFlightTransientReset() {
     }
 }
