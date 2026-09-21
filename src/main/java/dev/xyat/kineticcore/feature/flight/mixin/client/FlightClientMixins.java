@@ -312,7 +312,7 @@ public class FlightClientMixins {
         @Inject(method = "getFov", at = @At("RETURN"), cancellable = true)
         private void kineticcore$superFlightFov(Camera camera, float partialTick, boolean useConfiguredFov, CallbackInfoReturnable<Double> cir) {
             if (!useConfiguredFov || !KineticFlightClient.superFlightActive()) return;
-            double boost = KineticFlightClient.superFlightFovBoost();
+            double boost = KineticFlightClient.superFlightFovBoost(partialTick);
             if (boost > 0.001D) cir.setReturnValue(cir.getReturnValue() + boost);
         }
     }

@@ -22,7 +22,6 @@ public final class KineticSuperFlightClientRuntime {
     private static final double ACCELERATION_TICKS = ACCELERATION_SECONDS * 20.0D;
     private static final float ROLL_DEGREES_PER_TICK = 6.0F;
     private static final float FREE_LOOK_RETURN = 0.14F;
-    private static final float FOV_RESPONSE = 0.16F;
     private static final float DEFAULT_DAMPING_REFERENCE = 0.7F;
     private static final float DEFAULT_MAX_YAW_STEP = 12.0F;
     private static final float DEFAULT_MAX_PITCH_STEP = 10.0F;
@@ -36,6 +35,8 @@ public final class KineticSuperFlightClientRuntime {
     private static boolean rollRightDown;
     private static boolean requestedFallFlyingPose;
     private static double currentSpeed = CREATIVE_SPRINT_SPEED;
+    private static double previousActualSpeed;
+    private static double actualSpeed;
     private static double selectedSpeedMultiplier = 20.0D;
     private static double accelerationStartSpeed = CREATIVE_SPRINT_SPEED;
     private static double accelerationTargetSpeed = CREATIVE_SPRINT_SPEED;
@@ -50,7 +51,6 @@ public final class KineticSuperFlightClientRuntime {
     private static float cameraPitchOffset;
     private static float previousRoll;
     private static float roll;
-    private static float fovBoost;
     private static BooleanSupplier freeLookDown = () -> false;
     private static Consumer<Boolean> fallFlyingRequestHandler = ignored -> { };
     private static Consumer<Float> rollSyncRequestHandler = ignored -> { };
@@ -164,12 +164,12 @@ public final class KineticSuperFlightClientRuntime {
             active = false;
             requestFallFlyingPose(false);
             resetAllState();
-            fovBoost = approach(fovBoost, 0.0F, FOV_RESPONSE);
+            actualSpeed = 0.0D;
             return;
         }
 
         if (!active) {
-            fovBoost = approach(fovBoost, 0.0F, FOV_RESPONSE);
+            actualSpeed = 0.0D;
             return;
         }
 
@@ -179,7 +179,7 @@ public final class KineticSuperFlightClientRuntime {
 
         if (!compatible(player)) {
             if (maneuvering) stopManeuver(player, false);
-            fovBoost = approach(fovBoost, 0.0F, FOV_RESPONSE);
+            actualSpeed = 0.0D;
             return;
         }
 
@@ -204,7 +204,7 @@ public final class KineticSuperFlightClientRuntime {
 
         if (!maneuvering) {
             currentSpeed = CREATIVE_SPRINT_SPEED;
-            fovBoost = approach(fovBoost, 0.0F, FOV_RESPONSE);
+            actualSpeed = 0.0D;
             return;
         }
 
@@ -215,8 +215,6 @@ public final class KineticSuperFlightClientRuntime {
         updateManeuverSpeed();
 
         currentSpeed = Math.max(CREATIVE_SPRINT_SPEED, Math.min(currentSpeed, targetSpeed()));
-        float targetFov = fovForSpeed(currentSpeed);
-        fovBoost = approach(fovBoost, targetFov, FOV_RESPONSE);
     }
 
     public static void applyTravel(Player player) {
@@ -256,6 +254,7 @@ public final class KineticSuperFlightClientRuntime {
 
         if (!moving) {
             player.setDeltaMovement(Vec3.ZERO);
+            actualSpeed = 0.0D;
             applyVisualYaw(player, visualYaw);
             return;
         }
@@ -270,6 +269,7 @@ public final class KineticSuperFlightClientRuntime {
         player.fallDistance = 0.0F;
         if (!moving) {
             player.setDeltaMovement(Vec3.ZERO);
+            actualSpeed = 0.0D;
             return;
         }
         applyDirectionalTravel(player, CREATIVE_SPRINT_SPEED);
@@ -279,12 +279,15 @@ public final class KineticSuperFlightClientRuntime {
         Vec3 direction = movementDirection(freeLookDown());
         if (direction.lengthSqr() < 1.0E-7D) {
             player.setDeltaMovement(Vec3.ZERO);
+            actualSpeed = 0.0D;
             return;
         }
 
         Vec3 motion = direction.scale(speed);
+        Vec3 beforeMove = player.position();
         player.setDeltaMovement(motion);
         player.move(MoverType.SELF, motion);
+        actualSpeed = player.position().subtract(beforeMove).length();
         player.setDeltaMovement(motion);
         player.fallDistance = 0.0F;
 
@@ -331,7 +334,12 @@ public final class KineticSuperFlightClientRuntime {
     }
 
     public static float fovBoost() {
-        return fovBoost;
+        return fovForSpeed(actualSpeed);
+    }
+
+    public static float fovBoost(float partialTick) {
+        double speed = Mth.lerp(smoothPartial(partialTick), previousActualSpeed, actualSpeed);
+        return fovForSpeed(Math.max(0.0D, speed));
     }
 
     public static double currentSpeed() {
@@ -350,6 +358,8 @@ public final class KineticSuperFlightClientRuntime {
         maneuvering = true;
         moving = false;
         currentSpeed = CREATIVE_SPRINT_SPEED;
+        previousActualSpeed = 0.0D;
+        actualSpeed = 0.0D;
         resetAccelerationPhase();
         roll = 0.0F;
         previousRoll = 0.0F;
@@ -368,6 +378,8 @@ public final class KineticSuperFlightClientRuntime {
         maneuvering = false;
         moving = false;
         currentSpeed = CREATIVE_SPRINT_SPEED;
+        previousActualSpeed = 0.0D;
+        actualSpeed = 0.0D;
         resetAccelerationPhase();
         directionInitialized = false;
         rollLeftDown = false;
@@ -381,7 +393,6 @@ public final class KineticSuperFlightClientRuntime {
         previousCameraYawOffset = 0.0F;
         cameraPitchOffset = 0.0F;
         previousCameraPitchOffset = 0.0F;
-        fovBoost = 0.0F;
         if (stoppedBySpace) spaceStopLatch = true;
         player.setDeltaMovement(Vec3.ZERO);
         player.stopFallFlying();
@@ -495,6 +506,7 @@ public final class KineticSuperFlightClientRuntime {
     }
 
     private static void snapshotFrameState() {
+        previousActualSpeed = actualSpeed;
         previousCameraYawOffset = cameraYawOffset;
         previousCameraPitchOffset = cameraPitchOffset;
         previousRoll = roll;
@@ -514,6 +526,8 @@ public final class KineticSuperFlightClientRuntime {
         rollLeftDown = false;
         rollRightDown = false;
         currentSpeed = CREATIVE_SPRINT_SPEED;
+        previousActualSpeed = 0.0D;
+        actualSpeed = 0.0D;
         resetAccelerationPhase();
         previousCameraYawOffset = 0.0F;
         previousCameraPitchOffset = 0.0F;
@@ -523,7 +537,6 @@ public final class KineticSuperFlightClientRuntime {
         roll = 0.0F;
         rollSyncTicks = 0;
         lastSyncedRoll = Float.NaN;
-        fovBoost = 0.0F;
     }
 
     private static void requestFallFlyingPose(boolean enabled) {
@@ -541,8 +554,13 @@ public final class KineticSuperFlightClientRuntime {
     }
 
     private static float fovForSpeed(double speed) {
-        double multiplier = speed / CREATIVE_SPRINT_SPEED;
-        return (float) (Mth.clamp((multiplier - 1.0D) / 24.0D, 0.0D, 1.0D) * 34.0D);
+        double multiplier = Mth.clamp(
+                speed / CREATIVE_SPRINT_SPEED,
+                1.0D,
+                MAX_SELECTED_SPEED_MULTIPLIER
+        );
+        double normalized = Math.log(multiplier) / Math.log(MAX_SELECTED_SPEED_MULTIPLIER);
+        return (float) (normalized * 34.0D);
     }
 
     private static void updateFlightDirection(float targetYaw, float targetPitch, double damping) {

@@ -204,9 +204,14 @@ public final class KineticFlightClient {
         return KineticSuperFlightClientRuntime.playerRoll(player, partialTick);
     }
 
-    /** Returns the current speed-dependent FOV boost. */
+    /** Returns the current actual-motion-dependent FOV boost. */
     public static float superFlightFovBoost() {
         return KineticSuperFlightClientRuntime.fovBoost();
+    }
+
+    /** Returns the frame-interpolated actual-motion-dependent FOV boost. */
+    public static float superFlightFovBoost(float partialTick) {
+        return KineticSuperFlightClientRuntime.fovBoost(partialTick);
     }
 
     /** Returns current eased super-flight speed. */
