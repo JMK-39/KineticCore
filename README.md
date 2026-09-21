@@ -155,6 +155,8 @@ decompressBytes
 
 `KineticKeyBindings` 统一按键注册、默认键、鼠标键、修饰键、上下文、启用条件、按下回调和持续按住状态。
 
+`KineticInputGestures` 提供可复用的输入手势识别能力。当前包含 `DoubleTap`，用于识别指定 tick 窗口内的双击/双按操作，避免各 Feature 或附属重复维护边沿检测与计时状态。超人飞行的双击空格开关即通过该公共能力实现。
+
 `KineticClientEvents` 提供：
 
 - Client Tick START / END。
@@ -258,16 +260,22 @@ KineticRuntime
 
 `KineticFeatureSwitches` 使用稳定的功能 ID、名称和说明管理功能开关。Mixin 类名只允许作为实现层映射，不能成为玩家配置键或 GUI 文案。每个开关必须在 `zh_cn` 和 `en_us` 提供独立的名称与功能说明，鼠标悬停显示说明及保存后重启提示。
 
-## 世界与背包基础能力
+## 世界、玩家姿态与背包基础能力
 
 ```text
 KineticChunkLoading
 KineticInventorySlots
 KineticItemSearch
 KineticSelectors
+KineticPlayerPose
+KineticCrawling
 ```
 
 `KineticChunkLoading` 统一强加载/释放区块；`KineticInventorySlots` 提供玩家背包 Slot/Handler 判定；`KineticItemSearch` 提供共享物品搜索索引快照；选择器统一通过 `KineticSelectors` 打开。
+
+`KineticPlayerPose` 提供统一的玩家 Pose 应用与真实尺寸刷新能力。需要临时改变玩家真实碰撞姿态的功能应复用该 API，不要各自直接改写 `getDimensions()`。核心爬行与超人横向飞行共用这条姿态链，以避免多个功能同时争夺玩家 Pose/碰撞尺寸。
+
+`KineticCrawling` 提供爬行状态查询、接管与释放入口。横向超人飞行的优先级高于爬行：开始横向飞行时会释放爬行接管，横向飞行期间不允许重新进入爬行；退出横向飞行后，爬行功能才可再次接管。
 
 ## Minecraft 辅助能力
 
@@ -289,7 +297,25 @@ MinecraftScreens
 ```text
 KineticFlight
 KineticFlightClient
+KineticSuperFlight
 ```
+
+超人飞行使用统一的服务端/客户端飞行状态与网络同步，并与玩家姿态、爬行和输入手势 API 协同工作。
+
+控制方式：
+
+- **双击空格**：开启/关闭超人飞行。
+- 当玩家具备超人飞行能力时，Kinetic 会优先接管双击空格，优先级高于原版创造模式双击空格飞行；未具备该能力时不拦截原版行为。
+- **单击空格**：横向高速飞行时退出当前横向姿态，但不会关闭超人飞行总开关。
+- **W / S**：前进 / 后退。
+- **A / D**：控制 Roll，不作为左右平移。
+- **Shift**：平滑加速，不触发潜行。
+- **Ctrl + W**：立即达到当前保存的目标极速。
+- **Shift + 鼠标滚轮**：调整目标极速，范围最高 100x。
+- **Alt**：自由视角。
+- 鼠标左右移动只控制视角，不直接控制飞行方向或 Roll。
+
+超人飞行的 FOV 根据**玩家当前实际移动速度**实时计算，而不是只根据目标速度设置；视觉层使用平滑插值放大/缩小，100x 高速时会显著增强 FOV 效果。横向飞行期间使用与爬行共用的 `KineticPlayerPose` 姿态链来维持真实低矮碰撞尺寸，并与重生、跨维度、重新登录时的临时状态清理配套。
 
 性能：
 
