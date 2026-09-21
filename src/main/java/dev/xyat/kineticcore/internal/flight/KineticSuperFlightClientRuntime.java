@@ -605,7 +605,8 @@ public final class KineticSuperFlightClientRuntime {
                 MAX_SELECTED_SPEED_MULTIPLIER
         );
         double normalized = Math.log(multiplier) / Math.log(MAX_SELECTED_SPEED_MULTIPLIER);
-        return (float) (normalized * 34.0D);
+        double highSpeedAmplification = 1.0D + 2.0D * normalized * normalized;
+        return (float) (normalized * 34.0D * highSpeedAmplification);
     }
 
     private static void updateFlightDirection(float targetYaw, float targetPitch, double damping) {
