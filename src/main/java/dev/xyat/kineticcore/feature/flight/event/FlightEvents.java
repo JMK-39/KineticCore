@@ -91,7 +91,7 @@ public class FlightEvents {
 
     private static boolean applySuperFlightPose(Player player) {
         if (player == null || player.level().isClientSide) return false;
-        if (!KineticSuperFlight.fallFlyingPose(player) || !player.isFallFlying()) return false;
+        if (!KineticSuperFlight.fallFlyingPose(player)) return false;
         KineticCrawling.clear(player);
         KineticPlayerPose.apply(player, Pose.SWIMMING);
         return true;

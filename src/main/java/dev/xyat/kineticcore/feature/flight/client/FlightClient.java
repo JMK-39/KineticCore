@@ -182,7 +182,7 @@ public final class FlightClient {
 
     private static boolean applySuperFlightPose(Player player) {
         if (!KineticFlightClient.appliesSuperFlightTo(player)) return false;
-        if (!KineticFlightClient.superFlightManeuvering() || !player.isFallFlying()) return false;
+        if (!KineticFlightClient.superFlightManeuvering()) return false;
         KineticPlayerPose.apply(player, Pose.SWIMMING);
         return true;
     }
