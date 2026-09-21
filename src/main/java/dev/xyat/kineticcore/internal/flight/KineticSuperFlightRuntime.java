@@ -54,6 +54,7 @@ public final class KineticSuperFlightRuntime {
             if (ownedFallFlying) player.stopFallFlying();
             rollSyncSender.accept(player, 0.0F);
         } else {
+            player.setShiftKeyDown(false);
             player.fallDistance = 0.0F;
         }
         stateSyncSender.accept(player, actual);
@@ -94,6 +95,7 @@ public final class KineticSuperFlightRuntime {
             setActive(player, false);
             return;
         }
+        if (player.isShiftKeyDown()) player.setShiftKeyDown(false);
         player.fallDistance = 0.0F;
         if (fallFlyingPose(player)) {
             player.startFallFlying();

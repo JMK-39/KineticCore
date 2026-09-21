@@ -11,6 +11,7 @@
   ],
   "client": [
     "client.FlightClientMixins$LocalPlayerTweaks",
+    "client.FlightClientMixins$KeyboardInputTweaks",
     "client.FlightClientMixins$PlayerPhysicsTweaks",
     "client.FlightClientMixins$MouseTweaks",
     "client.FlightClientMixins$GameModeTweaks",

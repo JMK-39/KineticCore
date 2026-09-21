@@ -11,6 +11,9 @@ import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.feature.flight.config.SuperFlightClientConfig;
 import dev.xyat.kineticcore.feature.flight.network.FlightNetwork;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
@@ -18,8 +21,6 @@ public final class FlightClient {
     private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
     private static KineticKeyBindings.Binding speedModifierKey;
     private static KineticKeyBindings.Binding superFlightFreeLookKey;
-    private static boolean rollLeftDown;
-    private static boolean rollRightDown;
 
     private FlightClient() {
     }
@@ -71,8 +72,8 @@ public final class FlightClient {
                 () -> KineticFlightClient.installNoclipRequestHandler(FlightClient::setNoclip),
                 () -> KineticClientEvents.onLogin(FlightClient::onLogin),
                 () -> KineticClientEvents.onTick(KineticClientEvents.TickPhase.END, KineticFlightClient::tickSuperFlight),
-                () -> KineticClientEvents.onMouseButtonBefore(FlightClient::onMouseButton),
                 () -> KineticClientEvents.onCameraAngles(FlightClient::onCameraAngles),
+                () -> KineticClientEvents.onHudRender(KineticClientEvents.HudStage.END, FlightClient::renderSuperFlightHorizon),
                 () -> KineticClientEvents.onBlockScreenEffect(FlightClient::onBlockOverlay)
         );
     }
@@ -116,9 +117,6 @@ public final class FlightClient {
     }
 
     private static void onLogin() {
-        rollLeftDown = false;
-        rollRightDown = false;
-        KineticFlightClient.setSuperFlightRollInput(false, false);
         KineticFlightClient.setSuperFlightSelectedSpeedMultiplier(SuperFlightClientConfig.selectedSpeed());
         KineticFlightClient.applyLocalNoclip(false);
         KineticFlightClient.applySuperFlightState(false);
@@ -131,28 +129,27 @@ public final class FlightClient {
         return true;
     }
 
-    private static void onMouseButton(KineticClientEvents.MouseButtonContext context) {
-        if (!context.leftButton() && !context.rightButton()) return;
-        if (KineticClientRuntime.currentScreen() != null) {
-            rollLeftDown = false;
-            rollRightDown = false;
-            KineticFlightClient.setSuperFlightRollInput(false, false);
-            return;
-        }
+    private static void renderSuperFlightHorizon(GuiGraphics graphics, float partialTick) {
+        if (!KineticFlightClient.superFlightActive() || KineticClientRuntime.guiHidden()) return;
+        if (KineticClientRuntime.localPlayer() == null || KineticClientRuntime.currentScreen() != null) return;
 
-        boolean down = context.pressed();
-        if (context.leftButton()) rollLeftDown = down;
-        if (context.rightButton()) rollRightDown = down;
+        int centerX = graphics.guiWidth() / 2;
+        int centerY = graphics.guiHeight() / 2;
+        float roll = KineticFlightClient.superFlightRoll(partialTick);
 
-        if (KineticFlightClient.superFlightActive()) {
-            KineticFlightClient.setSuperFlightRollInput(rollLeftDown, rollRightDown);
-        } else {
-            KineticFlightClient.setSuperFlightRollInput(false, false);
-        }
+        PoseStack pose = graphics.pose();
+        pose.pushPose();
+        pose.translate(centerX, centerY, 0.0F);
+        pose.mulPose(Axis.ZP.rotationDegrees(-roll));
 
-        if (KineticFlightClient.superFlightManeuvering()) {
-            context.cancel();
-        }
+        int horizon = 0xE6FFFFFF;
+        int marker = 0xB8FFFFFF;
+        graphics.fill(-24, -1, -7, 1, horizon);
+        graphics.fill(7, -1, 24, 1, horizon);
+        graphics.fill(-24, -4, -22, 5, marker);
+        graphics.fill(22, -4, 24, 5, marker);
+
+        pose.popPose();
     }
 
     private static void onCameraAngles(KineticClientEvents.CameraAnglesContext context) {
