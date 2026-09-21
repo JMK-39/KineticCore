@@ -42,6 +42,11 @@ public final class KineticSuperFlight {
         return KineticSuperFlightRuntime.toggle(player);
     }
 
+    /** Clears only transient maneuver pose and roll state while preserving the enabled super-flight flag. */
+    public static void resetTransientState(ServerPlayer player) {
+        KineticSuperFlightRuntime.resetTransientState(player);
+    }
+
     /** Revalidates and synchronizes the authoritative state to the owning client. */
     public static void sync(ServerPlayer player) {
         KineticSuperFlightRuntime.sync(player);
@@ -75,5 +80,10 @@ public final class KineticSuperFlight {
     /** Installs the core network sender used to synchronize authoritative active state. */
     public static void installStateSyncSender(BiConsumer<ServerPlayer, Boolean> sender) {
         KineticSuperFlightRuntime.installStateSyncSender(sender);
+    }
+
+    /** Installs the core network sender used to clear synchronized physical roll when flight ends. */
+    public static void installRollSyncSender(BiConsumer<ServerPlayer, Float> sender) {
+        KineticSuperFlightRuntime.installRollSyncSender(sender);
     }
 }

@@ -59,8 +59,9 @@ public class FlightEvents {
     public static void onPlayerLogin(ServerPlayer player) {
         player.server.execute(() -> {
             FlightNetwork.applyServerNoclip(player, false);
-            KineticSuperFlight.setActive(player, false);
+            KineticSuperFlight.resetTransientState(player);
             resyncFlightAbilities(player);
+            KineticSuperFlight.sync(player);
         });
     }
 

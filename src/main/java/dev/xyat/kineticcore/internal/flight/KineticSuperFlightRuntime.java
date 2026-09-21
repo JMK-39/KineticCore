@@ -17,12 +17,17 @@ public final class KineticSuperFlightRuntime {
     private static final String COMMAND_SPEED_NAME = "Kinetic command super flight";
     private static final double COMMAND_SPEED_VALUE = 20.0D;
     private static volatile BiConsumer<ServerPlayer, Boolean> stateSyncSender = (player, active) -> { };
+    private static volatile BiConsumer<ServerPlayer, Float> rollSyncSender = (player, roll) -> { };
 
     private KineticSuperFlightRuntime() {
     }
 
     public static void installStateSyncSender(BiConsumer<ServerPlayer, Boolean> sender) {
         stateSyncSender = sender == null ? (player, active) -> { } : sender;
+    }
+
+    public static void installRollSyncSender(BiConsumer<ServerPlayer, Float> sender) {
+        rollSyncSender = sender == null ? (player, roll) -> { } : sender;
     }
 
     public static boolean available(LivingEntity entity) {
@@ -47,6 +52,7 @@ public final class KineticSuperFlightRuntime {
         if (!actual) {
             player.getPersistentData().putBoolean(NBT_FALL_FLYING_POSE, false);
             if (ownedFallFlying) player.stopFallFlying();
+            rollSyncSender.accept(player, 0.0F);
         } else {
             player.fallDistance = 0.0F;
         }
@@ -56,6 +62,15 @@ public final class KineticSuperFlightRuntime {
 
     public static boolean toggle(ServerPlayer player) {
         return setActive(player, !active(player));
+    }
+
+    public static void resetTransientState(ServerPlayer player) {
+        if (player == null) return;
+        boolean ownedFallFlying = player.getPersistentData().getBoolean(NBT_FALL_FLYING_POSE);
+        player.getPersistentData().putBoolean(NBT_FALL_FLYING_POSE, false);
+        if (ownedFallFlying) player.stopFallFlying();
+        player.fallDistance = 0.0F;
+        rollSyncSender.accept(player, 0.0F);
     }
 
     public static void sync(ServerPlayer player) {
@@ -70,6 +85,7 @@ public final class KineticSuperFlightRuntime {
             player.fallDistance = 0.0F;
         }
         stateSyncSender.accept(player, actual);
+        if (!actual) rollSyncSender.accept(player, 0.0F);
     }
 
     public static void tick(ServerPlayer player) {

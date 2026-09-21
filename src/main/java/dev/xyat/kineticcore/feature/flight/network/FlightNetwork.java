@@ -12,15 +12,20 @@ import dev.xyat.kineticcore.api.network.PacketRegistrations;
 import dev.xyat.kineticcore.api.network.ServerboundSender;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+
+import java.util.UUID;
 
 public final class FlightNetwork {
-    private static final NetworkChannel CHANNEL = KineticNetwork.channel(KineticRuntime.id("flight_channel"), "3", NetworkVersionPolicy.EXACT);
+    private static final NetworkChannel CHANNEL = KineticNetwork.channel(KineticRuntime.id("flight_channel"), "4", NetworkVersionPolicy.EXACT);
 
     private static ServerboundSender<PacketNoclip> noclipRequestSender;
     private static ClientboundSender<PacketNoclipState> noclipStateSender;
     private static ServerboundSender<PacketSuperFlightRequest> superFlightRequestSender;
     private static ClientboundSender<PacketSuperFlightState> superFlightStateSender;
     private static ServerboundSender<PacketSuperFlightFallFlying> superFlightFallFlyingSender;
+    private static ServerboundSender<PacketSuperFlightRollRequest> superFlightRollRequestSender;
+    private static ClientboundSender<PacketSuperFlightRollState> superFlightRollStateSender;
     private static boolean syncSenderInstalled;
 
     private FlightNetwork() {
@@ -91,7 +96,42 @@ public final class FlightNetwork {
             }
         },
         () -> {
-            if (!syncSenderInstalled && noclipStateSender != null && superFlightStateSender != null) {
+            if (superFlightRollRequestSender == null) {
+                superFlightRollRequestSender = CHANNEL.registerServerbound(5,
+                        PacketSuperFlightRollRequest.class,
+                        NetworkCodec.of(
+                                (buffer, message) -> buffer.writeFloat(message.roll()),
+                                buffer -> new PacketSuperFlightRollRequest(buffer.readFloat())
+                        ),
+                        (message, context) -> {
+                            ServerPlayer player = context.sender();
+                            if (player == null || !KineticSuperFlight.active(player)) {
+                                broadcastSuperFlightRoll(player, 0.0F);
+                                return;
+                            }
+                            float roll = Float.isFinite(message.roll()) ? Mth.wrapDegrees(message.roll()) : 0.0F;
+                            broadcastSuperFlightRoll(player, roll);
+                        }
+                );
+            }
+        },
+        () -> {
+            if (superFlightRollStateSender == null) {
+                superFlightRollStateSender = CHANNEL.registerClientbound(6,
+                        PacketSuperFlightRollState.class,
+                        NetworkCodec.of(
+                                (buffer, message) -> {
+                                    buffer.writeUuid(message.playerId());
+                                    buffer.writeFloat(message.roll());
+                                },
+                                buffer -> new PacketSuperFlightRollState(buffer.readUuid(), buffer.readFloat())
+                        ),
+                        message -> KineticFlightClient.applySuperFlightRemoteRoll(message.playerId(), message.roll())
+                );
+            }
+        },
+        () -> {
+            if (!syncSenderInstalled && noclipStateSender != null && superFlightStateSender != null && superFlightRollStateSender != null) {
                 KineticFlight.installNoclipSyncSender((player, enabled) -> {
                     if (noclipStateSender != null) {
                         noclipStateSender.send(player, new PacketNoclipState(enabled));
@@ -102,6 +142,7 @@ public final class FlightNetwork {
                         superFlightStateSender.send(player, new PacketSuperFlightState(enabled));
                     }
                 });
+                KineticSuperFlight.installRollSyncSender(FlightNetwork::broadcastSuperFlightRoll);
                 syncSenderInstalled = true;
             }
         }
@@ -126,6 +167,20 @@ public final class FlightNetwork {
         }
     }
 
+    public static void requestSuperFlightRoll(float roll) {
+        if (superFlightRollRequestSender != null && Float.isFinite(roll)) {
+            superFlightRollRequestSender.send(new PacketSuperFlightRollRequest(Mth.wrapDegrees(roll)));
+        }
+    }
+
+    private static void broadcastSuperFlightRoll(ServerPlayer player, float roll) {
+        if (player == null || superFlightRollStateSender == null) return;
+        superFlightRollStateSender.sendToTrackingAndSelf(
+                player,
+                new PacketSuperFlightRollState(player.getUUID(), Mth.wrapDegrees(roll))
+        );
+    }
+
     public static void applyServerNoclip(ServerPlayer player, boolean requestedState) {
         KineticFlight.applyServerNoclip(player, requestedState);
     }
@@ -147,5 +202,11 @@ public final class FlightNetwork {
     }
 
     public record PacketSuperFlightFallFlying(boolean enabled) {
+    }
+
+    public record PacketSuperFlightRollRequest(float roll) {
+    }
+
+    public record PacketSuperFlightRollState(UUID playerId, float roll) {
     }
 }
