@@ -20,7 +20,7 @@ public final class CrawlingStateHandler {
 
     public static void load() {
         REGISTRATION.run(
-                () -> CommonHooks.onCrawlPose(player -> {
+                () -> CommonHooks.onPlayerPoseUpdate(player -> {
                     if (KineticSuperFlight.fallFlyingPose(player)) {
                         PlayerCrawlStateUtil.clearCrawling(player);
                         return false;

@@ -1,11 +1,13 @@
 package dev.xyat.kineticcore.internal.flight;
 
 import dev.xyat.kineticcore.internal.player.KineticCrawlingRuntime;
+import dev.xyat.kineticcore.internal.player.KineticPlayerPoseRuntime;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.Pose;
 
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -60,6 +62,7 @@ public final class KineticSuperFlightRuntime {
         if (!actual) {
             player.getPersistentData().putBoolean(NBT_FALL_FLYING_POSE, false);
             if (ownedFallFlying) player.stopFallFlying();
+            if (ownedFallFlying && player.getPose() == Pose.SWIMMING) player.setPose(Pose.STANDING);
             player.refreshDimensions();
             rollSyncSender.accept(player, 0.0F);
         } else {
@@ -79,6 +82,7 @@ public final class KineticSuperFlightRuntime {
         boolean ownedFallFlying = player.getPersistentData().getBoolean(NBT_FALL_FLYING_POSE);
         player.getPersistentData().putBoolean(NBT_FALL_FLYING_POSE, false);
         if (ownedFallFlying) player.stopFallFlying();
+        if (ownedFallFlying && player.getPose() == Pose.SWIMMING) player.setPose(Pose.STANDING);
         player.refreshDimensions();
         player.fallDistance = 0.0F;
         rollSyncSender.accept(player, 0.0F);
@@ -121,10 +125,11 @@ public final class KineticSuperFlightRuntime {
         player.getPersistentData().putBoolean(NBT_FALL_FLYING_POSE, actual);
         if (actual) {
             player.startFallFlying();
-            player.refreshDimensions();
+            KineticPlayerPoseRuntime.apply(player, Pose.SWIMMING);
             player.fallDistance = 0.0F;
         } else if (previous) {
             player.stopFallFlying();
+            if (player.getPose() == Pose.SWIMMING) player.setPose(Pose.STANDING);
             player.refreshDimensions();
             player.fallDistance = 0.0F;
         }

@@ -69,7 +69,6 @@ public final class KineticCrawlingRuntime {
             return;
         }
         entity.getPersistentData().putBoolean(CRAWLING_TAG, true);
-        if (entity.getPose() != Pose.SWIMMING) entity.setPose(Pose.SWIMMING);
-        entity.refreshDimensions();
+        KineticPlayerPoseRuntime.apply(entity, Pose.SWIMMING);
     }
 }

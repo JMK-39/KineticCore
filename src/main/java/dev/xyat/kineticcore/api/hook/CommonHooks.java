@@ -13,13 +13,16 @@ public final class CommonHooks {
     private CommonHooks() {
     }
 
-    /**
-     * Registers a listener for crawl pose.
-     */
-    public static HookRegistration onCrawlPose(CrawlPoseHandler handler) {
-        return KineticCommonHookRuntime.registerCrawlPose(
+    /** Registers a listener that may take ownership of the current player pose update. */
+    public static HookRegistration onPlayerPoseUpdate(PlayerPoseUpdateHandler handler) {
+        return KineticCommonHookRuntime.registerPlayerPoseUpdate(
                 Objects.requireNonNull(handler, "handler")
         );
+    }
+
+    /** Compatibility alias for existing crawl integrations. */
+    public static HookRegistration onCrawlPose(CrawlPoseHandler handler) {
+        return onPlayerPoseUpdate(Objects.requireNonNull(handler, "handler"));
     }
 
     /**
@@ -42,10 +45,15 @@ public final class CommonHooks {
         );
     }
 
-    /** Callback contract for crawl pose notifications. */
+    /** Callback contract for player pose update ownership. */
     @FunctionalInterface
-    public interface CrawlPoseHandler {
+    public interface PlayerPoseUpdateHandler {
         boolean handle(Player player);
+    }
+
+    /** Compatibility callback type for existing crawl integrations. */
+    @FunctionalInterface
+    public interface CrawlPoseHandler extends PlayerPoseUpdateHandler {
     }
 
     /** Callback contract for mob persistence notifications. */

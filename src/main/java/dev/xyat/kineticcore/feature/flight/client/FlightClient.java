@@ -6,6 +6,8 @@ import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.flight.KineticFlightClient;
 import dev.xyat.kineticcore.api.flight.KineticSuperFlight;
+import dev.xyat.kineticcore.api.hook.CommonHooks;
+import dev.xyat.kineticcore.api.player.KineticPlayerPose;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.text.KineticI18n;
@@ -16,6 +18,8 @@ import com.mojang.math.Axis;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Player;
 
 public final class FlightClient {
     private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
@@ -74,7 +78,8 @@ public final class FlightClient {
                 () -> KineticClientEvents.onTick(KineticClientEvents.TickPhase.END, KineticFlightClient::tickSuperFlight),
                 () -> KineticClientEvents.onCameraAngles(FlightClient::onCameraAngles),
                 () -> KineticClientEvents.onHudRender(KineticClientEvents.HudStage.END, FlightClient::renderSuperFlightHorizon),
-                () -> KineticClientEvents.onBlockScreenEffect(FlightClient::onBlockOverlay)
+                () -> KineticClientEvents.onBlockScreenEffect(FlightClient::onBlockOverlay),
+                () -> CommonHooks.onPlayerPoseUpdate(FlightClient::applySuperFlightPose)
         );
     }
 
@@ -173,6 +178,13 @@ public final class FlightClient {
         if (KineticFlightClient.superFlightManeuvering()) {
             context.setRoll(context.roll() + KineticFlightClient.superFlightRoll(partialTick));
         }
+    }
+
+    private static boolean applySuperFlightPose(Player player) {
+        if (!KineticFlightClient.appliesSuperFlightTo(player)) return false;
+        if (!KineticFlightClient.superFlightManeuvering() || !player.isFallFlying()) return false;
+        KineticPlayerPose.apply(player, Pose.SWIMMING);
+        return true;
     }
 
     private static void onBlockOverlay(KineticClientEvents.BlockScreenEffectContext context) {

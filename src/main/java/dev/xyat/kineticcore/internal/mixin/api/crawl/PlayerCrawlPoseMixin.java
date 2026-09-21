@@ -20,7 +20,7 @@ public abstract class PlayerCrawlPoseMixin extends LivingEntity {
     @Inject(method = "updatePlayerPose", at = @At("HEAD"), cancellable = true)
     private void kineticcore$injectUpdatePlayerPose(CallbackInfo ci) {
         Player player = (Player) (Object) this;
-        if (KineticCommonHookRuntime.handleCrawlPose(player)) {
+        if (KineticCommonHookRuntime.handlePlayerPoseUpdate(player)) {
             ci.cancel();
         }
     }

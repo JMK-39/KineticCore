@@ -10,7 +10,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BooleanSupplier;
 
 public final class KineticCommonHookRuntime {
-    private static final CopyOnWriteArrayList<CommonHooks.CrawlPoseHandler> CRAWL_POSE =
+    private static final CopyOnWriteArrayList<CommonHooks.PlayerPoseUpdateHandler> PLAYER_POSE_UPDATE =
             new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<CommonHooks.MobPersistenceHandler> MOB_PERSISTENCE =
             new CopyOnWriteArrayList<>();
@@ -20,9 +20,13 @@ public final class KineticCommonHookRuntime {
     private KineticCommonHookRuntime() {
     }
 
+    public static HookRegistration registerPlayerPoseUpdate(CommonHooks.PlayerPoseUpdateHandler handler) {
+        PLAYER_POSE_UPDATE.add(handler);
+        return HookRegistration.once(() -> PLAYER_POSE_UPDATE.remove(handler));
+    }
+
     public static HookRegistration registerCrawlPose(CommonHooks.CrawlPoseHandler handler) {
-        CRAWL_POSE.add(handler);
-        return HookRegistration.once(() -> CRAWL_POSE.remove(handler));
+        return registerPlayerPoseUpdate(handler);
     }
 
     public static HookRegistration registerMobPersistence(CommonHooks.MobPersistenceHandler handler) {
@@ -35,8 +39,12 @@ public final class KineticCommonHookRuntime {
         return HookRegistration.once(() -> RECIPE_BOOK_REMOVAL.remove(handler));
     }
 
+    public static boolean handlePlayerPoseUpdate(Player player) {
+        return KineticCallbackQueries.anyMatch(PLAYER_POSE_UPDATE, handler -> handler.handle(player));
+    }
+
     public static boolean handleCrawlPose(Player player) {
-        return KineticCallbackQueries.anyMatch(CRAWL_POSE, handler -> handler.handle(player));
+        return handlePlayerPoseUpdate(player);
     }
 
     public static boolean mobPersistenceEnabled() {

@@ -2,9 +2,11 @@ package dev.xyat.kineticcore.internal.flight;
 
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.internal.player.KineticCrawlingRuntime;
+import dev.xyat.kineticcore.internal.player.KineticPlayerPoseRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -120,6 +122,7 @@ public final class KineticSuperFlightClientRuntime {
         if (!enabled) {
             if (player != null) {
                 if (maneuvering || requestedFallFlyingPose) player.stopFallFlying();
+                if ((maneuvering || requestedFallFlyingPose) && player.getPose() == Pose.SWIMMING) player.setPose(Pose.STANDING);
                 player.setDeltaMovement(Vec3.ZERO);
                 player.refreshDimensions();
             }
@@ -134,6 +137,7 @@ public final class KineticSuperFlightClientRuntime {
         requestedFallFlyingPose = false;
         if (player != null) {
             if (ownedPose) player.stopFallFlying();
+            if (ownedPose && player.getPose() == Pose.SWIMMING) player.setPose(Pose.STANDING);
             player.setDeltaMovement(Vec3.ZERO);
             player.refreshDimensions();
             player.fallDistance = 0.0F;
@@ -387,7 +391,7 @@ public final class KineticSuperFlightClientRuntime {
         visualYaw = player.getYRot();
         player.setDeltaMovement(Vec3.ZERO);
         player.startFallFlying();
-        player.refreshDimensions();
+        KineticPlayerPoseRuntime.apply(player, Pose.SWIMMING);
         player.fallDistance = 0.0F;
         requestFallFlyingPose(true);
     }
@@ -414,6 +418,7 @@ public final class KineticSuperFlightClientRuntime {
         if (stoppedBySpace) spaceStopLatch = true;
         player.setDeltaMovement(Vec3.ZERO);
         player.stopFallFlying();
+        if (player.getPose() == Pose.SWIMMING) player.setPose(Pose.STANDING);
         player.refreshDimensions();
         player.fallDistance = 0.0F;
         player.setYBodyRot(player.getYRot());

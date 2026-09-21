@@ -3,6 +3,9 @@ package dev.xyat.kineticcore.feature.flight.event;
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.flight.KineticFlightSources;
 import dev.xyat.kineticcore.api.flight.KineticSuperFlight;
+import dev.xyat.kineticcore.api.hook.CommonHooks;
+import dev.xyat.kineticcore.api.player.KineticCrawling;
+import dev.xyat.kineticcore.api.player.KineticPlayerPose;
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.event.KineticEventPriority;
 import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
@@ -11,6 +14,8 @@ import dev.xyat.kineticcore.feature.flight.network.FlightNetwork;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 
 public class FlightEvents {
@@ -22,7 +27,8 @@ public class FlightEvents {
                 () -> KineticServerEvents.onPlayerLogin(KineticEventPriority.NORMAL, FlightEvents::onPlayerLogin),
                 () -> KineticServerEvents.onPlayerChangedDimension(KineticEventPriority.NORMAL, (player, from, to) -> onDimensionChange(player)),
                 () -> KineticServerEvents.onPlayerRespawn(KineticEventPriority.NORMAL, (player, endConquered) -> onPlayerRespawn(player)),
-                () -> KineticServerEvents.onPlayerTick(KineticEventPriority.NORMAL, KineticServerEvents.TickPhase.END, KineticSuperFlight::tick)
+                () -> KineticServerEvents.onPlayerTick(KineticEventPriority.NORMAL, KineticServerEvents.TickPhase.END, KineticSuperFlight::tick),
+                () -> CommonHooks.onPlayerPoseUpdate(FlightEvents::applySuperFlightPose)
         );
     }
 
@@ -81,6 +87,14 @@ public class FlightEvents {
             resyncFlightAbilities(player);
             FlightNetwork.syncNoclipState(player);
         });
+    }
+
+    private static boolean applySuperFlightPose(Player player) {
+        if (player == null || player.level().isClientSide) return false;
+        if (!KineticSuperFlight.fallFlyingPose(player) || !player.isFallFlying()) return false;
+        KineticCrawling.clear(player);
+        KineticPlayerPose.apply(player, Pose.SWIMMING);
+        return true;
     }
 
     private static void resyncFlightAbilities(ServerPlayer player) {

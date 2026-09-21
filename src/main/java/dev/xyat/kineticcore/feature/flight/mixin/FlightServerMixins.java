@@ -40,18 +40,6 @@ public class FlightServerMixins {
             }
         }
 
-        @Inject(method = "getDimensions(Lnet/minecraft/world/entity/Pose;)Lnet/minecraft/world/entity/EntityDimensions;", at = @At("HEAD"), cancellable = true)
-        private void kineticcore$getDimensionsForPose(Pose pose, CallbackInfoReturnable<EntityDimensions> cir) {
-            Player player = (Player) (Object) this;
-            if (player.isCreative() && FlightState.noclipEnabled(player)) {
-                cir.setReturnValue(EntityDimensions.scalable(0.0F, 0.0F));
-                return;
-            }
-            if (!player.level().isClientSide && KineticSuperFlight.fallFlyingPose(player) && player.isFallFlying()) {
-                cir.setReturnValue(EntityDimensions.scalable(0.6F, 1.0F));
-            }
-        }
-
         @Inject(method = "getEyeHeight(Lnet/minecraft/world/entity/Pose;Lnet/minecraft/world/entity/EntityDimensions;)F", at = @At("HEAD"), cancellable = true)
         private void kineticcore$getEyeHeight(Pose pose, EntityDimensions dimensions, CallbackInfoReturnable<Float> cir) {
             Player player = (Player) (Object) this;

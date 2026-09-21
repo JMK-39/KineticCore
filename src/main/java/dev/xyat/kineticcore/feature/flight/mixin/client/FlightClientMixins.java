@@ -22,11 +22,9 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
@@ -105,16 +103,6 @@ public class FlightClientMixins {
     @Mixin(Player.class)
     public static abstract class PlayerPhysicsTweaks extends LivingEntity {
         protected PlayerPhysicsTweaks(EntityType<? extends LivingEntity> type, Level level) { super(type, level); }
-
-        @Inject(method = "getDimensions(Lnet/minecraft/world/entity/Pose;)Lnet/minecraft/world/entity/EntityDimensions;", at = @At("HEAD"), cancellable = true)
-        private void kineticcore$superFlightCompactDimensions(Pose pose, CallbackInfoReturnable<EntityDimensions> cir) {
-            Player self = (Player) (Object) this;
-            if (KineticFlightClient.appliesSuperFlightTo(self)
-                    && KineticFlightClient.superFlightManeuvering()
-                    && self.isFallFlying()) {
-                cir.setReturnValue(EntityDimensions.scalable(0.6F, 1.0F));
-            }
-        }
 
         @Inject(method = "travel", at = @At("HEAD"), cancellable = true)
         private void kineticcore$advancedZeroInertiaFlight(Vec3 travelVector, CallbackInfo ci) {

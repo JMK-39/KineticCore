@@ -290,7 +290,7 @@ public final class FeatureSwitchRuntime {
         definitions.add(def("movement.flight_client", "movement", true,
                 List.of("FlightClientMixins")));
         definitions.add(def("player.crawling", "movement", true,
-                List.of("PlayerCrawlPoseMixin")));
+                List.of()));
 
         definitions.add(def("world.spawn_override", "world", true,
                 List.of("SetSpawnMixins")));
