@@ -28,6 +28,9 @@ public final class KineticSuperFlightClientRuntime {
     private static final float DEFAULT_DAMPING_REFERENCE = 0.7F;
     private static final float DEFAULT_MAX_YAW_STEP = 12.0F;
     private static final float DEFAULT_MAX_PITCH_STEP = 10.0F;
+    private static final double FOV_RISE_SECONDS = 0.35D;
+    private static final double FOV_FALL_SECONDS = 0.45D;
+    private static final double FOV_MAX_FRAME_SECONDS = 0.10D;
 
     private static boolean active;
     private static boolean directionInitialized;
@@ -40,6 +43,8 @@ public final class KineticSuperFlightClientRuntime {
     private static double currentSpeed = CREATIVE_SPRINT_SPEED;
     private static double previousActualSpeed;
     private static double actualSpeed;
+    private static float displayedFovBoost;
+    private static long lastFovUpdateNanos;
     private static double selectedSpeedMultiplier = 20.0D;
     private static double accelerationStartSpeed = CREATIVE_SPRINT_SPEED;
     private static double accelerationTargetSpeed = CREATIVE_SPRINT_SPEED;
@@ -354,12 +359,26 @@ public final class KineticSuperFlightClientRuntime {
     }
 
     public static float fovBoost() {
-        return fovForSpeed(actualSpeed);
+        return displayedFovBoost;
     }
 
     public static float fovBoost(float partialTick) {
         double speed = Mth.lerp(smoothPartial(partialTick), previousActualSpeed, actualSpeed);
-        return fovForSpeed(Math.max(0.0D, speed));
+        float target = fovForSpeed(Math.max(0.0D, speed));
+        long now = System.nanoTime();
+        if (lastFovUpdateNanos == 0L) {
+            lastFovUpdateNanos = now;
+            return displayedFovBoost;
+        }
+
+        double elapsed = (now - lastFovUpdateNanos) / 1_000_000_000.0D;
+        lastFovUpdateNanos = now;
+        double frameSeconds = Mth.clamp(elapsed, 0.0D, FOV_MAX_FRAME_SECONDS);
+        double responseSeconds = target > displayedFovBoost ? FOV_RISE_SECONDS : FOV_FALL_SECONDS;
+        double alpha = 1.0D - Math.exp(-frameSeconds / responseSeconds);
+        displayedFovBoost += (float) ((target - displayedFovBoost) * alpha);
+        if (Math.abs(target - displayedFovBoost) < 0.01F) displayedFovBoost = target;
+        return displayedFovBoost;
     }
 
     public static double currentSpeed() {
@@ -552,6 +571,8 @@ public final class KineticSuperFlightClientRuntime {
         currentSpeed = CREATIVE_SPRINT_SPEED;
         previousActualSpeed = 0.0D;
         actualSpeed = 0.0D;
+        displayedFovBoost = 0.0F;
+        lastFovUpdateNanos = 0L;
         resetAccelerationPhase();
         previousCameraYawOffset = 0.0F;
         previousCameraPitchOffset = 0.0F;
