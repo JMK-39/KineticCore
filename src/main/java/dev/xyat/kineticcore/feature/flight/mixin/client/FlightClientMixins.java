@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.feature.flight.mixin.client;
 
+import dev.xyat.kineticcore.api.client.input.KineticCameraInput;
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import com.mojang.authlib.GameProfile;
@@ -14,6 +15,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.player.KeyboardInput;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.client.renderer.GameRenderer;
@@ -34,6 +36,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -80,6 +83,16 @@ public class FlightClientMixins {
             if (KineticFlightClient.superFlightManeuvering()) {
                 self.startFallFlying();
                 self.fallDistance = 0.0F;
+            }
+        }
+    }
+
+    @Mixin(KeyboardInput.class)
+    public static class KeyboardInputTweaks {
+        @Inject(method = "tick", at = @At("TAIL"))
+        private void kineticcore$consumeSneakWhileSuperFlightActive(boolean slowDown, float slowDownFactor, CallbackInfo ci) {
+            if (KineticFlightClient.superFlightActive()) {
+                ((KeyboardInput) (Object) this).shiftKeyDown = false;
             }
         }
     }
@@ -139,6 +152,27 @@ public class FlightClientMixins {
         @Unique private float kineticcore$freeLookBeforeYaw;
         @Unique private float kineticcore$freeLookBeforePitch;
         @Unique private boolean kineticcore$captureFreeLook;
+
+        @Redirect(
+                method = "turnPlayer",
+                at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;turn(DD)V")
+        )
+        private void kineticcore$rotateMouseInputWithSuperFlightRoll(LocalPlayer player, double horizontal, double vertical) {
+            if (!KineticFlightClient.appliesSuperFlightTo(player)
+                    || !KineticFlightClient.superFlightManeuvering()) {
+                player.turn(horizontal, vertical);
+                return;
+            }
+
+            float roll = KineticFlightClient.superFlightRoll(1.0F);
+            if (Math.abs(roll) < 0.0001F) {
+                player.turn(horizontal, vertical);
+                return;
+            }
+
+            KineticCameraInput.MouseDelta rotated = KineticCameraInput.rotateForRoll(horizontal, vertical, roll);
+            player.turn(rotated.horizontal(), rotated.vertical());
+        }
 
         @Inject(method = "turnPlayer", at = @At("HEAD"))
         private void kineticcore$beforeTurnPlayer(CallbackInfo ci) {
