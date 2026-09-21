@@ -7,6 +7,7 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.xyat.kineticcore.api.flight.KineticFlightClient;
+import dev.xyat.kineticcore.api.flight.KineticSuperFlight;
 import dev.xyat.kineticcore.feature.flight.config.SuperFlightClientConfig;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -54,6 +55,14 @@ public class FlightClientMixins {
         @Inject(method = "aiStep", at = @At("HEAD"))
         private void kineticcore$enforceClientPhysics(CallbackInfo ci) {
             LocalPlayer self = (LocalPlayer) (Object) this;
+
+            if (KineticSuperFlight.available(self)) {
+                this.jumpTriggerTime = 0;
+                if (KineticFlightClient.superFlightActive() && self.getAbilities().flying) {
+                    self.getAbilities().flying = false;
+                    self.onUpdateAbilities();
+                }
+            }
 
             if (self.isCreative()) {
                 float targetSpeed = KineticFlightClient.flightSpeedMultiplier() * 0.05F;

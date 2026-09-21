@@ -605,7 +605,7 @@ public final class KineticSuperFlightClientRuntime {
                 MAX_SELECTED_SPEED_MULTIPLIER
         );
         double normalized = Math.log(multiplier) / Math.log(MAX_SELECTED_SPEED_MULTIPLIER);
-        double highSpeedAmplification = 1.0D + 2.0D * normalized * normalized;
+        double highSpeedAmplification = 1.0D + normalized * normalized;
         return (float) (normalized * 34.0D * highSpeedAmplification);
     }
 

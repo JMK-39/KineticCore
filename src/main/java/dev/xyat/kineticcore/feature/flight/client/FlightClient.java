@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.feature.flight.client;
 
 import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
+import dev.xyat.kineticcore.api.client.input.KineticInputGestures;
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.text.KineticText;
@@ -23,6 +24,7 @@ import net.minecraft.world.entity.player.Player;
 
 public final class FlightClient {
     private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
+    private static final KineticInputGestures.DoubleTap SUPER_FLIGHT_DOUBLE_JUMP = KineticInputGestures.doubleTap(7);
     private static KineticKeyBindings.Binding speedModifierKey;
     private static KineticKeyBindings.Binding superFlightFreeLookKey;
 
@@ -37,12 +39,6 @@ public final class FlightClient {
                         .modifier(KineticKeyBindings.Modifier.ALT)
                         .keyboard(KineticKeyBindings.Key.K)
                         .onPressed(FlightClient::handleNoclipKey)
-                        .register(),
-                () -> KineticKeyBindings.builder("key.kineticcore.flying.super.toggle")
-                        .category("key.categories.movement")
-                        .context(KineticKeyBindings.Context.IN_GAME)
-                        .keyboard(KineticKeyBindings.Key.V)
-                        .onPressed(FlightClient::handleSuperFlightToggle)
                         .register(),
                 () -> {
                     superFlightFreeLookKey = KineticKeyBindings.builder("key.kineticcore.flying.super.freelook")
@@ -75,6 +71,7 @@ public final class FlightClient {
                 () -> KineticFlightClient.setSuperFlightSelectedSpeedMultiplier(SuperFlightClientConfig.selectedSpeed()),
                 () -> KineticFlightClient.installNoclipRequestHandler(FlightClient::setNoclip),
                 () -> KineticClientEvents.onLogin(FlightClient::onLogin),
+                () -> KineticClientEvents.onTick(KineticClientEvents.TickPhase.START, FlightClient::handleSuperFlightDoubleJump),
                 () -> KineticClientEvents.onTick(KineticClientEvents.TickPhase.END, KineticFlightClient::tickSuperFlight),
                 () -> KineticClientEvents.onCameraAngles(FlightClient::onCameraAngles),
                 () -> KineticClientEvents.onHudRender(KineticClientEvents.HudStage.END, FlightClient::renderSuperFlightHorizon),
@@ -122,16 +119,28 @@ public final class FlightClient {
     }
 
     private static void onLogin() {
+        SUPER_FLIGHT_DOUBLE_JUMP.reset();
         KineticFlightClient.setSuperFlightSelectedSpeedMultiplier(SuperFlightClientConfig.selectedSpeed());
         KineticFlightClient.applyLocalNoclip(false);
         KineticFlightClient.applySuperFlightState(false);
     }
 
-    private static boolean handleSuperFlightToggle() {
+    private static void handleSuperFlightDoubleJump() {
         var player = KineticClientRuntime.localPlayer();
-        if (player == null || !KineticSuperFlight.available(player)) return false;
+        if (player == null
+                || KineticClientRuntime.currentScreen() != null
+                || !KineticSuperFlight.available(player)) {
+            SUPER_FLIGHT_DOUBLE_JUMP.reset();
+            return;
+        }
+
+        if (!SUPER_FLIGHT_DOUBLE_JUMP.update(KineticClientRuntime.jumpKeyDown())) return;
+
+        if (player.getAbilities().flying) {
+            player.getAbilities().flying = false;
+            player.onUpdateAbilities();
+        }
         FlightNetwork.requestSuperFlight(!KineticFlightClient.superFlightActive());
-        return true;
     }
 
     private static void renderSuperFlightHorizon(GuiGraphics graphics, float partialTick) {
