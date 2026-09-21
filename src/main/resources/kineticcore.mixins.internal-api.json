@@ -1,0 +1,34 @@
+{
+  "minVersion": "0.8",
+  "package": "dev.xyat.kineticcore.internal.mixin.api",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.xyat.kineticcore.internal.mixin.KineticMixinPlugin",
+  "refmap": "kineticcore.mixins.refmap.json",
+  "mixins": [
+    "crawl.PlayerCrawlPoseMixin",
+    "datapack.DatapackRepositoryMixin",
+    "despawn.MobDespawnMixins$MobTweaks",
+    "despawn.MobDespawnMixins$EnderManTweaks",
+    "recipebook.RecipeBookServerMixins$Advancements",
+    "recipebook.RecipeBookServerMixins$BookData",
+    "recipebook.RecipeBookServerMixins$Player",
+    "setspawn.SetSpawnMixins$MinecraftServerMixin",
+    "setspawn.SetSpawnMixins$PlayerListMixin",
+    "setspawn.SetSpawnMixins$ServerPlayerMixin",
+    "setspawn.SetSpawnMixins$ServerLevelMixin"
+  ],
+  "client": [
+    "datapack.client.ScreenReloadNoticeMixin",
+    "datapack.client.PackSelectionScreenMixin",
+    "datapack.client.MinecraftResourceReloadMixin",
+    "datapack.client.GuiReloadNoticeMixin",
+    "client.OptionsLoadMixin$FileHandler",
+    "client.KeyAccess",
+    "gpufix.client.RenderTargetMixin",
+    "recipebook.client.ButtonAccess",
+    "recipebook.client.RecipeBookClientMixins$Gui",
+    "recipebook.client.RecipeBookClientMixins$Logic",
+    "worldmanagement.client.WorldManagementMixins$RecycleBin",
+    "worldmanagement.client.WorldManagementMixins$Navigation"
+  ]
+}

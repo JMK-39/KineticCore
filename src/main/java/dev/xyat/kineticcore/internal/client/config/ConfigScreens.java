@@ -2,7 +2,6 @@ package dev.xyat.kineticcore.internal.client.config;
 
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.network.chat.Component;
 
 import java.util.List;
 

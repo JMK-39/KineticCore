@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.spawnegg.entity;
 
+import javax.annotation.Nonnull;
+
 import dev.xyat.kineticcore.feature.spawnegg.SpawnEggInit;
 import dev.xyat.kineticcore.feature.spawnegg.util.SpawnImpactOffset;
 import net.minecraft.core.BlockPos;
@@ -47,7 +49,7 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
     }
 
     @Override
-    protected void onHit(HitResult result) {
+    protected void onHit(@Nonnull HitResult result) {
         super.onHit(result);
 
         ItemStack stack = getItem();

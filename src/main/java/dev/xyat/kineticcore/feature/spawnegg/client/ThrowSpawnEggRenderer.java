@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.spawnegg.client;
 
+import javax.annotation.Nonnull;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.xyat.kineticcore.feature.spawnegg.entity.ThrowSpawnEgg;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -23,11 +25,11 @@ public final class ThrowSpawnEggRenderer extends EntityRenderer<ThrowSpawnEgg> {
 
     @Override
     public void render(
-            ThrowSpawnEgg entity,
+            @Nonnull ThrowSpawnEgg entity,
             float entityYaw,
             float partialTicks,
-            PoseStack poseStack,
-            MultiBufferSource buffer,
+            @Nonnull PoseStack poseStack,
+            @Nonnull MultiBufferSource buffer,
             int packedLight
     ) {
         poseStack.pushPose();
@@ -49,7 +51,7 @@ public final class ThrowSpawnEggRenderer extends EntityRenderer<ThrowSpawnEgg> {
     }
 
     @Override
-    public ResourceLocation getTextureLocation(ThrowSpawnEgg entity) {
+    public ResourceLocation getTextureLocation(@Nonnull ThrowSpawnEgg entity) {
         return TextureAtlas.LOCATION_BLOCKS;
     }
 }

@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.worldinit.data;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -21,7 +23,7 @@ public class WorldInitData extends SavedData {
     }
 
     @Override
-    public @NotNull CompoundTag save(CompoundTag tag) {
+    public @NotNull CompoundTag save(@Nonnull CompoundTag tag) {
         tag.putBoolean("commandsExecuted", commandsExecuted);
         return tag;
     }

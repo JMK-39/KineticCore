@@ -1,0 +1,17 @@
+{
+  "minVersion": "0.8",
+  "package": "dev.xyat.kineticcore.feature.clientui.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.xyat.kineticcore.internal.mixin.KineticMixinPlugin",
+  "refmap": "kineticcore.mixins.refmap.json",
+  "client": [
+    "client.ChatComponentAccess",
+    "client.ClientInterfaceMixins$CreateWorldTweaks",
+    "client.ClientInterfaceMixins$ForgePingTweaks",
+    "client.ClientInterfaceMixins$LevelDataTweaks",
+    "client.ClientInterfaceMixins$NarratorTweaks",
+    "client.ClientInterfaceMixins$OpenFlowsTweaks",
+    "client.ClientInterfaceMixins$SelectionListTweaks",
+    "client.ClientInterfaceMixins$ToastTweaks"
+  ]
+}

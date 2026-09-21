@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.setspawn.data;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -56,7 +58,7 @@ public class SetSpawnData extends SavedData {
     }
 
     @Override
-    public @NotNull CompoundTag save(CompoundTag tag) {
+    public @NotNull CompoundTag save(@Nonnull CompoundTag tag) {
         tag.putInt("dataVersion", dataVersion);
         tag.putBoolean("initialized", initialized);
         tag.putBoolean("spawnCalculated", spawnCalculated);

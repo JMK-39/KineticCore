@@ -1,0 +1,17 @@
+{
+  "minVersion": "0.8",
+  "package": "dev.xyat.kineticcore.feature.bee.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.xyat.kineticcore.internal.mixin.KineticMixinPlugin",
+  "refmap": "kineticcore.mixins.refmap.json",
+  "mixins": [
+    "BeeMixins$BeeMixin",
+    "BeeMixins$LevelMixin",
+    "BeeMixins$PathNavigationMixin",
+    "BeeMixins$RandomPosMixin",
+    "BeeMixins$TurtleEggBlockMixin"
+  ],
+  "client": [
+    "client.BeeRendererMixin"
+  ]
+}
