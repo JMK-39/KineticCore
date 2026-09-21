@@ -1,6 +1,9 @@
 package dev.xyat.kineticcore.feature.entityfix.event;
 
-import net.minecraftforge.common.MinecraftForge;
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
+import dev.xyat.kineticcore.api.entity.event.KineticLivingEvents;
+import dev.xyat.kineticcore.api.world.event.KineticWorldEvents;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import net.minecraft.nbt.CompoundTag;
@@ -10,23 +13,19 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.living.LivingAttackEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.level.LevelEvent;
 
 public class EntityAttributeFixer {
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
 
     public static void register() {
-        if (registered) return;
-        registered = true;
-        MinecraftForge.EVENT_BUS.addListener(EntityAttributeFixer::onEntityJoinWorld);
-        MinecraftForge.EVENT_BUS.addListener(EntityAttributeFixer::onLivingAttack);
-        MinecraftForge.EVENT_BUS.addListener(EntityAttributeFixer::onLivingDeath);
-        MinecraftForge.EVENT_BUS.addListener(EntityAttributeFixer::onLevelLoad);
-        KineticServerEvents.onPlayerLogout(EntityAttributeFixer::onPlayerLogout);
-        KineticServerEvents.onPlayerChangedDimension(EntityAttributeFixer::onPlayerDimensionChange);
+        REGISTRATION.run(
+                () -> KineticWorldEvents.onEntityJoin(KineticEventPriority.NORMAL, EntityAttributeFixer::onEntityJoinWorld),
+                () -> KineticLivingEvents.onAttack(KineticEventPriority.NORMAL, EntityAttributeFixer::onLivingAttack),
+                () -> KineticLivingEvents.onDeath(KineticEventPriority.NORMAL, false, EntityAttributeFixer::onLivingDeath),
+                () -> KineticWorldEvents.onLevelLoad(KineticEventPriority.NORMAL, EntityAttributeFixer::onLevelLoad),
+                () -> KineticServerEvents.onPlayerLogout(KineticEventPriority.NORMAL, EntityAttributeFixer::onPlayerLogout),
+                () -> KineticServerEvents.onPlayerChangedDimension(KineticEventPriority.NORMAL, EntityAttributeFixer::onPlayerDimensionChange)
+        );
     }
 
 
@@ -55,11 +54,11 @@ public class EntityAttributeFixer {
         }
     }
 
-    public static void onEntityJoinWorld(EntityJoinLevelEvent event) {
+    public static void onEntityJoinWorld(KineticWorldEvents.EntityJoinContext context) {
         if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "entity_fixer", true)) return;
-        if (event.getLevel().isClientSide()) return;
+        if (context.level().isClientSide()) return;
 
-        if (event.getEntity() instanceof LivingEntity livingEntity) {
+        if (context.entity() instanceof LivingEntity livingEntity) {
             fixGhostEntity(livingEntity);
 
             if (livingEntity instanceof Player player) {
@@ -68,19 +67,19 @@ public class EntityAttributeFixer {
         }
     }
 
-    public static void onLivingAttack(LivingAttackEvent event) {
+    public static void onLivingAttack(KineticLivingEvents.AttackContext context) {
         if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "entity_fixer", true)) return;
-        fixGhostEntity(event.getEntity());
+        fixGhostEntity(context.entity());
     }
 
-    public static void onLivingDeath(LivingDeathEvent event) {
+    public static void onLivingDeath(KineticLivingEvents.DeathContext context) {
         if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "entity_fixer", true)) return;
-        fixGhostEntity(event.getEntity());
+        fixGhostEntity(context.entity());
     }
 
-    public static void onLevelLoad(LevelEvent.Load event) {
+    public static void onLevelLoad(net.minecraft.world.level.LevelAccessor level) {
         if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "entity_fixer", true)) return;
-        if (event.getLevel().isClientSide() || !(event.getLevel() instanceof ServerLevel serverLevel)) {
+        if (level.isClientSide() || !(level instanceof ServerLevel serverLevel)) {
             return;
         }
 

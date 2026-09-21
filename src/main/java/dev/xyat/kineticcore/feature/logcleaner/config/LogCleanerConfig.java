@@ -3,7 +3,7 @@ package dev.xyat.kineticcore.feature.logcleaner.config;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
-import net.minecraftforge.fml.loading.FMLPaths;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LogCleanerConfig {
-    private static final Path CONFIG_DIR = FMLPaths.CONFIGDIR.get().resolve("kineticcore");
+    private static final Path CONFIG_DIR = KineticPlatform.configDirectory().resolve("kineticcore");
     private static final Path CONFIG_PATH = CONFIG_DIR.resolve("log_cleaner.toml");
     private static CommentedFileConfig configData;
 

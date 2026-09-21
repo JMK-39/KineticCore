@@ -4,11 +4,12 @@ import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigEntry;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import dev.xyat.kineticcore.api.config.client.KTConfigScope;
+import dev.xyat.kineticcore.api.config.common.KineticConfigNumbers;
 import dev.xyat.kineticcore.internal.config.ServerConfigNetwork;
 import dev.xyat.kineticcore.internal.client.KineticClientEventRuntime;
 
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -26,11 +27,22 @@ import java.util.Objects;
 public final class ServerConfigClientRuntime {
     private static boolean initialized;
 
-    public static void initialize() {
+    public static synchronized void initialize() {
         if (initialized) return;
-        initialized = true;
-        KineticClientEventRuntime.registerLogin(ServerConfigClientRuntime::clear);
-        KineticClientEventRuntime.registerLogout(ServerConfigClientRuntime::clear);
+        // Install both listeners as one operation. If the second registration fails,
+        // release the first handle so retrying does not accumulate duplicate callbacks.
+        var loginSubscription = KineticClientEventRuntime.registerLogin(ServerConfigClientRuntime::clear);
+        try {
+            KineticClientEventRuntime.registerLogout(ServerConfigClientRuntime::clear);
+            initialized = true;
+        } catch (RuntimeException | Error failure) {
+            try {
+                loginSubscription.close();
+            } catch (RuntimeException | Error cleanupFailure) {
+                if (cleanupFailure != failure) failure.addSuppressed(cleanupFailure);
+            }
+            throw failure;
+        }
     }
 
     private record State(
@@ -98,10 +110,7 @@ public final class ServerConfigClientRuntime {
             return true;
         } catch (Throwable throwable) {
             KineticRuntime.logger().error("Failed to send server config page {}", page.id(), throwable);
-            GuiOverlay.toast(
-                    "kineticcore_server_config_save_failed",
-                    Component.translatable("gui.kineticcore.config.server.save_failed")
-            );
+            KineticOverlays.toast("kineticcore_server_config_save_failed", Component.translatable("gui.kineticcore.config.server.save_failed"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
             return false;
         }
     }
@@ -111,7 +120,7 @@ public final class ServerConfigClientRuntime {
         return page != null && save(page, changedValues);
     }
 
-    static void applyCached(KTConfigPage page) {
+    public static void applyCached(KTConfigPage page) {
         State state = STATES.get(page.id());
         if (state != null && state.loaded) {
             applyToClientMirror(page, state.values);
@@ -140,8 +149,8 @@ public final class ServerConfigClientRuntime {
     public static double getDouble(String pageId, String entryId, double fallback) {
         Object raw = value(pageId, entryId);
         if (!(raw instanceof Number number)) return fallback;
-        double decoded = number.doubleValue();
-        return Double.isFinite(decoded) ? decoded : fallback;
+        Double decoded = KineticConfigNumbers.finiteDoubleInRange(number, -Double.MAX_VALUE, Double.MAX_VALUE);
+        return decoded == null ? fallback : decoded;
     }
 
     public static String getString(String pageId, String entryId, String fallback) {
@@ -180,7 +189,9 @@ public final class ServerConfigClientRuntime {
         String loadFailureKey = "";
         if (payload != null && payload.length > 0) {
             try {
-                values.putAll(ServerConfigNetwork.decodeValues(payload));
+                // Validate the entire decoded snapshot before publishing any of its values.
+                // Map.copyOf also rejects null keys/values from malformed network payloads.
+                values.putAll(Map.copyOf(ServerConfigNetwork.decodeValues(payload)));
                 snapshotLoaded = true;
             } catch (Throwable throwable) {
                 KineticRuntime.logger().error("Failed to decode server config snapshot {}", pageId, throwable);
@@ -217,10 +228,7 @@ public final class ServerConfigClientRuntime {
                 if (page != null) {
                     KTConfigApi.notifySaved(page);
                 } else {
-                    GuiOverlay.toast(
-                            "kineticcore_server_config_saved:" + pageId,
-                            Component.translatable("gui.kineticcore.config.server.saved")
-                    );
+                    KineticOverlays.toast("kineticcore_server_config_saved:" + pageId, Component.translatable("gui.kineticcore.config.server.saved"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
                 }
             } else {
                 Component message = Component.translatable(
@@ -228,7 +236,7 @@ public final class ServerConfigClientRuntime {
                                 ? "gui.kineticcore.config.server.save_failed"
                                 : messageKey
                 );
-                GuiOverlay.toast("kineticcore_server_config_save_failed:" + pageId, message);
+                KineticOverlays.toast("kineticcore_server_config_save_failed:" + pageId, message, KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
             }
         }
     }
@@ -250,11 +258,13 @@ public final class ServerConfigClientRuntime {
 
     private static void applyToClientMirror(KTConfigPage page, Map<String, Object> values) {
         for (KTConfigEntry<?> entry : page.entries()) {
-            if (!entry.isValue() || !values.containsKey(entry.id())) continue;
-            Object normalized = normalizeForEntry(entry, values.get(entry.id()));
-            if (normalized == null || !entry.accepts(normalized)) continue;
+            if (!entry.isValueEntry() || !values.containsKey(entry.id())) continue;
             try {
-                entry.writeSnapshot(normalized);
+                Object normalized = normalizeForEntry(entry, values.get(entry.id()));
+                if (normalized == null) continue;
+                // The entry owns validation and rollback: do not invoke a stateful
+                // addon validator once here and again during the actual write.
+                entry.applySnapshotWithRollback(normalized);
             } catch (Throwable throwable) {
                 KineticRuntime.logger().error(
                         "Failed to apply server config mirror {}/{}",
@@ -271,36 +281,27 @@ public final class ServerConfigClientRuntime {
         return switch (entry.type()) {
             case INTEGER, COLOR -> raw instanceof Number number ? safeInt(number) : raw;
             case LONG -> raw instanceof Number number ? safeLong(number) : raw;
-            case DOUBLE -> raw instanceof Number number ? number.doubleValue() : raw;
+            case DOUBLE -> {
+                if (!(raw instanceof Number number)) yield raw;
+                // Keep the nullable result boxed; mixing Double and primitive double in
+                // a conditional expression would unbox null and throw during rejection.
+                if (entry.minimum() != null && entry.maximum() != null) {
+                    yield KineticConfigNumbers.finiteDoubleInRange(
+                            number, entry.minimum().doubleValue(), entry.maximum().doubleValue());
+                }
+                yield KineticConfigNumbers.finiteDoubleInRange(number, -Double.MAX_VALUE, Double.MAX_VALUE);
+            }
             case INTEGER_LIST -> normalizeIntegerList(raw);
             default -> raw;
         };
     }
 
     private static Integer safeInt(Number number) {
-        if (number instanceof Byte || number instanceof Short || number instanceof Integer) {
-            return number.intValue();
-        }
-        if (number instanceof Long longValue) {
-            long value = longValue;
-            return value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE ? (int) value : null;
-        }
-        double value = number.doubleValue();
-        if (!Double.isFinite(value) || value < Integer.MIN_VALUE || value > Integer.MAX_VALUE || value != Math.rint(value)) {
-            return null;
-        }
-        return (int) value;
+        return KineticConfigNumbers.exactInt(number);
     }
 
     private static Long safeLong(Number number) {
-        if (number instanceof Byte || number instanceof Short || number instanceof Integer || number instanceof Long) {
-            return number.longValue();
-        }
-        double value = number.doubleValue();
-        if (!Double.isFinite(value) || value < Long.MIN_VALUE || value > Long.MAX_VALUE || value != Math.rint(value)) {
-            return null;
-        }
-        return number.longValue();
+        return KineticConfigNumbers.exactLong(number);
     }
 
     private static List<Integer> normalizeIntegerList(Object raw) {

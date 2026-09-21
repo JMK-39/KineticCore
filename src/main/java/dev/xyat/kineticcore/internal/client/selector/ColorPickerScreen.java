@@ -4,11 +4,11 @@ import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
-import net.minecraft.client.Minecraft;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
@@ -46,7 +46,7 @@ public final class ColorPickerScreen extends KineticScreen {
     private final Consumer<List<Integer>> paletteConsumer;
     private final List<Integer> colors = new ArrayList<>();
 
-    private EditBox hexBox;
+    private KineticEditBox hexBox;
     private NumericEditBox redBox;
     private NumericEditBox greenBox;
     private NumericEditBox blueBox;
@@ -121,10 +121,10 @@ public final class ColorPickerScreen extends KineticScreen {
         hexBox = addTextField(
                 SIDE_X + 45, PICKER_Y + 33, SIDE_W - 45,
                 KineticText.translatable("gui.kineticcore.palette.hex"),
+                null, raw -> raw.matches("[0-9a-fA-F]{0,6}"),
                 KineticText.translatable("gui.kineticcore.palette.hex.tooltip")
         );
         hexBox.setMaxLength(6);
-        hexBox.setFilter(raw -> raw.matches("[0-9a-fA-F]{0,6}"));
         hexBox.setResponder(this::onHexChanged);
 
         redBox = createRgbBox(PICKER_Y + 59, "gui.kineticcore.palette.red");
@@ -135,7 +135,7 @@ public final class ColorPickerScreen extends KineticScreen {
                 SIDE_X, PICKER_Y + 137, 89,
                 KineticText.translatable("gui.kineticcore.palette.copy_hex"),
                 KineticText.translatable("gui.kineticcore.palette.copy_hex.tooltip"),
-                () -> Minecraft.getInstance().keyboardHandler.setClipboard(String.format(Locale.ROOT, "#%06X", rgb))
+                () -> KineticClientRuntime.setClipboard(String.format(Locale.ROOT, "#%06X", rgb))
         );
 
         if (paletteMode) {
@@ -155,7 +155,7 @@ public final class ColorPickerScreen extends KineticScreen {
         NumericEditBox box = addIntegerField(
                 SIDE_X + 45, y, SIDE_W - 45,
                 KineticText.translatable(key),
-                false, 0, 255,
+                false, 0, 255, null,
                 KineticText.translatable("gui.kineticcore.palette.rgb.tooltip")
         );
         box.setResponder(raw -> onRgbChanged());
@@ -248,17 +248,17 @@ public final class ColorPickerScreen extends KineticScreen {
 
     @Override
     protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int mouseX, int mouseY) {
-        if (overlays().blocksInput()) return;
+        if (overlayBlocksInput()) return;
         if (GuiTheme.hovering(scaledMouseX, scaledMouseY, PICKER_X, PICKER_Y, PICKER_SIZE, PICKER_SIZE)) {
-            showTooltip(KineticText.translatable("gui.kineticcore.palette.picker.tooltip"));
+            showTooltipLine(KineticText.translatable("gui.kineticcore.palette.picker.tooltip"));
             return;
         }
         if (GuiTheme.hovering(scaledMouseX, scaledMouseY, HUE_X - 2, PICKER_Y, HUE_W + 4, PICKER_SIZE)) {
-            showTooltip(KineticText.translatable("gui.kineticcore.palette.hue.tooltip"));
+            showTooltipLine(KineticText.translatable("gui.kineticcore.palette.hue.tooltip"));
             return;
         }
         if (GuiTheme.hovering(scaledMouseX, scaledMouseY, SIDE_X, PICKER_Y, SIDE_W, 24)) {
-            showTooltip(KineticText.translatable(
+            showTooltipLine(KineticText.translatable(
                     "gui.kineticcore.palette.current.tooltip",
                     String.format(Locale.ROOT, "%06X", rgb)
             ));
@@ -267,7 +267,7 @@ public final class ColorPickerScreen extends KineticScreen {
         if (paletteMode) {
             int index = swatchIndexAt(scaledMouseX, scaledMouseY);
             if (index >= 0 && index < colors.size()) {
-                showTooltip(KineticText.translatable(
+                showTooltipLine(KineticText.translatable(
                         "gui.kineticcore.palette.swatch.tooltip",
                         String.format(Locale.ROOT, "%06X", colors.get(index))
                 ));
@@ -423,29 +423,38 @@ public final class ColorPickerScreen extends KineticScreen {
     }
 
     private void openSwatchContextMenu(int index, double mouseX, double mouseY) {
-        List<GuiOverlay.MenuItem> entries = new ArrayList<>();
-        entries.add(GuiOverlay.MenuItem.action(
+        List<KineticOverlays.MenuItem> entries = new ArrayList<>();
+        entries.add(KineticOverlays.MenuItem.create(
                 KineticText.translatable("gui.kineticcore.palette.context.load"),
+                null, null, null,
                 () -> {
                     if (index >= 0 && index < colors.size()) setRgb(colors.get(index), true);
-                }
+                },
+                true, KineticOverlays.MenuItemStyle.NORMAL
         ));
-        entries.add(GuiOverlay.MenuItem.action(
+        entries.add(KineticOverlays.MenuItem.create(
                 KineticText.translatable("gui.kineticcore.palette.context.delete"),
+                null, null, null,
                 () -> {
                     if (index >= 0 && index < colors.size()) colors.remove(index);
                     rebuildUi();
-                }
+                },
+                true, KineticOverlays.MenuItemStyle.NORMAL
         ));
         if (colors.isEmpty()) {
-            entries.add(GuiOverlay.MenuItem.disabled(KineticText.translatable("gui.kineticcore.palette.context.clear")));
-        } else {
-            entries.add(GuiOverlay.MenuItem.action(
+            entries.add(KineticOverlays.MenuItem.create(
                     KineticText.translatable("gui.kineticcore.palette.context.clear"),
+                    null, null, null, null, false, KineticOverlays.MenuItemStyle.NORMAL
+            ));
+        } else {
+            entries.add(KineticOverlays.MenuItem.create(
+                    KineticText.translatable("gui.kineticcore.palette.context.clear"),
+                    null, null, null,
                     () -> {
                         colors.clear();
                         rebuildUi();
-                    }
+                    },
+                    true, KineticOverlays.MenuItemStyle.NORMAL
             ));
         }
         openContextMenu(mouseX, mouseY, entries);
@@ -460,13 +469,6 @@ public final class ColorPickerScreen extends KineticScreen {
             colorConsumer.accept(rgb & 0xFFFFFF);
         }
         onClose();
-    }
-
-    @Override
-    public void onClose() {
-        if (minecraft != null) {
-            navigateBack();
-        }
     }
 
     @Override

@@ -1,16 +1,19 @@
 # KineticCore
 
-开发前先读 [Kinetic 开发地图](KINETIC_API_GUIDE.md)：标准入口、实现位置、草稿生命周期和 internal 边界。
-
 KineticCore 是面向 **Minecraft 1.20.1 / Forge 47.4.x / Java 17** 的核心基础模组与公共开发 API。它为 Kinetic 系列及其他附属提供统一的 GUI、配置、网络、压缩、输入、生命周期、Hook、命令扩展、选择器、注册表访问、Minecraft 辅助能力与运行时基础设施。
 
 核心约束：**业务代码只调用公开 `dev.xyat.kineticcore.api.*`。** `internal/` 只负责实现，不属于附属调用面。
 
-## 文档
+## API 文档
 
-- [API 架构规则](API_ARCHITECTURE.md)
-- [API 参考](API_REFERENCE.md)
-- [API 使用教程](API_TUTORIAL.md)
+公开 API 的说明直接维护在 `dev.xyat.kineticcore.api.*` 源码 Javadoc 中，不再手工维护独立 API Markdown。正常构建不会生成 Javadoc，以免拖慢编译。
+
+需要给 AI 提供方法文档时，在 IDEA 的 Gradle 面板选择 `Tasks → build → buildJavaDOC`，或在项目根目录运行 `gradlew buildJavaDOC`（Windows）。仅执行此任务时才生成对应文档及便于分享的压缩包：
+
+- 浏览器文档：`javadoc/index.html`（文档目录：项目根目录下的 `javadoc/`）。
+- 发给 AI 的文件：项目根目录下的 `KineticCore-javadoc-<构建版本号>.zip`，其中 `javadoc/index.html` 是文档首页。
+
+仅需包含源码和文档的完整 API 源码包时，仍可单独运行 `apiSourceZip`；它同样会按需生成 Javadoc，但不会由普通 `build` 调用。
 
 ## 运行环境
 
@@ -253,7 +256,7 @@ KineticRuntime
 `KineticEnvironment`、`KineticPlatform`、`KineticPaths` 统一物理端判断、模组检测和配置目录。
 `KineticClientRuntime` 负责统一客户端线程执行、Screen 打开与刷新；附属不需要管理 KC 内部初始化顺序。
 
-`KineticFeatureSwitches` 使用稳定的功能 ID、名称和说明管理功能开关。Mixin 类名只允许作为实现层映射，不能成为玩家配置键或 GUI 文案。
+`KineticFeatureSwitches` 使用稳定的功能 ID、名称和说明管理功能开关。Mixin 类名只允许作为实现层映射，不能成为玩家配置键或 GUI 文案。每个开关必须在 `zh_cn` 和 `en_us` 提供独立的名称与功能说明，鼠标悬停显示说明及保存后重启提示。
 
 ## 世界与背包基础能力
 
@@ -307,18 +310,11 @@ ServerTickTracker
 - API 暴露 Forge Event 实现类型。
 - 业务绕过已有统一 GUI、输入、生命周期、网络、Tooltip、命令能力。
 
-完整规则见 [API_ARCHITECTURE.md](API_ARCHITECTURE.md)。
+架构规则由 `gradle/kinetic-architecture.gradle` 和 `gradle/kinetic-api-verification.gradle` 在构建阶段自动检查。
 
 ## API 源码包
 
-工程提供 `apiSourceZip`，内容包括公开 `api/` 源码和：
-
-```text
-README.md
-API_ARCHITECTURE.md
-API_REFERENCE.md
-API_TUTORIAL.md
-```
+工程提供 `apiSourceZip`，包含公开 `api/` 源码、`README.md` 与构建时自动生成的 Javadoc HTML。
 
 ## 许可证
 

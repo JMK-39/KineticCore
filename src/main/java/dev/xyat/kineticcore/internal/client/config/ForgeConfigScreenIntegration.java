@@ -17,7 +17,7 @@ public final class ForgeConfigScreenIntegration {
         owner.registerExtensionPoint(
                 ConfigScreenHandler.ConfigScreenFactory.class,
                 () -> new ConfigScreenHandler.ConfigScreenFactory(
-                        (minecraft, parent) -> KTConfigApi.createScreen(parent)
+                        (minecraft, parent) -> KTConfigApi.createIndexScreen(parent)
                 )
         );
     }

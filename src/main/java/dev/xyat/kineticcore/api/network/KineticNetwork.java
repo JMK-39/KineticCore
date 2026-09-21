@@ -3,20 +3,16 @@ package dev.xyat.kineticcore.api.network;
 import dev.xyat.kineticcore.internal.network.KineticNetworkRuntime;
 import net.minecraft.resources.ResourceLocation;
 
+/** Public Kinetic API facade for network. */
 public final class KineticNetwork {
     private static volatile NetworkTransportLimits transportLimits = NetworkTransportLimits.DEFAULT;
 
     private KineticNetwork() {
     }
 
-    public static NetworkChannel channel(ResourceLocation id) {
-        return channel(id, "1");
-    }
-
-    public static NetworkChannel channel(ResourceLocation id, String protocolVersion) {
-        return channel(id, protocolVersion, NetworkVersionPolicy.EXACT);
-    }
-
+    /**
+     * Performs the channel API operation.
+     */
     public static NetworkChannel channel(
             ResourceLocation id,
             String protocolVersion,
@@ -25,10 +21,16 @@ public final class KineticNetwork {
         return KineticNetworkRuntime.channel(id, protocolVersion, versionPolicy);
     }
 
+    /**
+     * Performs the transport limits API operation.
+     */
     public static NetworkTransportLimits transportLimits() {
         return transportLimits;
     }
 
+    /**
+     * Performs the configure transport limits API operation.
+     */
     public static void configureTransportLimits(NetworkTransportLimits limits) {
         if (limits == null) throw new IllegalArgumentException("limits");
         transportLimits = limits;

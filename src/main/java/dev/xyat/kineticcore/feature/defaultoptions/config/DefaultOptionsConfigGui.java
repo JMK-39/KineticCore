@@ -2,7 +2,7 @@ package dev.xyat.kineticcore.feature.defaultoptions.config;
 
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import dev.xyat.kineticcore.api.config.client.KTConfigScope;
@@ -35,7 +35,7 @@ public final class DefaultOptionsConfigGui {
     }
 
     private static void confirmSave() {
-        GuiOverlay.openCurrentDialog(
+        KineticOverlays.openCurrentDialog(
                 KineticText.translatable("gui.kineticcore.default_options.confirm.title"),
                 KineticText.translatable("gui.kineticcore.default_options.confirm.message"),
                 KineticText.translatable("gui.yes"),
@@ -48,10 +48,7 @@ public final class DefaultOptionsConfigGui {
     private static void saveCurrentOptions() {
         try {
             OptionsManager.saveAllSettingsAsDefault();
-            GuiOverlay.toast(
-                    TOAST_ID,
-                    KineticText.translatable("gui.kineticcore.default_options.save.success")
-            );
+            KineticOverlays.toast(TOAST_ID, KineticText.translatable("gui.kineticcore.default_options.save.success"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
         } catch (Exception exception) {
             KineticRuntime.logger().error("Failed to save the current options as defaults", exception);
 
@@ -59,13 +56,10 @@ public final class DefaultOptionsConfigGui {
             if (detail == null || detail.isBlank()) {
                 detail = exception.getClass().getSimpleName();
             }
-            GuiOverlay.toast(
-                    TOAST_ID,
-                    KineticText.translatable(
+            KineticOverlays.toast(TOAST_ID, KineticText.translatable(
                             "gui.kineticcore.default_options.save.failure",
                             Component.literal(detail)
-                    )
-            );
+                    ), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
         }
     }
 }

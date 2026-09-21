@@ -1,15 +1,20 @@
 package dev.xyat.kineticcore.internal.client;
 
+import dev.xyat.kineticcore.internal.runtime.KineticForgeListenerRegistrations;
+import dev.xyat.kineticcore.internal.runtime.KineticCallbackBatch;
 import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
-import dev.xyat.kineticcore.api.hook.HookRegistration;
+import dev.xyat.kineticcore.api.client.effect.KineticEffectDisplay;
+import dev.xyat.kineticcore.api.event.KineticEventSubscription;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
+import net.minecraftforge.client.event.RenderBlockScreenEffectEvent;
 import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
@@ -20,6 +25,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.ItemTooltipEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -30,9 +37,9 @@ public final class KineticClientEventRuntime {
     private static final CopyOnWriteArrayList<Runnable> LOGIN = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<Runnable> LOGOUT = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<PreparableReloadListener> CLIENT_RELOAD_LISTENERS = new CopyOnWriteArrayList<>();
-    private static final CopyOnWriteArrayList<KineticClientEvents.ScreenHandler> SCREEN_INIT_BEFORE = new CopyOnWriteArrayList<>();
-    private static final CopyOnWriteArrayList<KineticClientEvents.ScreenHandler> SCREEN_INIT_AFTER = new CopyOnWriteArrayList<>();
-    private static final CopyOnWriteArrayList<KineticClientEvents.ScreenInitHandler> SCREEN_INIT_AFTER_WITH_CONTROLS = new CopyOnWriteArrayList<>();
+    private static final CopyOnWriteArrayList<KineticClientEvents.ScreenInitBeforeHandler> SCREEN_INIT_BEFORE = new CopyOnWriteArrayList<>();
+    private static final CopyOnWriteArrayList<KineticClientEvents.ItemTooltipHandler> ITEM_TOOLTIP = new CopyOnWriteArrayList<>();
+    private static final CopyOnWriteArrayList<KineticClientEvents.ScreenInitHandler> SCREEN_INIT_AFTER = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<KineticClientEvents.ScreenRenderHandler> SCREEN_RENDER_BEFORE = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<KineticClientEvents.ScreenRenderHandler> SCREEN_RENDER_AFTER = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<KineticClientEvents.ScreenMouseButtonHandler> SCREEN_MOUSE_PRESSED_BEFORE = new CopyOnWriteArrayList<>();
@@ -44,123 +51,153 @@ public final class KineticClientEventRuntime {
     private static final CopyOnWriteArrayList<KineticClientEvents.InteractionKeyHandler> INTERACTION_KEY = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<KineticClientEvents.PlayerRenderBeforeHandler> PLAYER_RENDER_BEFORE = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<KineticClientEvents.PlayerRenderAfterHandler> PLAYER_RENDER_AFTER = new CopyOnWriteArrayList<>();
+    private static final CopyOnWriteArrayList<KineticClientEvents.BlockScreenEffectHandler> BLOCK_SCREEN_EFFECT = new CopyOnWriteArrayList<>();
+    private static final CopyOnWriteArrayList<KineticClientEvents.InventoryEffectLayoutHandler> INVENTORY_EFFECT_LAYOUT = new CopyOnWriteArrayList<>();
+    private static final CopyOnWriteArrayList<KineticClientEvents.CameraAnglesHandler> CAMERA_ANGLES = new CopyOnWriteArrayList<>();
     private static final EnumMap<KineticClientEvents.LevelRenderStage, CopyOnWriteArrayList<KineticClientEvents.LevelRenderHandler>> LEVEL_RENDER = levelRenderHandlers();
 
+    private static final KineticForgeListenerRegistrations LISTENER_REGISTRATIONS = new KineticForgeListenerRegistrations();
     private static boolean initialized;
+    private static boolean reloadListenerRegistrationClosed;
 
     private KineticClientEventRuntime() {
     }
 
     public static synchronized void initialize() {
         if (initialized) return;
-        initialized = true;
+        var attempt = LISTENER_REGISTRATIONS.begin();
+        int slot = 0;
 
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onClientTick);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogin);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogout);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenInitBefore);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenInitAfter);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenRenderBefore);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenRenderAfter);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMousePressedBefore);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMouseReleasedBefore);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onHudOverlayRender);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onHudRenderEnd);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onMouseButtonBefore);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onInteractionKey);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onPlayerRenderBefore);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onPlayerRenderAfter);
-        MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLevelRender);
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticClientEventRuntime::onRegisterClientReloadListeners);
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onClientTick));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogin));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogout));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onItemTooltip));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenInitBefore));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenInitAfter));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenRenderBefore));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenRenderAfter));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMousePressedBefore));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMouseReleasedBefore));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onHudOverlayRender));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onHudRenderEnd));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onMouseButtonBefore));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onInteractionKey));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onPlayerRenderBefore));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onPlayerRenderAfter));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLevelRender));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onCameraAngles));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onBlockScreenEffect));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onInventoryEffectLayout));
+        attempt.install(slot++, () -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticClientEventRuntime::onRegisterClientReloadListeners));
+        attempt.finish();
+        initialized = true;
     }
 
-    public static HookRegistration registerTick(KineticClientEvents.TickPhase phase, Runnable listener) {
+    public static KineticEventSubscription registerTick(KineticClientEvents.TickPhase phase, Runnable listener) {
         initialize();
         return add(phase == KineticClientEvents.TickPhase.START ? TICK_START : TICK_END, listener);
     }
 
-    public static HookRegistration registerLogin(Runnable listener) {
+    public static KineticEventSubscription registerLogin(Runnable listener) {
         initialize();
         return add(LOGIN, listener);
     }
 
-    public static HookRegistration registerLogout(Runnable listener) {
+    public static KineticEventSubscription registerLogout(Runnable listener) {
         initialize();
         return add(LOGOUT, listener);
     }
 
-    public static HookRegistration registerReloadListener(PreparableReloadListener listener) {
+    public static KineticEventSubscription registerItemTooltip(KineticClientEvents.ItemTooltipHandler listener) {
         initialize();
-        return add(CLIENT_RELOAD_LISTENERS, listener);
+        return add(ITEM_TOOLTIP, listener);
     }
 
-    public static HookRegistration registerScreenInitBefore(KineticClientEvents.ScreenHandler listener) {
+    public static synchronized void registerReloadListener(PreparableReloadListener listener) {
+        initialize();
+        if (reloadListenerRegistrationClosed) {
+            throw new IllegalStateException("Client reload-listener registration window has already closed");
+        }
+        CLIENT_RELOAD_LISTENERS.add(listener);
+    }
+
+    public static KineticEventSubscription registerScreenInitBefore(KineticClientEvents.ScreenInitBeforeHandler listener) {
         initialize();
         return add(SCREEN_INIT_BEFORE, listener);
     }
 
-    public static HookRegistration registerScreenInitAfter(KineticClientEvents.ScreenHandler listener) {
+    public static KineticEventSubscription registerScreenInitAfter(KineticClientEvents.ScreenInitHandler listener) {
         initialize();
         return add(SCREEN_INIT_AFTER, listener);
     }
 
-    public static HookRegistration registerScreenInitAfterWithControls(KineticClientEvents.ScreenInitHandler listener) {
-        initialize();
-        return add(SCREEN_INIT_AFTER_WITH_CONTROLS, listener);
-    }
-
-    public static HookRegistration registerScreenRenderBefore(KineticClientEvents.ScreenRenderHandler listener) {
+    public static KineticEventSubscription registerScreenRenderBefore(KineticClientEvents.ScreenRenderHandler listener) {
         initialize();
         return add(SCREEN_RENDER_BEFORE, listener);
     }
 
-    public static HookRegistration registerScreenRenderAfter(KineticClientEvents.ScreenRenderHandler listener) {
+    public static KineticEventSubscription registerScreenRenderAfter(KineticClientEvents.ScreenRenderHandler listener) {
         initialize();
         return add(SCREEN_RENDER_AFTER, listener);
     }
 
-    public static HookRegistration registerScreenMouseButtonPressedBefore(KineticClientEvents.ScreenMouseButtonHandler listener) {
+    public static KineticEventSubscription registerScreenMouseButtonPressedBefore(KineticClientEvents.ScreenMouseButtonHandler listener) {
         initialize();
         return add(SCREEN_MOUSE_PRESSED_BEFORE, listener);
     }
 
-    public static HookRegistration registerScreenMouseButtonReleasedBefore(KineticClientEvents.ScreenMouseButtonHandler listener) {
+    public static KineticEventSubscription registerScreenMouseButtonReleasedBefore(KineticClientEvents.ScreenMouseButtonHandler listener) {
         initialize();
         return add(SCREEN_MOUSE_RELEASED_BEFORE, listener);
     }
 
-    public static HookRegistration registerMouseButtonBefore(KineticClientEvents.MouseButtonHandler listener) {
+    public static KineticEventSubscription registerMouseButtonBefore(KineticClientEvents.MouseButtonHandler listener) {
         initialize();
         return add(MOUSE_BUTTON_BEFORE, listener);
     }
 
-    public static HookRegistration registerInteractionKey(KineticClientEvents.InteractionKeyHandler listener) {
+    public static KineticEventSubscription registerInteractionKey(KineticClientEvents.InteractionKeyHandler listener) {
         initialize();
         return add(INTERACTION_KEY, listener);
     }
 
-    public static HookRegistration registerPlayerRenderBefore(KineticClientEvents.PlayerRenderBeforeHandler listener) {
+    public static KineticEventSubscription registerPlayerRenderBefore(KineticClientEvents.PlayerRenderBeforeHandler listener) {
         initialize();
         return add(PLAYER_RENDER_BEFORE, listener);
     }
 
-    public static HookRegistration registerPlayerRenderAfter(KineticClientEvents.PlayerRenderAfterHandler listener) {
+    public static KineticEventSubscription registerPlayerRenderAfter(KineticClientEvents.PlayerRenderAfterHandler listener) {
         initialize();
         return add(PLAYER_RENDER_AFTER, listener);
     }
 
-    public static HookRegistration registerLevelRender(KineticClientEvents.LevelRenderStage stage, KineticClientEvents.LevelRenderHandler listener) {
+    public static KineticEventSubscription registerLevelRender(KineticClientEvents.LevelRenderStage stage, KineticClientEvents.LevelRenderHandler listener) {
         initialize();
         return add(LEVEL_RENDER.get(stage), listener);
     }
 
-    public static HookRegistration registerHudRender(KineticClientEvents.HudStage stage, KineticClientEvents.HudRenderHandler listener) {
+    public static KineticEventSubscription registerCameraAngles(KineticClientEvents.CameraAnglesHandler listener) {
+        initialize();
+        return add(CAMERA_ANGLES, listener);
+    }
+
+    public static KineticEventSubscription registerHudRender(KineticClientEvents.HudStage stage, KineticClientEvents.HudRenderHandler listener) {
         initialize();
         return add(switch (stage) {
             case HOTBAR -> HUD_HOTBAR;
             case AFTER_CHAT -> HUD_AFTER_CHAT;
             case END -> HUD_END;
         }, listener);
+    }
+
+    public static KineticEventSubscription registerBlockScreenEffect(KineticClientEvents.BlockScreenEffectHandler listener) {
+        initialize();
+        return add(BLOCK_SCREEN_EFFECT, listener);
+    }
+
+    public static KineticEventSubscription registerInventoryEffectLayout(KineticClientEvents.InventoryEffectLayoutHandler listener) {
+        initialize();
+        return add(INVENTORY_EFFECT_LAYOUT, listener);
     }
 
     private static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -175,45 +212,51 @@ public final class KineticClientEventRuntime {
         fire(LOGOUT);
     }
 
-    private static void onRegisterClientReloadListeners(RegisterClientReloadListenersEvent event) {
-        for (PreparableReloadListener listener : CLIENT_RELOAD_LISTENERS) {
-            event.registerReloadListener(listener);
+    private static void onItemTooltip(ItemTooltipEvent event) {
+        if (ITEM_TOOLTIP.isEmpty()) return;
+        ItemTooltipContextImpl context = new ItemTooltipContextImpl(event);
+        KineticCallbackBatch.runAll(ITEM_TOOLTIP, listener -> listener.handle(context));
+    }
+
+    private static synchronized void onRegisterClientReloadListeners(RegisterClientReloadListenersEvent event) {
+        reloadListenerRegistrationClosed = true;
+        RuntimeException failure = null;
+        try {
+            for (PreparableReloadListener listener : CLIENT_RELOAD_LISTENERS) {
+                try {
+                    event.registerReloadListener(listener);
+                } catch (RuntimeException exception) {
+                    if (failure == null) failure = exception;
+                    else if (failure != exception) failure.addSuppressed(exception);
+                }
+            }
+        } finally {
+            CLIENT_RELOAD_LISTENERS.clear();
         }
+        if (failure != null) throw failure;
     }
 
     private static void onScreenInitBefore(ScreenEvent.Init.Pre event) {
-        for (KineticClientEvents.ScreenHandler listener : SCREEN_INIT_BEFORE) {
-            listener.handle(event.getScreen());
-        }
+        KineticCallbackBatch.runAll(SCREEN_INIT_BEFORE, listener -> listener.handle(event.getScreen()));
     }
 
     private static void onScreenInitAfter(ScreenEvent.Init.Post event) {
-        for (KineticClientEvents.ScreenHandler listener : SCREEN_INIT_AFTER) {
-            listener.handle(event.getScreen());
-        }
-        if (!SCREEN_INIT_AFTER_WITH_CONTROLS.isEmpty()) {
-            ScreenInitContextImpl context = new ScreenInitContextImpl(
-                    event.getScreen(),
-                    event.getListenersList(),
-                    event::addListener,
-                    event::removeListener
-            );
-            for (KineticClientEvents.ScreenInitHandler listener : SCREEN_INIT_AFTER_WITH_CONTROLS) {
-                listener.handle(context);
-            }
-        }
+        if (SCREEN_INIT_AFTER.isEmpty()) return;
+        ScreenInitContextImpl context = new ScreenInitContextImpl(
+                event.getScreen(),
+                event.getListenersList(),
+                event::addListener,
+                event::removeListener
+        );
+        KineticCallbackBatch.runAll(SCREEN_INIT_AFTER, listener -> listener.handle(context));
     }
 
     private static void onScreenRenderBefore(ScreenEvent.Render.Pre event) {
-        for (KineticClientEvents.ScreenRenderHandler listener : SCREEN_RENDER_BEFORE) {
-            listener.render(event.getScreen(), event.getGuiGraphics(), event.getMouseX(), event.getMouseY(), event.getPartialTick());
-        }
+        KineticCallbackBatch.runAll(SCREEN_RENDER_BEFORE, listener -> listener.render(event.getScreen(), event.getGuiGraphics(), event.getMouseX(), event.getMouseY(), event.getPartialTick()));
     }
 
     private static void onScreenRenderAfter(ScreenEvent.Render.Post event) {
-        for (KineticClientEvents.ScreenRenderHandler listener : SCREEN_RENDER_AFTER) {
-            listener.render(event.getScreen(), event.getGuiGraphics(), event.getMouseX(), event.getMouseY(), event.getPartialTick());
-        }
+        KineticCallbackBatch.runAll(SCREEN_RENDER_AFTER, listener -> listener.render(event.getScreen(), event.getGuiGraphics(), event.getMouseX(), event.getMouseY(), event.getPartialTick()));
     }
 
     private static void onScreenMousePressedBefore(ScreenEvent.MouseButtonPressed.Pre event) {
@@ -226,50 +269,47 @@ public final class KineticClientEventRuntime {
 
     private static void onHudOverlayRender(RenderGuiOverlayEvent.Post event) {
         if (event.getOverlay() == VanillaGuiOverlay.HOTBAR.type()) {
-            for (KineticClientEvents.HudRenderHandler listener : HUD_HOTBAR) {
-                listener.render(event.getGuiGraphics(), event.getPartialTick());
-            }
+            KineticCallbackBatch.runAll(HUD_HOTBAR, listener -> listener.render(event.getGuiGraphics(), event.getPartialTick()));
         }
         if (event.getOverlay() == VanillaGuiOverlay.CHAT_PANEL.type()) {
-            for (KineticClientEvents.HudRenderHandler listener : HUD_AFTER_CHAT) {
-                listener.render(event.getGuiGraphics(), event.getPartialTick());
-            }
+            KineticCallbackBatch.runAll(HUD_AFTER_CHAT, listener -> listener.render(event.getGuiGraphics(), event.getPartialTick()));
         }
     }
 
     private static void onMouseButtonBefore(InputEvent.MouseButton.Pre event) {
         if (MOUSE_BUTTON_BEFORE.isEmpty()) return;
         MouseButtonContextImpl context = new MouseButtonContextImpl(event);
-        for (KineticClientEvents.MouseButtonHandler listener : MOUSE_BUTTON_BEFORE) {
-            listener.handle(context);
-            if (context.cancelled()) break;
-        }
+        KineticCallbackBatch.runUntilCancelled(
+                MOUSE_BUTTON_BEFORE,
+                listener -> listener.handle(context),
+                context::cancelled
+        );
     }
 
     private static void onInteractionKey(InputEvent.InteractionKeyMappingTriggered event) {
         if (INTERACTION_KEY.isEmpty()) return;
         InteractionKeyContextImpl context = new InteractionKeyContextImpl(event);
-        for (KineticClientEvents.InteractionKeyHandler listener : INTERACTION_KEY) {
-            listener.handle(context);
-            if (context.cancelled()) break;
-        }
+        KineticCallbackBatch.runUntilCancelled(
+                INTERACTION_KEY,
+                listener -> listener.handle(context),
+                context::cancelled
+        );
     }
 
     private static void onPlayerRenderBefore(RenderPlayerEvent.Pre event) {
         if (PLAYER_RENDER_BEFORE.isEmpty()) return;
         PlayerRenderBeforeContextImpl context = new PlayerRenderBeforeContextImpl(event);
-        for (KineticClientEvents.PlayerRenderBeforeHandler listener : PLAYER_RENDER_BEFORE) {
-            listener.render(context);
-            if (context.cancelled()) break;
-        }
+        KineticCallbackBatch.runUntilCancelled(
+                PLAYER_RENDER_BEFORE,
+                listener -> listener.render(context),
+                context::cancelled
+        );
     }
 
     private static void onPlayerRenderAfter(RenderPlayerEvent.Post event) {
         if (PLAYER_RENDER_AFTER.isEmpty()) return;
         PlayerRenderContextImpl context = new PlayerRenderContextImpl(event);
-        for (KineticClientEvents.PlayerRenderAfterHandler listener : PLAYER_RENDER_AFTER) {
-            listener.render(context);
-        }
+        KineticCallbackBatch.runAll(PLAYER_RENDER_AFTER, listener -> listener.render(context));
     }
 
     private static void onLevelRender(RenderLevelStageEvent event) {
@@ -278,9 +318,13 @@ public final class KineticClientEventRuntime {
         CopyOnWriteArrayList<KineticClientEvents.LevelRenderHandler> listeners = LEVEL_RENDER.get(stage);
         if (listeners == null || listeners.isEmpty()) return;
         LevelRenderContextImpl context = new LevelRenderContextImpl(event);
-        for (KineticClientEvents.LevelRenderHandler listener : listeners) {
-            listener.render(context);
-        }
+        KineticCallbackBatch.runAll(listeners, listener -> listener.render(context));
+    }
+
+    private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
+        if (CAMERA_ANGLES.isEmpty()) return;
+        CameraAnglesContextImpl context = new CameraAnglesContextImpl(event);
+        KineticCallbackBatch.runAll(CAMERA_ANGLES, listener -> listener.handle(context));
     }
 
     private static KineticClientEvents.LevelRenderStage mapLevelRenderStage(RenderLevelStageEvent.Stage stage) {
@@ -299,8 +343,91 @@ public final class KineticClientEventRuntime {
     }
 
     private static void onHudRenderEnd(RenderGuiEvent.Post event) {
-        for (KineticClientEvents.HudRenderHandler listener : HUD_END) {
-            listener.render(event.getGuiGraphics(), event.getPartialTick());
+        KineticCallbackBatch.runAll(HUD_END, listener -> listener.render(event.getGuiGraphics(), event.getPartialTick()));
+    }
+
+    private static void onBlockScreenEffect(RenderBlockScreenEffectEvent event) {
+        if (BLOCK_SCREEN_EFFECT.isEmpty()) return;
+        BlockScreenEffectContextImpl context = new BlockScreenEffectContextImpl(event);
+        KineticCallbackBatch.runUntilCancelled(
+                BLOCK_SCREEN_EFFECT,
+                listener -> listener.handle(context),
+                context::cancelled
+        );
+    }
+
+    private static void onInventoryEffectLayout(ScreenEvent.RenderInventoryMobEffects event) {
+        InventoryEffectLayoutContextImpl context = new InventoryEffectLayoutContextImpl(
+                event.getAvailableSpace(), KineticEffectDisplay.compact(event.getAvailableSpace())
+        );
+        RuntimeException failure = null;
+        try {
+            KineticCallbackBatch.runAll(INVENTORY_EFFECT_LAYOUT, listener -> listener.configure(context));
+        } catch (RuntimeException exception) {
+            failure = exception;
+        }
+        // Always apply the final layout decision, even if an earlier addon failed.
+        try {
+            event.setCompact(context.compact());
+        } catch (RuntimeException exception) {
+            if (failure == null) failure = exception;
+            else if (failure != exception) failure.addSuppressed(exception);
+        }
+        if (failure != null) throw failure;
+    }
+
+    private static final class BlockScreenEffectContextImpl implements KineticClientEvents.BlockScreenEffectContext {
+        private final RenderBlockScreenEffectEvent event;
+
+        private BlockScreenEffectContextImpl(RenderBlockScreenEffectEvent event) {
+            this.event = event;
+        }
+
+        @Override
+        public boolean cancelled() {
+            return event.isCanceled();
+        }
+
+        @Override
+        public void cancel() {
+            event.setCanceled(true);
+        }
+    }
+
+    private static final class InventoryEffectLayoutContextImpl implements KineticClientEvents.InventoryEffectLayoutContext {
+        private final int availableSpace;
+        private boolean compact;
+
+        private InventoryEffectLayoutContextImpl(int availableSpace, boolean compact) {
+            this.availableSpace = availableSpace;
+            this.compact = compact;
+        }
+
+        @Override
+        public int availableSpace() {
+            return availableSpace;
+        }
+
+        @Override
+        public boolean compact() {
+            return compact;
+        }
+
+        @Override
+        public void setCompact(boolean compact) {
+            this.compact = compact;
+        }
+    }
+
+    private record ItemTooltipContextImpl(ItemTooltipEvent event) implements KineticClientEvents.ItemTooltipContext {
+        @Override
+        public net.minecraft.world.item.ItemStack itemStack() {
+            return event.getItemStack();
+        }
+
+        @Override
+        public java.util.List<net.minecraft.network.chat.Component> tooltip() {
+            return event.getToolTip();
         }
     }
 
@@ -339,10 +466,11 @@ public final class KineticClientEventRuntime {
         ScreenMouseButtonContextImpl context = new ScreenMouseButtonContextImpl(
                 screen, mouseX, mouseY, button, initiallyCancelled, cancelAction
         );
-        for (KineticClientEvents.ScreenMouseButtonHandler listener : listeners) {
-            listener.handle(context);
-            if (context.cancelled()) break;
-        }
+        KineticCallbackBatch.runUntilCancelled(
+                listeners,
+                listener -> listener.handle(context),
+                context::cancelled
+        );
     }
 
     private static final class ScreenMouseButtonContextImpl implements KineticClientEvents.ScreenMouseButtonContext {
@@ -500,6 +628,48 @@ public final class KineticClientEventRuntime {
         }
     }
 
+    private record CameraAnglesContextImpl(ViewportEvent.ComputeCameraAngles event) implements KineticClientEvents.CameraAnglesContext {
+        @Override
+        public net.minecraft.client.Camera camera() {
+            return event.getCamera();
+        }
+
+        @Override
+        public float partialTick() {
+            return (float) event.getPartialTick();
+        }
+
+        @Override
+        public float yaw() {
+            return event.getYaw();
+        }
+
+        @Override
+        public void setYaw(float yaw) {
+            event.setYaw(yaw);
+        }
+
+        @Override
+        public float pitch() {
+            return event.getPitch();
+        }
+
+        @Override
+        public void setPitch(float pitch) {
+            event.setPitch(pitch);
+        }
+
+        @Override
+        public float roll() {
+            return event.getRoll();
+        }
+
+        @Override
+        public void setRoll(float roll) {
+            event.setRoll(roll);
+        }
+    }
+
     private record LevelRenderContextImpl(RenderLevelStageEvent event) implements KineticClientEvents.LevelRenderContext {
         @Override
         public com.mojang.blaze3d.vertex.PoseStack poseStack() {
@@ -536,13 +706,11 @@ public final class KineticClientEventRuntime {
     }
 
     private static void fire(CopyOnWriteArrayList<Runnable> listeners) {
-        for (Runnable listener : listeners) {
-            listener.run();
-        }
+        KineticCallbackBatch.runAll(listeners, Runnable::run);
     }
 
-    private static <T> HookRegistration add(CopyOnWriteArrayList<T> listeners, T listener) {
+    private static <T> KineticEventSubscription add(CopyOnWriteArrayList<T> listeners, T listener) {
         listeners.add(listener);
-        return () -> listeners.remove(listener);
+        return KineticEventSubscription.once(() -> listeners.remove(listener));
     }
 }

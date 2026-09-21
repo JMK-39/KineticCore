@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.tps.logic;
 
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
 import dev.xyat.kineticcore.api.monitoring.KineticServerPerformance;
 import dev.xyat.kineticcore.api.monitoring.ServerTickTracker;
 import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
@@ -12,13 +14,13 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class TpsHudManager {
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
 
     public static void register() {
-        if (registered) return;
-        registered = true;
-        KineticServerEvents.onTick(KineticServerEvents.TickPhase.END, TpsHudManager::onServerTick);
-        KineticServerEvents.onPlayerLogout(TpsHudManager::onPlayerLogout);
+        REGISTRATION.run(
+                () -> KineticServerEvents.onTick(KineticEventPriority.NORMAL, KineticServerEvents.TickPhase.END, TpsHudManager::onServerTick),
+                () -> KineticServerEvents.onPlayerLogout(KineticEventPriority.NORMAL, TpsHudManager::onPlayerLogout)
+        );
     }
 
     private static final Set<UUID> SUBSCRIBERS = new HashSet<>();

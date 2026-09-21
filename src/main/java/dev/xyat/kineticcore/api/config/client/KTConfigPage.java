@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.api.config.client;
 
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -15,7 +16,9 @@ import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
 
+/** Public API type for kt config page. */
 public final class KTConfigPage {
+    /** Supported apply timing values exposed by this API. */
     public enum ApplyTiming {
         IMMEDIATE(
                 "gui.kineticcore.config.apply.immediate.short",
@@ -96,56 +99,93 @@ public final class KTConfigPage {
         this.saver = builder.saver;
     }
 
+    /**
+     * Creates a new builder.
+     */
     public static Builder builder(String id, Component title) {
         return new Builder(id, title);
     }
 
+    /**
+     * Returns the id.
+     */
     public String id() {
         return id;
     }
 
+    /**
+     * Returns the title.
+     */
     public Component title() {
         return title;
     }
 
+    /**
+     * Returns the description.
+     */
     public Component description() {
         return description;
     }
 
+    /**
+     * Returns the scope.
+     */
     public KTConfigScope scope() {
         return scope;
     }
 
+    /**
+     * Performs the server managed API operation.
+     */
     public boolean serverManaged() {
         return serverManaged;
     }
 
+    /**
+     * Applies timing.
+     */
     public ApplyTiming applyTiming() {
         return applyTiming;
     }
 
+    /**
+     * Applies notice.
+     */
     public Component applyNotice() {
         return applyNotice;
     }
 
+    /**
+     * Returns the entries.
+     */
     public List<KTConfigEntry<?>> entries() {
         return entries;
     }
 
+    /**
+     * Performs the shows apply timing API operation.
+     */
     public boolean showsApplyTiming() {
-        return applyNotice != null || entries.stream().anyMatch(KTConfigEntry::isValue);
+        return applyNotice != null || entries.stream().anyMatch(KTConfigEntry::isValueEntry);
     }
 
+    /**
+     * Applies detail.
+     */
     public Component applyDetail() {
         return applyNotice != null
                 ? applyNotice
-                : Component.translatable(applyTiming.detailTranslationKey());
+                : KineticI18n.translatable(applyTiming.detailTranslationKey());
     }
 
+    /**
+     * Saves the current values.
+     */
     public void save() {
         saver.run();
     }
 
+    /** Builder for definitions owned by the enclosing API. */
     public static final class Builder {
         private final String id;
         private final Component title;
@@ -164,36 +204,57 @@ public final class KTConfigPage {
             this.title = Objects.requireNonNull(title, "title");
         }
 
+        /**
+         * Performs the page description API operation.
+         */
         public Builder pageDescription(Component description) {
             this.description = description;
             return this;
         }
 
+        /**
+         * Returns the scope.
+         */
         public Builder scope(KTConfigScope scope) {
             this.scope = Objects.requireNonNull(scope, "scope");
             return this;
         }
 
+        /**
+         * Performs the server managed API operation.
+         */
         public Builder serverManaged() {
             this.serverManaged = true;
             return this;
         }
 
+        /**
+         * Applies timing.
+         */
         public Builder applyTiming(ApplyTiming applyTiming) {
             this.applyTiming = Objects.requireNonNull(applyTiming, "applyTiming");
             return this;
         }
 
+        /**
+         * Applies notice.
+         */
         public Builder applyNotice(Component applyNotice) {
             this.applyNotice = Objects.requireNonNull(applyNotice, "applyNotice");
             return this;
         }
 
+        /**
+         * Registers a listener for save.
+         */
         public Builder onSave(Runnable saver) {
             this.saver = Objects.requireNonNull(saver, "saver");
             return this;
         }
 
+        /**
+         * Performs the section API operation.
+         */
         public Builder section(Component label) {
             entries.add(KTConfigEntry.structural(
                     "__section_" + structuralIndex++,
@@ -203,6 +264,9 @@ public final class KTConfigPage {
             return this;
         }
 
+        /**
+         * Returns the description.
+         */
         public Builder description(Component text) {
             entries.add(KTConfigEntry.structural(
                     "__description_" + structuralIndex++,
@@ -212,14 +276,20 @@ public final class KTConfigPage {
             return this;
         }
 
+        /**
+         * Returns the boolean value.
+         */
         public Builder booleanValue(
                 String id, Component label, Supplier<Boolean> reader, Consumer<Boolean> writer,
                 boolean defaultValue, Component tooltip
         ) {
-            return booleanValue(id, label, reader, writer, defaultValue, value -> true, tooltip);
+            return booleanValueValidated(id, label, reader, writer, defaultValue, value -> true, tooltip);
         }
 
-        public Builder booleanValue(
+        /**
+         * Performs the boolean value validated API operation.
+         */
+        public Builder booleanValueValidated(
                 String id, Component label, Supplier<Boolean> reader, Consumer<Boolean> writer,
                 boolean defaultValue, Predicate<Boolean> validator, Component tooltip
         ) {
@@ -230,14 +300,20 @@ public final class KTConfigPage {
             );
         }
 
+        /**
+         * Returns the int value.
+         */
         public Builder intValue(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
                 int defaultValue, int minimum, int maximum, Component tooltip
         ) {
-            return intValue(id, label, reader, writer, defaultValue, minimum, maximum, value -> true, tooltip);
+            return intValueValidated(id, label, reader, writer, defaultValue, minimum, maximum, value -> true, tooltip);
         }
 
-        public Builder intValue(
+        /**
+         * Performs the int value validated API operation.
+         */
+        public Builder intValueValidated(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
                 int defaultValue, int minimum, int maximum, Predicate<Integer> validator, Component tooltip
         ) {
@@ -249,14 +325,20 @@ public final class KTConfigPage {
             );
         }
 
+        /**
+         * Returns the long value.
+         */
         public Builder longValue(
                 String id, Component label, Supplier<Long> reader, Consumer<Long> writer,
                 long defaultValue, long minimum, long maximum, Component tooltip
         ) {
-            return longValue(id, label, reader, writer, defaultValue, minimum, maximum, value -> true, tooltip);
+            return longValueValidated(id, label, reader, writer, defaultValue, minimum, maximum, value -> true, tooltip);
         }
 
-        public Builder longValue(
+        /**
+         * Performs the long value validated API operation.
+         */
+        public Builder longValueValidated(
                 String id, Component label, Supplier<Long> reader, Consumer<Long> writer,
                 long defaultValue, long minimum, long maximum, Predicate<Long> validator, Component tooltip
         ) {
@@ -268,7 +350,10 @@ public final class KTConfigPage {
             );
         }
 
-        public Builder intValue(
+        /**
+         * Performs the int value unbounded API operation.
+         */
+        public Builder intValueUnbounded(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
                 int defaultValue, Component tooltip
         ) {
@@ -278,17 +363,23 @@ public final class KTConfigPage {
             );
         }
 
-        public Builder intValue(
+        /**
+         * Performs the int value unbounded validated API operation.
+         */
+        public Builder intValueUnboundedValidated(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
                 int defaultValue, Predicate<Integer> validator, Component tooltip
         ) {
-            return intValue(
+            return intValueValidated(
                     id, label, reader, writer, defaultValue,
                     Integer.MIN_VALUE, Integer.MAX_VALUE, validator, tooltip
             );
         }
 
-        public Builder longValue(
+        /**
+         * Performs the long value unbounded API operation.
+         */
+        public Builder longValueUnbounded(
                 String id, Component label, Supplier<Long> reader, Consumer<Long> writer,
                 long defaultValue, Component tooltip
         ) {
@@ -298,24 +389,33 @@ public final class KTConfigPage {
             );
         }
 
-        public Builder longValue(
+        /**
+         * Performs the long value unbounded validated API operation.
+         */
+        public Builder longValueUnboundedValidated(
                 String id, Component label, Supplier<Long> reader, Consumer<Long> writer,
                 long defaultValue, Predicate<Long> validator, Component tooltip
         ) {
-            return longValue(
+            return longValueValidated(
                     id, label, reader, writer, defaultValue,
                     Long.MIN_VALUE, Long.MAX_VALUE, validator, tooltip
             );
         }
 
+        /**
+         * Returns the double value.
+         */
         public Builder doubleValue(
                 String id, Component label, Supplier<Double> reader, Consumer<Double> writer,
                 double defaultValue, double minimum, double maximum, Component tooltip
         ) {
-            return doubleValue(id, label, reader, writer, defaultValue, minimum, maximum, value -> true, tooltip);
+            return doubleValueValidated(id, label, reader, writer, defaultValue, minimum, maximum, value -> true, tooltip);
         }
 
-        public Builder doubleValue(
+        /**
+         * Performs the double value validated API operation.
+         */
+        public Builder doubleValueValidated(
                 String id, Component label, Supplier<Double> reader, Consumer<Double> writer,
                 double defaultValue, double minimum, double maximum, Predicate<Double> validator, Component tooltip
         ) {
@@ -329,7 +429,10 @@ public final class KTConfigPage {
             );
         }
 
-        public Builder doubleValue(
+        /**
+         * Performs the double value unbounded API operation.
+         */
+        public Builder doubleValueUnbounded(
                 String id, Component label, Supplier<Double> reader, Consumer<Double> writer,
                 double defaultValue, Component tooltip
         ) {
@@ -339,24 +442,33 @@ public final class KTConfigPage {
             );
         }
 
-        public Builder doubleValue(
+        /**
+         * Performs the double value unbounded validated API operation.
+         */
+        public Builder doubleValueUnboundedValidated(
                 String id, Component label, Supplier<Double> reader, Consumer<Double> writer,
                 double defaultValue, Predicate<Double> validator, Component tooltip
         ) {
-            return doubleValue(
+            return doubleValueValidated(
                     id, label, reader, writer, defaultValue,
                     -Double.MAX_VALUE, Double.MAX_VALUE, validator, tooltip
             );
         }
 
+        /**
+         * Returns the string value.
+         */
         public Builder stringValue(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
                 String defaultValue, Component tooltip
         ) {
-            return stringValue(id, label, reader, writer, defaultValue, value -> true, tooltip);
+            return stringValueValidated(id, label, reader, writer, defaultValue, value -> true, tooltip);
         }
 
-        public Builder stringValue(
+        /**
+         * Performs the string value validated API operation.
+         */
+        public Builder stringValueValidated(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
                 String defaultValue, Predicate<String> validator, Component tooltip
         ) {
@@ -367,14 +479,20 @@ public final class KTConfigPage {
             );
         }
 
+        /**
+         * Returns the long text value.
+         */
         public Builder longTextValue(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
                 String defaultValue, Component tooltip
         ) {
-            return longTextValue(id, label, reader, writer, defaultValue, value -> true, tooltip);
+            return longTextValueValidated(id, label, reader, writer, defaultValue, value -> true, tooltip);
         }
 
-        public Builder longTextValue(
+        /**
+         * Performs the long text value validated API operation.
+         */
+        public Builder longTextValueValidated(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
                 String defaultValue, Predicate<String> validator, Component tooltip
         ) {
@@ -385,37 +503,55 @@ public final class KTConfigPage {
             );
         }
 
+        /**
+         * Performs the choice API operation.
+         */
         public Builder choice(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
                 String defaultValue, Component tooltip, String... choices
         ) {
-            return choice(id, label, reader, writer, defaultValue, value -> true, tooltip, choices);
+            return choiceValidated(id, label, reader, writer, defaultValue, value -> true, tooltip, choices);
         }
 
-        public Builder choice(
+        /**
+         * Performs the choice validated API operation.
+         */
+        public Builder choiceValidated(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
                 String defaultValue, Predicate<String> validator, Component tooltip, String... choices
         ) {
             KTConfigEntry.ChoiceOption[] options = Arrays.stream(choices)
-                    .map(KTConfigEntry.ChoiceOption::literal)
+                    .map(value -> new KTConfigEntry.ChoiceOption(value, Component.empty(), Component.empty()))
                     .toArray(KTConfigEntry.ChoiceOption[]::new);
-            return choice(id, label, reader, writer, defaultValue, validator, tooltip, options);
+            return choiceOptionsValidated(id, label, reader, writer, defaultValue, validator, tooltip, options);
         }
 
-        public Builder choice(
+        /**
+         * Performs the choice options API operation.
+         */
+        public Builder choiceOptions(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
                 String defaultValue, Component tooltip, KTConfigEntry.ChoiceOption... choices
         ) {
-            return choice(id, label, reader, writer, defaultValue, value -> true, tooltip, choices);
+            return choiceOptionsValidated(id, label, reader, writer, defaultValue, value -> true, tooltip, choices);
         }
 
-        public Builder choice(
+        /**
+         * Performs the choice options validated API operation.
+         */
+        public Builder choiceOptionsValidated(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
                 String defaultValue, Predicate<String> validator, Component tooltip,
                 KTConfigEntry.ChoiceOption... choices
         ) {
             List<KTConfigEntry.ChoiceOption> values = List.copyOf(Arrays.asList(choices));
             if (values.isEmpty()) throw new IllegalArgumentException("choices cannot be empty for " + id);
+            Set<String> distinctValues = new HashSet<>();
+            for (KTConfigEntry.ChoiceOption option : values) {
+                if (!distinctValues.add(option.value())) {
+                    throw new IllegalArgumentException("Duplicate choice value for " + id + ": " + option.value());
+                }
+            }
             if (values.stream().noneMatch(option -> option.value().equals(defaultValue))) {
                 throw new IllegalArgumentException("default value is not a choice for " + id);
             }
@@ -426,17 +562,23 @@ public final class KTConfigPage {
             );
         }
 
+        /**
+         * Performs the translated choice API operation.
+         */
         public Builder translatedChoice(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
                 String defaultValue, Component tooltip, String translationKeyPrefix, String... choices
         ) {
-            return translatedChoice(
+            return translatedChoiceValidated(
                     id, label, reader, writer, defaultValue, value -> true,
                     tooltip, translationKeyPrefix, choices
             );
         }
 
-        public Builder translatedChoice(
+        /**
+         * Performs the translated choice validated API operation.
+         */
+        public Builder translatedChoiceValidated(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
                 String defaultValue, Predicate<String> validator, Component tooltip,
                 String translationKeyPrefix, String... choices
@@ -444,22 +586,29 @@ public final class KTConfigPage {
             String prefix = Objects.requireNonNull(translationKeyPrefix, "translationKeyPrefix").trim();
             if (prefix.isEmpty()) throw new IllegalArgumentException("translationKeyPrefix cannot be blank");
             KTConfigEntry.ChoiceOption[] options = Arrays.stream(choices)
-                    .map(value -> KTConfigEntry.ChoiceOption.translated(
+                    .map(value -> new KTConfigEntry.ChoiceOption(
                             value,
-                            prefix + "." + value.toLowerCase(java.util.Locale.ROOT)
+                            KineticI18n.translatable(prefix + "." + value.toLowerCase(java.util.Locale.ROOT)),
+                            Component.empty()
                     ))
                     .toArray(KTConfigEntry.ChoiceOption[]::new);
-            return choice(id, label, reader, writer, defaultValue, validator, tooltip, options);
+            return choiceOptionsValidated(id, label, reader, writer, defaultValue, validator, tooltip, options);
         }
 
+        /**
+         * Performs the string list API operation.
+         */
         public Builder stringList(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
                 List<String> defaultValue, Component tooltip
         ) {
-            return stringList(id, label, reader, writer, defaultValue, value -> true, tooltip);
+            return stringListValidated(id, label, reader, writer, defaultValue, value -> true, tooltip);
         }
 
-        public Builder stringList(
+        /**
+         * Performs the string list validated API operation.
+         */
+        public Builder stringListValidated(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
                 List<String> defaultValue, Predicate<List<String>> validator, Component tooltip
         ) {
@@ -470,14 +619,20 @@ public final class KTConfigPage {
             );
         }
 
+        /**
+         * Performs the entity list API operation.
+         */
         public Builder entityList(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
                 List<String> defaultValue, Component tooltip
         ) {
-            return entityList(id, label, reader, writer, defaultValue, value -> true, tooltip);
+            return entityListValidated(id, label, reader, writer, defaultValue, value -> true, tooltip);
         }
 
-        public Builder entityList(
+        /**
+         * Performs the entity list validated API operation.
+         */
+        public Builder entityListValidated(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
                 List<String> defaultValue, Predicate<List<String>> validator, Component tooltip
         ) {
@@ -488,14 +643,20 @@ public final class KTConfigPage {
             );
         }
 
+        /**
+         * Performs the item list API operation.
+         */
         public Builder itemList(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
                 List<String> defaultValue, Component tooltip
         ) {
-            return itemList(id, label, reader, writer, defaultValue, value -> true, tooltip);
+            return itemListValidated(id, label, reader, writer, defaultValue, value -> true, tooltip);
         }
 
-        public Builder itemList(
+        /**
+         * Performs the item list validated API operation.
+         */
+        public Builder itemListValidated(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
                 List<String> defaultValue, Predicate<List<String>> validator, Component tooltip
         ) {
@@ -506,14 +667,20 @@ public final class KTConfigPage {
             );
         }
 
+        /**
+         * Performs the item rule list API operation.
+         */
         public Builder itemRuleList(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
                 List<String> defaultValue, Component tooltip
         ) {
-            return itemRuleList(id, label, reader, writer, defaultValue, value -> true, tooltip);
+            return itemRuleListValidated(id, label, reader, writer, defaultValue, value -> true, tooltip);
         }
 
-        public Builder itemRuleList(
+        /**
+         * Performs the item rule list validated API operation.
+         */
+        public Builder itemRuleListValidated(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
                 List<String> defaultValue, Predicate<List<String>> validator, Component tooltip
         ) {
@@ -525,17 +692,23 @@ public final class KTConfigPage {
         }
 
 
+        /**
+         * Returns the tick seconds value.
+         */
         public Builder tickSecondsValue(
                 String id, Component label, Supplier<Integer> tickReader, Consumer<Integer> tickWriter,
                 int defaultTicks, int minimumTicks, int maximumTicks, Component tooltip
         ) {
-            return tickSecondsValue(
+            return tickSecondsValueValidated(
                     id, label, tickReader, tickWriter,
                     defaultTicks, minimumTicks, maximumTicks, value -> true, tooltip
             );
         }
 
-        public Builder tickSecondsValue(
+        /**
+         * Performs the tick seconds value validated API operation.
+         */
+        public Builder tickSecondsValueValidated(
                 String id, Component label, Supplier<Integer> tickReader, Consumer<Integer> tickWriter,
                 int defaultTicks, int minimumTicks, int maximumTicks,
                 Predicate<Double> validator, Component tooltip
@@ -548,7 +721,7 @@ public final class KTConfigPage {
                     clampTicks(tickReader.get(), minimumTicks, maximumTicks));
             Consumer<Double> secondsWriter = seconds -> tickWriter.accept(
                     secondsToTicks(seconds, minimumTicks, maximumTicks));
-            return doubleValue(
+            return doubleValueValidated(
                     id, label, secondsReader, secondsWriter,
                     ticksToSeconds(defaultTicks),
                     ticksToSeconds(minimumTicks),
@@ -557,14 +730,20 @@ public final class KTConfigPage {
             );
         }
 
+        /**
+         * Performs the int list API operation.
+         */
         public Builder intList(
                 String id, Component label, Supplier<List<Integer>> reader, Consumer<List<Integer>> writer,
                 List<Integer> defaultValue, Component tooltip
         ) {
-            return intList(id, label, reader, writer, defaultValue, value -> true, tooltip);
+            return intListValidated(id, label, reader, writer, defaultValue, value -> true, tooltip);
         }
 
-        public Builder intList(
+        /**
+         * Performs the int list validated API operation.
+         */
+        public Builder intListValidated(
                 String id, Component label, Supplier<List<Integer>> reader, Consumer<List<Integer>> writer,
                 List<Integer> defaultValue, Predicate<List<Integer>> validator, Component tooltip
         ) {
@@ -575,14 +754,20 @@ public final class KTConfigPage {
             );
         }
 
+        /**
+         * Performs the color API operation.
+         */
         public Builder color(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
                 int defaultValue, Component tooltip
         ) {
-            return color(id, label, reader, writer, defaultValue, value -> true, tooltip);
+            return colorValidated(id, label, reader, writer, defaultValue, value -> true, tooltip);
         }
 
-        public Builder color(
+        /**
+         * Performs the color validated API operation.
+         */
+        public Builder colorValidated(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
                 int defaultValue, Predicate<Integer> validator, Component tooltip
         ) {
@@ -593,18 +778,26 @@ public final class KTConfigPage {
             );
         }
 
+        /**
+         * Performs the action API operation.
+         */
         public Builder action(String id, Component label, Runnable action, Component tooltip) {
             requireEntryId(id);
             requireUniqueEntryId(id);
-            entries.add(KTConfigEntry.action(
+            KTConfigEntry<Void> entry = KTConfigEntry.action(
                     id,
                     Objects.requireNonNull(label, "label"),
                     tooltip,
                     Objects.requireNonNull(action, "action")
-            ));
+            );
+            entries.add(entry);
+            entryIds.add(id);
             return this;
         }
 
+        /**
+         * Builds the configured API value.
+         */
         public KTConfigPage build() {
             if (serverManaged && scope != KTConfigScope.SERVER_AUTHORITATIVE) {
                 throw new IllegalStateException(
@@ -671,11 +864,12 @@ public final class KTConfigPage {
                 throw new IllegalArgumentException("Invalid default value for " + id + ": " + defaultValue);
             }
             entries.add(entry);
+            entryIds.add(id);
             return this;
         }
 
         private void requireUniqueEntryId(String id) {
-            if (!entryIds.add(id)) {
+            if (entryIds.contains(id)) {
                 throw new IllegalArgumentException("Duplicate entry id: " + id);
             }
         }

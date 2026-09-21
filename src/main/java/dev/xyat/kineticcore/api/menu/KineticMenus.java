@@ -11,7 +11,9 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+/** Public Kinetic API facade for menus. */
 public final class KineticMenus {
+    /** Factory contract for creating menu instances. */
     @FunctionalInterface
     public interface MenuFactory {
         AbstractContainerMenu create(int containerId, Inventory inventory, Player player);
@@ -20,10 +22,19 @@ public final class KineticMenus {
     private KineticMenus() {
     }
 
-    public static void open(ServerPlayer player, Component title, MenuFactory factory) {
+
+    /** Opens a menu that does not require extra opening payload data. */
+    public static void open(
+            ServerPlayer player,
+            Component title,
+            MenuFactory factory
+    ) {
         open(player, title, factory, null);
     }
 
+    /**
+     * Opens the requested API resource or view.
+     */
     public static void open(
             ServerPlayer player,
             Component title,

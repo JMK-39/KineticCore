@@ -1,14 +1,14 @@
 package dev.xyat.kineticcore.feature.defaultoptions;
 
-import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.hook.ClientHooks;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.api.minecraft.MinecraftKeys;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.Options;
-import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -18,27 +18,26 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class OptionsManager {
-    private static boolean hookRegistered;
+    private static final File CUSTOM_DEFAULTS_FILE = KineticPlatform.configDirectory().resolve("kineticcore/defaultoptions.txt").toFile();
+    private static final KineticRegistrationBatch HOOK_REGISTRATION = new KineticRegistrationBatch();
 
-    public static void registerHook() {
-        if (hookRegistered) return;
-        hookRegistered = true;
-        ClientHooks.onOptionsLoading(options -> {
-            OptionsManager.enforceDefaultOptions();
-            OptionsManager.applyCustomKeyDefaults(options);
-        });
+    public static synchronized void registerHook() {
+        if (!KineticFeatureSwitches.isEnabled("client.default_options")) return;
+        HOOK_REGISTRATION.run(() -> ClientHooks.onOptionsLoading(options -> {
+            enforceDefaultOptions();
+            applyCustomKeyDefaults(MinecraftKeys.snapshotMappings(options.keyMappings));
+        }));
     }
-    private static final File CUSTOM_DEFAULTS_FILE = FMLPaths.CONFIGDIR.get().resolve("kineticcore/defaultoptions.txt").toFile();
 
     public static class KeyData {
-        public InputConstants.Key key = null;
+        public String serializedKey = null;
         public KineticKeyBindings.Modifier modifier = KineticKeyBindings.Modifier.NONE;
     }
 
     public static void enforceDefaultOptions() {
         if (!CUSTOM_DEFAULTS_FILE.exists()) return;
 
-        File gameOptionsFile = FMLPaths.GAMEDIR.get().resolve("options.txt").toFile();
+        File gameOptionsFile = KineticPlatform.gameDirectory().resolve("options.txt").toFile();
         boolean shouldReplace = false;
 
         if (!gameOptionsFile.exists()) {
@@ -57,22 +56,22 @@ public class OptionsManager {
         }
     }
 
-    public static void applyCustomKeyDefaults(Options options) {
+    public static void applyCustomKeyDefaults(Iterable<KeyMapping> mappings) {
         if (!CUSTOM_DEFAULTS_FILE.exists()) return;
 
         Map<String, KeyData> newDefaults = parseKeysFromDefaultFile();
         boolean changed = false;
 
-        for (KeyMapping mapping : options.keyMappings) {
+        for (KeyMapping mapping : mappings) {
             KeyData newData = newDefaults.get(mapping.getName());
-            if (newData != null && newData.key != null) {
-                MinecraftKeys.setDefault(mapping, newData.key, newData.modifier);
+            if (newData != null && newData.serializedKey != null
+                    && MinecraftKeys.setDefaultSerialized(mapping, newData.serializedKey, newData.modifier)) {
                 changed = true;
             }
         }
 
         if (changed) {
-            KeyMapping.resetMapping();
+            MinecraftKeys.resetMappings();
         }
     }
 
@@ -99,9 +98,8 @@ public class OptionsManager {
                                 keyCodeStr = payload;
                             }
 
-                            InputConstants.Key key = InputConstants.getKey(keyCodeStr);
                             KeyData data = defaultKeys.computeIfAbsent(name, k -> new KeyData());
-                            data.key = key;
+                            data.serializedKey = keyCodeStr;
                             if (modifier != KineticKeyBindings.Modifier.NONE || data.modifier == null) {
                                 data.modifier = modifier;
                             }
@@ -125,10 +123,9 @@ public class OptionsManager {
 
     public static void saveAllSettingsAsDefault() throws IOException {
 
-        Minecraft mc = Minecraft.getInstance();
-        mc.options.save();
+        KineticClientRuntime.saveOptions();
 
-        File gameOptionsFile = new File(mc.gameDirectory, "options.txt");
+        File gameOptionsFile = KineticPlatform.gameDirectory().resolve("options.txt").toFile();
         if (!gameOptionsFile.exists()) throw new FileNotFoundException();
 
         if (!CUSTOM_DEFAULTS_FILE.getParentFile().exists() && !CUSTOM_DEFAULTS_FILE.getParentFile().mkdirs()) {
@@ -136,6 +133,6 @@ public class OptionsManager {
         }
 
         Files.copy(gameOptionsFile.toPath(), CUSTOM_DEFAULTS_FILE.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        applyCustomKeyDefaults(mc.options);
+        applyCustomKeyDefaults(MinecraftKeys.currentMappings());
     }
 }

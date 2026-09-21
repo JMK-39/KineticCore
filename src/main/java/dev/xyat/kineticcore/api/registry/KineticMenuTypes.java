@@ -9,7 +9,9 @@ import net.minecraft.world.inventory.MenuType;
 
 import java.util.Objects;
 
+/** Public Kinetic API facade for menu types. */
 public final class KineticMenuTypes {
+    /** Factory contract used by the enclosing API. */
     @FunctionalInterface
     public interface Factory<T extends AbstractContainerMenu> {
         T create(int containerId, Inventory inventory, NetworkBuffer data);
@@ -18,6 +20,9 @@ public final class KineticMenuTypes {
     private KineticMenuTypes() {
     }
 
+    /**
+     * Registers this API capability.
+     */
     public static <T extends AbstractContainerMenu> KineticRegistryHandle<MenuType<T>> register(
             ResourceLocation id,
             Factory<T> factory
@@ -28,11 +33,4 @@ public final class KineticMenuTypes {
         );
     }
 
-    public static <T extends AbstractContainerMenu> KineticRegistryHandle<MenuType<T>> register(
-            String namespace,
-            String path,
-            Factory<T> factory
-    ) {
-        return register(new ResourceLocation(namespace, path), factory);
-    }
 }

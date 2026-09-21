@@ -4,74 +4,131 @@ import dev.xyat.kineticcore.internal.client.search.ItemSearchIndex;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
-import java.util.Set;
 
+/**
+ * Read-only item-search API backed by Kinetic's shared client index.
+ * <p>
+ * Cached entries never expose the mutable {@link ItemStack} held by the shared index; {@link CachedItem#stack()}
+ * returns a copy so add-ons cannot corrupt another consumer's cached search data.
+ */
 public final class KineticItemSearch {
-    private static volatile List<ItemSearchIndex.CachedItem> cachedSource = List.of();
-    private static volatile List<CachedItem> cachedView = List.of();
+    // Publish source identity and its immutable view together: a concurrent caller must never
+    // observe a newly indexed source paired with the previous source's view.
+    private record CacheSnapshot(List<ItemSearchIndex.CachedItem> source, List<CachedItem> view) {
+    }
+
+    private static volatile CacheSnapshot cached = new CacheSnapshot(List.of(), List.of());
 
     private KineticItemSearch() {
     }
 
+    /** Immutable search metadata for one indexed item. */
     public static final class CachedItem {
-        public final ItemStack stack;
-        public final String idStr;
-        public final String uniqueKey;
-        public final String displayName;
-        public final String namespace;
-        public final List<String> tagIds;
-        public final String searchData;
-
-        public CachedItem(ItemStack stack) {
-            this(new ItemSearchIndex.CachedItem(stack));
-        }
+        private final ItemStack stack;
+        private final String id;
+        private final String displayName;
+        private final String namespace;
+        private final List<String> tagIds;
+        private final String searchText;
 
         private CachedItem(ItemSearchIndex.CachedItem item) {
             this.stack = item.stack == null ? ItemStack.EMPTY : item.stack.copy();
-            this.idStr = item.idStr == null ? "" : item.idStr;
-            this.uniqueKey = item.uniqueKey == null ? "" : item.uniqueKey;
+            this.id = item.idStr == null ? "" : item.idStr;
             this.displayName = item.displayName == null ? "" : item.displayName;
             this.namespace = item.namespace == null ? "" : item.namespace;
             this.tagIds = item.tagIds == null ? List.of() : List.copyOf(item.tagIds);
-            this.searchData = item.searchData == null ? "" : item.searchData;
+            this.searchText = buildSearchText(this.displayName, this.id, this.namespace, this.tagIds);
         }
 
-        public static CachedItem custom(ItemStack stack, String idStr) {
-            return new CachedItem(ItemSearchIndex.CachedItem.custom(stack, idStr));
+        /** Returns a defensive copy of the indexed item stack. */
+        public ItemStack stack() {
+            return stack.copy();
+        }
+
+        /** Returns the normalized registry/custom id stored for this search entry. */
+        public String id() {
+            return id;
+        }
+
+        /** Returns the display name captured when the entry was indexed. */
+        public String displayName() {
+            return displayName;
+        }
+
+        /** Returns the item namespace used by {@code @namespace} filtering. */
+        public String namespace() {
+            return namespace;
+        }
+
+        /** Returns an immutable list of registry tag ids captured for this item. */
+        public List<String> tagIds() {
+            return tagIds;
+        }
+
+        /** Returns stable plain search text without exposing Kinetic's internal pinyin/index representation. */
+        public String searchText() {
+            return searchText;
+        }
+
+        /** Returns whether this indexed item matches the query using Kinetic search and pinyin rules. */
+        public boolean matches(String query) {
+            return KineticSearch.match(searchText, query);
+        }
+
+        private static String buildSearchText(String displayName, String id, String namespace, List<String> tagIds) {
+            StringBuilder builder = new StringBuilder();
+            if (displayName != null && !displayName.isBlank()) builder.append(displayName);
+            if (id != null && !id.isBlank()) builder.append(' ').append(id);
+            if (namespace != null && !namespace.isBlank()) builder.append(" @").append(namespace);
+            if (tagIds != null) {
+                for (String tag : tagIds) {
+                    if (tag != null && !tag.isBlank()) builder.append(" #").append(tag);
+                }
+            }
+            return builder.toString().trim();
         }
     }
 
-    public static String getUniqueKey(ItemStack stack) {
-        return ItemSearchIndex.getUniqueKey(stack);
+    /** Creates an immutable searchable snapshot for an ad-hoc item stack, such as a player inventory entry. */
+    public static CachedItem snapshot(ItemStack stack) {
+        return new CachedItem(new ItemSearchIndex.CachedItem(stack));
     }
 
-    public static Set<String> getRegistryTagIds(ItemStack stack) {
-        return ItemSearchIndex.getRegistryTagIds(stack);
+    /** Creates an immutable searchable snapshot whose identifier is supplied by the caller. */
+    public static CachedItem customSnapshot(ItemStack stack, String identifier) {
+        return new CachedItem(ItemSearchIndex.customItem(stack, identifier));
     }
 
-    public static List<CachedItem> getItems() {
+    /** Returns the current immutable cached item-search view. */
+    public static List<CachedItem> items() {
         List<ItemSearchIndex.CachedItem> source = ItemSearchIndex.getItems();
-        if (cachedSource == source) {
-            return cachedView;
+        CacheSnapshot snapshot = cached;
+        if (snapshot.source() == source) {
+            return snapshot.view();
         }
         synchronized (KineticItemSearch.class) {
-            if (cachedSource != source) {
-                cachedSource = source;
-                cachedView = source.stream().map(CachedItem::new).toList();
+            snapshot = cached;
+            if (snapshot.source() != source) {
+                snapshot = new CacheSnapshot(source, source.stream().map(CachedItem::new).toList());
+                cached = snapshot;
             }
-            return cachedView;
+            return snapshot.view();
         }
     }
 
-    public static boolean isReady() {
+    /** Returns whether the shared item-search cache has finished building and is ready for queries. */
+    public static boolean ready() {
         return ItemSearchIndex.isReady();
     }
 
+    /** Clears the shared item-search cache so it can be rebuilt for the current client context. */
     public static void clear() {
         ItemSearchIndex.clear();
+        cached = new CacheSnapshot(List.of(), List.of());
     }
 
-    public static void prepareCache(Runnable onDone) {
+    /** Ensures the shared cache is prepared, invoking the optional callback after a successful cache build. */
+    public static void prepare(Runnable onDone) {
         ItemSearchIndex.prepareCache(onDone == null ? () -> { } : onDone);
     }
 }

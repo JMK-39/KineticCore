@@ -60,7 +60,16 @@ public final class FeatureSwitchRuntime {
             boolean active = LOADED_VALUES.getOrDefault(definition.id(), definition.defaultEnabled());
             ACTIVE.put(definition.id(), active);
             CONFIGURED.put(definition.id(), active);
-            save(CONFIGURED);
+            try {
+                save(CONFIGURED);
+            } catch (RuntimeException | Error failure) {
+                // A failed persistence must not consume an addon's feature ID or
+                // publish a setting which never reached the on-disk config.
+                CONFIGURED.remove(definition.id());
+                ACTIVE.remove(definition.id());
+                EXTERNAL_DEFINITIONS.remove(definition.id());
+                throw failure;
+            }
         }
     }
 
@@ -196,7 +205,12 @@ public final class FeatureSwitchRuntime {
                 if (line.isEmpty() || line.startsWith("#") || line.startsWith("[")) continue;
                 String[] parts = line.split("=", 2);
                 if (parts.length == 2) {
-                    result.put(parts[0].trim(), Boolean.parseBoolean(parts[1].trim()));
+                    String rawValue = parts[1].split("#", 2)[0].trim();
+                    // Boolean.parseBoolean silently interprets every typo as false.
+                    // Invalid values must preserve the feature's declared default.
+                    if (rawValue.equalsIgnoreCase("true") || rawValue.equalsIgnoreCase("false")) {
+                        result.put(parts[0].trim(), Boolean.parseBoolean(rawValue));
+                    }
                 }
             }
         } catch (IOException exception) {
@@ -206,7 +220,9 @@ public final class FeatureSwitchRuntime {
     }
 
     private static void save(Map<String, Boolean> values) {
-        LOADED_VALUES.putAll(values);
+        // Keep the last successfully persisted snapshot intact if writing fails.
+        Map<String, Boolean> nextLoadedValues = new LinkedHashMap<>(LOADED_VALUES);
+        nextLoadedValues.putAll(values);
         Path temporaryFile = null;
         try {
             Path parent = CONFIG_PATH.getParent();
@@ -233,7 +249,7 @@ public final class FeatureSwitchRuntime {
 
                 List<String> registeredIds = definitions().stream().map(Definition::id).toList();
                 boolean wroteUnknownHeader = false;
-                for (Map.Entry<String, Boolean> entry : LOADED_VALUES.entrySet()) {
+                for (Map.Entry<String, Boolean> entry : nextLoadedValues.entrySet()) {
                     if (registeredIds.contains(entry.getKey())) continue;
                     if (!wroteUnknownHeader) {
                         writer.newLine();
@@ -252,6 +268,8 @@ public final class FeatureSwitchRuntime {
                 Files.move(temporaryFile, CONFIG_PATH, StandardCopyOption.REPLACE_EXISTING);
             }
             temporaryFile = null;
+            LOADED_VALUES.clear();
+            LOADED_VALUES.putAll(nextLoadedValues);
         } catch (IOException exception) {
             throw new UncheckedIOException("Failed to save startup feature config", exception);
         } finally {
@@ -304,7 +322,7 @@ public final class FeatureSwitchRuntime {
         definitions.add(def("client.copy_item_container_access", "client", true,
                 List.of("AbstractContainerScreenAccessor")));
         definitions.add(def("client.default_options", "client", true,
-                List.of("DefaultOptionsMixins", "KeyAccess")));
+                List.of()));
         definitions.add(def("client.interface_automation", "client", true,
                 List.of("ClientInterfaceMixins")));
         definitions.add(def("client.status_effect_hud", "client", true,

@@ -35,6 +35,11 @@ public final class KineticSoundEventRegistryRuntime {
     private record Handle(ResourceLocation id, RegistryObject<SoundEvent> object)
             implements KineticRegistryHandle<SoundEvent> {
         @Override
+        public boolean isPresent() {
+            return object.isPresent();
+        }
+
+        @Override
         public SoundEvent get() {
             return object.get();
         }

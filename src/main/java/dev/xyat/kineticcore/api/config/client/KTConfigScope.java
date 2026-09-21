@@ -23,10 +23,16 @@ public enum KTConfigScope {
         this.detailTranslationKey = detailTranslationKey;
     }
 
+    /**
+     * Performs the short translation key API operation.
+     */
     public String shortTranslationKey() {
         return shortTranslationKey;
     }
 
+    /**
+     * Performs the detail translation key API operation.
+     */
     public String detailTranslationKey() {
         return detailTranslationKey;
     }

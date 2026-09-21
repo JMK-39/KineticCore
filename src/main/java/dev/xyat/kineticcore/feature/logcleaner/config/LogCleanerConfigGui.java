@@ -1,10 +1,11 @@
 package dev.xyat.kineticcore.feature.logcleaner.config;
 
+
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import dev.xyat.kineticcore.api.config.client.KTConfigScope;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.network.chat.Component;
 
 public final class LogCleanerConfigGui {
     public static final String PAGE_ID = "kineticcore:log_cleaner";
@@ -17,67 +18,67 @@ public final class LogCleanerConfigGui {
     }
 
     public static Screen create(Screen parent) {
-        return KTConfigApi.createScreen(parent, PAGE_ID);
+        return KTConfigApi.createRegisteredPageScreen(parent, PAGE_ID);
     }
 
     private static KTConfigPage buildPage() {
-        return KTConfigPage.builder(PAGE_ID, Component.translatable("cfg.kineticcore.logcleaner.title"))
+        return KTConfigPage.builder(PAGE_ID, KineticI18n.translatable("cfg.kineticcore.logcleaner.title"))
                 .scope(KTConfigScope.LOCAL_INSTALLATION)
-                .pageDescription(Component.translatable("cfg.kineticcore.logcleaner.description"))
+                .pageDescription(KineticI18n.translatable("cfg.kineticcore.logcleaner.description"))
                 .applyTiming(KTConfigPage.ApplyTiming.IMMEDIATE)
                 .booleanValue(
                         "enable",
-                        Component.translatable("cfg.kineticcore.logcleaner.enable"),
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.enable"),
                         () -> LogCleanerConfig.enableCleanup,
                         value -> LogCleanerConfig.enableCleanup = value,
                         true,
-                        Component.translatable("cfg.kineticcore.logcleaner.enable.tooltip")
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.enable.tooltip")
                 )
                 .booleanValue(
                         "deduplication",
-                        Component.translatable("cfg.kineticcore.logcleaner.deduplication"),
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.deduplication"),
                         () -> LogCleanerConfig.enableLogDeduplication,
                         value -> LogCleanerConfig.enableLogDeduplication = value,
                         true,
-                        Component.translatable("cfg.kineticcore.logcleaner.deduplication.tooltip")
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.deduplication.tooltip")
                 )
                 .longTextValue(
                         "filtered_keywords",
-                        Component.translatable("cfg.kineticcore.logcleaner.filtered_keywords"),
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.filtered_keywords"),
                         () -> LogCleanerConfig.rawFilteredKeywords,
                         value -> LogCleanerConfig.rawFilteredKeywords = value,
                         "Tried to load a block entity for block",
-                        Component.translatable("cfg.kineticcore.logcleaner.filtered_keywords.tooltip")
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.filtered_keywords.tooltip")
                 )
                 .intValue(
                         "max_crash_reports",
-                        Component.translatable("cfg.kineticcore.logcleaner.max_crash_reports"),
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.max_crash_reports"),
                         () -> LogCleanerConfig.maxCrashReports,
                         value -> LogCleanerConfig.maxCrashReports = value,
                         3,
                         1,
                         Integer.MAX_VALUE,
-                        Component.translatable("cfg.kineticcore.logcleaner.max_crash_reports.tooltip")
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.max_crash_reports.tooltip")
                 )
                 .intValue(
                         "max_logs",
-                        Component.translatable("cfg.kineticcore.logcleaner.max_logs"),
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.max_logs"),
                         () -> LogCleanerConfig.maxLogs,
                         value -> LogCleanerConfig.maxLogs = value,
                         3,
                         1,
                         Integer.MAX_VALUE,
-                        Component.translatable("cfg.kineticcore.logcleaner.max_logs.tooltip")
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.max_logs.tooltip")
                 )
                 .intValue(
                         "max_debug_logs",
-                        Component.translatable("cfg.kineticcore.logcleaner.max_debug_logs"),
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.max_debug_logs"),
                         () -> LogCleanerConfig.maxDebugLogs,
                         value -> LogCleanerConfig.maxDebugLogs = value,
                         3,
                         1,
                         Integer.MAX_VALUE,
-                        Component.translatable("cfg.kineticcore.logcleaner.max_debug_logs.tooltip")
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.max_debug_logs.tooltip")
                 )
                 .onSave(LogCleanerConfig::save)
                 .build();

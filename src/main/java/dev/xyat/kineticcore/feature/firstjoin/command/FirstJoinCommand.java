@@ -1,10 +1,11 @@
 package dev.xyat.kineticcore.feature.firstjoin.command;
 
+
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
@@ -41,7 +42,7 @@ public class FirstJoinCommand {
                     // 保存至磁盘
                     PlayerConfig.save();
 
-                    ctx.getSource().sendSuccess(() -> Component.translatable("cmd.kineticcore.setfirstjoin.success"), true);
+                    ctx.getSource().sendSuccess(() -> KineticI18n.translatable("cmd.kineticcore.setfirstjoin.success"), true);
                     return 1;
                 })
         );

@@ -18,10 +18,14 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
 
 public final class KineticCreativeTabsRuntime {
     private static final Map<String, DeferredRegister<CreativeModeTab>> REGISTRIES = new LinkedHashMap<>();
+    private static final CopyOnWriteArrayList<KineticCreativeTabs.Handler> BUILD_CONTENT_HANDLERS =
+            new CopyOnWriteArrayList<>();
+    private static boolean buildContentsListenerRegistered;
     private KineticCreativeTabsRuntime() {
     }
 
@@ -39,10 +43,20 @@ public final class KineticCreativeTabsRuntime {
         return new Handle(id, object);
     }
 
-    public static void onBuildContents(KineticCreativeTabs.Handler handler) {
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(
-                (BuildCreativeModeTabContentsEvent event) -> handler.handle(new ContextImpl(event))
-        );
+    public static synchronized void onBuildContents(KineticCreativeTabs.Handler handler) {
+        ensureBuildContentsListener();
+        BUILD_CONTENT_HANDLERS.add(handler);
+    }
+
+    private static void ensureBuildContentsListener() {
+        if (buildContentsListenerRegistered) return;
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticCreativeTabsRuntime::onBuildContentsEvent);
+        buildContentsListenerRegistered = true;
+    }
+
+    private static void onBuildContentsEvent(BuildCreativeModeTabContentsEvent event) {
+        ContextImpl context = new ContextImpl(event);
+        KineticCallbackBatch.runAll(BUILD_CONTENT_HANDLERS, handler -> handler.handle(context));
     }
 
     public static List<KineticCreativeTabs.TabEntry> entries() {
@@ -74,6 +88,11 @@ public final class KineticCreativeTabsRuntime {
     }
 
     private record Handle(ResourceLocation id, RegistryObject<CreativeModeTab> object) implements KineticRegistryHandle<CreativeModeTab> {
+        @Override
+        public boolean isPresent() {
+            return object.isPresent();
+        }
+
         @Override
         public CreativeModeTab get() {
             return object.get();

@@ -17,21 +17,50 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/** Public Kinetic API facade for i18n. */
 public final class KineticI18n {
     private static final Map<String, Map<String, String>> DEFAULT_LANGUAGES = new ConcurrentHashMap<>();
 
     private KineticI18n() {
     }
 
+    /**
+     * Performs the translatable API operation.
+     */
     public static MutableComponent translatable(String key, Object... args) {
         String namespace = namespaceFromKey(key);
         if (namespace == null || args == null || args.length == 0) {
             return Component.translatable(key, args == null ? new Object[0] : args);
         }
-        return translatableIn(namespace, key, args);
+        return translatableWithStyle(namespace, key, true, args);
     }
 
+    /**
+     * Performs the styled API operation.
+     */
+    public static MutableComponent styled(String styleKey, Object value) {
+        String namespace = namespaceFromKey(styleKey);
+        if (namespace == null) {
+            return Component.literal(String.valueOf(value));
+        }
+        return translatableWithStyle(namespace, styleKey, false, value);
+    }
+
+    /**
+     * Performs the string API operation.
+     */
+    public static String string(String key, Object... args) {
+        return translatable(key, args).getString();
+    }
+
+    /**
+     * Performs the translatable in API operation.
+     */
     public static MutableComponent translatableIn(String namespace, String key, Object... args) {
+        return translatableWithStyle(namespace, key, true, args);
+    }
+
+    private static MutableComponent translatableWithStyle(String namespace, String key, boolean preserveArgumentColors, Object... args) {
         if (args == null || args.length == 0) {
             return Component.translatable(key);
         }
@@ -89,7 +118,7 @@ public final class KineticI18n {
             }
 
             if (argIndex >= 0 && argIndex < styledArgs.length && !activeFormats.isEmpty()) {
-                styledArgs[argIndex] = applyFormats(styledArgs[argIndex], activeFormats);
+                styledArgs[argIndex] = applyFormats(styledArgs[argIndex], activeFormats, preserveArgumentColors);
                 i = tokenEnd;
             }
         }
@@ -149,11 +178,17 @@ public final class KineticI18n {
         }
     }
 
-    private static MutableComponent applyFormats(Object value, List<ChatFormatting> formats) {
+    private static MutableComponent applyFormats(Object value, List<ChatFormatting> formats, boolean preserveArgumentColors) {
         MutableComponent component = value instanceof Component existing
                 ? existing.copy()
                 : Component.literal(String.valueOf(value));
-        component.withStyle(formats.toArray(new ChatFormatting[0]));
+        boolean preserveColor = preserveArgumentColors && component.getStyle().getColor() != null;
+        for (ChatFormatting format : formats) {
+            if (preserveColor && format.getColor() != null) {
+                continue;
+            }
+            component.withStyle(format);
+        }
         return component;
     }
 }

@@ -1,68 +1,117 @@
 package dev.xyat.kineticcore.api.server.event;
 
-import dev.xyat.kineticcore.api.hook.HookRegistration;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
+import dev.xyat.kineticcore.api.event.KineticEventSubscription;
 import dev.xyat.kineticcore.internal.runtime.event.KineticServerEventRuntime;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 
 import java.util.Objects;
 
+/**
+ * 事件订阅入口。非取消型回调按注册顺序逐一执行；某个回调抛出 RuntimeException
+ * 时仍执行后续回调，结束后抛出首个异常并附加后续异常。
+ * 取消型回调也逐项处理异常：未取消时继续下一个处理器；一旦取消立即停止，
+ * 即使取消方随后抛出异常也不会调用下一个处理器，最后报告首个异常及后续错误。
+ */
 public final class KineticServerEvents {
+    /** Supported tick phase values exposed by this API. */
     public enum TickPhase {
         START,
         END
     }
 
-    public enum Priority {
-        HIGHEST,
-        HIGH,
-        NORMAL,
-        LOW,
-        LOWEST
-    }
-
+    /** Callback contract for server notifications. */
     @FunctionalInterface
     public interface ServerHandler {
         void handle(MinecraftServer server);
     }
 
+    /** Callback contract for player notifications. */
     @FunctionalInterface
     public interface PlayerHandler {
         void handle(ServerPlayer player);
     }
 
+    /** Callback contract for player clone notifications. */
     @FunctionalInterface
     public interface PlayerCloneHandler {
         void handle(ServerPlayer original, ServerPlayer current, boolean wasDeath);
     }
 
+    /** Callback contract for player respawn notifications. */
     @FunctionalInterface
     public interface PlayerRespawnHandler {
         void handle(ServerPlayer player, boolean endConquered);
     }
 
+    /** Callback contract for player dimension notifications. */
     @FunctionalInterface
     public interface PlayerDimensionHandler {
         void handle(ServerPlayer player, ResourceKey<Level> from, ResourceKey<Level> to);
     }
 
+    /** Callback contract for datapack sync notifications. */
     @FunctionalInterface
     public interface DatapackSyncHandler {
         void handle(MinecraftServer server, ServerPlayer player);
     }
 
-    public interface ChatContext {
+    /** Context exposed to player game mode change callbacks. */
+    public interface PlayerGameModeChangeContext {
         ServerPlayer player();
 
-        net.minecraft.network.chat.Component message();
+        GameType currentGameMode();
+
+        GameType newGameMode();
+
+        void setNewGameMode(GameType gameMode);
 
         boolean cancelled();
 
         void cancel();
     }
 
+    /** Callback contract for player game mode change notifications. */
+    @FunctionalInterface
+    public interface PlayerGameModeChangeHandler {
+        void handle(PlayerGameModeChangeContext context);
+    }
+
+    /** Context exposed to command callbacks. */
+    public interface CommandContext {
+        CommandSourceStack source();
+
+        String command();
+
+        boolean cancelled();
+
+        void cancel();
+    }
+
+    /** Callback contract for command notifications. */
+    @FunctionalInterface
+    public interface CommandHandler {
+        void handle(CommandContext context);
+    }
+
+    /** Context exposed to chat callbacks. */
+    public interface ChatContext {
+        ServerPlayer player();
+
+        Component message();
+
+        boolean cancelled();
+
+        void cancel();
+    }
+
+    /** Callback contract for chat notifications. */
     @FunctionalInterface
     public interface ChatHandler {
         void handle(ChatContext context);
@@ -71,143 +120,147 @@ public final class KineticServerEvents {
     private KineticServerEvents() {
     }
 
-    public static HookRegistration onTick(TickPhase phase, ServerHandler listener) {
-        return onTick(Priority.NORMAL, phase, listener);
-    }
-
-    public static HookRegistration onTick(Priority priority, TickPhase phase, ServerHandler listener) {
+    /**
+     * Registers a listener for tick.
+     */
+    public static KineticEventSubscription onTick(KineticEventPriority priority, TickPhase phase, ServerHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(phase, "phase");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerTick(priority, phase, listener);
     }
 
-    public static HookRegistration onPlayerTick(TickPhase phase, PlayerHandler listener) {
-        return onPlayerTick(Priority.NORMAL, phase, listener);
-    }
-
-    public static HookRegistration onPlayerTick(Priority priority, TickPhase phase, PlayerHandler listener) {
+    /**
+     * Registers a listener for player tick.
+     */
+    public static KineticEventSubscription onPlayerTick(KineticEventPriority priority, TickPhase phase, PlayerHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(phase, "phase");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerPlayerTick(priority, phase, listener);
     }
 
-    public static HookRegistration onAboutToStart(ServerHandler listener) {
-        return onAboutToStart(Priority.NORMAL, listener);
-    }
-
-    public static HookRegistration onAboutToStart(Priority priority, ServerHandler listener) {
+    /**
+     * Registers a listener for about to start.
+     */
+    public static KineticEventSubscription onAboutToStart(KineticEventPriority priority, ServerHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerAboutToStart(priority, listener);
     }
 
-    public static HookRegistration onStarting(ServerHandler listener) {
-        return onStarting(Priority.NORMAL, listener);
-    }
-
-    public static HookRegistration onStarting(Priority priority, ServerHandler listener) {
+    /**
+     * Registers a listener for starting.
+     */
+    public static KineticEventSubscription onStarting(KineticEventPriority priority, ServerHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerStarting(priority, listener);
     }
 
-    public static HookRegistration onStarted(ServerHandler listener) {
-        return onStarted(Priority.NORMAL, listener);
-    }
-
-    public static HookRegistration onStarted(Priority priority, ServerHandler listener) {
+    /**
+     * Registers a listener for started.
+     */
+    public static KineticEventSubscription onStarted(KineticEventPriority priority, ServerHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerStarted(priority, listener);
     }
 
-    public static HookRegistration onStopping(ServerHandler listener) {
-        return onStopping(Priority.NORMAL, listener);
-    }
-
-    public static HookRegistration onStopping(Priority priority, ServerHandler listener) {
+    /**
+     * Registers a listener for stopping.
+     */
+    public static KineticEventSubscription onStopping(KineticEventPriority priority, ServerHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerStopping(priority, listener);
     }
 
-    public static HookRegistration onStopped(ServerHandler listener) {
-        return onStopped(Priority.NORMAL, listener);
-    }
-
-    public static HookRegistration onStopped(Priority priority, ServerHandler listener) {
+    /**
+     * Registers a listener for stopped.
+     */
+    public static KineticEventSubscription onStopped(KineticEventPriority priority, ServerHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerStopped(priority, listener);
     }
 
-    public static HookRegistration onPlayerLogin(PlayerHandler listener) {
-        return onPlayerLogin(Priority.NORMAL, listener);
-    }
-
-    public static HookRegistration onPlayerLogin(Priority priority, PlayerHandler listener) {
+    /**
+     * Registers a listener for player login.
+     */
+    public static KineticEventSubscription onPlayerLogin(KineticEventPriority priority, PlayerHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerPlayerLogin(priority, listener);
     }
 
-    public static HookRegistration onPlayerLogout(PlayerHandler listener) {
-        return onPlayerLogout(Priority.NORMAL, listener);
-    }
-
-    public static HookRegistration onPlayerLogout(Priority priority, PlayerHandler listener) {
+    /**
+     * Registers a listener for player logout.
+     */
+    public static KineticEventSubscription onPlayerLogout(KineticEventPriority priority, PlayerHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerPlayerLogout(priority, listener);
     }
 
-    public static HookRegistration onPlayerClone(PlayerCloneHandler listener) {
-        return onPlayerClone(Priority.NORMAL, listener);
-    }
-
-    public static HookRegistration onPlayerClone(Priority priority, PlayerCloneHandler listener) {
+    /**
+     * Registers a listener for player clone.
+     */
+    public static KineticEventSubscription onPlayerClone(KineticEventPriority priority, PlayerCloneHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerPlayerClone(priority, listener);
     }
 
-    public static HookRegistration onPlayerRespawn(PlayerRespawnHandler listener) {
-        return onPlayerRespawn(Priority.NORMAL, listener);
-    }
-
-    public static HookRegistration onPlayerRespawn(Priority priority, PlayerRespawnHandler listener) {
+    /**
+     * Registers a listener for player respawn.
+     */
+    public static KineticEventSubscription onPlayerRespawn(KineticEventPriority priority, PlayerRespawnHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerPlayerRespawn(priority, listener);
     }
 
-    public static HookRegistration onPlayerChangedDimension(PlayerDimensionHandler listener) {
-        return onPlayerChangedDimension(Priority.NORMAL, listener);
-    }
-
-    public static HookRegistration onPlayerChangedDimension(Priority priority, PlayerDimensionHandler listener) {
+    /**
+     * Registers a listener for player changed dimension.
+     */
+    public static KineticEventSubscription onPlayerChangedDimension(KineticEventPriority priority, PlayerDimensionHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerPlayerChangedDimension(priority, listener);
     }
 
-    public static HookRegistration onDatapackSync(DatapackSyncHandler listener) {
-        return onDatapackSync(Priority.NORMAL, listener);
+    /**
+     * Registers a listener for player game mode change.
+     */
+    public static KineticEventSubscription onPlayerGameModeChange(KineticEventPriority priority, PlayerGameModeChangeHandler listener) {
+        Objects.requireNonNull(priority, "priority");
+        Objects.requireNonNull(listener, "listener");
+        return KineticServerEventRuntime.registerPlayerGameModeChange(priority, listener);
     }
 
-    public static HookRegistration onDatapackSync(Priority priority, DatapackSyncHandler listener) {
+    /**
+     * Registers a listener for command.
+     */
+    public static KineticEventSubscription onCommand(KineticEventPriority priority, CommandHandler listener) {
+        Objects.requireNonNull(priority, "priority");
+        Objects.requireNonNull(listener, "listener");
+        return KineticServerEventRuntime.registerCommand(priority, listener);
+    }
+
+    /**
+     * Registers a listener for datapack sync.
+     */
+    public static KineticEventSubscription onDatapackSync(KineticEventPriority priority, DatapackSyncHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerDatapackSync(priority, listener);
     }
 
-    public static HookRegistration onChat(ChatHandler listener) {
-        return onChat(Priority.NORMAL, listener);
-    }
-
-    public static HookRegistration onChat(Priority priority, ChatHandler listener) {
+    /**
+     * Registers a listener for chat.
+     */
+    public static KineticEventSubscription onChat(KineticEventPriority priority, ChatHandler listener) {
         Objects.requireNonNull(priority, "priority");
         Objects.requireNonNull(listener, "listener");
         return KineticServerEventRuntime.registerChat(priority, listener);

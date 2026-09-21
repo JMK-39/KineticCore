@@ -1,6 +1,9 @@
 package dev.xyat.kineticcore.internal.runtime.event;
 
-import dev.xyat.kineticcore.api.hook.HookRegistration;
+import dev.xyat.kineticcore.internal.runtime.KineticCallbackBatch;
+import dev.xyat.kineticcore.internal.runtime.KineticForgeListenerRegistrations;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
+import dev.xyat.kineticcore.api.event.KineticEventSubscription;
 import dev.xyat.kineticcore.api.villager.event.KineticVillagerEvents;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.npc.VillagerTrades;
@@ -14,49 +17,49 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class KineticVillagerEventRuntime {
-    private static final EnumMap<KineticVillagerEvents.Priority, CopyOnWriteArrayList<KineticVillagerEvents.VillagerTradesHandler>> VILLAGER = villagerBuckets();
-    private static final EnumMap<KineticVillagerEvents.Priority, CopyOnWriteArrayList<KineticVillagerEvents.WandererTradesHandler>> WANDERER = wandererBuckets();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticVillagerEvents.VillagerTradesHandler>> VILLAGER = villagerBuckets();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticVillagerEvents.WandererTradesHandler>> WANDERER = wandererBuckets();
+    private static final KineticForgeListenerRegistrations LISTENER_REGISTRATIONS = new KineticForgeListenerRegistrations();
     private static boolean initialized;
 
     private KineticVillagerEventRuntime() {
     }
 
-    public static HookRegistration registerVillagerTrades(KineticVillagerEvents.Priority priority, KineticVillagerEvents.VillagerTradesHandler handler) {
+    public static KineticEventSubscription registerVillagerTrades(KineticEventPriority priority, KineticVillagerEvents.VillagerTradesHandler handler) {
         initialize();
         CopyOnWriteArrayList<KineticVillagerEvents.VillagerTradesHandler> bucket = VILLAGER.get(priority);
         bucket.add(handler);
-        return () -> bucket.remove(handler);
+        return KineticEventSubscription.once(() -> bucket.remove(handler));
     }
 
-    public static HookRegistration registerWandererTrades(KineticVillagerEvents.Priority priority, KineticVillagerEvents.WandererTradesHandler handler) {
+    public static KineticEventSubscription registerWandererTrades(KineticEventPriority priority, KineticVillagerEvents.WandererTradesHandler handler) {
         initialize();
         CopyOnWriteArrayList<KineticVillagerEvents.WandererTradesHandler> bucket = WANDERER.get(priority);
         bucket.add(handler);
-        return () -> bucket.remove(handler);
+        return KineticEventSubscription.once(() -> bucket.remove(handler));
     }
 
     private static synchronized void initialize() {
         if (initialized) return;
-        initialized = true;
-        for (KineticVillagerEvents.Priority priority : KineticVillagerEvents.Priority.values()) {
+        var attempt = LISTENER_REGISTRATIONS.begin();
+        int slot = 0;
+        for (KineticEventPriority priority : KineticEventPriority.values()) {
             EventPriority forgePriority = toForge(priority);
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (VillagerTradesEvent event) -> dispatchVillager(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (WandererTradesEvent event) -> dispatchWanderer(priority, event));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (VillagerTradesEvent event) -> dispatchVillager(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (WandererTradesEvent event) -> dispatchWanderer(priority, event)));
         }
+        attempt.finish();
+        initialized = true;
     }
 
-    private static void dispatchVillager(KineticVillagerEvents.Priority priority, VillagerTradesEvent event) {
+    private static void dispatchVillager(KineticEventPriority priority, VillagerTradesEvent event) {
         VillagerContext context = new VillagerContext(event);
-        for (KineticVillagerEvents.VillagerTradesHandler handler : VILLAGER.get(priority)) {
-            handler.handle(context);
-        }
+        KineticCallbackBatch.runAll(VILLAGER.get(priority), handler -> handler.handle(context));
     }
 
-    private static void dispatchWanderer(KineticVillagerEvents.Priority priority, WandererTradesEvent event) {
+    private static void dispatchWanderer(KineticEventPriority priority, WandererTradesEvent event) {
         WandererContext context = new WandererContext(event);
-        for (KineticVillagerEvents.WandererTradesHandler handler : WANDERER.get(priority)) {
-            handler.handle(context);
-        }
+        KineticCallbackBatch.runAll(WANDERER.get(priority), handler -> handler.handle(context));
     }
 
     private record VillagerContext(VillagerTradesEvent event) implements KineticVillagerEvents.VillagerTradesContext {
@@ -83,7 +86,7 @@ public final class KineticVillagerEventRuntime {
         }
     }
 
-    private static EventPriority toForge(KineticVillagerEvents.Priority priority) {
+    private static EventPriority toForge(KineticEventPriority priority) {
         return switch (priority) {
             case HIGHEST -> EventPriority.HIGHEST;
             case HIGH -> EventPriority.HIGH;
@@ -93,17 +96,17 @@ public final class KineticVillagerEventRuntime {
         };
     }
 
-    private static EnumMap<KineticVillagerEvents.Priority, CopyOnWriteArrayList<KineticVillagerEvents.VillagerTradesHandler>> villagerBuckets() {
-        EnumMap<KineticVillagerEvents.Priority, CopyOnWriteArrayList<KineticVillagerEvents.VillagerTradesHandler>> result = new EnumMap<>(KineticVillagerEvents.Priority.class);
-        for (KineticVillagerEvents.Priority priority : KineticVillagerEvents.Priority.values()) {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticVillagerEvents.VillagerTradesHandler>> villagerBuckets() {
+        EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticVillagerEvents.VillagerTradesHandler>> result = new EnumMap<>(KineticEventPriority.class);
+        for (KineticEventPriority priority : KineticEventPriority.values()) {
             result.put(priority, new CopyOnWriteArrayList<>());
         }
         return result;
     }
 
-    private static EnumMap<KineticVillagerEvents.Priority, CopyOnWriteArrayList<KineticVillagerEvents.WandererTradesHandler>> wandererBuckets() {
-        EnumMap<KineticVillagerEvents.Priority, CopyOnWriteArrayList<KineticVillagerEvents.WandererTradesHandler>> result = new EnumMap<>(KineticVillagerEvents.Priority.class);
-        for (KineticVillagerEvents.Priority priority : KineticVillagerEvents.Priority.values()) {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticVillagerEvents.WandererTradesHandler>> wandererBuckets() {
+        EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticVillagerEvents.WandererTradesHandler>> result = new EnumMap<>(KineticEventPriority.class);
+        for (KineticEventPriority priority : KineticEventPriority.values()) {
             result.put(priority, new CopyOnWriteArrayList<>());
         }
         return result;

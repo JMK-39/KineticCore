@@ -1,19 +1,22 @@
 package dev.xyat.kineticcore.api.client.widget.scroll;
 
-import net.minecraft.client.Minecraft;
+import javax.annotation.Nonnull;
+
+import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
+import dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.util.Mth;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 
+/**
+ * Shared smooth-scroll state and grid-scroll controller API.
+ */
 public final class KineticScroll {
     private KineticScroll() {}
 
     private static final class ScrollUtil {
-        public static final int SCROLLBAR_VISUAL_WIDTH = 4;
-        public static final int DEFAULT_TRACK_COLOR = 0xFF171717;
-        public static final int DEFAULT_THUMB_COLOR = 0xFFFF9800;
-        public static final int DEFAULT_THUMB_HOVER_COLOR = 0xFFFFD700;
+        private static final int SCROLLBAR_VISUAL_WIDTH = 4;
 
         private static int visualScrollbarWidth(int requestedWidth) {
             return Math.min(SCROLLBAR_VISUAL_WIDTH, Math.max(1, requestedWidth));
@@ -23,140 +26,351 @@ public final class KineticScroll {
             return requestedX + Math.max(0, requestedWidth - visualScrollbarWidth(requestedWidth));
         }
 
-        /**
-         * 计算滑块高度
-         */
-        public static int calculateThumbHeight(int trackHeight, int visibleItems, int totalItems, int minHeight) {
-            if (totalItems <= 0) return minHeight;
-            return Math.max(minHeight, (int) ((float) visibleItems / totalItems * trackHeight));
+        private static int calculateThumbHeight(int trackHeight, int visibleItems, int totalItems, int minHeight) {
+            if (trackHeight <= 0) return 0;
+            if (totalItems <= 0) return trackHeight;
+            int minimum = Math.min(trackHeight, Math.max(1, minHeight));
+            int calculated = (int) ((double) Math.max(0, visibleItems) / totalItems * trackHeight);
+            return Math.min(trackHeight, Math.max(minimum, calculated));
         }
 
-        /**
-         * 根据鼠标位置计算滚动偏移量
-         */
-        public static int calculateScrollOffset(double mouseY, int trackY, int trackHeight, int thumbHeight, int maxScroll) {
-            return (int) Math.round(calculateScrollOffsetPrecise(mouseY, trackY, trackHeight, thumbHeight, maxScroll));
-        }
-
-        public static double calculateScrollOffsetPrecise(double mouseY, int trackY, int trackHeight, int thumbHeight, int maxScroll) {
-            double relativeY = mouseY - trackY - (thumbHeight / 2.0D);
-            double scrollableHeight = trackHeight - thumbHeight;
-            if (scrollableHeight <= 0D || maxScroll <= 0) {
-                return 0D;
-            }
-            return Mth.clamp((relativeY / scrollableHeight) * maxScroll, 0D, maxScroll);
-        }
-
-        /**
-         * Renders the default scrollbar theme.
-         */
-        public static void renderScrollbar(GuiGraphics g, int barX, int barY, int barWidth, int trackHeight, int thumbHeight, int maxScroll, int currentScroll, boolean isDragging) {
-            renderScrollbar(g, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, currentScroll, isDragging, DEFAULT_TRACK_COLOR, DEFAULT_THUMB_COLOR, DEFAULT_THUMB_HOVER_COLOR);
-        }
-
-        public static void renderScrollbar(GuiGraphics g, int barX, int barY, int barWidth, int trackHeight, int thumbHeight, int maxScroll, double currentScroll, boolean isDragging) {
-            renderScrollbar(g, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, currentScroll, isDragging, DEFAULT_TRACK_COLOR, DEFAULT_THUMB_COLOR, DEFAULT_THUMB_HOVER_COLOR);
-        }
-
-        /**
-         * Renders the default scrollbar theme with automatic thumb hover highlighting.
-         */
-        public static void renderScrollbar(
-                GuiGraphics g,
-                double mouseX,
-                double mouseY,
-                int barX,
-                int barY,
-                int barWidth,
+        private static int calculateScrollOffset(
+                double pointerY,
+                int trackY,
                 int trackHeight,
                 int thumbHeight,
-                int maxScroll,
-                int currentScroll,
-                boolean isDragging
+                int maxOffset
         ) {
-            renderScrollbar(g, mouseX, mouseY, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, (double) currentScroll, isDragging);
+            return (int) Math.round(calculateScrollOffsetPrecise(
+                    pointerY, trackY, trackHeight, thumbHeight, maxOffset
+            ));
         }
 
-        public static void renderScrollbar(
-                GuiGraphics g,
-                double mouseX,
-                double mouseY,
-                int barX,
-                int barY,
-                int barWidth,
+        private static double calculateScrollOffsetPrecise(
+                double pointerY,
+                int trackY,
                 int trackHeight,
                 int thumbHeight,
-                int maxScroll,
-                double currentScroll,
-                boolean isDragging
+                int maxOffset
         ) {
-            int safeMaxScroll = Math.max(0, maxScroll);
-            if (safeMaxScroll <= 0 || trackHeight <= 0 || barWidth <= 0) return;
-            int safeThumbHeight = Mth.clamp(thumbHeight, 1, trackHeight);
-            double safeCurrentScroll = Math.max(0D, Math.min(currentScroll, safeMaxScroll));
+            if (!Double.isFinite(pointerY) || trackHeight <= 0 || maxOffset <= 0) return 0D;
+            double relativeY = pointerY - trackY - thumbHeight / 2.0D;
+            double scrollableHeight = (double) trackHeight - thumbHeight;
+            if (scrollableHeight <= 0D) return 0D;
+            return Mth.clamp((relativeY / scrollableHeight) * maxOffset, 0D, maxOffset);
+        }
+
+        private static double calculateTrackPointerOffsetPrecise(
+                double pointerY,
+                int trackY,
+                int trackHeight,
+                int maxOffset
+        ) {
+            if (!Double.isFinite(pointerY) || trackHeight <= 0 || maxOffset <= 0) return 0D;
+            double relativeY = Mth.clamp(pointerY - trackY, 0D, trackHeight);
+            return relativeY / trackHeight * maxOffset;
+        }
+
+        private static double verticalOffsetFromThumbStart(
+                double thumbStartY,
+                int trackY,
+                int trackHeight,
+                int thumbHeight,
+                int maxOffset
+        ) {
+            int safeThumbHeight = Mth.clamp(thumbHeight, 1, Math.max(1, trackHeight));
+            int travel = Math.max(0, trackHeight - safeThumbHeight);
+            if (!Double.isFinite(thumbStartY) || maxOffset <= 0 || travel == 0) return 0D;
+            double local = Mth.clamp(thumbStartY - trackY, 0D, travel);
+            return local / travel * maxOffset;
+        }
+
+        private static void renderScrollbar(
+                GuiGraphics graphics,
+                double mouseX,
+                double mouseY,
+                int x,
+                int y,
+                int width,
+                int height,
+                int thumbHeight,
+                int maxOffset,
+                double offset,
+                boolean dragging
+        ) {
+            int safeMaxOffset = Math.max(0, maxOffset);
+            if (safeMaxOffset <= 0 || height <= 0 || width <= 0) return;
+            int safeThumbHeight = Mth.clamp(thumbHeight, 1, height);
+            double safeOffset = Mth.clamp(offset, 0D, safeMaxOffset);
             boolean hovered = isHoveringThumb(
                     mouseX,
                     mouseY,
-                    barX,
-                    barY,
-                    barWidth,
-                    trackHeight,
+                    x,
+                    y,
+                    width,
+                    height,
                     safeThumbHeight,
-                    safeMaxScroll,
-                    safeCurrentScroll
+                    safeMaxOffset,
+                    safeOffset
             );
-            renderScrollbar(
-                    g,
-                    barX,
-                    barY,
-                    barWidth,
-                    trackHeight,
-                    safeThumbHeight,
-                    safeMaxScroll,
-                    safeCurrentScroll,
-                    isDragging || hovered,
-                    DEFAULT_TRACK_COLOR,
-                    DEFAULT_THUMB_COLOR,
-                    DEFAULT_THUMB_HOVER_COLOR
+            int thumbY = y + (int) Math.round(
+                    safeOffset / safeMaxOffset * (height - safeThumbHeight)
+            );
+            int visualWidth = visualScrollbarWidth(width);
+            int visualX = visualScrollbarX(x, width);
+            GuiTheme.Palette theme = GuiTheme.current();
+            graphics.fill(visualX, y, visualX + visualWidth, y + height, theme.scrollTrack());
+            graphics.fill(
+                    visualX,
+                    thumbY,
+                    visualX + visualWidth,
+                    thumbY + safeThumbHeight,
+                    dragging || hovered ? theme.scrollThumbHover() : theme.scrollThumb()
             );
         }
 
-        /**
-         * 渲染可自定义颜色的滚动条。
-         */
-        public static void renderScrollbar(GuiGraphics g, int barX, int barY, int barWidth, int trackHeight, int thumbHeight, int maxScroll, int currentScroll, boolean highlighted, int trackColor, int thumbColor, int highlightColor) {
-            renderScrollbar(g, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, (double) currentScroll, highlighted, trackColor, thumbColor, highlightColor);
+        private static void renderHorizontalScrollbar(
+                GuiGraphics graphics,
+                double mouseX,
+                double mouseY,
+                int x,
+                int y,
+                int width,
+                int height,
+                int thumbWidth,
+                int maxOffset,
+                double offset,
+                boolean dragging
+        ) {
+            int safeMaxOffset = Math.max(0, maxOffset);
+            if (safeMaxOffset <= 0 || height <= 0 || width <= 0) return;
+            int safeThumbWidth = Mth.clamp(thumbWidth, 1, width);
+            double safeOffset = Mth.clamp(offset, 0D, safeMaxOffset);
+            int thumbX = horizontalThumbStart(x, width, safeThumbWidth, safeMaxOffset, safeOffset);
+            boolean hovered = mouseX >= thumbX
+                    && mouseX <= thumbX + safeThumbWidth
+                    && mouseY >= y
+                    && mouseY <= y + height;
+            GuiTheme.Palette theme = GuiTheme.current();
+            graphics.fill(x, y, x + width, y + height, theme.scrollTrack());
+            graphics.fill(
+                    thumbX,
+                    y,
+                    thumbX + safeThumbWidth,
+                    y + height,
+                    dragging || hovered ? theme.scrollThumbHover() : theme.scrollThumb()
+            );
         }
 
-        public static void renderScrollbar(GuiGraphics g, int barX, int barY, int barWidth, int trackHeight, int thumbHeight, int maxScroll, double currentScroll, boolean highlighted, int trackColor, int thumbColor, int highlightColor) {
-            if (maxScroll <= 0 || trackHeight <= 0 || barWidth <= 0) return;
-            double safeScroll = Math.max(0D, Math.min(currentScroll, maxScroll));
-            int safeThumbHeight = Mth.clamp(thumbHeight, 1, trackHeight);
-            int thumbY = barY + (int) Math.round(safeScroll / maxScroll * (trackHeight - safeThumbHeight));
-            int visualWidth = visualScrollbarWidth(barWidth);
-            int visualX = visualScrollbarX(barX, barWidth);
-            g.fill(visualX, barY, visualX + visualWidth, barY + trackHeight, trackColor);
-            g.fill(visualX, thumbY, visualX + visualWidth, thumbY + safeThumbHeight, highlighted ? highlightColor : thumbColor);
+        private static int horizontalThumbStart(
+                int x,
+                int width,
+                int thumbWidth,
+                int maxOffset,
+                double offset
+        ) {
+            int safeThumbWidth = Mth.clamp(thumbWidth, 1, Math.max(1, width));
+            int travel = Math.max(0, width - safeThumbWidth);
+            if (maxOffset <= 0 || travel == 0) return x;
+            double safeOffset = Mth.clamp(offset, 0D, maxOffset);
+            return x + (int) Math.round(travel * (safeOffset / maxOffset));
         }
 
-        /**
-         * 鼠标是否悬浮在滚动条滑块上。
-         */
-        public static boolean isHoveringThumb(double mouseX, double mouseY, int barX, int barY, int barWidth, int trackHeight, int thumbHeight, int maxScroll, int currentScroll) {
-            return isHoveringThumb(mouseX, mouseY, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, (double) currentScroll);
+        private static double horizontalOffsetFromThumbStart(
+                double thumbStartX,
+                int trackX,
+                int trackWidth,
+                int thumbWidth,
+                int maxOffset
+        ) {
+            int safeThumbWidth = Mth.clamp(thumbWidth, 1, Math.max(1, trackWidth));
+            int travel = Math.max(0, trackWidth - safeThumbWidth);
+            if (!Double.isFinite(thumbStartX) || maxOffset <= 0 || travel == 0) return 0D;
+            double local = Mth.clamp(thumbStartX - trackX, 0D, travel);
+            return local / travel * maxOffset;
         }
 
-        public static boolean isHoveringThumb(double mouseX, double mouseY, int barX, int barY, int barWidth, int trackHeight, int thumbHeight, int maxScroll, double currentScroll) {
-            if (maxScroll <= 0 || trackHeight <= 0 || barWidth <= 0) return false;
-            double safeScroll = Math.max(0D, Math.min(currentScroll, maxScroll));
-            int safeThumbHeight = Mth.clamp(thumbHeight, 1, trackHeight);
-            int thumbY = barY + (int) Math.round(safeScroll / maxScroll * (trackHeight - safeThumbHeight));
-            int visualWidth = visualScrollbarWidth(barWidth);
-            int visualX = visualScrollbarX(barX, barWidth);
-            return mouseX >= visualX && mouseX <= visualX + visualWidth && mouseY >= thumbY && mouseY <= thumbY + safeThumbHeight;
+        private static boolean isHoveringThumb(
+                double mouseX,
+                double mouseY,
+                int x,
+                int y,
+                int width,
+                int height,
+                int thumbHeight,
+                int maxOffset,
+                double offset
+        ) {
+            if (maxOffset <= 0 || height <= 0 || width <= 0) return false;
+            double safeOffset = Mth.clamp(offset, 0D, maxOffset);
+            int safeThumbHeight = Mth.clamp(thumbHeight, 1, height);
+            int thumbY = y + (int) Math.round(
+                    safeOffset / maxOffset * (height - safeThumbHeight)
+            );
+            int visualWidth = visualScrollbarWidth(width);
+            int visualX = visualScrollbarX(x, width);
+            return mouseX >= visualX
+                    && mouseX <= visualX + visualWidth
+                    && mouseY >= thumbY
+                    && mouseY <= thumbY + safeThumbHeight;
         }
     }
 
+    /**
+     * Draws a vertical Kinetic scrollbar from explicit raw scroll state using the active theme.
+     * The caller supplies only geometry and state; visual colors remain API-owned.
+     */
+    public static void renderScrollbarState(
+            GuiGraphics graphics,
+            double mouseX,
+            double mouseY,
+            int x,
+            int y,
+            int width,
+            int height,
+            int thumbHeight,
+            int maxOffset,
+            double offset,
+            boolean dragging
+    ) {
+        ScrollUtil.renderScrollbar(
+                graphics,
+                mouseX,
+                mouseY,
+                x,
+                y,
+                width,
+                height,
+                thumbHeight,
+                maxOffset,
+                offset,
+                dragging
+        );
+    }
+
+    /** Calculates the themed scrollbar thumb height for callers that retain explicit raw scroll state. */
+    public static int stateThumbHeight(
+            int trackHeight,
+            int visibleItems,
+            int totalItems,
+            int minHeight
+    ) {
+        return ScrollUtil.calculateThumbHeight(trackHeight, visibleItems, totalItems, minHeight);
+    }
+
+    /** Converts a pointer Y coordinate into a clamped integer offset for explicit raw scrollbar state. */
+    public static int stateOffsetFromPointer(
+            double pointerY,
+            int trackY,
+            int trackHeight,
+            int thumbHeight,
+            int maxOffset
+    ) {
+        return ScrollUtil.calculateScrollOffset(pointerY, trackY, trackHeight, thumbHeight, maxOffset);
+    }
+
+    /** Converts a pointer Y coordinate into a clamped precise offset for explicit raw scrollbar state. */
+    public static double stateOffsetFromPointerPrecise(
+            double pointerY,
+            int trackY,
+            int trackHeight,
+            int thumbHeight,
+            int maxOffset
+    ) {
+        return ScrollUtil.calculateScrollOffsetPrecise(pointerY, trackY, trackHeight, thumbHeight, maxOffset);
+    }
+
+    /** Converts a pointer Y coordinate across the full track into a clamped precise raw offset. */
+    public static double stateOffsetFromTrackPointerPrecise(
+            double pointerY,
+            int trackY,
+            int trackHeight,
+            int maxOffset
+    ) {
+        return ScrollUtil.calculateTrackPointerOffsetPrecise(pointerY, trackY, trackHeight, maxOffset);
+    }
+
+    /** Converts a vertical thumb start into a clamped precise raw scrollbar offset. */
+    public static double stateOffsetFromThumbStartPrecise(
+            double thumbStartY,
+            int trackY,
+            int trackHeight,
+            int thumbHeight,
+            int maxOffset
+    ) {
+        return ScrollUtil.verticalOffsetFromThumbStart(
+                thumbStartY,
+                trackY,
+                trackHeight,
+                thumbHeight,
+                maxOffset
+        );
+    }
+
+    /** Draws a horizontal Kinetic scrollbar from explicit raw scroll state using the active theme. */
+    public static void renderHorizontalScrollbarState(
+            GuiGraphics graphics,
+            double mouseX,
+            double mouseY,
+            int x,
+            int y,
+            int width,
+            int height,
+            int thumbWidth,
+            int maxOffset,
+            double offset,
+            boolean dragging
+    ) {
+        ScrollUtil.renderHorizontalScrollbar(
+                graphics,
+                mouseX,
+                mouseY,
+                x,
+                y,
+                width,
+                height,
+                thumbWidth,
+                maxOffset,
+                offset,
+                dragging
+        );
+    }
+
+    /** Returns the horizontal thumb start for explicit raw scrollbar state. */
+    public static int stateHorizontalThumbStart(
+            int trackX,
+            int trackWidth,
+            int thumbWidth,
+            int maxOffset,
+            double offset
+    ) {
+        return ScrollUtil.horizontalThumbStart(
+                trackX,
+                trackWidth,
+                thumbWidth,
+                maxOffset,
+                offset
+        );
+    }
+
+    /** Converts a horizontal thumb start into a clamped precise raw scrollbar offset. */
+    public static double stateHorizontalOffsetFromThumbStartPrecise(
+            double thumbStartX,
+            int trackX,
+            int trackWidth,
+            int thumbWidth,
+            int maxOffset
+    ) {
+        return ScrollUtil.horizontalOffsetFromThumbStart(
+                thumbStartX,
+                trackX,
+                trackWidth,
+                thumbWidth,
+                maxOffset
+        );
+    }
+
+    /** Animated scroll state shared by Kinetic scrolling controls. */
     public static class State {
         private double current;
         private double target;
@@ -164,12 +378,10 @@ public final class KineticScroll {
         private long lastAnimationNanos = System.nanoTime();
         private boolean initialized;
 
-        public double update(double target, double max) {
-            return update(target, max, false);
-        }
-
+        /** Updates the animated value with explicit maximum and snap behavior. */
         public double update(double target, double max, boolean immediate) {
-            this.max = Math.max(0D, max);
+            if (!Double.isFinite(target)) return current();
+            this.max = validMaximum(max);
             this.target = clamp(target);
 
             long now = System.nanoTime();
@@ -184,16 +396,10 @@ public final class KineticScroll {
             return current;
         }
 
-        public double follow(int logicalTarget, double max) {
-            return follow(logicalTarget, max, false);
-        }
-
-        public double follow(double logicalTarget, double max) {
-            return follow(logicalTarget, max, false);
-        }
-
+        /** Follows a logical target with explicit maximum and snap behavior. */
         public double follow(double logicalTarget, double max, boolean immediate) {
-            this.max = Math.max(0D, max);
+            if (!Double.isFinite(logicalTarget)) return current();
+            this.max = validMaximum(max);
             target = clamp(target);
             if (!initialized) {
                 snap(logicalTarget, this.max);
@@ -214,35 +420,21 @@ public final class KineticScroll {
             return current;
         }
 
-        public double follow(int logicalTarget, double max, boolean immediate) {
-            this.max = Math.max(0D, max);
-            target = clamp(target);
-            if (!initialized) {
-                snap(logicalTarget, this.max);
-                return current;
-            }
-
-            if ((int) Math.round(target) != logicalTarget) {
-                target = clamp(logicalTarget);
-            }
-
-            if (immediate) {
-                current = target;
-                lastAnimationNanos = System.nanoTime();
-                return current;
-            }
-
-            advance(System.nanoTime());
-            return current;
+        /** Follows a logical target smoothly using the supplied maximum. */
+        public double follow(double logicalTarget, double max) {
+            return follow(logicalTarget, max, false);
         }
 
+        /** Applies one wheel delta to a logical target using an explicit step. */
         public double wheel(
                 double logicalTarget,
                 double delta,
                 double step,
                 double max
         ) {
-            this.max = Math.max(0D, max);
+            if (!Double.isFinite(logicalTarget) || !Double.isFinite(delta)
+                    || !Double.isFinite(step)) return target;
+            this.max = validMaximum(max);
             target = clamp(target);
             if (!initialized) {
                 snap(logicalTarget, this.max);
@@ -251,53 +443,33 @@ public final class KineticScroll {
             }
 
             if (delta != 0D) {
-                target = clamp(target - delta * Math.max(0D, step));
+                double wheelItems = KineticScrollSettings.wheelItemsPerNotch();
+                target = clamp(target - delta * Math.max(0D, step) * wheelItems);
             }
 
             return target;
         }
 
-        public int wheel(
-                int logicalTarget,
-                double delta,
-                double step,
-                double max
-        ) {
-            this.max = Math.max(0D, max);
-            target = clamp(target);
-            if (!initialized) {
-                snap(logicalTarget, this.max);
-            } else if ((int) Math.round(target) != logicalTarget) {
-                target = clamp(logicalTarget);
-            }
-
-            if (delta != 0D) {
-                target = clamp(target - delta * Math.max(0D, step));
-            }
-
-            return targetInt();
-        }
-
+        /** Snaps smooth scrolling directly to the supplied clamped value. */
         public void snap(double value, double max) {
-            this.max = Math.max(0D, max);
+            if (!Double.isFinite(value)) return;
+            this.max = validMaximum(max);
             this.target = clamp(value);
             this.current = this.target;
             this.initialized = true;
             this.lastAnimationNanos = System.nanoTime();
         }
 
+        /** Returns the current animated scroll value after advancing animation to the current frame time. */
         public double current() {
             if (!initialized) return 0D;
             advance(System.nanoTime());
             return current;
         }
 
+        /** Returns the logical target that the animated scroll value is approaching. */
         public double target() {
             return target;
-        }
-
-        public int targetInt() {
-            return (int) Math.round(target);
         }
 
         private void advance(long now) {
@@ -328,6 +500,10 @@ public final class KineticScroll {
             );
         }
 
+        private double validMaximum(double requested) {
+            return Double.isFinite(requested) && requested >= 0D ? requested : max;
+        }
+
         private double clamp(double value) {
             return Math.max(
                     0D,
@@ -336,97 +512,14 @@ public final class KineticScroll {
         }
     }
 
-    public static int calculateThumbHeight(int trackHeight, int visibleItems, int totalItems, int minHeight) {
-        return ScrollUtil.calculateThumbHeight(trackHeight, visibleItems, totalItems, minHeight);
+    /** Kinetic-owned row base for smooth selection lists. Addons extend this instead of vanilla list entries. */
+    public abstract static class SmoothEntry<E extends SmoothEntry<E>> extends ObjectSelectionList.Entry<E> {
     }
 
-    public static int calculateScrollOffset(double mouseY, int trackY, int trackHeight, int thumbHeight, int maxScroll) {
-        return ScrollUtil.calculateScrollOffset(mouseY, trackY, trackHeight, thumbHeight, maxScroll);
-    }
-
-    public static double calculateScrollOffsetPrecise(double mouseY, int trackY, int trackHeight, int thumbHeight, int maxScroll) {
-        return ScrollUtil.calculateScrollOffsetPrecise(mouseY, trackY, trackHeight, thumbHeight, maxScroll);
-    }
-
-    public static void renderScrollbar(GuiGraphics g, int barX, int barY, int barWidth, int trackHeight, int thumbHeight, int maxScroll, int currentScroll, boolean isDragging) {
-        ScrollUtil.renderScrollbar(g, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, currentScroll, isDragging);
-    }
-
-    public static void renderScrollbar(GuiGraphics g, int barX, int barY, int barWidth, int trackHeight, int thumbHeight, int maxScroll, double currentScroll, boolean isDragging) {
-        ScrollUtil.renderScrollbar(g, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, currentScroll, isDragging);
-    }
-
-    public static void renderScrollbar(
-            GuiGraphics g,
-            double mouseX,
-            double mouseY,
-            int barX,
-            int barY,
-            int barWidth,
-            int trackHeight,
-            int thumbHeight,
-            int maxScroll,
-            int currentScroll,
-            boolean isDragging
-    ) {
-        ScrollUtil.renderScrollbar(g, mouseX, mouseY, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, currentScroll, isDragging);
-    }
-
-    public static void renderScrollbar(
-            GuiGraphics g,
-            double mouseX,
-            double mouseY,
-            int barX,
-            int barY,
-            int barWidth,
-            int trackHeight,
-            int thumbHeight,
-            int maxScroll,
-            double currentScroll,
-            boolean isDragging
-    ) {
-        ScrollUtil.renderScrollbar(g, mouseX, mouseY, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, currentScroll, isDragging);
-    }
-
-    public static void renderScrollbar(
-            GuiGraphics g,
-            int barX,
-            int barY,
-            int barWidth,
-            int trackHeight,
-            int thumbHeight,
-            int maxScroll,
-            int currentScroll,
-            boolean highlighted,
-            int trackColor,
-            int thumbColor,
-            int highlightColor
-    ) {
-        ScrollUtil.renderScrollbar(g, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, currentScroll, highlighted, trackColor, thumbColor, highlightColor);
-    }
-
-    public static void renderScrollbar(
-            GuiGraphics g,
-            int barX,
-            int barY,
-            int barWidth,
-            int trackHeight,
-            int thumbHeight,
-            int maxScroll,
-            double currentScroll,
-            boolean highlighted,
-            int trackColor,
-            int thumbColor,
-            int highlightColor
-    ) {
-        ScrollUtil.renderScrollbar(g, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, currentScroll, highlighted, trackColor, thumbColor, highlightColor);
-    }
-
-    public static boolean isHoveringThumb(double mouseX, double mouseY, int barX, int barY, int barWidth, int trackHeight, int thumbHeight, int maxScroll, int currentScroll) {
-        return ScrollUtil.isHoveringThumb(mouseX, mouseY, barX, barY, barWidth, trackHeight, thumbHeight, maxScroll, currentScroll);
-    }
-
-    public abstract static class SmoothSelectionList<E extends ObjectSelectionList.Entry<E>>
+    /**
+     * Smooth-scrolling selection-list base that keeps vanilla list semantics while applying Kinetic scrolling and scrollbar visuals.
+     */
+    public abstract static class SmoothSelectionList<E extends SmoothEntry<E>>
             extends ObjectSelectionList<E> {
         private static final int SCROLLBAR_WIDTH = 4;
 
@@ -439,6 +532,7 @@ public final class KineticScroll {
         private boolean scrollbarDragging;
         private double scrollbarDragGrabOffset;
 
+        /** Creates a new {@code SmoothSelectionList}. */
         protected SmoothSelectionList(
                 int width,
                 int height,
@@ -446,18 +540,7 @@ public final class KineticScroll {
                 int y1,
                 int itemHeight
         ) {
-            this(Minecraft.getInstance(), width, height, y0, y1, itemHeight);
-        }
-
-        protected SmoothSelectionList(
-                Minecraft minecraft,
-                int width,
-                int height,
-                int y0,
-                int y1,
-                int itemHeight
-        ) {
-            super(minecraft, width, height, y0, y1, itemHeight);
+            super(KineticClientRuntimeImpl.client(), width, height, y0, y1, itemHeight);
             this.kineticListTop = y0;
             this.kineticListBottom = y1;
             this.kineticItemHeight = Math.max(1, itemHeight);
@@ -465,6 +548,7 @@ public final class KineticScroll {
 
         @Override
         public void setScrollAmount(double amount) {
+            if (!Double.isFinite(amount)) return;
             double max = Math.max(0D, getMaxScroll());
             targetScrollAmount = Mth.clamp(amount, 0D, max);
             if (!smoothScrollInitialized) {
@@ -474,7 +558,9 @@ public final class KineticScroll {
             }
         }
 
+        /** Snaps this scroll widget directly to the supplied scroll amount. */
         public final void snapScrollAmount(double amount) {
+            if (!Double.isFinite(amount)) return;
             double max = Math.max(0D, getMaxScroll());
             targetScrollAmount = Mth.clamp(amount, 0D, max);
             smoothScrollState.snap(targetScrollAmount, max);
@@ -482,6 +568,7 @@ public final class KineticScroll {
             smoothScrollInitialized = true;
         }
 
+        /** Returns the logical pixel scroll amount that this list is animating toward. */
         public final double targetScrollAmount() {
             return targetScrollAmount;
         }
@@ -510,7 +597,7 @@ public final class KineticScroll {
         }
 
         private boolean beginScrollbarDrag(double mouseX, double mouseY, int button) {
-            if (button != 0) return false;
+            if (button != 0 || !Double.isFinite(mouseX) || !Double.isFinite(mouseY)) return false;
             double max = Math.max(0D, getMaxScroll());
             if (max <= 0D) return false;
 
@@ -537,6 +624,7 @@ public final class KineticScroll {
         }
 
         private void applyScrollbarDrag(double mouseY) {
+            if (!Double.isFinite(mouseY)) return;
             double max = Math.max(0D, getMaxScroll());
             int trackHeight = scrollbarTrackHeight();
             int thumbHeight = scrollbarThumbHeight();
@@ -555,19 +643,26 @@ public final class KineticScroll {
         }
 
         private boolean dragScrollbar(double mouseY, int button) {
-            if (button != 0 || !scrollbarDragging) return false;
+            if (button != 0 || !scrollbarDragging || !Double.isFinite(mouseY)) return false;
             applyScrollbarDrag(mouseY);
             return true;
         }
 
+        /** Renders the list inside its clipped viewport and draws the API-themed scrollbar when scrolling is available. */
         @Override
         public void render(
-                GuiGraphics graphics,
+                @Nonnull GuiGraphics graphics,
                 int mouseX,
                 int mouseY,
                 float partialTick
         ) {
             double max = Math.max(0D, getMaxScroll());
+            if (max <= 0D) {
+                // When the content fits, release the old thumb drag and forget its target.
+                scrollbarDragging = false;
+                scrollbarDragGrabOffset = 0D;
+                snapScrollAmount(0D);
+            }
             if (!smoothScrollInitialized) {
                 targetScrollAmount = Mth.clamp(
                         super.getScrollAmount(),
@@ -585,7 +680,8 @@ public final class KineticScroll {
                             scrollbarDragging
                     )
             );
-            graphics.enableScissor(
+            KineticRenderRuntime.enableScissor(
+                    graphics,
                     this.getLeft(),
                     kineticListTop,
                     this.getLeft() + this.width,
@@ -599,7 +695,7 @@ public final class KineticScroll {
                         partialTick
                 );
             } finally {
-                graphics.disableScissor();
+                KineticRenderRuntime.disableScissor(graphics);
             }
 
             if (max > 0D) {
@@ -630,6 +726,7 @@ public final class KineticScroll {
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (!Double.isFinite(mouseX) || !Double.isFinite(mouseY)) return false;
             if (beginScrollbarDrag(mouseX, mouseY, button)) return true;
 
             boolean handled = super.mouseClicked(mouseX, mouseY, button);
@@ -645,7 +742,9 @@ public final class KineticScroll {
 
         @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-            if (delta == 0D || !this.isMouseOver(mouseX, mouseY)) return false;
+            if (!Double.isFinite(mouseX) || !Double.isFinite(mouseY)
+                    || !Double.isFinite(delta) || delta == 0D
+                    || !this.isMouseOver(mouseX, mouseY)) return false;
             double max = Math.max(0D, getMaxScroll());
             if (max <= 0D) return false;
             if (!smoothScrollInitialized) {
@@ -654,7 +753,7 @@ public final class KineticScroll {
                 smoothScrollInitialized = true;
             }
             targetScrollAmount = Mth.clamp(
-                    targetScrollAmount - delta * (kineticItemHeight / 3.0D),
+                    targetScrollAmount - delta * kineticItemHeight * KineticScrollSettings.wheelItemsPerNotch(),
                     0D,
                     max
             );
@@ -669,6 +768,8 @@ public final class KineticScroll {
                 double dragX,
                 double dragY
         ) {
+            if (!Double.isFinite(mouseX) || !Double.isFinite(mouseY)
+                    || !Double.isFinite(dragX) || !Double.isFinite(dragY)) return false;
             if (dragScrollbar(mouseY, button)) return true;
 
             boolean handled = super.mouseDragged(
@@ -699,6 +800,7 @@ public final class KineticScroll {
         }
     }
 
+    /** Controls logical offset, dragging, animation, and themed rendering for grid-style scrolling. */
     public static class GridScrollController {
         private int offset;
         private double currentOffset;
@@ -710,6 +812,7 @@ public final class KineticScroll {
         private boolean dragging;
         private int dragGrabOffset;
 
+        /** Updates the logical item count and visible-row count used by this grid controller. */
         public void update(int totalItems, int visibleItems) {
             this.totalItems = Math.max(0, totalItems);
             this.visibleItems = Math.max(1, visibleItems);
@@ -717,12 +820,17 @@ public final class KineticScroll {
                     0,
                     this.totalItems - this.visibleItems
             );
+            if (this.maxOffset == 0) {
+                dragging = false;
+                dragGrabOffset = 0;
+            }
             advanceAnimation();
             currentOffset = clamp(currentOffset);
             targetOffset = clamp(targetOffset);
             offset = clamp((int) Math.round(targetOffset));
         }
 
+        /** Updates an explicitly supplied maximum offset while retaining total/visible counts for thumb sizing. */
         public void updateRange(
                 int maxOffset,
                 int totalItems,
@@ -731,52 +839,56 @@ public final class KineticScroll {
             this.totalItems = Math.max(0, totalItems);
             this.visibleItems = Math.max(1, visibleItems);
             this.maxOffset = Math.max(0, maxOffset);
+            if (this.maxOffset == 0) {
+                dragging = false;
+                dragGrabOffset = 0;
+            }
             advanceAnimation();
             currentOffset = clamp(currentOffset);
             targetOffset = clamp(targetOffset);
             offset = clamp((int) Math.round(targetOffset));
         }
 
-        public void restoreOffset(int offset) {
-            setOffset(offset);
-        }
-
+        /** Returns the nearest logical item offset after advancing smooth animation. */
         public int offset() {
             advanceAnimation();
             return offset;
         }
 
+        /** Returns the current fractional logical offset after advancing smooth animation. */
         public double smoothOffset() {
             advanceAnimation();
             return currentOffset;
         }
 
-        public int indexOffset() {
-            return offset();
-        }
-
+        /** Returns the first fully addressed item index represented by the current smooth offset. */
         public int smoothIndexOffset() {
             advanceAnimation();
             return clamp((int) Math.floor(currentOffset + 1.0E-6D));
         }
 
+        /** Returns only the fractional part of the current smooth logical offset. */
         public double fractionalOffset() {
             advanceAnimation();
             return currentOffset - Math.floor(currentOffset);
         }
 
+        /** Converts the fractional offset into a pixel shift for one item/row size. */
         public int visualShift(int unitPixels) {
             return (int) Math.round(fractionalOffset() * Math.max(0, unitPixels));
         }
 
+        /** Returns the maximum logical offset currently allowed by this controller. */
         public int maxOffset() {
             return maxOffset;
         }
 
+        /** Returns whether the current content range can scroll beyond its initial position. */
         public boolean canScroll() {
             return maxOffset > 0;
         }
 
+        /** Immediately sets current and target offsets to the supplied clamped logical position. */
         public void setOffset(int offset) {
             int clamped = clamp(offset);
             this.offset = clamped;
@@ -785,6 +897,12 @@ public final class KineticScroll {
             this.lastAnimationNanos = System.nanoTime();
         }
 
+        /** Restores a previously persisted logical offset immediately. */
+        public void restoreOffset(int offset) {
+            setOffset(offset);
+        }
+
+        /** Resets this grid scroll controller to its initial position and drag state. */
         public void reset() {
             offset = 0;
             currentOffset = 0D;
@@ -794,24 +912,27 @@ public final class KineticScroll {
             dragGrabOffset = 0;
         }
 
+
+        /** Applies one standard logical scroll step per wheel delta. */
         public boolean scroll(double delta) {
-            return scroll(delta, 1.0D / 3.0D);
+            return scroll(delta, 1.0D);
         }
 
-        public boolean scroll(double delta, int step) {
-            return scroll(delta, (double) Math.max(1, step));
-        }
-
+        /** Applies a scroll delta with an explicit logical step size. */
         public boolean scroll(double delta, double step) {
-            if (!canScroll() || delta == 0D) return false;
+            if (!canScroll() || delta == 0D || !Double.isFinite(delta)
+                    || !Double.isFinite(step)) return false;
 
             advanceAnimation();
-            double safeStep = Math.max(0.05D, step);
-            targetOffset = clamp(targetOffset - delta * safeStep);
+            double safeStep = Math.max(0D, step);
+            targetOffset = clamp(
+                    targetOffset - delta * safeStep * KineticScrollSettings.wheelItemsPerNotch()
+            );
             offset = clamp((int) Math.round(targetOffset));
             return true;
         }
 
+        /** Begins vertical scrollbar dragging when the pointer hits the track or padded thumb hit area. */
         public boolean beginDrag(
                 double mouseX,
                 double mouseY,
@@ -822,7 +943,7 @@ public final class KineticScroll {
                 int minThumbHeight,
                 int hitPadding
         ) {
-            if (!canScroll()) return false;
+            if (!canScroll() || !Double.isFinite(mouseX) || !Double.isFinite(mouseY)) return false;
             if (mouseX < x - hitPadding
                     || mouseX > x + width + hitPadding
                     || mouseY < y
@@ -859,12 +980,14 @@ public final class KineticScroll {
             return true;
         }
 
+        /** Updates an active vertical scrollbar drag from the supplied pointer Y coordinate. */
         public boolean drag(double mouseY, int y, int height, int minThumbHeight) {
-            if (!dragging) return false;
+            if (!dragging || !Double.isFinite(mouseY)) return false;
             updateFromMouse(mouseY, y, height, minThumbHeight);
             return true;
         }
 
+        /** Begins horizontal scrollbar dragging when the pointer hits the track or padded thumb hit area. */
         public boolean beginHorizontalDrag(
                 double mouseX,
                 double mouseY,
@@ -875,7 +998,7 @@ public final class KineticScroll {
                 int minThumbWidth,
                 int hitPadding
         ) {
-            if (!canScroll()) return false;
+            if (!canScroll() || !Double.isFinite(mouseX) || !Double.isFinite(mouseY)) return false;
             if (mouseX < x
                     || mouseX > x + width
                     || mouseY < y - hitPadding
@@ -912,13 +1035,14 @@ public final class KineticScroll {
             return true;
         }
 
+        /** Updates an active horizontal scrollbar drag from the supplied pointer X coordinate. */
         public boolean dragHorizontal(
                 double mouseX,
                 int x,
                 int width,
                 int minThumbWidth
         ) {
-            if (!dragging) return false;
+            if (!dragging || !Double.isFinite(mouseX)) return false;
 
             updateFromMouseHorizontal(
                     mouseX,
@@ -929,6 +1053,7 @@ public final class KineticScroll {
             return true;
         }
 
+        /** Ends an active primary-button scrollbar drag and reports whether a drag was released. */
         public boolean release(int button) {
             if (button != 0 || !dragging) return false;
             dragging = false;
@@ -936,23 +1061,7 @@ public final class KineticScroll {
             return true;
         }
 
-        public void render(
-                GuiGraphics graphics,
-                int x,
-                int y,
-                int width,
-                int height,
-                int minThumbHeight
-        ) {
-            if (canScroll()) {
-                int thumbHeight = thumbHeight(height, minThumbHeight);
-                ScrollUtil.renderScrollbar(
-                        graphics, x, y, width, height,
-                        thumbHeight, maxOffset, smoothOffset(), dragging
-                );
-            }
-        }
-
+        /** Renders the standard vertical scrollbar for this controller using the active theme. */
         public void render(
                 GuiGraphics graphics,
                 int mouseX,
@@ -963,7 +1072,8 @@ public final class KineticScroll {
                 int height,
                 int minThumbHeight
         ) {
-            render(
+            if (!canScroll()) return;
+            KineticScroll.renderScrollbarState(
                     graphics,
                     mouseX,
                     mouseY,
@@ -971,116 +1081,14 @@ public final class KineticScroll {
                     y,
                     width,
                     height,
-                    minThumbHeight,
-                    ScrollUtil.DEFAULT_TRACK_COLOR,
-                    ScrollUtil.DEFAULT_THUMB_COLOR,
-                    ScrollUtil.DEFAULT_THUMB_HOVER_COLOR
+                    thumbHeight(height, minThumbHeight),
+                    maxOffset,
+                    smoothOffset(),
+                    dragging
             );
         }
 
-        public void render(
-                GuiGraphics graphics,
-                int mouseX,
-                int mouseY,
-                int x,
-                int y,
-                int width,
-                int height,
-                int minThumbHeight,
-                int trackColor,
-                int thumbColor,
-                int hoverColor
-        ) {
-            if (canScroll()) {
-                int thumbHeight = thumbHeight(height, minThumbHeight);
-                boolean hover = ScrollUtil.isHoveringThumb(
-                        mouseX, mouseY, x, y, width, height,
-                        thumbHeight, maxOffset, smoothOffset()
-                );
-
-                ScrollUtil.renderScrollbar(
-                        graphics, x, y, width, height,
-                        thumbHeight, maxOffset, smoothOffset(),
-                        dragging || hover,
-                        trackColor, thumbColor, hoverColor
-                );
-            }
-        }
-
-        public void renderFramed(
-                GuiGraphics graphics,
-                int mouseX,
-                int mouseY,
-                int x,
-                int y,
-                int width,
-                int height,
-                int minThumbHeight,
-                int borderColor,
-                int trackColor,
-                int thumbColor,
-                int hoverColor
-        ) {
-            if (!canScroll()) return;
-
-            int currentThumbHeight = thumbHeight(
-                    height,
-                    minThumbHeight
-            );
-
-            int currentThumbTop = thumbTop(
-                    y,
-                    height,
-                    minThumbHeight
-            );
-
-            int visualWidth = ScrollUtil.visualScrollbarWidth(width);
-            int visualX = ScrollUtil.visualScrollbarX(x, width);
-            boolean hovered =
-                    mouseX >= visualX
-                            && mouseX <= visualX + visualWidth
-                            && mouseY >= currentThumbTop
-                            && mouseY <= currentThumbTop + currentThumbHeight;
-
-            graphics.fill(
-                    visualX,
-                    y,
-                    visualX + visualWidth,
-                    y + height,
-                    trackColor
-            );
-
-            graphics.fill(
-                    visualX,
-                    currentThumbTop,
-                    visualX + visualWidth,
-                    currentThumbTop + currentThumbHeight,
-                    dragging || hovered
-                            ? hoverColor
-                            : thumbColor
-            );
-        }
-
-        public void renderHorizontal(
-                GuiGraphics graphics,
-                int x,
-                int y,
-                int width,
-                int height,
-                int minThumbWidth
-        ) {
-            renderHorizontal(
-                    graphics,
-                    Integer.MIN_VALUE,
-                    Integer.MIN_VALUE,
-                    x,
-                    y,
-                    width,
-                    height,
-                    minThumbWidth
-            );
-        }
-
+        /** Renders the standard horizontal scrollbar for this controller using the active theme. */
         public void renderHorizontal(
                 GuiGraphics graphics,
                 int mouseX,
@@ -1091,69 +1099,22 @@ public final class KineticScroll {
                 int height,
                 int minThumbWidth
         ) {
-            renderHorizontal(
-                    graphics,
-                    mouseX,
-                    mouseY,
-                    x,
-                    y,
-                    width,
-                    height,
-                    minThumbWidth,
-                    ScrollUtil.DEFAULT_TRACK_COLOR,
-                    ScrollUtil.DEFAULT_THUMB_COLOR,
-                    ScrollUtil.DEFAULT_THUMB_HOVER_COLOR
-            );
-        }
-
-        public void renderHorizontal(
-                GuiGraphics graphics,
-                int mouseX,
-                int mouseY,
-                int x,
-                int y,
-                int width,
-                int height,
-                int minThumbWidth,
-                int trackColor,
-                int thumbColor,
-                int hoverColor
-        ) {
             if (!canScroll()) return;
 
-            int currentThumbWidth = thumbWidth(
-                    width,
-                    minThumbWidth
-            );
-
-            int currentThumbLeft = thumbLeft(
-                    x,
-                    width,
-                    minThumbWidth
-            );
-
-            boolean hovered =
-                    mouseX >= currentThumbLeft
-                            && mouseX <= currentThumbLeft + currentThumbWidth
-                            && mouseY >= y
-                            && mouseY <= y + height;
-
-            graphics.fill(
-                    x,
-                    y,
-                    x + width,
-                    y + height,
-                    trackColor
-            );
-
+            int currentThumbWidth = thumbWidth(width, minThumbWidth);
+            int currentThumbLeft = thumbLeft(x, width, minThumbWidth);
+            boolean hovered = mouseX >= currentThumbLeft
+                    && mouseX <= currentThumbLeft + currentThumbWidth
+                    && mouseY >= y
+                    && mouseY <= y + height;
+            GuiTheme.Palette theme = GuiTheme.current();
+            graphics.fill(x, y, x + width, y + height, theme.scrollTrack());
             graphics.fill(
                     currentThumbLeft,
                     y,
                     currentThumbLeft + currentThumbWidth,
                     y + height,
-                    dragging || hovered
-                            ? hoverColor
-                            : thumbColor
+                    dragging || hovered ? theme.scrollThumbHover() : theme.scrollThumb()
             );
         }
 
@@ -1229,9 +1190,9 @@ public final class KineticScroll {
                     )
             );
 
-            return Math.max(
-                    minThumbWidth,
-                    Math.min(width, calculated)
+            return Math.min(
+                    Math.max(0, width),
+                    Math.max(Math.max(0, minThumbWidth), calculated)
             );
         }
 

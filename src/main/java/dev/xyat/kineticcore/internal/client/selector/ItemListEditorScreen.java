@@ -1,9 +1,12 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.api.client.search.KineticItemSearch;
+import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.internal.client.search.ItemSearchIndex;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
 
@@ -15,7 +18,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -82,13 +84,13 @@ public final class ItemListEditorScreen extends KineticScreen {
     protected void buildUi() {
         updateScrollRange();
 
-        addButton(158, 316, 96, Component.translatable("gui.kineticcore.items.list_editor.add"), null, this::openSelector);
-        addButton(272, 316, 96, Component.translatable("gui.kineticcore.config.back"), null, this::onClose);
-        addButton(386, 316, 96, Component.translatable("gui.kineticcore.hud_editor.save"), null, this::saveAndClose);
+        addButton(158, 316, 96, KineticText.translatable("gui.kineticcore.items.list_editor.add"), null, this::openSelector);
+        addButton(272, 316, 96, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
+        addButton(386, 316, 96, KineticText.translatable("gui.kineticcore.hud_editor.save"), null, this::saveAndClose);
     }
 
     private void openSelector() {
-        ItemSearchIndex.prepareCache(() ->
+        KineticItemSearch.prepare(() ->
                 KineticClientRuntime.openScreen(new ItemSelectorScreen(this, this::acceptSelection))
         );
     }
@@ -98,7 +100,7 @@ public final class ItemListEditorScreen extends KineticScreen {
 
         String rule;
         if (selection.isItem()) {
-            ResourceLocation id = ForgeRegistries.ITEMS.getKey(selection.stack().getItem());
+            ResourceLocation id = KineticRegistries.items().id(selection.stack().getItem());
             if (id == null) return;
             rule = id.toString();
         } else if (selection.isTag()) {
@@ -125,10 +127,7 @@ public final class ItemListEditorScreen extends KineticScreen {
     }
 
     private void showItemOnlyToast() {
-        GuiOverlay.toast(
-                "kineticcore_item_list_item_only",
-                Component.translatable("gui.kineticcore.items.list_editor.item_only")
-        );
+        KineticOverlays.toast("kineticcore_item_list_item_only", KineticText.translatable("gui.kineticcore.items.list_editor.item_only"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
     }
 
     private void saveAndClose() {
@@ -162,9 +161,7 @@ public final class ItemListEditorScreen extends KineticScreen {
         );
         GuiTheme.stateOutline(graphics, GRID_X, GRID_Y, GRID_WIDTH, GRID_HEIGHT, false, false, false);
         renderRules(graphics, mouseX, mouseY);
-        GuiTheme.scrollbar(
-                scroll,
-                graphics,
+        scroll.render(graphics,
                 mouseX,
                 mouseY,
                 SCROLL_X,
@@ -185,7 +182,7 @@ public final class ItemListEditorScreen extends KineticScreen {
         if (rules.isEmpty()) {
             graphics.drawCenteredString(
                     font,
-                    Component.translatable("gui.kineticcore.items.list_editor.empty"),
+                    KineticText.translatable("gui.kineticcore.items.list_editor.empty"),
                     GRID_X + GRID_WIDTH / 2,
                     GRID_Y + GRID_HEIGHT / 2 - font.lineHeight / 2,
                     0xFFAAAAAA
@@ -225,7 +222,7 @@ public final class ItemListEditorScreen extends KineticScreen {
                 graphics.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, GuiTheme.current().panel());
                 GuiTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, false, hovered, true);
             } else {
-                GuiTheme.itemSlot(graphics, x, y, SLOT_SIZE, false, hovered, false);
+                GuiTheme.itemSlot(graphics, x, y, SLOT_SIZE, SLOT_SIZE, 4, false, hovered, false);
             }
             if (!stack.isEmpty()) {
                 GuiTheme.item(
@@ -255,27 +252,27 @@ public final class ItemListEditorScreen extends KineticScreen {
     private ItemStack buildPreviewStack(String rule) {
         if (rule.startsWith("@")) {
             String namespace = rule.substring(1);
-            return ForgeRegistries.ITEMS.getEntries().stream()
-                    .filter(entry -> entry.getKey().location().getNamespace().equals(namespace))
+            return KineticRegistries.items().entries().entrySet().stream()
+                    .filter(entry -> entry.getKey().getNamespace().equals(namespace))
                     .map(entry -> new ItemStack(entry.getValue()))
                     .filter(stack -> !stack.isEmpty())
                     .findFirst()
                     .orElse(ItemStack.EMPTY);
         }
         if (rule.startsWith("#")) {
-            ResourceLocation id = ResourceLocation.tryParse(rule.substring(1));
+            ResourceLocation id = KineticResourceIds.tryParse(rule.substring(1));
             if (id == null) return ItemStack.EMPTY;
             TagKey<Item> tag = TagKey.create(Registries.ITEM, id);
-            return ForgeRegistries.ITEMS.getValues().stream()
+            return KineticRegistries.items().values().stream()
                     .map(ItemStack::new)
                     .filter(stack -> stack.is(tag))
                     .findFirst()
                     .orElse(ItemStack.EMPTY);
         }
 
-        ResourceLocation id = ResourceLocation.tryParse(rule);
+        ResourceLocation id = KineticResourceIds.tryParse(rule);
         if (id == null) return ItemStack.EMPTY;
-        Item item = ForgeRegistries.ITEMS.getValue(id);
+        Item item = KineticRegistries.items().get(id);
         return item == null ? ItemStack.EMPTY : new ItemStack(item);
     }
 
@@ -344,7 +341,7 @@ public final class ItemListEditorScreen extends KineticScreen {
     @Override
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
         if (GuiTheme.hovering(mouseX, mouseY, GRID_X, GRID_Y, GRID_WIDTH + 12, GRID_HEIGHT)
-                && scroll.scroll(delta)) {
+                && scroll.scroll(delta, 1.0D)) {
             return true;
         }
         return super.canvasMouseScrolled(mouseX, mouseY, delta);
@@ -366,17 +363,12 @@ public final class ItemListEditorScreen extends KineticScreen {
             lines.add(stack.getHoverName());
         }
         lines.add(Component.literal(rule));
-        lines.add(Component.translatable("gui.kineticcore.items.list_editor.remove_hint"));
+        lines.add(KineticText.translatable("gui.kineticcore.items.list_editor.remove_hint"));
         showTooltip(lines, 300);
     }
 
     private static String normalizeRule(String rule) {
         return rule == null ? "" : rule.trim();
-    }
-
-    @Override
-    public void onClose() {
-        navigateBack();
     }
 
     @Override

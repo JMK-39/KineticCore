@@ -4,6 +4,7 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+/** Public API contract for network codec. */
 public interface NetworkCodec<T> {
     void encode(NetworkBuffer buffer, T message);
 

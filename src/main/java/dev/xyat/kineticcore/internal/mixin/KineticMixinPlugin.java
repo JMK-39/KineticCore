@@ -16,7 +16,20 @@ public final class KineticMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.endsWith("MiniEffectsMixins$InventoryEffectRendererGuiHandlerMixin")
+                && classMissing("mezz.jei.api.IModPlugin")) {
+            return false;
+        }
         return FeatureSwitchRuntime.shouldApplyMixin(mixinClassName);
+    }
+
+    private static boolean classMissing(String className) {
+        try {
+            Class.forName(className, false, KineticMixinPlugin.class.getClassLoader());
+            return false;
+        } catch (ClassNotFoundException | LinkageError ignored) {
+            return true;
+        }
     }
 
     @Override

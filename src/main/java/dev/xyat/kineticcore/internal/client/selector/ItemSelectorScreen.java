@@ -2,36 +2,33 @@ package dev.xyat.kineticcore.internal.client.selector;
 
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.internal.client.search.ItemSearchIndex;
-import dev.xyat.kineticcore.api.client.search.KineticSearch;
+import dev.xyat.kineticcore.api.client.search.KineticItemSearch;
+import dev.xyat.kineticcore.api.client.selector.KineticSelectors.ItemSelectorPreset;
+import dev.xyat.kineticcore.api.client.selector.KineticSelectors.ItemSource;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
+import dev.xyat.kineticcore.api.client.widget.input.KineticAutoComplete;
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.internal.compat.curios.KineticCuriosInventoryBridge;
 import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
-import top.theillusivec4.curios.api.CuriosApi;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 public class ItemSelectorScreen extends KineticScreen {
     public int getCachedVisibleCols() {
@@ -97,10 +94,9 @@ public class ItemSelectorScreen extends KineticScreen {
         }
     }
 
-    private final Screen parent;
     private final Consumer<Selection> onSelect;
-    private final List<ItemSearchIndex.CachedItem> invItems = new ArrayList<>();
-    private List<ItemSearchIndex.CachedItem> displayList = new ArrayList<>();
+    private final List<KineticItemSearch.CachedItem> invItems = new ArrayList<>();
+    private List<KineticItemSearch.CachedItem> displayList = new ArrayList<>();
 
     private static String rememberedSearch = "";
     private static int rememberedMode = 0;
@@ -108,7 +104,8 @@ public class ItemSelectorScreen extends KineticScreen {
     private static int rememberedFilterType = 0;
     private static String rememberedCategoryKey = null;
 
-    private EditBox searchBox;
+    private String searchText = rememberedSearch;
+    private KineticAutoComplete.AutoCompleteBox searchBox;
     private int mode = rememberedMode;
     private final GridScrollController mainScroll =
             new GridScrollController();
@@ -137,15 +134,15 @@ public class ItemSelectorScreen extends KineticScreen {
     private int categoryY;
     private int topInfoY;
 
-    private List<ItemSearchIndex.CachedItem> cachedAllSource = List.of();
-    private List<ItemSearchIndex.CachedItem> cachedInventorySource = List.of();
-    private List<ItemSearchIndex.CachedItem> cachedItemSearchIndexIdentity = List.of();
-    private Map<String, List<ItemSearchIndex.CachedItem>> cachedVanillaCategorySources = Map.of();
-    private Map<String, List<ItemSearchIndex.CachedItem>> cachedModSources = Map.of();
-    private final Map<DisplayCacheKey, List<ItemSearchIndex.CachedItem>> displayCache =
+    private List<KineticItemSearch.CachedItem> cachedAllSource = List.of();
+    private List<KineticItemSearch.CachedItem> cachedInventorySource = List.of();
+    private List<KineticItemSearch.CachedItem> cachedItemSearchIndexIdentity = List.of();
+    private Map<String, List<KineticItemSearch.CachedItem>> cachedVanillaCategorySources = Map.of();
+    private Map<String, List<KineticItemSearch.CachedItem>> cachedModSources = Map.of();
+    private final Map<DisplayCacheKey, List<KineticItemSearch.CachedItem>> displayCache =
             new LinkedHashMap<>(SEARCH_CACHE_LIMIT, 0.75F, true) {
                 @Override
-                protected boolean removeEldestEntry(Map.Entry<DisplayCacheKey, List<ItemSearchIndex.CachedItem>> eldest) {
+                protected boolean removeEldestEntry(Map.Entry<DisplayCacheKey, List<KineticItemSearch.CachedItem>> eldest) {
                     return size() > SEARCH_CACHE_LIMIT;
                 }
             };
@@ -159,34 +156,41 @@ public class ItemSelectorScreen extends KineticScreen {
     private final List<String> allMods = new ArrayList<>();
     private final List<String> allTags = new ArrayList<>();
     private final List<CategoryEntry> categoryEntries = new ArrayList<>();
-    private final List<Button> categoryButtons = new ArrayList<>();
+    private final List<StateButton> categoryButtons = new ArrayList<>();
     private final GridScrollController categoryScroll = new GridScrollController();
     private String categoryKey = rememberedCategoryKey;
-    private List<String> autoCompleteList = new ArrayList<>();
-    private final GridScrollController autoCompleteScroll =
-            new GridScrollController();
-    private final int autoCompleteMaxVisible = 10;
-    private int autoCompleteSelected = -1;
-    private boolean showAutoComplete = false;
-    private int autoCompleteMode = 0;
 
     private String activeFilterValue = rememberedFilterValue;
     private int activeFilterType = rememberedFilterType;
-    private Button applyFilterBtn = null;
+    private StateButton applyFilterBtn = null;
     private int btnAreaStartX;
 
-    public static void configureInitialState(int mode, int filterType, String filterValue, String categoryKey, String search) {
-        rememberedMode = mode == 1 ? 1 : 0;
-        rememberedFilterType = Math.max(0, filterType);
-        rememberedFilterValue = filterValue == null || filterValue.isBlank() ? null : filterValue;
-        rememberedCategoryKey = categoryKey == null || categoryKey.isBlank() ? null : categoryKey;
-        rememberedSearch = search == null ? "" : search;
+    public ItemSelectorScreen(Screen parent, Consumer<Selection> onSelect) {
+        this(parent, onSelect, null);
     }
 
-    public ItemSelectorScreen(Screen parent, Consumer<Selection> onSelect) {
+    /** Applies one request's selection preset without sharing mutable initial state with other pending opens. */
+    public ItemSelectorScreen(Screen parent, Consumer<Selection> onSelect, ItemSelectorPreset preset) {
         super(KineticText.translatable("gui.kineticcore.items.item_selector.title"));
-        this.parent = parent;
+        setParentScreen(parent);
         this.onSelect = onSelect;
+        if (preset != null) {
+            mode = preset.source() == ItemSource.INVENTORY ? 1 : 0;
+            activeFilterType = switch (preset.filter()) {
+                case NONE -> 0;
+                case MOD -> 1;
+                case TAG -> 2;
+            };
+            activeFilterValue = activeFilterType == 0 || preset.filterValue().isBlank()
+                    ? null : preset.filterValue();
+            categoryKey = mode == 0 && !preset.categoryKey().isBlank() ? preset.categoryKey() : null;
+            searchText = preset.search();
+            rememberedMode = mode;
+            rememberedFilterType = activeFilterType;
+            rememberedFilterValue = activeFilterValue;
+            rememberedCategoryKey = categoryKey;
+            rememberedSearch = searchText;
+        }
         loadPlayerStacks();
         loadFilters();
         rebuildCategoryEntries();
@@ -199,37 +203,31 @@ public class ItemSelectorScreen extends KineticScreen {
     }
 
     private void loadPlayerStacks() {
-        Player player = Minecraft.getInstance().player;
+        Player player = KineticClientRuntime.localPlayer();
         if (player == null) return;
 
         player.getInventory().items.forEach(this::addInventoryStack);
         player.getArmorSlots().forEach(this::addInventoryStack);
         addInventoryStack(player.getOffhandItem());
 
-        try {
-            CuriosApi.getCuriosInventory(player).ifPresent(handler -> handler.getCurios().values().forEach(stackHandler -> {
-                var stacks = stackHandler.getStacks();
-                for (int i = 0; i < stacks.getSlots(); i++) {
-                    addInventoryStack(stacks.getStackInSlot(i));
-                }
-            }));
-        } catch (NoClassDefFoundError ignored) {
+        if (KineticPlatform.isModLoaded("curios")) {
+            KineticCuriosInventoryBridge.appendPlayerStacks(player, this::addInventoryStack);
         }
     }
 
     private void addInventoryStack(ItemStack stack) {
         if (stack != null && !stack.isEmpty()) {
-            invItems.add(new ItemSearchIndex.CachedItem(stack));
+            invItems.add(KineticItemSearch.snapshot(stack));
         }
     }
 
     private void loadFilters() {
         Set<String> modSet = new TreeSet<>();
-        ForgeRegistries.ITEMS.getEntries().forEach(entry -> modSet.add(entry.getKey().location().getNamespace()));
+        KineticRegistries.items().ids().forEach(id -> modSet.add(id.getNamespace()));
         allMods.addAll(modSet);
 
         Set<String> tagSet = new TreeSet<>();
-        Objects.requireNonNull(ForgeRegistries.ITEMS.tags()).getTagNames().forEach(tagKey -> tagSet.add(tagKey.location().toString()));
+        KineticRegistries.items().tagIds().forEach(id -> tagSet.add(id.toString()));
         allTags.addAll(tagSet);
     }
 
@@ -254,12 +252,12 @@ public class ItemSelectorScreen extends KineticScreen {
     @Override
     protected void buildUi() {
         resetScrollableWidgets();
-        if (!ItemSearchIndex.isReady()) {
-            ItemSearchIndex.prepareCache(() -> {
-                if (this.minecraft != null) {
-                    this.minecraft.execute(this::rebuildUi);
+        if (!KineticItemSearch.ready()) {
+            KineticItemSearch.prepare(() -> KineticClientRuntime.execute(() -> {
+                if (KineticClientRuntime.currentScreen() == this) {
+                    rebuildUi();
                 }
-            });
+            }));
             return;
         }
 
@@ -294,9 +292,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 backBtnX, topY, backBtnW,
                 KineticText.translatable("gui.kineticcore.config.back"),
                 null,
-                () -> {
-                    if (minecraft != null) navigateBack();
-                }
+                this::navigateBack
         );
 
         applyFilterBtn = addButton(
@@ -305,21 +301,25 @@ public class ItemSelectorScreen extends KineticScreen {
                 null,
                 this::applyFilterAsResult
         );
-        applyFilterBtn.visible = false;
-        applyFilterBtn.active = false;
+        applyFilterBtn.setVisible(false);
+        applyFilterBtn.setEnabled(false);
 
         int searchX = gridX;
         int maxSearchWidth = Math.max(100, applyBtnX - gap - searchX);
         int searchWidth = Math.min(220, maxSearchWidth);
 
-        searchBox = addTextField(
+        searchBox = addAutoCompleteField(
                 searchX, topY, searchWidth, Component.empty(),
-                KineticText.translatable("gui.kineticcore.items.search.hint"), null
+                KineticText.translatable("gui.kineticcore.items.search.hint"),
+                this::autoCompleteSuggestions,
+                null
         );
 
         searchBox.setMaxLength(1024);
+        searchBox.setMaxVisibleSuggestions(10);
         searchBox.setResponder(this::onSearchInput);
-        searchBox.setValue(rememberedSearch);
+        searchBox.setSelectionResponder(this::applySelectedSuggestion);
+        searchBox.setValue(searchText);
 
         categoryScroll.update(categoryEntries.size(), FIXED_GRID_ROWS);
         createCategoryButtons();
@@ -329,35 +329,42 @@ public class ItemSelectorScreen extends KineticScreen {
 
 
     private void onSearchInput(String text) {
-        rememberedSearch = text == null ? "" : text;
-        String trimmed = rememberedSearch.trim();
+        searchText = text == null ? "" : text;
+        rememberedSearch = searchText;
+        refreshDisplay();
+    }
+
+    private List<KineticAutoComplete.Suggestion> autoCompleteSuggestions() {
+        String current = searchBox == null ? searchText : searchBox.getValue();
+        String trimmed = current == null ? "" : current.trim();
         if (trimmed.startsWith("@")) {
-            autoCompleteMode = 1;
-            String query = trimmed.substring(1).toLowerCase(Locale.ROOT);
-            autoCompleteList = allMods.stream().filter(mod -> query.isEmpty() || mod.contains(query)).collect(Collectors.toList());
-            showAutoComplete = !autoCompleteList.isEmpty();
-            autoCompleteScroll.reset();
-            autoCompleteScroll.update(
-                    autoCompleteList.size(),
-                    autoCompleteMaxVisible
-            );
-            autoCompleteSelected = -1;
-        } else if (trimmed.startsWith("#")) {
-            autoCompleteMode = 2;
-            String query = trimmed.substring(1).toLowerCase(Locale.ROOT);
-            autoCompleteList = allTags.stream().filter(tag -> query.isEmpty() || tag.contains(query)).collect(Collectors.toList());
-            showAutoComplete = !autoCompleteList.isEmpty();
-            autoCompleteScroll.reset();
-            autoCompleteScroll.update(
-                    autoCompleteList.size(),
-                    autoCompleteMaxVisible
-            );
-            autoCompleteSelected = -1;
-        } else {
-            showAutoComplete = false;
-            autoCompleteMode = 0;
-            autoCompleteList.clear();
+            return allMods.stream()
+                    .map(mod -> new KineticAutoComplete.Suggestion("@" + mod, Component.empty()))
+                    .toList();
         }
+        if (trimmed.startsWith("#")) {
+            return allTags.stream()
+                    .map(tag -> new KineticAutoComplete.Suggestion("#" + tag, Component.empty()))
+                    .toList();
+        }
+        return List.of();
+    }
+
+    private void applySelectedSuggestion(String value) {
+        if (value == null || value.length() < 2) {
+            return;
+        }
+        if (value.startsWith("@")) {
+            activeFilterType = 1;
+            activeFilterValue = value.substring(1);
+        } else if (value.startsWith("#")) {
+            activeFilterType = 2;
+            activeFilterValue = value.substring(1);
+        } else {
+            return;
+        }
+        rememberedFilterType = activeFilterType;
+        rememberedFilterValue = activeFilterValue;
         refreshDisplay();
     }
 
@@ -375,27 +382,27 @@ public class ItemSelectorScreen extends KineticScreen {
                 activeFilterValue == null ? "" : activeFilterValue,
                 categoryKey == null ? "" : categoryKey
         );
-        List<ItemSearchIndex.CachedItem> cached = displayCache.get(cacheKey);
+        List<KineticItemSearch.CachedItem> cached = displayCache.get(cacheKey);
         if (cached != null) {
             displayList = cached;
         } else {
-            List<ItemSearchIndex.CachedItem> source = sourceForMode();
+            List<KineticItemSearch.CachedItem> source = sourceForMode();
             if (activeFilterType == 0 && query.isEmpty()) {
                 displayList = source;
             } else {
-                List<ItemSearchIndex.CachedItem> scanSource = findCachedSearchBase(cacheKey, source);
-                List<ItemSearchIndex.CachedItem> filtered = new ArrayList<>();
+                List<KineticItemSearch.CachedItem> scanSource = findCachedSearchBase(cacheKey, source);
+                List<KineticItemSearch.CachedItem> filtered = new ArrayList<>();
 
                 String extraQuery = query;
                 if (activeFilterType != 0 && (extraQuery.startsWith("@") || extraQuery.startsWith("#"))) {
                     extraQuery = "";
                 }
 
-                for (ItemSearchIndex.CachedItem item : scanSource) {
-                    if (!matchesActiveFilter(item)) {
+                for (KineticItemSearch.CachedItem item : scanSource) {
+                    if (failsActiveFilter(item)) {
                         continue;
                     }
-                    if (!matchesSearch(item, query, extraQuery)) {
+                    if (failsSearch(item, query, extraQuery)) {
                         continue;
                     }
                     filtered.add(item);
@@ -415,7 +422,7 @@ public class ItemSelectorScreen extends KineticScreen {
     }
 
     private void ensureSourceCache() {
-        List<ItemSearchIndex.CachedItem> currentItems = ItemSearchIndex.getItems();
+        List<KineticItemSearch.CachedItem> currentItems = KineticItemSearch.items();
         if (currentItems == cachedItemSearchIndexIdentity) {
             return;
         }
@@ -424,8 +431,8 @@ public class ItemSelectorScreen extends KineticScreen {
         cachedAllSource = buildSelectableSource(currentItems);
         cachedInventorySource = buildSelectableSource(invItems);
 
-        Map<String, List<ItemSearchIndex.CachedItem>> groupedMods = new LinkedHashMap<>();
-        Map<String, List<ItemSearchIndex.CachedItem>> groupedVanilla = new LinkedHashMap<>();
+        Map<String, List<KineticItemSearch.CachedItem>> groupedMods = new LinkedHashMap<>();
+        Map<String, List<KineticItemSearch.CachedItem>> groupedVanilla = new LinkedHashMap<>();
         groupedVanilla.put("blocks", new ArrayList<>());
         groupedVanilla.put("redstone", new ArrayList<>());
         groupedVanilla.put("tools", new ArrayList<>());
@@ -434,7 +441,7 @@ public class ItemSelectorScreen extends KineticScreen {
         groupedVanilla.put("ingredients", new ArrayList<>());
         groupedVanilla.put("spawn_eggs", new ArrayList<>());
 
-        for (ItemSearchIndex.CachedItem item : cachedAllSource) {
+        for (KineticItemSearch.CachedItem item : cachedAllSource) {
             String namespace = getNamespace(item);
             if (!namespace.isEmpty()) {
                 groupedMods.computeIfAbsent(namespace, key -> new ArrayList<>()).add(item);
@@ -451,9 +458,9 @@ public class ItemSelectorScreen extends KineticScreen {
         displayCache.clear();
     }
 
-    private List<ItemSearchIndex.CachedItem> buildSelectableSource(List<ItemSearchIndex.CachedItem> source) {
-        List<ItemSearchIndex.CachedItem> result = new ArrayList<>();
-        for (ItemSearchIndex.CachedItem item : source) {
+    private List<KineticItemSearch.CachedItem> buildSelectableSource(List<KineticItemSearch.CachedItem> source) {
+        List<KineticItemSearch.CachedItem> result = new ArrayList<>();
+        for (KineticItemSearch.CachedItem item : source) {
             if (isSelectable(item)) {
                 result.add(item);
             }
@@ -461,20 +468,20 @@ public class ItemSelectorScreen extends KineticScreen {
         return List.copyOf(result);
     }
 
-    private boolean isSelectable(ItemSearchIndex.CachedItem item) {
-        return item != null && item.stack != null && !item.stack.isEmpty();
+    private boolean isSelectable(KineticItemSearch.CachedItem item) {
+        return item != null && item.stack() != null && !item.stack().isEmpty();
     }
 
-    private Map<String, List<ItemSearchIndex.CachedItem>> freezeGroupedSources(Map<String, List<ItemSearchIndex.CachedItem>> grouped) {
-        Map<String, List<ItemSearchIndex.CachedItem>> immutable = new LinkedHashMap<>();
-        for (Map.Entry<String, List<ItemSearchIndex.CachedItem>> entry : grouped.entrySet()) {
+    private Map<String, List<KineticItemSearch.CachedItem>> freezeGroupedSources(Map<String, List<KineticItemSearch.CachedItem>> grouped) {
+        Map<String, List<KineticItemSearch.CachedItem>> immutable = new LinkedHashMap<>();
+        for (Map.Entry<String, List<KineticItemSearch.CachedItem>> entry : grouped.entrySet()) {
             immutable.put(entry.getKey(), List.copyOf(entry.getValue()));
         }
         return Map.copyOf(immutable);
     }
 
-    private boolean belongsToVanillaCategory(ItemSearchIndex.CachedItem cachedItem, String category) {
-        ItemStack stack = cachedItem.stack;
+    private boolean belongsToVanillaCategory(KineticItemSearch.CachedItem cachedItem, String category) {
+        ItemStack stack = cachedItem.stack();
         Item item = stack.getItem();
         String path = registryPath(cachedItem);
 
@@ -523,7 +530,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 || containsAny(path, "totem_of_undying");
     }
 
-    private boolean isIngredientItem(ItemSearchIndex.CachedItem item, String path) {
+    private boolean isIngredientItem(KineticItemSearch.CachedItem item, String path) {
         if (containsAny(path,
                 "ingot", "nugget", "diamond", "emerald", "lapis", "quartz", "amethyst", "coal",
                 "charcoal", "scrap", "shard", "crystal", "dust", "powder", "rod", "stick",
@@ -532,7 +539,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 "membrane", "shell", "heart_of_the_sea", "echo_shard", "raw_")) {
             return true;
         }
-        String searchData = item.searchData == null ? "" : item.searchData;
+        String searchData = String.join(" ", item.tagIds());
         return containsAny(searchData,
                 "#forge:ingots/", "#forge:nuggets/", "#forge:gems/", "#forge:dusts/",
                 "#forge:raw_materials/", "#forge:rods/", "#forge:plates/", "#forge:shards/",
@@ -548,18 +555,18 @@ public class ItemSelectorScreen extends KineticScreen {
         return false;
     }
 
-    private String registryPath(ItemSearchIndex.CachedItem item) {
-        if (item == null || item.idStr == null) {
+    private String registryPath(KineticItemSearch.CachedItem item) {
+        if (item == null || item.id() == null) {
             return "";
         }
-        int colon = item.idStr.indexOf(':');
-        String path = colon >= 0 && colon + 1 < item.idStr.length()
-                ? item.idStr.substring(colon + 1)
-                : item.idStr;
+        int colon = item.id().indexOf(':');
+        String path = colon >= 0 && colon + 1 < item.id().length()
+                ? item.id().substring(colon + 1)
+                : item.id();
         return path.toLowerCase(Locale.ROOT);
     }
 
-    private List<ItemSearchIndex.CachedItem> sourceForMode() {
+    private List<KineticItemSearch.CachedItem> sourceForMode() {
         if (mode == 1) {
             return cachedInventorySource;
         }
@@ -575,55 +582,46 @@ public class ItemSelectorScreen extends KineticScreen {
         return cachedAllSource;
     }
 
-    private List<ItemSearchIndex.CachedItem> rawSourceForMode() {
+    private List<KineticItemSearch.CachedItem> rawSourceForMode() {
         return sourceForMode();
     }
 
-    private String getNamespace(ItemSearchIndex.CachedItem item) {
-        if (item == null || item.idStr == null || item.idStr.isBlank()) {
-            return "";
-        }
-        int colon = item.idStr.indexOf(':');
-        if (colon <= 0) {
-            return "";
-        }
-        return item.idStr.substring(0, colon).toLowerCase(Locale.ROOT);
+    private String getNamespace(KineticItemSearch.CachedItem item) {
+        return item == null ? "" : item.namespace().toLowerCase(Locale.ROOT);
     }
 
-    private boolean matchesActiveFilter(ItemSearchIndex.CachedItem item) {
+    private boolean failsActiveFilter(KineticItemSearch.CachedItem item) {
         if (activeFilterType == 1 && activeFilterValue != null) {
-            ResourceLocation id = ForgeRegistries.ITEMS.getKey(item.stack.getItem());
-            return id != null && id.getNamespace().equals(activeFilterValue);
+            return !item.namespace().equals(activeFilterValue);
         }
         if (activeFilterType == 2 && activeFilterValue != null) {
-            return ItemSearchIndex.getRegistryTagIds(item.stack).contains(activeFilterValue);
+            return !item.tagIds().contains(activeFilterValue);
         }
-        return true;
+        return false;
     }
 
-    private boolean matchesSearch(ItemSearchIndex.CachedItem item, String query, String extraQuery) {
+    private boolean failsSearch(KineticItemSearch.CachedItem item, String query, String extraQuery) {
         if (activeFilterType != 0) {
-            return extraQuery.isEmpty() || KineticSearch.match(item.searchData, extraQuery);
+            return !extraQuery.isEmpty() && !item.matches(extraQuery);
         }
         if (query.startsWith("@") && query.length() > 1) {
-            ResourceLocation id = ForgeRegistries.ITEMS.getKey(item.stack.getItem());
-            return id != null && id.getNamespace().contains(query.substring(1));
+            return !item.namespace().contains(query.substring(1));
         }
         if (query.startsWith("#") && query.length() > 1) {
             String tagQuery = query.substring(1);
-            return ItemSearchIndex.getRegistryTagIds(item.stack).stream().anyMatch(tag -> tag.contains(tagQuery));
+            return item.tagIds().stream().noneMatch(tag -> tag.contains(tagQuery));
         }
-        return query.isEmpty() || KineticSearch.match(item.searchData, query);
+        return !query.isEmpty() && !item.matches(query);
     }
 
-    private List<ItemSearchIndex.CachedItem> findCachedSearchBase(
+    private List<KineticItemSearch.CachedItem> findCachedSearchBase(
             DisplayCacheKey requested,
-            List<ItemSearchIndex.CachedItem> fallback
+            List<KineticItemSearch.CachedItem> fallback
     ) {
-        List<ItemSearchIndex.CachedItem> best = fallback;
+        List<KineticItemSearch.CachedItem> best = fallback;
         int bestLength = -1;
 
-        for (Map.Entry<DisplayCacheKey, List<ItemSearchIndex.CachedItem>> entry : displayCache.entrySet()) {
+        for (Map.Entry<DisplayCacheKey, List<KineticItemSearch.CachedItem>> entry : displayCache.entrySet()) {
             DisplayCacheKey candidate = entry.getKey();
             if (candidate.mode() != requested.mode()
                     || candidate.filterType() != requested.filterType()
@@ -646,38 +644,18 @@ public class ItemSelectorScreen extends KineticScreen {
     private void updateApplyButton() {
         if (applyFilterBtn == null) return;
         boolean canApply = activeFilterType != 0 && activeFilterValue != null && !activeFilterValue.isBlank();
-        applyFilterBtn.visible = canApply;
-        applyFilterBtn.active = canApply;
+        applyFilterBtn.setVisible(canApply);
+        applyFilterBtn.setEnabled(canApply);
     }
 
-    private void selectAutoComplete(int index) {
-        if (index < 0 || index >= autoCompleteList.size()) return;
-        String selected = autoCompleteList.get(index);
-        if (autoCompleteMode == 1) {
-            activeFilterType = 1;
-            activeFilterValue = selected;
-            rememberedFilterType = activeFilterType;
-            rememberedFilterValue = activeFilterValue;
-            searchBox.setValue("@" + selected);
-        } else if (autoCompleteMode == 2) {
-            activeFilterType = 2;
-            activeFilterValue = selected;
-            rememberedFilterType = activeFilterType;
-            rememberedFilterValue = activeFilterValue;
-            searchBox.setValue("#" + selected);
-        }
-        showAutoComplete = false;
-        autoCompleteMode = 0;
-        autoCompleteList.clear();
-        autoCompleteScroll.reset();
-        refreshDisplay();
-    }
+
 
     private void clearActiveFilter() {
         activeFilterType = 0;
         activeFilterValue = null;
         rememberedFilterType = 0;
         rememberedFilterValue = null;
+        searchText = "";
         rememberedSearch = "";
         searchBox.setValue("");
         refreshDisplay();
@@ -691,12 +669,12 @@ public class ItemSelectorScreen extends KineticScreen {
                 onSelect.accept(Selection.mod(activeFilterValue));
             }
         }
-        if (this.minecraft != null) this.navigateBack();
+        this.navigateBack();
     }
 
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        if (ItemSearchIndex.isReady()) {
+        if (KineticItemSearch.ready()) {
             syncCategoryButtons();
         }
         graphics.fillGradient(0, 0, this.canvasWidth(), this.canvasHeight(), 0xFF222222, 0xFF111111);
@@ -706,7 +684,7 @@ public class ItemSelectorScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasForeground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        if (!ItemSearchIndex.isReady()) return;
+        if (!KineticItemSearch.ready()) return;
         renderTopInfo(graphics, mouseX, mouseY);
         renderCategories(graphics, mouseX, mouseY);
         renderItems(graphics, mouseX, mouseY);
@@ -715,7 +693,6 @@ public class ItemSelectorScreen extends KineticScreen {
                 mouseX,
                 mouseY
         );
-        if (showAutoComplete && !autoCompleteList.isEmpty() && searchBox != null) renderAutoComplete(graphics, mouseX, mouseY);
     }
 
     private void renderTopInfo(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -727,7 +704,7 @@ public class ItemSelectorScreen extends KineticScreen {
 
         int maxInfoX =
                 btnAreaStartX - 6;
-        List<ItemSearchIndex.CachedItem> src = rawSourceForMode();
+        List<KineticItemSearch.CachedItem> src = rawSourceForMode();
         Component countText = KineticText.translatable(
                 "gui.kineticcore.items.count",
                 Component.literal(String.format("%,d", displayList.size())),
@@ -760,7 +737,7 @@ public class ItemSelectorScreen extends KineticScreen {
         int badgeY = searchBox.getY() + 2;
 
         graphics.fill(nextX, badgeY, nextX + filterW, badgeY + 16, 0xCC2A2A2A);
-        graphics.renderOutline(nextX, badgeY, filterW, 16, 0xFFAAAAAA);
+        GuiTheme.stateOutline(graphics, nextX, badgeY, filterW, 16, false, false, false);
         KineticText.drawScrollingLeft(graphics, this.font, filterComp, nextX + 3, badgeY + 4, availW, 0xFFFFFF, false);
 
         int closeX = nextX + filterW - 11;
@@ -779,10 +756,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 categoryY,
                 CATEGORY_SCROLLBAR_WIDTH,
                 gridContentHeight(),
-                20,
-                GuiTheme.current().scrollTrack(),
-                GuiTheme.current().scrollThumb(),
-                GuiTheme.current().scrollThumbHover()
+                20
         );
     }
 
@@ -790,7 +764,7 @@ public class ItemSelectorScreen extends KineticScreen {
         categoryButtons.clear();
         for (int index = 0; index < categoryEntries.size(); index++) {
             int categoryIndex = index;
-            Button button = addCompactScrollableButton(
+            StateButton button = addCompactScrollableButton(
                     categoryButtonX(),
                     categoryY + index * CELL_SIZE,
                     CATEGORY_BUTTON_WIDTH,
@@ -811,19 +785,19 @@ public class ItemSelectorScreen extends KineticScreen {
     private void syncCategoryButtons() {
         categoryScroll.update(categoryEntries.size(), FIXED_GRID_ROWS);
         for (int index = 0; index < categoryButtons.size(); index++) {
-            Button button = categoryButtons.get(index);
+            StateButton button = categoryButtons.get(index);
             if (index >= categoryEntries.size()) {
-                button.visible = false;
-                button.active = false;
-                KineticWidgets.setButtonSelected(button, false);
+                button.setVisible(false);
+                button.setEnabled(false);
+                button.setSelected(false);
                 continue;
             }
 
             CategoryEntry entry = categoryEntries.get(index);
-            button.visible = true;
-            button.setMessage(entry.label());
-            button.active = entry.selectable();
-            KineticWidgets.setButtonSelected(button, entry.selectable() && isCategoryActive(entry));
+            button.setVisible(true);
+            button.setText(entry.label());
+            button.setEnabled(entry.selectable());
+            button.setSelected(entry.selectable() && isCategoryActive(entry));
         }
     }
 
@@ -847,7 +821,7 @@ public class ItemSelectorScreen extends KineticScreen {
         rememberedCategoryKey = categoryKey;
         refreshDisplay();
         syncCategoryButtons();
-        showAutoComplete = false;
+        if (searchBox != null) searchBox.clearSuggestions();
     }
 
     private boolean isCategoryActive(CategoryEntry entry) {
@@ -920,7 +894,7 @@ public class ItemSelectorScreen extends KineticScreen {
                     && mouseY < gridY + gridContentHeight();
             for (VisibleSlot slot : visibleSlotCache) {
                 boolean hovered = mouseInGrid && slot.contains(mouseX, mouseY);
-                GuiTheme.itemSlot(graphics, slot.x(), slot.y(), SLOT_SIZE, hovered);
+                GuiTheme.itemSlot(graphics, slot.x(), slot.y(), SLOT_SIZE, SLOT_SIZE, 4, false, hovered, false);
                 graphics.renderItem(slot.stack(), slot.x() + 1, slot.y() + 1);
             }
         } finally {
@@ -947,7 +921,7 @@ public class ItemSelectorScreen extends KineticScreen {
             int x = gridX + column * CELL_SIZE;
             int y = gridY + row * CELL_SIZE - shiftY;
             if (y + SLOT_SIZE <= gridY || y >= gridY + gridContentHeight()) continue;
-            ItemStack stack = displayList.get(index).stack;
+            ItemStack stack = displayList.get(index).stack();
             visibleSlotCache.add(new VisibleSlot(index, stack, x, y));
         }
 
@@ -1014,74 +988,15 @@ public class ItemSelectorScreen extends KineticScreen {
                 gridY,
                 SCROLLBAR_WIDTH,
                 gridContentHeight(),
-                20,
-                GuiTheme.current().scrollTrack(),
-                GuiTheme.current().scrollThumb(),
-                GuiTheme.current().scrollThumbHover()
+                20
         );
     }
 
-    private void renderAutoComplete(GuiGraphics graphics, int mouseX, int mouseY) {
-        int acX = searchBox.getX();
-        int acY = searchBox.getY() + searchBox.getHeight() + 2;
-        int acW = Math.max(80, Math.min(250, canvasWidth() - acX - 12));
-        int itemH = 14;
-        int visibleCount = Math.min(autoCompleteList.size(), autoCompleteMaxVisible);
-        int totalH = visibleCount * itemH;
-        String prefix = autoCompleteMode == 1 ? "@" : "#";
 
-        autoCompleteScroll.update(autoCompleteList.size(), autoCompleteMaxVisible);
-        double smoothOffset = autoCompleteScroll.smoothOffset();
-        int first = Math.max(0, (int) Math.floor(smoothOffset));
-        int last = Math.min(autoCompleteList.size(), first + autoCompleteMaxVisible + 2);
-
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, 300);
-        graphics.fill(acX, acY, acX + acW, acY + totalH, 0xFA0A0A0A);
-        graphics.renderOutline(acX, acY, acW, totalH, 0xFF666666);
-        enableUiScissor(graphics, acX, acY, acX + acW, acY + totalH);
-        try {
-            for (int index = first; index < last; index++) {
-                int top = acY + (int) Math.round((index - smoothOffset) * itemH);
-                int bgColor = index % 2 == 0 ? 0xFF1E1E1E : 0xFF2A2A2A;
-                boolean hovered = mouseX >= acX
-                        && mouseX < acX + acW
-                        && mouseY >= acY
-                        && mouseY < acY + totalH
-                        && mouseY >= top
-                        && mouseY < top + itemH;
-                if (hovered || index == autoCompleteSelected) bgColor = 0xFF444444;
-                graphics.fill(acX + 1, top, acX + acW - 1, top + itemH, bgColor);
-
-                String entry = autoCompleteList.get(index);
-                String rawText = prefix + entry;
-                int textMaxW = acW - 8;
-                Component lineText = KineticText.translatable("gui.kineticcore.items.filter.autocomplete", Component.literal(rawText));
-                KineticText.drawScrollingLeft(graphics, this.font, lineText, acX + 4, top + 3, textMaxW, 0xFFFFFF, false);
-            }
-        } finally {
-            disableUiScissor(graphics);
-        }
-
-        autoCompleteScroll.render(
-                graphics,
-                mouseX,
-                mouseY,
-                acX + acW + 1,
-                acY,
-                4,
-                totalH,
-                10,
-                GuiTheme.current().scrollTrack(),
-                GuiTheme.current().scrollThumb(),
-                GuiTheme.current().scrollThumbHover()
-        );
-        graphics.pose().popPose();
-    }
 
     @Override
     protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int rawMouseX, int rawMouseY) {
-        if (!ItemSearchIndex.isReady() || showAutoComplete) {
+        if (!KineticItemSearch.ready() || (searchBox != null && searchBox.isSuggestionPopupOpen())) {
             return;
         }
         VisibleSlot slot = findVisibleSlot(scaledMouseX, scaledMouseY);
@@ -1096,41 +1011,23 @@ public class ItemSelectorScreen extends KineticScreen {
         unfocusSearchIfNeeded(mouseX, mouseY);
         if (handleFilterCloseClick(mouseX, mouseY, button)) return true;
         if (handleCategoryClick(mouseX, mouseY, button)) {
-            showAutoComplete = false;
+            if (searchBox != null) searchBox.clearSuggestions();
             return true;
         }
-        if (handleAutoCompleteClick(mouseX, mouseY, button)) return true;
         if (super.canvasMouseClicked(mouseX, mouseY, button)) return true;
-        if (button == 0 && ItemSearchIndex.isReady()) return handleListClick(mouseX, mouseY);
+        if (button == 0 && KineticItemSearch.ready()) return handleListClick(mouseX, mouseY);
         return false;
     }
 
     private void unfocusSearchIfNeeded(double mouseX, double mouseY) {
         if (this.searchBox == null || this.searchBox.isMouseOver(mouseX, mouseY)) return;
-        boolean inAutoComplete = false;
-        if (showAutoComplete) {
-            int acX = searchBox.getX();
-            int acY = searchBox.getY() + searchBox.getHeight() + 2;
-            int acW = Math.max(
-                80,
-                Math.min(
-                        250,
-                        canvasWidth() - acX - 12
-                )
-        );
-            int visibleCount = Math.min(autoCompleteList.size(), autoCompleteMaxVisible);
-            int totalH = visibleCount * 14;
-            inAutoComplete = mouseX >= acX && mouseX < acX + acW + 10 && mouseY >= acY && mouseY < acY + totalH;
-        }
-        if (!inAutoComplete) {
-            blurControl(this.searchBox);
-        }
+        blurControl(this.searchBox);
     }
 
     private boolean handleFilterCloseClick(double mouseX, double mouseY, int button) {
         if (activeFilterType == 0 || activeFilterValue == null || searchBox == null || button != 0) return false;
         int infoX = searchBox.getX() + searchBox.getWidth() + 6;
-        List<ItemSearchIndex.CachedItem> src = rawSourceForMode();
+        List<KineticItemSearch.CachedItem> src = rawSourceForMode();
         Component countText = KineticText.translatable(
                 "gui.kineticcore.items.count",
                 Component.literal(String.format("%,d", displayList.size())),
@@ -1154,48 +1051,7 @@ public class ItemSelectorScreen extends KineticScreen {
         return false;
     }
 
-    private boolean handleAutoCompleteClick(double mouseX, double mouseY, int button) {
-        if (!showAutoComplete || searchBox == null || button != 0) return false;
-        int acX = searchBox.getX();
-        int acY = searchBox.getY() + searchBox.getHeight() + 2;
-        int acW = Math.max(
-                80,
-                Math.min(
-                        250,
-                        canvasWidth() - acX - 12
-                )
-        );
-        int itemH = 14;
-        int visibleCount = Math.min(autoCompleteList.size(), autoCompleteMaxVisible);
-        int totalH = visibleCount * itemH;
-        autoCompleteScroll.update(
-                autoCompleteList.size(),
-                autoCompleteMaxVisible
-        );
 
-        if (autoCompleteScroll.beginDrag(
-                mouseX,
-                mouseY,
-                acX + acW + 1,
-                acY,
-                4,
-                totalH,
-                10,
-                2
-        )) {
-            return true;
-        }
-        if (mouseX >= acX && mouseX < acX + acW && mouseY >= acY && mouseY < acY + totalH) {
-            double contentY = mouseY - acY + autoCompleteScroll.smoothOffset() * itemH;
-            int clickedIdx = (int) Math.floor(contentY / itemH);
-            if (clickedIdx >= 0 && clickedIdx < autoCompleteList.size()) {
-                selectAutoComplete(clickedIdx);
-                return true;
-            }
-        }
-        showAutoComplete = false;
-        return true;
-    }
 
     private boolean handleListClick(double mouseX, double mouseY) {
         int contentWidth = gridContentWidth();
@@ -1227,11 +1083,9 @@ public class ItemSelectorScreen extends KineticScreen {
         }
 
         if (onSelect != null) {
-            onSelect.accept(Selection.item(displayList.get(slot.displayIndex()).stack));
+            onSelect.accept(Selection.item(displayList.get(slot.displayIndex()).stack()));
         }
-        if (this.minecraft != null) {
-            this.navigateBack();
-        }
+        this.navigateBack();
         return true;
     }
 
@@ -1242,21 +1096,9 @@ public class ItemSelectorScreen extends KineticScreen {
             double mouseY,
             int button
     ) {
-        boolean handled =
-                mainScroll.release(button);
-
-        handled |=
-                autoCompleteScroll.release(button);
-
-        handled |=
-                categoryScroll.release(button);
-
-        return handled
-                || super.canvasMouseReleased(
-                        mouseX,
-                        mouseY,
-                        button
-                );
+        boolean handled = mainScroll.release(button);
+        handled |= categoryScroll.release(button);
+        return handled || super.canvasMouseReleased(mouseX, mouseY, button);
     }
 
     @Override
@@ -1267,58 +1109,14 @@ public class ItemSelectorScreen extends KineticScreen {
             double dragX,
             double dragY
     ) {
-        if (showAutoComplete
-                && searchBox != null) {
-            int acY =
-                    searchBox.getY()
-                            + searchBox.getHeight()
-                            + 2;
-
-            int visibleCount =
-                    Math.min(
-                            autoCompleteList.size(),
-                            autoCompleteMaxVisible
-                    );
-
-            int totalH =
-                    visibleCount * 14;
-
-            if (autoCompleteScroll.drag(
-                    mouseY,
-                    acY,
-                    totalH,
-                    10
-            )) {
-                return true;
-            }
-        }
-
-        if (categoryScroll.drag(
-                mouseY,
-                categoryY,
-                gridContentHeight(),
-                20
-        )) {
+        if (categoryScroll.drag(mouseY, categoryY, gridContentHeight(), 20)) {
             return true;
         }
-
-        if (mainScroll.drag(
-                mouseY,
-                gridY,
-                gridContentHeight(),
-                20
-        )) {
+        if (mainScroll.drag(mouseY, gridY, gridContentHeight(), 20)) {
             invalidateVisibleSlotCache();
             return true;
         }
-
-        return super.canvasMouseDragged(
-                mouseX,
-                mouseY,
-                button,
-                dragX,
-                dragY
-        );
+        return super.canvasMouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override
@@ -1327,131 +1125,21 @@ public class ItemSelectorScreen extends KineticScreen {
             double mouseY,
             double delta
     ) {
-        if (showAutoComplete
-                && searchBox != null) {
-            int acX =
-                    searchBox.getX();
-
-            int acY =
-                    searchBox.getY()
-                            + searchBox.getHeight()
-                            + 2;
-
-            int acW =
-                    Math.max(
-                            80,
-                            Math.min(
-                                    250,
-                                    canvasWidth()
-                                            - acX
-                                            - 12
-                            )
-                    );
-
-            int visibleCount =
-                    Math.min(
-                            autoCompleteList.size(),
-                            autoCompleteMaxVisible
-                    );
-
-            int totalH =
-                    visibleCount * 14;
-
-            if (mouseX >= acX
-                    && mouseX < acX + acW + 10
-                    && mouseY >= acY
-                    && mouseY < acY + totalH) {
-                autoCompleteScroll.update(
-                        autoCompleteList.size(),
-                        autoCompleteMaxVisible
-                );
-
-                return autoCompleteScroll.scroll(
-                        delta
-                );
-            }
-        }
-
         if (mouseX >= categoryButtonX()
                 && mouseX < categoryScrollbarX() + CATEGORY_SCROLLBAR_WIDTH + 2
                 && mouseY >= categoryY
                 && mouseY < categoryY + gridContentHeight()) {
             categoryScroll.update(categoryEntries.size(), FIXED_GRID_ROWS);
-            if (categoryScroll.scroll(delta)) {
+            if (categoryScroll.scroll(delta, 1.0D)) {
                 return true;
             }
         }
-
-        mainScroll.update(
-                totalDisplayRows(),
-                gridRowsVisible
-        );
-
-        if (mainScroll.scroll(delta)) {
+        mainScroll.update(totalDisplayRows(), gridRowsVisible);
+        if (mainScroll.scroll(delta, 1.0D)) {
             invalidateVisibleSlotCache();
             return true;
         }
-
-        return super.canvasMouseScrolled(
-                mouseX,
-                mouseY,
-                delta
-        );
+        return super.canvasMouseScrolled(mouseX, mouseY, delta);
     }
 
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (showAutoComplete && !autoCompleteList.isEmpty()) {
-            if (keyCode == 265) {
-                autoCompleteSelected = autoCompleteSelected <= 0 ? autoCompleteList.size() - 1 : autoCompleteSelected - 1;
-                ensureAutoCompleteVisible();
-                return true;
-            }
-            if (keyCode == 264) {
-                autoCompleteSelected = autoCompleteSelected >= autoCompleteList.size() - 1 ? 0 : autoCompleteSelected + 1;
-                ensureAutoCompleteVisible();
-                return true;
-            }
-            if (keyCode == 257 || keyCode == 335) {
-                if (autoCompleteSelected >= 0 && autoCompleteSelected < autoCompleteList.size()) {
-                    selectAutoComplete(autoCompleteSelected);
-                    return true;
-                }
-            }
-            if (keyCode == 256) {
-                showAutoComplete = false;
-                return true;
-            }
-            if (keyCode == 258) {
-                if (autoCompleteSelected >= 0 && autoCompleteSelected < autoCompleteList.size()) selectAutoComplete(autoCompleteSelected);
-                else selectAutoComplete(0);
-                return true;
-            }
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    private void ensureAutoCompleteVisible() {
-        autoCompleteScroll.update(
-                autoCompleteList.size(),
-                autoCompleteMaxVisible
-        );
-
-        if (autoCompleteSelected
-                < autoCompleteScroll.smoothOffset()) {
-            autoCompleteScroll.setOffset(
-                    autoCompleteSelected
-            );
-        }
-
-        if (autoCompleteSelected
-                >= autoCompleteScroll.smoothOffset()
-                + autoCompleteMaxVisible) {
-            autoCompleteScroll.setOffset(
-                    autoCompleteSelected
-                            - autoCompleteMaxVisible
-                            + 1
-            );
-        }
-    }
 }

@@ -1,7 +1,7 @@
 package dev.xyat.kineticcore.internal.client.editor;
 
 import dev.xyat.kineticcore.api.client.editor.KineticCommandListEditor;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.text.KineticText;
@@ -9,7 +9,7 @@ import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
 import dev.xyat.kineticcore.api.config.client.KTServerConfigClient;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
@@ -40,16 +40,15 @@ public final class CommandListEditorScreen extends KineticScreen {
     private static final int DELETE_W = 54;
     private static final int BUTTON_GAP = 3;
 
-    private final Screen parent;
     private final Supplier<List<String>> commandGetter;
     private final Consumer<List<String>> commandSetter;
     private final String serverPageId;
     private final String serverEntryId;
     private final KineticCommandListEditor.Text text;
     private final GridScrollController scroll = new GridScrollController();
-    private final List<Button> upButtons = new ArrayList<>();
-    private final List<Button> downButtons = new ArrayList<>();
-    private final List<Button> deleteButtons = new ArrayList<>();
+    private final List<StateButton> upButtons = new ArrayList<>();
+    private final List<StateButton> downButtons = new ArrayList<>();
+    private final List<StateButton> deleteButtons = new ArrayList<>();
     private List<Component> deferredTooltip;
 
     public CommandListEditorScreen(
@@ -61,7 +60,6 @@ public final class CommandListEditorScreen extends KineticScreen {
             KineticCommandListEditor.Text text
     ) {
         super(text.title());
-        this.parent = parent;
         this.commandGetter = commandGetter;
         this.commandSetter = commandSetter;
         this.serverPageId = serverPageId;
@@ -87,21 +85,21 @@ public final class CommandListEditorScreen extends KineticScreen {
             int y = LIST_Y + index * ROW_H + 2;
             upButtons.add(addCompactScrollableButton(
                     upX, y, MOVE_W,
-                    Component.translatable("gui.kineticcore.command_list.move_up"), null,
+                    KineticText.translatable("gui.kineticcore.command_list.move_up"), null,
                     () -> moveIndex(commandIndex, -1),
                     LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
                     () -> scroll.smoothOffset() * ROW_H
             ));
             downButtons.add(addCompactScrollableButton(
                     downX, y, MOVE_W,
-                    Component.translatable("gui.kineticcore.command_list.move_down"), null,
+                    KineticText.translatable("gui.kineticcore.command_list.move_down"), null,
                     () -> moveIndex(commandIndex, 1),
                     LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
                     () -> scroll.smoothOffset() * ROW_H
             ));
             deleteButtons.add(addCompactScrollableButton(
                     deleteX, y, DELETE_W,
-                    Component.translatable("gui.kineticcore.command_list.delete"), null,
+                    KineticText.translatable("gui.kineticcore.command_list.delete"), null,
                     () -> deleteCommand(commandIndex),
                     LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
                     () -> scroll.smoothOffset() * ROW_H
@@ -110,13 +108,13 @@ public final class CommandListEditorScreen extends KineticScreen {
 
         addButton(
                 44, 314, 110,
-                Component.translatable("gui.kineticcore.command_list.add"),
+                KineticText.translatable("gui.kineticcore.command_list.add"),
                 null,
                 () -> openEditor(-1)
         );
         addButton(
                 472, 314, 110,
-                Component.translatable("gui.kineticcore.command_list.back"),
+                KineticText.translatable("gui.kineticcore.command_list.back"),
                 null,
                 this::closeToParent
         );
@@ -145,7 +143,7 @@ public final class CommandListEditorScreen extends KineticScreen {
         }
         persist(updated);
         refreshAfterEdit();
-        GuiOverlay.toast(text.savedMessage());
+        KineticOverlays.toast(null, text.savedMessage(), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
     }
 
     void refreshAfterEdit() {
@@ -170,14 +168,12 @@ public final class CommandListEditorScreen extends KineticScreen {
         int buttonCount = Math.min(size, Math.min(upButtons.size(), Math.min(downButtons.size(), deleteButtons.size())));
         for (int index = 0; index < upButtons.size(); index++) {
             boolean visible = index < buttonCount;
-            upButtons.get(index).visible = visible;
-            downButtons.get(index).visible = visible;
-            deleteButtons.get(index).visible = visible;
-            if (visible) {
-                upButtons.get(index).active = index > 0;
-                downButtons.get(index).active = index < size - 1;
-                deleteButtons.get(index).active = true;
-            }
+            upButtons.get(index).setVisible(visible);
+            downButtons.get(index).setVisible(visible);
+            deleteButtons.get(index).setVisible(visible);
+            upButtons.get(index).setEnabled(visible && index > 0);
+            downButtons.get(index).setEnabled(visible && index < size - 1);
+            deleteButtons.get(index).setEnabled(visible);
         }
     }
 
@@ -194,7 +190,7 @@ public final class CommandListEditorScreen extends KineticScreen {
             if (target >= scroll.smoothOffset() + VISIBLE_ROWS) scroll.setOffset(target - VISIBLE_ROWS + 1);
             updateRowButtons();
         } catch (Throwable throwable) {
-            GuiOverlay.toast(text.saveFailedMessage());
+            KineticOverlays.toast(null, text.saveFailedMessage(), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
         }
     }
 
@@ -208,7 +204,7 @@ public final class CommandListEditorScreen extends KineticScreen {
         graphics.drawCenteredString(font, title, canvasWidth() / 2, 30, 0xFFFFFF);
 
         renderRows(graphics, mouseX, mouseY);
-        GuiTheme.scrollbar(scroll, graphics, mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18);
+        scroll.render(graphics, mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18);
 
         if (currentCommands().isEmpty()) {
             graphics.drawCenteredString(
@@ -240,14 +236,14 @@ public final class CommandListEditorScreen extends KineticScreen {
                         && mouseY >= y
                         && mouseY < y + ROW_H - 2;
                 graphics.fill(LIST_X, y, LIST_X + LIST_W, y + ROW_H - 2, index % 2 == 0 ? 0xCC181818 : 0xCC111111);
-                graphics.renderOutline(LIST_X, y, LIST_W, ROW_H - 2, hovered ? GuiTheme.current().accentHover() : 0xFF555555);
+                GuiTheme.stateOutline(graphics, LIST_X, y, LIST_W, ROW_H - 2, false, hovered, false);
 
                 String display = displayCommand(commands.get(index));
                 int commandWidth = LIST_W - actionWidth - 14;
                 KineticText.drawScrollingLeft(
                         graphics,
                         font,
-                        display,
+                        Component.literal(display),
                         LIST_X + 7,
                         y + 7,
                         commandWidth,
@@ -258,7 +254,7 @@ public final class CommandListEditorScreen extends KineticScreen {
                 if (hovered) {
                     deferredTooltip = List.of(
                             Component.literal(display),
-                            Component.translatable("gui.kineticcore.command_list.edit_hint")
+                            KineticText.translatable("gui.kineticcore.command_list.edit_hint")
                     );
                 }
             }
@@ -298,9 +294,9 @@ public final class CommandListEditorScreen extends KineticScreen {
             persist(updated);
             updateScrollRange();
             updateRowButtons();
-            GuiOverlay.toast(text.deletedMessage());
+            KineticOverlays.toast(null, text.deletedMessage(), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
         } catch (Throwable throwable) {
-            GuiOverlay.toast(text.saveFailedMessage());
+            KineticOverlays.toast(null, text.saveFailedMessage(), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
         }
     }
 
@@ -339,7 +335,7 @@ public final class CommandListEditorScreen extends KineticScreen {
 
     @Override
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
-        if (inList(mouseX, mouseY) && scroll.scroll(delta)) {
+        if (inList(mouseX, mouseY) && scroll.scroll(delta, 1.0D)) {
             return true;
         }
         return super.canvasMouseScrolled(mouseX, mouseY, delta);
@@ -348,17 +344,12 @@ public final class CommandListEditorScreen extends KineticScreen {
     @Override
     protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int mouseX, int mouseY) {
         if (deferredTooltip != null) {
-            showTooltip(deferredTooltip);
+            showTooltip(deferredTooltip, null);
         }
     }
 
     private void closeToParent() {
-        if (minecraft != null) navigateBack();
-    }
-
-    @Override
-    public void onClose() {
-        closeToParent();
+        navigateBack();
     }
 
     @Override

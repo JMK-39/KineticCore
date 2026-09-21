@@ -1,11 +1,17 @@
 package dev.xyat.kineticcore.feature.nbt.network;
 
+
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
+import dev.xyat.kineticcore.api.event.KineticEventSubscription;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.kineticcore.api.network.ClientboundSender;
 import dev.xyat.kineticcore.api.network.KineticNetwork;
 import dev.xyat.kineticcore.api.network.NetworkChannel;
+import dev.xyat.kineticcore.api.network.NetworkVersionPolicy;
 import dev.xyat.kineticcore.api.network.NetworkCodec;
+import dev.xyat.kineticcore.api.network.PacketRegistrations;
 import dev.xyat.kineticcore.api.network.ServerboundSender;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -44,77 +50,101 @@ public final class NbtNetwork {
 
     private static final Map<UUID, EditorSession> EDITOR_SESSIONS = new ConcurrentHashMap<>();
     private static final NetworkChannel CHANNEL = KineticNetwork.channel(
-            new ResourceLocation(KineticRuntime.MOD_ID, "nbt")
-    );
+            KineticResourceIds.of(KineticRuntime.MOD_ID, "nbt")
+    , "1", NetworkVersionPolicy.EXACT);
 
     private static ServerboundSender<OpenNbtEditorRequestPacket> openRequestSender;
     private static ClientboundSender<OpenNbtEditorPacket> openEditorSender;
     private static ClientboundSender<OpenNbtFromCommandPacket> commandOpenSender;
     private static ServerboundSender<SaveNbtPacket> saveSender;
     private static ClientboundSender<S2CNotifyPacket> notifySender;
-    private static boolean eventsRegistered;
+    // This listener stays active for the lifetime of the network registration.
+    private static KineticEventSubscription logoutSubscription;
 
     private NbtNetwork() {
     }
 
-    public static void register() {
-        openRequestSender = CHANNEL.registerServerbound(
-                OpenNbtEditorRequestPacket.class,
-                NetworkCodec.of(
-                        (buffer, packet) -> {
-                            buffer.writeByte(packet.targetType());
-                            buffer.writeUtf(packet.targetId(), MAX_TARGET_ID_LENGTH);
-                            buffer.writeResourceLocation(packet.dimension());
-                        },
-                        buffer -> new OpenNbtEditorRequestPacket(
-                                buffer.readByte(),
-                                buffer.readUtf(MAX_TARGET_ID_LENGTH),
-                                buffer.readResourceLocation()
-                        )
-                ),
-                (packet, context) -> handleOpenRequest(context.sender(), packet)
-        );
+    public static synchronized void register() {
+        PacketRegistrations.runIndependent(
+        () -> {
+            if (openRequestSender == null) {
+                openRequestSender = CHANNEL.registerServerbound(0,
+                                OpenNbtEditorRequestPacket.class,
+                        NetworkCodec.of(
+                                (buffer, packet) -> {
+                                    buffer.writeByte(packet.targetType());
+                                    buffer.writeUtf(packet.targetId(), MAX_TARGET_ID_LENGTH);
+                                    buffer.writeResourceLocation(packet.dimension());
+                                },
+                                buffer -> new OpenNbtEditorRequestPacket(
+                                        buffer.readByte(),
+                                        buffer.readUtf(MAX_TARGET_ID_LENGTH),
+                                        buffer.readResourceLocation()
+                                )
+                        ),
+                        (packet, context) -> handleOpenRequest(context.sender(), packet)
+                );
 
-        openEditorSender = CHANNEL.registerClientbound(
-                OpenNbtEditorPacket.class,
-                NetworkCodec.of(
-                        (buffer, packet) -> buffer.writeUtf(packet.nbt(), MAX_NBT_LENGTH),
-                        buffer -> new OpenNbtEditorPacket(buffer.readUtf(MAX_NBT_LENGTH))
-                ),
-                packet -> NbtNetworkHandlerClient.handleOpenEditor(packet.nbt())
-        );
+            }
+        },
+        () -> {
+            if (openEditorSender == null) {
+                openEditorSender = CHANNEL.registerClientbound(1,
+                                OpenNbtEditorPacket.class,
+                        NetworkCodec.of(
+                                (buffer, packet) -> buffer.writeUtf(packet.nbt(), MAX_NBT_LENGTH),
+                                buffer -> new OpenNbtEditorPacket(buffer.readUtf(MAX_NBT_LENGTH))
+                        ),
+                        packet -> NbtNetworkHandlerClient.handleOpenEditor(packet.nbt())
+                );
 
-        commandOpenSender = CHANNEL.registerClientbound(
-                OpenNbtFromCommandPacket.class,
-                NetworkCodec.of(
-                        (buffer, packet) -> buffer.writeByte(packet.commandMode()),
-                        buffer -> new OpenNbtFromCommandPacket(buffer.readByte())
-                ),
-                packet -> NbtNetworkHandlerClient.handleCommandOpen(packet.commandMode())
-        );
+            }
+        },
+        () -> {
+            if (commandOpenSender == null) {
+                commandOpenSender = CHANNEL.registerClientbound(2,
+                                OpenNbtFromCommandPacket.class,
+                        NetworkCodec.of(
+                                (buffer, packet) -> buffer.writeByte(packet.commandMode()),
+                                buffer -> new OpenNbtFromCommandPacket(buffer.readByte())
+                        ),
+                        packet -> NbtNetworkHandlerClient.handleCommandOpen(packet.commandMode())
+                );
 
-        saveSender = CHANNEL.registerServerbound(
-                SaveNbtPacket.class,
-                NetworkCodec.of(
-                        (buffer, packet) -> buffer.writeUtf(packet.nbt(), MAX_NBT_LENGTH),
-                        buffer -> new SaveNbtPacket(buffer.readUtf(MAX_NBT_LENGTH))
-                ),
-                (packet, context) -> handleSave(context.sender(), packet)
-        );
+            }
+        },
+        () -> {
+            if (saveSender == null) {
+                saveSender = CHANNEL.registerServerbound(3,
+                                SaveNbtPacket.class,
+                        NetworkCodec.of(
+                                (buffer, packet) -> buffer.writeUtf(packet.nbt(), MAX_NBT_LENGTH),
+                                buffer -> new SaveNbtPacket(buffer.readUtf(MAX_NBT_LENGTH))
+                        ),
+                        (packet, context) -> handleSave(context.sender(), packet)
+                );
 
-        notifySender = CHANNEL.registerClientbound(
-                S2CNotifyPacket.class,
-                NetworkCodec.of(
-                        (buffer, packet) -> buffer.writeUtf(packet.translationKey()),
-                        buffer -> new S2CNotifyPacket(buffer.readUtf())
-                ),
-                packet -> NbtNetworkHandlerClient.handleNotify(packet.translationKey())
-        );
+            }
+        },
+        () -> {
+            if (notifySender == null) {
+                notifySender = CHANNEL.registerClientbound(4,
+                                S2CNotifyPacket.class,
+                        NetworkCodec.of(
+                                (buffer, packet) -> buffer.writeUtf(packet.translationKey()),
+                                buffer -> new S2CNotifyPacket(buffer.readUtf())
+                        ),
+                        packet -> NbtNetworkHandlerClient.handleNotify(packet.translationKey())
+                );
 
-        if (!eventsRegistered) {
-            eventsRegistered = true;
-            KineticServerEvents.onPlayerLogout(NbtNetwork::onPlayerLogout);
+            }
+        },
+        () -> {
+            if (logoutSubscription == null) {
+                logoutSubscription = KineticServerEvents.onPlayerLogout(KineticEventPriority.NORMAL, NbtNetwork::onPlayerLogout);
+            }
         }
+        );
     }
 
     public static void openFromCommand(ServerPlayer player, byte commandMode) {
@@ -123,10 +153,12 @@ public final class NbtNetwork {
         }
     }
 
-    public static void sendToServer(OpenNbtEditorRequestPacket message) {
-        if (openRequestSender != null) {
-            openRequestSender.send(message);
-        }
+    /** Whether the editor request was actually submitted; missing registration is not success. */
+    public static boolean sendToServer(OpenNbtEditorRequestPacket message) {
+        ServerboundSender<OpenNbtEditorRequestPacket> sender = openRequestSender;
+        if (sender == null) return false;
+        sender.send(message);
+        return true;
     }
 
     public static void sendToServer(SaveNbtPacket message) {
@@ -136,8 +168,8 @@ public final class NbtNetwork {
     }
 
     private static void handleOpenRequest(ServerPlayer player, OpenNbtEditorRequestPacket request) {
-        EDITOR_SESSIONS.remove(player.getUUID());
         if (!player.hasPermissions(2)) {
+            EDITOR_SESSIONS.remove(player.getUUID());
             sendNotify(player, PERMISSION_ERROR_KEY);
             return;
         }
@@ -156,6 +188,9 @@ public final class NbtNetwork {
                 default -> sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
             }
         } catch (IllegalArgumentException exception) {
+            sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
+        } catch (RuntimeException exception) {
+            KineticRuntime.logger().error("Failed to open NBT editor for player {}", player.getUUID(), exception);
             sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
         }
     }
@@ -177,7 +212,7 @@ public final class NbtNetwork {
 
     private static void openEntityEditor(ServerPlayer player, ServerLevel level, String targetId) {
         Entity target = level.getEntity(UUID.fromString(targetId));
-        if (!isAvailableEntity(player, level, target)) {
+        if (isUnavailableEntity(player, level, target)) {
             sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
             return;
         }
@@ -207,19 +242,35 @@ public final class NbtNetwork {
     }
 
     private static void openEditor(ServerPlayer player, EditorSession session, String nbt) {
-        EDITOR_SESSIONS.put(player.getUUID(), session);
-        if (openEditorSender != null) {
-            openEditorSender.send(player, new OpenNbtEditorPacket(nbt));
+        ClientboundSender<OpenNbtEditorPacket> sender = openEditorSender;
+        if (sender == null) {
+            sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
+            return;
+        }
+        UUID playerId = player.getUUID();
+        EditorSession previous = EDITOR_SESSIONS.put(playerId, session);
+        try {
+            sender.send(player, new OpenNbtEditorPacket(nbt));
+        } catch (RuntimeException exception) {
+            // Do not leave a session for an editor that never reached the client.
+            if (EDITOR_SESSIONS.remove(playerId, session) && previous != null) {
+                EDITOR_SESSIONS.putIfAbsent(playerId, previous);
+            }
+            KineticRuntime.logger().error("Failed to send NBT editor to player {}", playerId, exception);
+            sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
         }
     }
 
     private static void handleSave(ServerPlayer player, SaveNbtPacket packet) {
-        EditorSession session = EDITOR_SESSIONS.remove(player.getUUID());
+        UUID playerId = player.getUUID();
+        EditorSession session = EDITOR_SESSIONS.get(playerId);
         if (!player.hasPermissions(2)) {
+            EDITOR_SESSIONS.remove(playerId);
             sendNotify(player, PERMISSION_ERROR_KEY);
             return;
         }
         if (session == null || !player.serverLevel().dimension().equals(session.dimension())) {
+            if (session != null) EDITOR_SESSIONS.remove(playerId, session);
             sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
             return;
         }
@@ -228,7 +279,15 @@ public final class NbtNetwork {
         try {
             tag = packet.nbt().isBlank() ? new CompoundTag() : TagParser.parseTag(packet.nbt());
         } catch (Exception exception) {
+            // Invalid input can be corrected and resubmitted from the same editor.
             sendNotify(player, INVALID_NBT_ERROR_KEY);
+            return;
+        }
+
+        // Consume only this exact session after parsing; stale requests cannot
+        // consume a newer editor session or replay an already-applied edit.
+        if (!EDITOR_SESSIONS.remove(player.getUUID(), session)) {
+            sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
             return;
         }
 
@@ -258,15 +317,28 @@ public final class NbtNetwork {
     private static void saveEntity(ServerPlayer player, EditorSession session, CompoundTag tag) {
         ServerLevel level = player.serverLevel();
         Entity target = session.target() instanceof Entity entity ? entity : null;
-        if (!isAvailableEntity(player, level, target)
+        if (isUnavailableEntity(player, level, target)
                 || level.getEntity(target.getUUID()) != target) {
             sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
             return;
         }
 
         UUID oldUuid = target.getUUID();
-        target.load(tag);
-        target.setUUID(oldUuid);
+        CompoundTag previousTag = new CompoundTag();
+        target.saveWithoutId(previousTag);
+        try {
+            target.load(tag);
+        } catch (RuntimeException failure) {
+            // Loading a malformed tag can mutate the entity before it fails.
+            try {
+                target.load(previousTag);
+            } catch (RuntimeException rollbackFailure) {
+                if (rollbackFailure != failure) failure.addSuppressed(rollbackFailure);
+            }
+            throw failure;
+        } finally {
+            target.setUUID(oldUuid);
+        }
         sendNotify(player, ENTITY_SUCCESS_KEY);
     }
 
@@ -288,17 +360,27 @@ public final class NbtNetwork {
         tag.putInt("x", pos.getX());
         tag.putInt("y", pos.getY());
         tag.putInt("z", pos.getZ());
-        target.load(tag);
+        CompoundTag previousTag = target.saveWithId();
+        try {
+            target.load(tag);
+        } catch (RuntimeException failure) {
+            try {
+                target.load(previousTag);
+            } catch (RuntimeException rollbackFailure) {
+                if (rollbackFailure != failure) failure.addSuppressed(rollbackFailure);
+            }
+            throw failure;
+        }
         target.setChanged();
         level.sendBlockUpdated(pos, target.getBlockState(), target.getBlockState(), 3);
         sendNotify(player, BLOCK_SUCCESS_KEY);
     }
 
-    private static boolean isAvailableEntity(ServerPlayer player, ServerLevel level, Entity target) {
-        return target != null
-                && !target.isRemoved()
-                && target.level() == level
-                && player.distanceToSqr(target) <= MAX_TARGET_DISTANCE_SQUARED;
+    private static boolean isUnavailableEntity(ServerPlayer player, ServerLevel level, Entity target) {
+        return target == null
+                || target.isRemoved()
+                || target.level() != level
+                || !(player.distanceToSqr(target) <= MAX_TARGET_DISTANCE_SQUARED);
     }
 
     private static BlockEntity findAvailableBlockEntity(ServerPlayer player, ServerLevel level, BlockPos pos) {

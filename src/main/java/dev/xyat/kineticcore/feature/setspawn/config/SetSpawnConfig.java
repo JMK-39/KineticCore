@@ -5,13 +5,13 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
-import net.minecraftforge.fml.loading.FMLPaths;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 
 import java.nio.file.Path;
 import java.util.*;
 
 public class SetSpawnConfig {
-    private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("kineticcore/setspawn.toml");
+    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/setspawn.toml");
     private static CommentedFileConfig configData;
 
     public static boolean enableCustomSpawn = true;
@@ -37,22 +37,48 @@ public class SetSpawnConfig {
             "minecraft:village_snowy", "minecraft:village_taiga"
     );
 
-    public static void load() {
+    public static synchronized void load() {
+        CommentedFileConfig previous = configData;
+        CommentedFileConfig candidate = null;
+        SettingsSnapshot priorSettings = SettingsSnapshot.capture();
         try {
-            configData = CommentedFileConfig.builder(CONFIG_PATH)
+            candidate = CommentedFileConfig.builder(CONFIG_PATH)
                     .sync().preserveInsertionOrder().writingMode(WritingMode.REPLACE).build();
+            configData = candidate;
             configData.load();
             setupConfig();
             configData.save();
             readValues();
             registerServerConfig();
         } catch (Exception e) {
+            configData = previous;
+            priorSettings.restore();
+            if (candidate != null) {
+                try {
+                    candidate.close();
+                } catch (Exception cleanupFailure) {
+                    if (cleanupFailure != e) e.addSuppressed(cleanupFailure);
+                }
+            }
             KineticRuntime.logger().error("出生地修改: SetSpawnConfig Load Failed", e);
+            return;
+        }
+        // Failure to close a superseded handle must not roll back a successful
+        // reload to an already closed instance.
+        if (previous != null) {
+            try {
+                previous.close();
+            } catch (Exception cleanupFailure) {
+                KineticRuntime.logger().error("Failed to close prior SetSpawn config", cleanupFailure);
+            }
         }
     }
 
     private static void registerServerConfig() {
-        KTServerConfigApi.register(KTServerConfigSpec.builder("kineticcore:setspawn")
+        // Opening the editor reloads this file. The API rejects duplicate page
+        // objects, so construct and install the spec only once per process.
+        if (!KTServerConfigApi.isRegistered("kineticcore:setspawn")) {
+            KTServerConfigApi.register(KTServerConfigSpec.builder("kineticcore:setspawn")
                 .booleanValue("enable", () -> enableCustomSpawn, value -> enableCustomSpawn = value)
                 .intValue("radius", () -> spawnSearchRadius, value -> spawnSearchRadius = value, 0, Integer.MAX_VALUE)
                 .intValue("structure_radius", () -> structureRadius, value -> structureRadius = value, 0, Integer.MAX_VALUE)
@@ -60,6 +86,7 @@ public class SetSpawnConfig {
                 .intValue("biome_step", () -> biomeStep, value -> biomeStep = value, 1, Integer.MAX_VALUE)
                 .onSave(SetSpawnConfig::save)
                 .build());
+        }
         KTServerConfigApi.registerActionPage("kineticcore:setspawn_rules");
     }
 
@@ -137,17 +164,58 @@ public class SetSpawnConfig {
         biomeStep = Math.max(1, configData.getOrElse("setspawn.biome_step", 48));
 
         enableDimensions = configData.getOrElse("setspawn.rule_dimension.enable", false);
-        setspawnDimensions = configData.getOrElse("setspawn.rule_dimension.list", new ArrayList<>());
-        setspawnDimensions.removeIf(dim -> dim.equals("minecraft:overworld")); // 自动过滤主世界
+        setspawnDimensions = readStringList("setspawn.rule_dimension.list", List.of());
+        setspawnDimensions.removeIf("minecraft:overworld"::equals); // 自动过滤主世界
 
         enableBiomes = configData.getOrElse("setspawn.rule_biome.enable", false);
-        setspawnBiomes = configData.getOrElse("setspawn.rule_biome.list", new ArrayList<>(DEFAULT_BIOMES));
+        setspawnBiomes = readStringList("setspawn.rule_biome.list", DEFAULT_BIOMES);
 
         enableStructures = configData.getOrElse("setspawn.rule_structure.enable", true);
-        setspawnStructures = configData.getOrElse("setspawn.rule_structure.list", new ArrayList<>(DEFAULT_STRUCTURES));
+        setspawnStructures = readStringList("setspawn.rule_structure.list", DEFAULT_STRUCTURES);
     }
 
-    public static void save() {
+    /** Copy untrusted config lists; never mutate a list owned by the configuration backend. */
+    private static List<String> readStringList(String path, List<String> defaults) {
+        Object value = configData.getOrElse(path, defaults);
+        if (!(value instanceof List<?> entries)) return new ArrayList<>(defaults);
+        List<String> result = new ArrayList<>(entries.size());
+        for (Object entry : entries) {
+            if (entry instanceof String text && !text.isBlank()) result.add(text);
+        }
+        return result;
+    }
+
+    /** Keep the last usable configuration active if a reload stops halfway. */
+    private record SettingsSnapshot(
+            boolean custom, int searchRadius, int structureRadius, int timeoutSeconds, int step,
+            boolean dimensionsEnabled, List<String> dimensions,
+            boolean biomesEnabled, List<String> biomes,
+            boolean structuresEnabled, List<String> structures
+    ) {
+        private static SettingsSnapshot capture() {
+            return new SettingsSnapshot(enableCustomSpawn, spawnSearchRadius, SetSpawnConfig.structureRadius,
+                    structureSearchTimeoutSeconds, biomeStep, enableDimensions,
+                    new ArrayList<>(setspawnDimensions), enableBiomes,
+                    new ArrayList<>(setspawnBiomes), enableStructures,
+                    new ArrayList<>(setspawnStructures));
+        }
+
+        private void restore() {
+            enableCustomSpawn = custom;
+            spawnSearchRadius = searchRadius;
+            SetSpawnConfig.structureRadius = structureRadius;
+            structureSearchTimeoutSeconds = timeoutSeconds;
+            biomeStep = step;
+            enableDimensions = dimensionsEnabled;
+            setspawnDimensions = new ArrayList<>(dimensions);
+            enableBiomes = biomesEnabled;
+            setspawnBiomes = new ArrayList<>(biomes);
+            enableStructures = structuresEnabled;
+            setspawnStructures = new ArrayList<>(structures);
+        }
+    }
+
+    public static synchronized void save() {
         if (configData == null) {
             throw new IllegalStateException("SetSpawn config is not loaded");
         }

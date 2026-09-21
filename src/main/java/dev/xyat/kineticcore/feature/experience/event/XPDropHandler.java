@@ -1,28 +1,26 @@
 package dev.xyat.kineticcore.feature.experience.event;
 
-import net.minecraftforge.common.MinecraftForge;
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.entity.event.KineticLivingEvents;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameRules;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
 
 public class XPDropHandler {
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
 
     public static void register() {
-        if (registered) return;
-        registered = true;
-        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOW, XPDropHandler::onPlayerDeath);
+        REGISTRATION.run(() -> KineticLivingEvents.onDeath(KineticEventPriority.LOW, false, XPDropHandler::onPlayerDeath));
     }
 
     private static final String DEATH_RECOVERY_XP_TAG = "kineticcore:death_recovery_xp";
 
-    public static void onPlayerDeath(LivingDeathEvent event) {
-        if (!(event.getEntity() instanceof Player player)) return;
+    public static void onPlayerDeath(KineticLivingEvents.DeathContext context) {
+        if (!(context.entity() instanceof Player player)) return;
         if (player.level().isClientSide) return;
 
         ServerLevel level = (ServerLevel) player.level();

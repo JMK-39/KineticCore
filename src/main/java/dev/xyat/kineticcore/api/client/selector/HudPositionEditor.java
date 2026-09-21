@@ -1,38 +1,51 @@
 package dev.xyat.kineticcore.api.client.selector;
 
+import dev.xyat.kineticcore.api.text.KineticI18n;
+import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
+import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.HighZButton;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.function.Consumer;
 
+/** Public API type for hud position editor. */
 public final class HudPositionEditor {
+    /** Immutable state data exposed by this API. */
     public record State(int x, int y, double scale) {
     }
 
+    /** Public API contract for element renderer. */
     @FunctionalInterface
     public interface ElementRenderer {
         void render(GuiGraphics graphics, int x, int y, int mouseX, int mouseY);
     }
 
+    /**
+     * Exposes the inventory width API value.
+     */
     public static final int INVENTORY_WIDTH = 176;
+    /**
+     * Exposes the inventory height API value.
+     */
     public static final int INVENTORY_HEIGHT = 166;
 
-    private static final ResourceLocation INVENTORY_TEXTURE = new ResourceLocation(
+    private static final ResourceLocation INVENTORY_TEXTURE = KineticResourceIds.of(
             "minecraft",
             "textures/gui/container/inventory.png"
     );
     private static final int ELEMENT_PADDING = 4;
     private static final int BUTTON_WIDTH = 90;
     private static final int BUTTON_GAP = 6;
-    private static final double MIN_SCALE = 0.5D;
+    /** Default minimum scale used by HUD position editors. */
+    public static final double DEFAULT_MINIMUM_SCALE = 0.5D;
     private static final int SAFE_MAX_SIZE = 1_000_000_000;
 
     private int screenWidth;
@@ -44,7 +57,7 @@ public final class HudPositionEditor {
     private int defaultX;
     private int defaultY;
     private double defaultScale = 1.0D;
-    private double minimumScale = MIN_SCALE;
+    private double minimumScale = DEFAULT_MINIMUM_SCALE;
     private double scale = 1.0D;
     private int x;
     private int y;
@@ -53,14 +66,23 @@ public final class HudPositionEditor {
     private boolean initialized;
     private boolean dragging;
 
+    /**
+     * Returns inventory left.
+     */
     public static int getInventoryLeft(int screenWidth) {
         return (screenWidth - INVENTORY_WIDTH) / 2;
     }
 
+    /**
+     * Returns inventory top.
+     */
     public static int getInventoryTop(int screenHeight) {
         return (screenHeight - INVENTORY_HEIGHT) / 2;
     }
 
+    /**
+     * Renders inventory reference.
+     */
     public static void renderInventoryReference(
             GuiGraphics graphics,
             Font font,
@@ -76,7 +98,7 @@ public final class HudPositionEditor {
         graphics.blit(INVENTORY_TEXTURE, left, top, 0, 0, INVENTORY_WIDTH, INVENTORY_HEIGHT);
         graphics.drawString(
                 font,
-                Component.translatable("container.crafting"),
+                KineticI18n.translatable("container.crafting"),
                 left + 97,
                 top + 8,
                 4210752,
@@ -84,7 +106,7 @@ public final class HudPositionEditor {
         );
         graphics.drawString(
                 font,
-                Component.translatable("container.inventory"),
+                KineticI18n.translatable("container.inventory"),
                 left + 8,
                 top + 72,
                 4210752,
@@ -101,60 +123,9 @@ public final class HudPositionEditor {
         );
     }
 
-    public void initialize(
-            int screenWidth,
-            int screenHeight,
-            int elementWidth,
-            int elementHeight,
-            int initialX,
-            int initialY,
-            int defaultX,
-            int defaultY
-    ) {
-        initialize(
-                screenWidth,
-                screenHeight,
-                elementWidth,
-                elementHeight,
-                initialX,
-                initialY,
-                defaultX,
-                defaultY,
-                1.0D,
-                1.0D
-        );
-    }
-
-    public void initialize(
-            int screenWidth,
-            int screenHeight,
-            int elementWidth,
-            int elementHeight,
-            int initialX,
-            int initialY,
-            int defaultX,
-            int defaultY,
-            double initialScale,
-            double defaultScale
-    ) {
-        initialize(
-                screenWidth,
-                screenHeight,
-                elementWidth,
-                elementHeight,
-                initialX,
-                initialY,
-                defaultX,
-                defaultY,
-                initialScale,
-                defaultScale,
-                MIN_SCALE
-        );
-    }
-
     /**
      * Initializes an editor with a caller-defined minimum scale. Existing
-     * overloads retain the historical {@value #MIN_SCALE} lower bound.
+     * overloads retain the the caller-defined lower bound.
      */
     public void initialize(
             int screenWidth,
@@ -192,8 +163,11 @@ public final class HudPositionEditor {
         }
     }
 
+    /**
+     * Adds control buttons.
+     */
     public void addControlButtons(
-            Consumer<Button> buttonAdder,
+            Consumer<? super HighZButton> buttonAdder,
             Component saveText,
             Component resetText,
             Component cancelText,
@@ -206,20 +180,23 @@ public final class HudPositionEditor {
 
         buttonAdder.accept(KineticWidgets.createHighZButton(
                 startX, buttonY, BUTTON_WIDTH,
-                saveText, null, 0, ignored -> saveAction.run()
+                saveText, null, 0, saveAction
         ));
 
         buttonAdder.accept(KineticWidgets.createHighZButton(
                 startX + BUTTON_WIDTH + BUTTON_GAP, buttonY, BUTTON_WIDTH,
-                resetText, null, 0, ignored -> reset()
+                resetText, null, 0, this::reset
         ));
 
         buttonAdder.accept(KineticWidgets.createHighZButton(
                 startX + (BUTTON_WIDTH + BUTTON_GAP) * 2, buttonY, BUTTON_WIDTH,
-                cancelText, null, 0, ignored -> cancelAction.run()
+                cancelText, null, 0, cancelAction
         ));
     }
 
+    /**
+     * Performs the render API operation.
+     */
     public void render(
             GuiGraphics graphics,
             Font font,
@@ -237,8 +214,11 @@ public final class HudPositionEditor {
         renderElement(graphics, mouseX, mouseY, renderer);
     }
 
+    /**
+     * Performs the mouse clicked API operation.
+     */
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT || !isElementHovered(mouseX, mouseY)) {
+        if (!KineticMouseButtons.isPrimary(button) || !isElementHovered(mouseX, mouseY)) {
             return false;
         }
 
@@ -248,8 +228,11 @@ public final class HudPositionEditor {
         return true;
     }
 
+    /**
+     * Performs the mouse dragged API operation.
+     */
     public boolean mouseDragged(double mouseX, double mouseY, int button) {
-        if (!dragging || button != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        if (!dragging || !KineticMouseButtons.isPrimary(button)) {
             return false;
         }
 
@@ -258,8 +241,11 @@ public final class HudPositionEditor {
         return true;
     }
 
+    /**
+     * Performs the mouse released API operation.
+     */
     public boolean mouseReleased(int button) {
-        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT || !dragging) {
+        if (!KineticMouseButtons.isPrimary(button) || !dragging) {
             return false;
         }
 
@@ -267,6 +253,9 @@ public final class HudPositionEditor {
         return true;
     }
 
+    /**
+     * Performs the mouse scrolled API operation.
+     */
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollDelta) {
         if (scrollDelta == 0.0D || !isElementHovered(mouseX, mouseY)) {
             return false;
@@ -293,28 +282,34 @@ public final class HudPositionEditor {
         return true;
     }
 
+    /**
+     * Performs the key pressed API operation.
+     */
     public boolean keyPressed(int keyCode, boolean shiftDown) {
         int step = shiftDown ? 5 : 1;
 
-        if (keyCode == GLFW.GLFW_KEY_LEFT) {
+        if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.LEFT, keyCode)) {
             x = clampX(x - step);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_RIGHT) {
+        if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.RIGHT, keyCode)) {
             x = clampX(x + step);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_UP) {
+        if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.UP, keyCode)) {
             y = clampY(y - step);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_DOWN) {
+        if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.DOWN, keyCode)) {
             y = clampY(y + step);
             return true;
         }
         return false;
     }
 
+    /**
+     * Resets the current API state.
+     */
     public void reset() {
         scale = defaultScale;
         updateElementSize();
@@ -322,30 +317,51 @@ public final class HudPositionEditor {
         y = clampY(defaultY);
     }
 
+    /**
+     * Returns x.
+     */
     public int getX() {
         return x;
     }
 
+    /**
+     * Returns y.
+     */
     public int getY() {
         return y;
     }
 
+    /**
+     * Returns element width.
+     */
     public int getElementWidth() {
         return elementWidth;
     }
 
+    /**
+     * Returns element height.
+     */
     public int getElementHeight() {
         return elementHeight;
     }
 
+    /**
+     * Returns scale.
+     */
     public double getScale() {
         return scale;
     }
 
+    /**
+     * Returns a snapshot of the current values.
+     */
     public State snapshot() {
         return new State(x, y, scale);
     }
 
+    /**
+     * Performs the restore API operation.
+     */
     public void restore(State state) {
         if (state == null) return;
         scale = sanitizeScale(state.scale());
@@ -420,7 +436,7 @@ public final class HudPositionEditor {
     }
 
     private static double sanitizeMinimumScale(double value) {
-        return Double.isFinite(value) && value > 0.0D ? value : MIN_SCALE;
+        return Double.isFinite(value) && value > 0.0D ? value : DEFAULT_MINIMUM_SCALE;
     }
 
     private static int safeAdd(int base, int delta) {

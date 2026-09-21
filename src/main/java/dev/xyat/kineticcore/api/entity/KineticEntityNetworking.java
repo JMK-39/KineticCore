@@ -7,10 +7,14 @@ import net.minecraft.world.entity.Entity;
 
 import java.util.Objects;
 
+/** Public Kinetic API facade for entity networking. */
 public final class KineticEntityNetworking {
     private KineticEntityNetworking() {
     }
 
+    /**
+     * Performs the spawning packet API operation.
+     */
     public static Packet<ClientGamePacketListener> spawningPacket(Entity entity) {
         return KineticEntityNetworkingRuntime.spawningPacket(Objects.requireNonNull(entity, "entity"));
     }

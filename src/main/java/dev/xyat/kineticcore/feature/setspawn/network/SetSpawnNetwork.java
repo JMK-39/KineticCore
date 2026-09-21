@@ -1,12 +1,12 @@
 package dev.xyat.kineticcore.feature.setspawn.network;
 
-import dev.xyat.kineticcore.api.runtime.KineticRuntime;
-import dev.xyat.kineticcore.api.network.ClientboundSender;
-import dev.xyat.kineticcore.api.network.KineticNetwork;
-import dev.xyat.kineticcore.api.network.NetworkChannel;
+import dev.xyat.kineticcore.api.network.PacketChannel;
+import dev.xyat.kineticcore.api.network.NetworkVersionPolicy;
 import dev.xyat.kineticcore.api.network.NetworkCodec;
+import dev.xyat.kineticcore.api.network.PacketRegistrations;
 import dev.xyat.kineticcore.api.network.NetworkProtocolLimits;
-import dev.xyat.kineticcore.api.network.ServerboundSender;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
+import dev.xyat.kineticcore.api.runtime.KineticLog;
 import dev.xyat.kineticcore.feature.setspawn.config.SetSpawnConfig;
 import dev.xyat.kineticcore.feature.setspawn.util.StructureUtils;
 import net.minecraft.core.registries.Registries;
@@ -23,111 +23,137 @@ import java.util.stream.Collectors;
 public final class SetSpawnNetwork {
     private static final int MAX_LIST_ENTRIES = NetworkProtocolLimits.DEFAULT.maxCollectionEntries();
     private static final int MAX_STRING_LENGTH = NetworkProtocolLimits.DEFAULT.maxUtfChars();
-    private static final NetworkChannel CHANNEL = KineticNetwork.channel(
-            new ResourceLocation(KineticRuntime.MOD_ID, "setspawn")
-    );
-
-    private static ClientboundSender<OpenSetSpawnGuiPacket> openEditorSender;
-    private static ServerboundSender<SaveSetSpawnPacket> saveSender;
-    private static ClientboundSender<SaveSetSpawnResultPacket> saveResultSender;
-    private static ServerboundSender<RequestOpenSetSpawnGuiPacket> openRequestSender;
+    private static final PacketChannel CHANNEL = PacketChannel.create(
+                                                          KineticResourceIds.of("kineticcore", "setspawn"),
+                                                          "1",
+                                                          NetworkVersionPolicy.EXACT
+                                                  );
+    private static boolean networkRegistered;
+    private static boolean openGuiRegistered;
+    private static boolean savePacketRegistered;
+    private static boolean saveResultRegistered;
+    private static boolean requestOpenRegistered;
 
     private SetSpawnNetwork() {
     }
 
-    public static void register() {
-        openEditorSender = CHANNEL.registerClientbound(
-                OpenSetSpawnGuiPacket.class,
-                NetworkCodec.of(
-                        (buffer, packet) -> {
-                            buffer.writeBoolean(packet.globalEnable());
-                            buffer.writeBoolean(packet.dimEnable());
-                            buffer.writeStringList(packet.dims());
-                            buffer.writeBoolean(packet.biomeEnable());
-                            buffer.writeStringList(packet.biomes());
-                            buffer.writeBoolean(packet.structEnable());
-                            buffer.writeStringList(packet.structs());
-                            buffer.writeUtf(packet.playerDim());
-                            buffer.writeUtf(packet.playerBiome());
-                            buffer.writeUtf(packet.playerStruct());
-                            buffer.writeStringList(packet.allDims());
-                            buffer.writeStringList(packet.allBiomes());
-                            buffer.writeStringList(packet.allStructs());
-                        },
-                        buffer -> new OpenSetSpawnGuiPacket(
-                                buffer.readBoolean(),
-                                buffer.readBoolean(),
-                                buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
-                                buffer.readBoolean(),
-                                buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
-                                buffer.readBoolean(),
-                                buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
-                                buffer.readUtf(),
-                                buffer.readUtf(),
-                                buffer.readUtf(),
-                                buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
-                                buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
-                                buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH)
-                        )
-                ),
-                SetSpawnNetworkClient::handleOpenGui
-        );
+    public static synchronized void register() {
+        PacketRegistrations.runIndependent(
+        () -> {
+            if (!openGuiRegistered) {
+                CHANNEL.registerClientbound(0,
+                                OpenSetSpawnGuiPacket.class,
+                        NetworkCodec.of(
+                                (buffer, packet) -> {
+                                    buffer.writeBoolean(packet.globalEnable());
+                                    buffer.writeBoolean(packet.dimEnable());
+                                    buffer.writeStringList(packet.dims(), MAX_LIST_ENTRIES, MAX_STRING_LENGTH);
+                                    buffer.writeBoolean(packet.biomeEnable());
+                                    buffer.writeStringList(packet.biomes(), MAX_LIST_ENTRIES, MAX_STRING_LENGTH);
+                                    buffer.writeBoolean(packet.structEnable());
+                                    buffer.writeStringList(packet.structs(), MAX_LIST_ENTRIES, MAX_STRING_LENGTH);
+                                    buffer.writeUtf(packet.playerDim(), MAX_STRING_LENGTH);
+                                    buffer.writeUtf(packet.playerBiome(), MAX_STRING_LENGTH);
+                                    buffer.writeUtf(packet.playerStruct(), MAX_STRING_LENGTH);
+                                    buffer.writeStringList(packet.allDims(), MAX_LIST_ENTRIES, MAX_STRING_LENGTH);
+                                    buffer.writeStringList(packet.allBiomes(), MAX_LIST_ENTRIES, MAX_STRING_LENGTH);
+                                    buffer.writeStringList(packet.allStructs(), MAX_LIST_ENTRIES, MAX_STRING_LENGTH);
+                                },
+                                buffer -> new OpenSetSpawnGuiPacket(
+                                        buffer.readBoolean(),
+                                        buffer.readBoolean(),
+                                        buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
+                                        buffer.readBoolean(),
+                                        buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
+                                        buffer.readBoolean(),
+                                        buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
+                                        buffer.readUtf(MAX_STRING_LENGTH),
+                                        buffer.readUtf(MAX_STRING_LENGTH),
+                                        buffer.readUtf(MAX_STRING_LENGTH),
+                                        buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
+                                        buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
+                                        buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH)
+                                )
+                        ),
+                        packet -> SetSpawnNetworkClient.handleOpenGui(packet)
+                );
 
-        saveSender = CHANNEL.registerServerbound(
-                SaveSetSpawnPacket.class,
-                NetworkCodec.of(
-                        (buffer, packet) -> {
-                            buffer.writeBoolean(packet.globalEnable());
-                            buffer.writeBoolean(packet.dimEnable());
-                            buffer.writeStringList(packet.dims());
-                            buffer.writeBoolean(packet.biomeEnable());
-                            buffer.writeStringList(packet.biomes());
-                            buffer.writeBoolean(packet.structEnable());
-                            buffer.writeStringList(packet.structs());
-                        },
-                        buffer -> new SaveSetSpawnPacket(
-                                buffer.readBoolean(),
-                                buffer.readBoolean(),
-                                buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
-                                buffer.readBoolean(),
-                                buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
-                                buffer.readBoolean(),
-                                buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH)
-                        )
-                ),
-                (packet, context) -> handleSave(context.sender(), packet)
-        );
+                openGuiRegistered = true;
+            }
+        },
+        () -> {
+            if (!savePacketRegistered) {
+                CHANNEL.registerServerbound(1,
+                                SaveSetSpawnPacket.class,
+                        NetworkCodec.of(
+                                (buffer, packet) -> {
+                                    buffer.writeBoolean(packet.globalEnable());
+                                    buffer.writeBoolean(packet.dimEnable());
+                                    buffer.writeStringList(packet.dims(), MAX_LIST_ENTRIES, MAX_STRING_LENGTH);
+                                    buffer.writeBoolean(packet.biomeEnable());
+                                    buffer.writeStringList(packet.biomes(), MAX_LIST_ENTRIES, MAX_STRING_LENGTH);
+                                    buffer.writeBoolean(packet.structEnable());
+                                    buffer.writeStringList(packet.structs(), MAX_LIST_ENTRIES, MAX_STRING_LENGTH);
+                                },
+                                buffer -> new SaveSetSpawnPacket(
+                                        buffer.readBoolean(),
+                                        buffer.readBoolean(),
+                                        buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
+                                        buffer.readBoolean(),
+                                        buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH),
+                                        buffer.readBoolean(),
+                                        buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH)
+                                )
+                        ),
+                        (packet, context) -> handleSave(context.sender(), packet)
+                );
 
-        saveResultSender = CHANNEL.registerClientbound(
-                SaveSetSpawnResultPacket.class,
-                NetworkCodec.of(
-                        (buffer, packet) -> buffer.writeBoolean(packet.success()),
-                        buffer -> new SaveSetSpawnResultPacket(buffer.readBoolean())
-                ),
-                packet -> SetSpawnNetworkClient.handleSaveResult(packet.success())
-        );
+                savePacketRegistered = true;
+            }
+        },
+        () -> {
+            if (!saveResultRegistered) {
+                CHANNEL.registerClientbound(2,
+                                SaveSetSpawnResultPacket.class,
+                        NetworkCodec.of(
+                                (buffer, packet) -> buffer.writeBoolean(packet.success()),
+                                buffer -> new SaveSetSpawnResultPacket(buffer.readBoolean())
+                        ),
+                        packet -> SetSpawnNetworkClient.handleSaveResult(packet.success())
+                );
 
-        openRequestSender = CHANNEL.registerServerbound(
-                RequestOpenSetSpawnGuiPacket.class,
-                NetworkCodec.of((buffer, packet) -> { }, buffer -> new RequestOpenSetSpawnGuiPacket()),
-                (packet, context) -> {
-                    ServerPlayer player = context.sender();
-                    if (player.hasPermissions(2)) {
-                        openEditorForPlayer(player);
-                    }
-                }
+                saveResultRegistered = true;
+            }
+        },
+        () -> {
+            if (!requestOpenRegistered) {
+                CHANNEL.registerServerbound(3,
+                                RequestOpenSetSpawnGuiPacket.class,
+                        NetworkCodec.of((buffer, packet) -> { }, buffer -> new RequestOpenSetSpawnGuiPacket()),
+                        (packet, context) -> {
+                            ServerPlayer player = context.sender();
+                            if (player.hasPermissions(2)) {
+                                openEditorForPlayer(player);
+                            }
+                        }
+                );
+
+                requestOpenRegistered = true;
+            }
+        },
+        () -> networkRegistered = openGuiRegistered && savePacketRegistered && saveResultRegistered && requestOpenRegistered
         );
     }
 
     public static void requestOpenEditor() {
-        if (openRequestSender != null) {
-            openRequestSender.send(new RequestOpenSetSpawnGuiPacket());
+        if (networkRegistered) {
+            CHANNEL.sendToServer(new RequestOpenSetSpawnGuiPacket());
         }
     }
 
     public static void saveToServer(SaveSetSpawnPacket packet) {
-        if (saveSender != null) {
-            saveSender.send(packet);
+        if (networkRegistered) {
+            CHANNEL.sendToServer(packet);
         }
     }
 
@@ -155,8 +181,8 @@ public final class SetSpawnNetwork {
                 .sorted()
                 .collect(Collectors.toList());
 
-        if (openEditorSender != null) {
-            openEditorSender.send(
+        if (networkRegistered) {
+            CHANNEL.sendToPlayer(
                     player,
                     new OpenSetSpawnGuiPacket(
                             SetSpawnConfig.enableCustomSpawn,
@@ -186,6 +212,9 @@ public final class SetSpawnNetwork {
         Set<String> allowedDimensions = player.server.levelKeys().stream()
                 .map(key -> key.location().toString())
                 .collect(Collectors.toSet());
+        // The editor displays the overworld. Accept it as an input choice, then
+        // normalize it away as documented by the SetSpawn configuration.
+        Set<String> selectableDimensions = new HashSet<>(allowedDimensions);
         allowedDimensions.remove("minecraft:overworld");
         Set<String> allowedBiomes = player.server.registryAccess().registryOrThrow(Registries.BIOME).keySet().stream()
                 .map(ResourceLocation::toString)
@@ -194,43 +223,80 @@ public final class SetSpawnNetwork {
                 .map(ResourceLocation::toString)
                 .collect(Collectors.toSet());
 
-        if (!containsOnlyAllowed(packet.dims(), allowedDimensions)
-                || !containsOnlyAllowed(packet.biomes(), allowedBiomes)
-                || !containsOnlyAllowed(packet.structs(), allowedStructures)) {
+        if (containsDisallowed(packet.dims(), selectableDimensions)
+                || containsDisallowed(packet.biomes(), allowedBiomes)
+                || containsDisallowed(packet.structs(), allowedStructures)) {
             sendSaveResult(player, false);
             return;
         }
 
+        // Complete all conversions before changing any live server setting.
+        List<String> dimensions = sanitizeStrings(packet.dims(), allowedDimensions);
+        List<String> biomes = sanitizeStrings(packet.biomes(), allowedBiomes);
+        List<String> structures = sanitizeStrings(packet.structs(), allowedStructures);
+        SpawnSettings previous = SpawnSettings.capture();
+        boolean saved = false;
         try {
             SetSpawnConfig.enableCustomSpawn = packet.globalEnable();
             SetSpawnConfig.enableDimensions = packet.dimEnable();
-            SetSpawnConfig.setspawnDimensions = sanitizeStrings(packet.dims(), allowedDimensions);
+            SetSpawnConfig.setspawnDimensions = dimensions;
             SetSpawnConfig.enableBiomes = packet.biomeEnable();
-            SetSpawnConfig.setspawnBiomes = sanitizeStrings(packet.biomes(), allowedBiomes);
+            SetSpawnConfig.setspawnBiomes = biomes;
             SetSpawnConfig.enableStructures = packet.structEnable();
-            SetSpawnConfig.setspawnStructures = sanitizeStrings(packet.structs(), allowedStructures);
+            SetSpawnConfig.setspawnStructures = structures;
             SetSpawnConfig.save();
-            sendSaveResult(player, true);
+            saved = true;
         } catch (Throwable throwable) {
-            KineticRuntime.logger().error("Failed to save SetSpawn config", throwable);
-            sendSaveResult(player, false);
+            previous.restore();
+            try {
+                SetSpawnConfig.save();
+            } catch (Throwable rollbackFailure) {
+                if (rollbackFailure != throwable) throwable.addSuppressed(rollbackFailure);
+            }
+            KineticLog.error("Failed to save SetSpawn config", throwable);
+        }
+        // Reporting a result is not part of the configuration transaction.
+        sendSaveResult(player, saved);
+    }
+
+    /** Captures only the seven fields modified by this editor, not unrelated config. */
+    private record SpawnSettings(
+            boolean custom, boolean dimensionsEnabled, List<String> dimensions,
+            boolean biomesEnabled, List<String> biomes,
+            boolean structuresEnabled, List<String> structures
+    ) {
+        private static SpawnSettings capture() {
+            return new SpawnSettings(SetSpawnConfig.enableCustomSpawn,
+                    SetSpawnConfig.enableDimensions, new ArrayList<>(SetSpawnConfig.setspawnDimensions),
+                    SetSpawnConfig.enableBiomes, new ArrayList<>(SetSpawnConfig.setspawnBiomes),
+                    SetSpawnConfig.enableStructures, new ArrayList<>(SetSpawnConfig.setspawnStructures));
+        }
+
+        private void restore() {
+            SetSpawnConfig.enableCustomSpawn = custom;
+            SetSpawnConfig.enableDimensions = dimensionsEnabled;
+            SetSpawnConfig.setspawnDimensions = new ArrayList<>(dimensions);
+            SetSpawnConfig.enableBiomes = biomesEnabled;
+            SetSpawnConfig.setspawnBiomes = new ArrayList<>(biomes);
+            SetSpawnConfig.enableStructures = structuresEnabled;
+            SetSpawnConfig.setspawnStructures = new ArrayList<>(structures);
         }
     }
 
     private static void sendSaveResult(ServerPlayer player, boolean success) {
-        if (saveResultSender != null) {
-            saveResultSender.send(player, new SaveSetSpawnResultPacket(success));
+        if (networkRegistered) {
+            CHANNEL.sendToPlayer(player, new SaveSetSpawnResultPacket(success));
         }
     }
 
-    private static boolean containsOnlyAllowed(List<String> rawIds, Set<String> allowed) {
-        if (rawIds == null) return false;
+    private static boolean containsDisallowed(List<String> rawIds, Set<String> allowed) {
+        if (rawIds == null) return true;
         for (String raw : rawIds) {
-            if (raw == null) return false;
+            if (raw == null) return true;
             String id = raw.trim();
-            if (id.isEmpty() || !allowed.contains(id)) return false;
+            if (id.isEmpty() || !allowed.contains(id)) return true;
         }
-        return true;
+        return false;
     }
 
     private static List<String> sanitizeStrings(List<String> rawIds, Set<String> allowed) {

@@ -47,22 +47,27 @@ public final class KineticCommandSuggestionRuntime {
 
             @Override
             public void render(GuiGraphics graphics, int mouseX, int mouseY) {
+                if (!inputInteractive()) return;
                 delegate.render(graphics, mouseX, mouseY);
             }
 
             @Override
             public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-                return delegate.keyPressed(keyCode, scanCode, modifiers);
+                return inputInteractive() && delegate.keyPressed(keyCode, scanCode, modifiers);
             }
 
             @Override
             public boolean mouseClicked(double mouseX, double mouseY, int button) {
-                return delegate.mouseClicked(mouseX, mouseY, button);
+                return inputInteractive() && delegate.mouseClicked(mouseX, mouseY, button);
             }
 
             @Override
             public boolean mouseScrolled(double delta) {
-                return delegate.mouseScrolled(delta);
+                return inputInteractive() && delegate.mouseScrolled(delta);
+            }
+
+            private boolean inputInteractive() {
+                return input.visible && input.active && input.isFocused();
             }
         };
     }

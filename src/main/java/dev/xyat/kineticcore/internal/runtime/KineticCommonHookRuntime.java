@@ -22,56 +22,45 @@ public final class KineticCommonHookRuntime {
 
     public static HookRegistration registerCrawlPose(CommonHooks.CrawlPoseHandler handler) {
         CRAWL_POSE.add(handler);
-        return () -> CRAWL_POSE.remove(handler);
+        return HookRegistration.once(() -> CRAWL_POSE.remove(handler));
     }
 
     public static HookRegistration registerMobPersistence(CommonHooks.MobPersistenceHandler handler) {
         MOB_PERSISTENCE.add(handler);
-        return () -> MOB_PERSISTENCE.remove(handler);
+        return HookRegistration.once(() -> MOB_PERSISTENCE.remove(handler));
     }
 
     public static HookRegistration registerRecipeBookRemoval(BooleanSupplier handler) {
         RECIPE_BOOK_REMOVAL.add(handler);
-        return () -> RECIPE_BOOK_REMOVAL.remove(handler);
+        return HookRegistration.once(() -> RECIPE_BOOK_REMOVAL.remove(handler));
     }
 
     public static boolean handleCrawlPose(Player player) {
-        for (CommonHooks.CrawlPoseHandler handler : CRAWL_POSE) {
-            if (handler.handle(player)) return true;
-        }
-        return false;
+        return KineticCallbackQueries.anyMatch(CRAWL_POSE, handler -> handler.handle(player));
     }
 
     public static boolean mobPersistenceEnabled() {
-        for (CommonHooks.MobPersistenceHandler handler : MOB_PERSISTENCE) {
-            if (handler.enabled()) return true;
-        }
-        return false;
+        return KineticCallbackQueries.anyMatch(MOB_PERSISTENCE, CommonHooks.MobPersistenceHandler::enabled);
     }
 
     public static boolean shouldForceDespawn(Mob mob) {
-        for (CommonHooks.MobPersistenceHandler handler : MOB_PERSISTENCE) {
-            if (handler.enabled() && handler.shouldForceDespawn(mob)) return true;
-        }
-        return false;
+        return KineticCallbackQueries.anyMatch(MOB_PERSISTENCE,
+                handler -> handler.enabled() && handler.shouldForceDespawn(mob));
     }
 
     public static void processPersistence(Mob mob, EquipmentSlot slot) {
-        for (CommonHooks.MobPersistenceHandler handler : MOB_PERSISTENCE) {
+        KineticCallbackBatch.runAll(MOB_PERSISTENCE, handler -> {
             if (handler.enabled()) handler.processPersistence(mob, slot);
-        }
+        });
     }
 
     public static void dropPickedEquipment(Mob mob) {
-        for (CommonHooks.MobPersistenceHandler handler : MOB_PERSISTENCE) {
+        KineticCallbackBatch.runAll(MOB_PERSISTENCE, handler -> {
             if (handler.enabled()) handler.dropPickedEquipment(mob);
-        }
+        });
     }
 
     public static boolean recipeBookRemovalEnabled() {
-        for (BooleanSupplier handler : RECIPE_BOOK_REMOVAL) {
-            if (handler.getAsBoolean()) return true;
-        }
-        return false;
+        return KineticCallbackQueries.anyMatch(RECIPE_BOOK_REMOVAL, BooleanSupplier::getAsBoolean);
     }
 }

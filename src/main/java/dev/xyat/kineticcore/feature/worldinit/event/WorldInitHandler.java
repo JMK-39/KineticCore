@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.worldinit.event;
 
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
@@ -16,13 +18,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WorldInitHandler {
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
 
     public static void register() {
-        if (registered) return;
-        registered = true;
-        KineticServerEvents.onStarted(WorldInitHandler::onServerStarted);
-        KineticServerEvents.onPlayerLogin(WorldInitHandler::onPlayerLoggedIn);
+        REGISTRATION.run(
+                () -> KineticServerEvents.onStarted(KineticEventPriority.NORMAL, WorldInitHandler::onServerStarted),
+                () -> KineticServerEvents.onPlayerLogin(KineticEventPriority.NORMAL, WorldInitHandler::onPlayerLoggedIn)
+        );
     }
 
     private static final List<Component> PENDING_ADMIN_MESSAGES = new ArrayList<>();

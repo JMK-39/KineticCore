@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.feature.logcleaner;
 
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.feature.logcleaner.config.LogCleanerConfig;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -14,8 +15,8 @@ import org.apache.logging.log4j.message.SimpleMessage;
 import java.util.Objects;
 
 public class DuplicateLogFilter extends AbstractFilter {
-    private static boolean hasInjected = false;
-    private static DuplicateLogFilter INSTANCE;
+    private static final DuplicateLogFilter INSTANCE = new DuplicateLogFilter();
+    private static final KineticRegistrationBatch INJECTION = new KineticRegistrationBatch();
 
     private LogEvent lastEvent = null;
     private EventKey lastKey = null;
@@ -24,23 +25,26 @@ public class DuplicateLogFilter extends AbstractFilter {
     private final ThreadLocal<Boolean> isInjecting = ThreadLocal.withInitial(() -> false);
 
     public DuplicateLogFilter() {
-        INSTANCE = this;
     }
 
     public static void inject() {
-        if (hasInjected) return;
-        hasInjected = true;
+        INJECTION.runSequential(
+                () -> rootLoggerConfig().addFilter(INSTANCE),
+                () -> loggerContext().updateLoggers(),
+                () -> Runtime.getRuntime().addShutdownHook(new Thread(
+                        INSTANCE::flush,
+                        "KineticCore-LogCleaner-Flusher-Shutdown"
+                ))
+        );
+    }
 
-        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-        Configuration config = ctx.getConfiguration();
-        LoggerConfig rootConfig = config.getRootLogger();
+    private static LoggerContext loggerContext() {
+        return (LoggerContext) LogManager.getContext(false);
+    }
 
-        rootConfig.addFilter(new DuplicateLogFilter());
-        ctx.updateLoggers();
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (INSTANCE != null) INSTANCE.flush();
-        }, "KineticCore-LogCleaner-Flusher-Shutdown"));
+    private static LoggerConfig rootLoggerConfig() {
+        Configuration config = loggerContext().getConfiguration();
+        return config.getRootLogger();
     }
 
     private synchronized void flush() {

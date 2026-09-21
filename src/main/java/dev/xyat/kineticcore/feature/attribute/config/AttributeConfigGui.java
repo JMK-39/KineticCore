@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.feature.attribute.config;
 
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
@@ -7,10 +8,10 @@ import dev.xyat.kineticcore.api.config.client.KTConfigScope;
 import dev.xyat.kineticcore.api.runtime.KineticModLifecycle;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.Comparator;
 import java.util.List;
@@ -54,7 +55,7 @@ public final class AttributeConfigGui {
                 .action(
                         "edit_attributes",
                         KineticText.translatable("cfg.kineticcore.attribute.edit"),
-                        KTConfigApi.screenAction(parent -> KTConfigApi.createScreen(parent, buildAttributeEditorPage())),
+                        KTConfigApi.screenAction(parent -> KTConfigApi.createPageScreen(parent, buildAttributeEditorPage())),
                         KineticText.translatable("cfg.kineticcore.attribute.edit.tooltip")
                 )
                 .build();
@@ -146,8 +147,9 @@ public final class AttributeConfigGui {
     }
 
     private static List<Map.Entry<ResourceKey<Attribute>, Attribute>> sortedRangedAttributes() {
-        return ForgeRegistries.ATTRIBUTES.getEntries().stream()
+        return KineticRegistries.attributes().entries().entrySet().stream()
                 .filter(entry -> entry.getValue() instanceof RangedAttribute)
+                .map(entry -> Map.entry(ResourceKey.create(Registries.ATTRIBUTE, entry.getKey()), entry.getValue()))
                 .sorted(Comparator.comparing(entry -> entry.getKey().location().toString()))
                 .toList();
     }

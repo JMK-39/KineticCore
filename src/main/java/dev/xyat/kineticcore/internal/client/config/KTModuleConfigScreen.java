@@ -9,17 +9,14 @@ import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
 import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
 import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -35,7 +32,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public final class KTModuleConfigScreen extends KineticScreen {
+final class KTModuleConfigScreen extends KineticScreen {
     private enum SaveOutcome {
         FAILED,
         UNCHANGED,
@@ -86,13 +83,13 @@ public final class KTModuleConfigScreen extends KineticScreen {
 
     private List<Row> rows = List.of();
     private Component status;
-    private EditBox searchBox;
+    private KineticEditBox searchBox;
     private Row hoveredRow;
     private String searchQuery = "";
     private boolean searchDirty;
     private boolean lastSaveSentServerRequest;
 
-    public KTModuleConfigScreen(
+    KTModuleConfigScreen(
             Screen parent,
             Component moduleTitle,
             List<KTConfigPage> pages
@@ -111,41 +108,61 @@ public final class KTModuleConfigScreen extends KineticScreen {
     }
 
     public void refreshFromSource() {
+        // Assemble a complete replacement before changing the active draft.
+        // A faulty add-on copier must not leave a half-refreshed editor.
+        Map<String, Object> refreshedPending = new HashMap<>();
+        Map<String, Object> refreshedOriginal = new HashMap<>();
+        try {
+
+
+            for (KTConfigPage page : pages) {
+                for (KTConfigEntry<?> entry : page.entries()) {
+                    if (!entry.isValueEntry()) continue;
+                    String key = entryKey(page, entry);
+                    Object value;
+                    try {
+                        value = entry.read();
+                    } catch (Throwable throwable) {
+                        KineticRuntime.logger().error(
+                                "Failed to read config value {} from page {}",
+                                entry.id(),
+                                page.id(),
+                                throwable
+                        );
+                        value = entry.defaultValue();
+                    }
+                    boolean accepted;
+                    try {
+                        accepted = entry.accepts(value);
+                    } catch (RuntimeException invalidValue) {
+                        KineticRuntime.logger().error("Failed to validate config entry {} on page {}",
+                                entry.id(), page.id(), invalidValue);
+                        accepted = false;
+                    }
+                    if (!accepted) {
+                        KineticRuntime.logger().warn(
+                                "Invalid config value {} on page {}; using its default",
+                                entry.id(),
+                                page.id()
+                        );
+                        value = entry.defaultValue();
+                    }
+                    Object snapshot = entry.snapshot(value);
+                    refreshedPending.put(key, snapshot);
+                    refreshedOriginal.put(key, entry.snapshot(snapshot));
+                }
+            }
+        } catch (Throwable failure) {
+            KineticRuntime.logger().error("Failed to refresh module config", failure);
+            return;
+        }
         pendingValues.clear();
+        pendingValues.putAll(refreshedPending);
         originalValues.clear();
+        originalValues.putAll(refreshedOriginal);
         rawTextValues.clear();
         invalidEntries.clear();
         status = null;
-
-        for (KTConfigPage page : pages) {
-            for (KTConfigEntry<?> entry : page.entries()) {
-                if (!entry.isValue()) continue;
-                String key = entryKey(page, entry);
-                Object value;
-                try {
-                    value = entry.readSnapshot();
-                } catch (Throwable throwable) {
-                    KineticRuntime.logger().error(
-                            "Failed to read config value {} from page {}",
-                            entry.id(),
-                            page.id(),
-                            throwable
-                    );
-                    value = entry.defaultSnapshot();
-                }
-                if (!entry.accepts(value)) {
-                    KineticRuntime.logger().warn(
-                            "Invalid config value {} on page {}; using its default",
-                            entry.id(),
-                            page.id()
-                    );
-                    value = entry.defaultSnapshot();
-                }
-                Object snapshot = entry.snapshot(value);
-                pendingValues.put(key, snapshot);
-                originalValues.put(key, entry.snapshot(snapshot));
-            }
-        }
     }
 
     @Override
@@ -161,7 +178,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
                 430,
                 KineticText.translatable("gui.kineticcore.config.search_fields"),
                 KineticText.translatable("gui.kineticcore.config.search_fields"),
-                null
+                null, null
         );
         searchBox.setMaxLength(256);
         searchBox.setValue(searchQuery);
@@ -176,7 +193,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
             int y = ROW_TOP + index * ROW_HEIGHT;
             visibleRows.put(row, y);
             if (row.kind() != RowKind.ENTRY || row.entry() == null) continue;
-            if (row.entry().isValue()) {
+            if (row.entry().isValueEntry()) {
                 addValueWidgets(row.page(), row.entry(), y);
             } else if (row.entry().type() == KTConfigEntry.Type.ACTION) {
                 addActionWidget(row.page(), row.entry(), y);
@@ -200,14 +217,17 @@ public final class KTModuleConfigScreen extends KineticScreen {
     }
 
     private <T extends AbstractWidget> T addRowScrollableWidget(T widget) {
-        return attachScrollableWidget(
-                widget,
+        if (!(widget instanceof dev.xyat.kineticcore.api.client.widget.KineticControl control)) {
+            throw new IllegalArgumentException("Scrollable widget must be an API-created control");
+        }
+        addScrollableWidget(control,
                 28,
                 ROW_TOP,
                 SCROLL_X - 2,
                 ROW_TOP + LIST_HEIGHT,
                 this::rowPixelOffset
         );
+        return widget;
     }
 
     private void addValueWidgets(KTConfigPage page, KTConfigEntry<?> entry, int y) {
@@ -275,7 +295,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
                 );
                 box.setMaxLength(350);
                 box.setValue(rawTextValues.getOrDefault(
-                        key, NumericEditBox.format(((Number) pendingValues.get(key)).doubleValue())
+                        key, dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.formatDecimal(((Number) pendingValues.get(key)).doubleValue())
                 ));
                 box.setResponder(raw -> setParsedValue(key, entry, box.getDoubleValue(), box));
                 setParsedValue(key, entry, box.getDoubleValue(), box);
@@ -300,21 +320,15 @@ public final class KTModuleConfigScreen extends KineticScreen {
             );
             case CHOICE -> {
                 List<KTConfigEntry.ChoiceOption> choiceOptions = entry.choiceOptions();
-                List<String> choices = choiceOptions.stream().map(KTConfigEntry.ChoiceOption::value).toList();
                 String current = String.valueOf(pendingValues.get(key));
-                int selectedIndex = Math.max(0, choices.indexOf(current));
                 editor = addDropdown(
                         editorX, y, editorWidth,
-                        choiceOptions.stream().map(KTConfigEntry.ChoiceOption::label).toList(),
-                        choiceOptions.stream().map(KTConfigEntry.ChoiceOption::tooltip).toList(),
-                        selectedIndex, null,
-                        selected -> selected >= 0 && selected < choices.size()
-                                && entry.accepts(choices.get(selected)),
-                        selected -> {
-                            if (selected >= 0 && selected < choices.size()) {
-                                updateValidation(key, entry, choices.get(selected));
-                            }
-                        }
+                        choiceOptions.stream().map(option -> new dev.xyat.kineticcore.api.client.widget.selection.KineticDropdowns.Option(
+                                option.value(), option.translation(), option.tooltip()
+                        )).toList(),
+                        current, null,
+                        entry::accepts,
+                        selected -> updateValidation(key, entry, selected)
                 );
             }
             case STRING_LIST, ITEM_LIST, ITEM_RULE_LIST, ENTITY_LIST, INTEGER_LIST -> {
@@ -361,8 +375,12 @@ public final class KTModuleConfigScreen extends KineticScreen {
             editorTooltip = entry.tooltip();
         }
         editor.active = editable;
-        KineticWidgets.setButtonError(editor instanceof Button button ? button : null, invalidEntries.contains(key));
-        registerWidgetTooltip(editor, editorTooltip);
+        if (editor instanceof dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton stateButton) {
+            stateButton.setError(invalidEntries.contains(key));
+        }
+        if (editor instanceof dev.xyat.kineticcore.api.client.widget.KineticControl control) {
+            registerWidgetTooltip(control, editorTooltip);
+        }
         addRowScrollableWidget(editor);
 
         Button reset = addButton(
@@ -372,7 +390,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
                         ? KineticText.translatable("gui.kineticcore.config.reset.tooltip")
                         : KTConfigApi.unavailableReason(page),
                 () -> {
-                    pendingValues.put(key, entry.defaultSnapshot());
+                    pendingValues.put(key, entry.defaultValue());
                     invalidEntries.remove(key);
                     rawTextValues.remove(key);
                     status = null;
@@ -397,8 +415,8 @@ public final class KTModuleConfigScreen extends KineticScreen {
     }
 
     private void requestAction(KTConfigPage page, KTConfigEntry<?> entry) {
-        if (minecraft == null || !ensurePageEditable(page)) return;
-        if (!isDirty()) {
+        if (KineticClientRuntime.currentScreen() != this || rejectUneditablePage(page)) return;
+        if (isClean()) {
             runAction(page, entry);
             return;
         }
@@ -419,7 +437,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
     }
 
     private void runAction(KTConfigPage page, KTConfigEntry<?> entry) {
-        if (!ensurePageEditable(page)) return;
+        if (rejectUneditablePage(page)) return;
         try {
             entry.runAction();
         } catch (Throwable throwable) {
@@ -436,20 +454,20 @@ public final class KTModuleConfigScreen extends KineticScreen {
         }
     }
 
-    private boolean isDirty() {
-        if (!invalidEntries.isEmpty()) return true;
+    private boolean isClean() {
+        if (!invalidEntries.isEmpty()) return false;
         for (KTConfigPage page : pages) {
             for (KTConfigEntry<?> entry : page.entries()) {
-                if (!entry.isValue()) continue;
+                if (!entry.isValueEntry()) continue;
                 String key = entryKey(page, entry);
-                if (!Objects.equals(pendingValues.get(key), originalValues.get(key))) return true;
+                if (!Objects.equals(pendingValues.get(key), originalValues.get(key))) return false;
             }
         }
-        return false;
+        return true;
     }
 
     private void openLongTextEditor(KTConfigPage page, KTConfigEntry<?> entry, String key) {
-        if (minecraft == null || !ensurePageEditable(page)) return;
+        if (KineticClientRuntime.currentScreen() != this || rejectUneditablePage(page)) return;
         String current = String.valueOf(pendingValues.getOrDefault(key, ""));
         KineticClientRuntime.openScreen(new KTLongTextEditorScreen(
                 this,
@@ -465,7 +483,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
     }
 
     private void openListEditor(KTConfigPage page, KTConfigEntry<?> entry) {
-        if (minecraft == null || !ensurePageEditable(page)) return;
+        if (KineticClientRuntime.currentScreen() != this || rejectUneditablePage(page)) return;
         String key = entryKey(page, entry);
         List<?> values = listValue(key);
 
@@ -520,7 +538,14 @@ public final class KTModuleConfigScreen extends KineticScreen {
 
     private void updateValidation(String key, KTConfigEntry<?> entry, Object value) {
         pendingValues.put(key, value);
-        if (entry.accepts(value)) {
+        boolean valid;
+        try {
+            valid = entry.accepts(value);
+        } catch (RuntimeException failure) {
+            KineticRuntime.logger().error("Failed to validate config entry {}", entry.id(), failure);
+            valid = false;
+        }
+        if (valid) {
             invalidEntries.remove(key);
         } else {
             invalidEntries.add(key);
@@ -535,7 +560,14 @@ public final class KTModuleConfigScreen extends KineticScreen {
 
     private void setParsedValue(String key, KTConfigEntry<?> entry, Object value, KineticEditBox box) {
         rawTextValues.put(key, box.getValue());
-        boolean valid = value != null && entry.accepts(value);
+        boolean valid = false;
+        if (value != null) {
+            try {
+                valid = entry.accepts(value);
+            } catch (RuntimeException failure) {
+                KineticRuntime.logger().error("Failed to validate config entry {}", entry.id(), failure);
+            }
+        }
         box.setValidationError(!valid);
         if (!valid) {
             invalidEntries.add(key);
@@ -546,8 +578,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
     }
 
     @Override
-    public void tick() {
-        super.tick();
+    protected void canvasTick() {
         if (!searchDirty) return;
 
         searchDirty = false;
@@ -561,15 +592,26 @@ public final class KTModuleConfigScreen extends KineticScreen {
     }
 
     private void resetAll() {
-        for (KTConfigPage page : pages) {
-            if (!KTConfigApi.canEdit(page)) continue;
-            for (KTConfigEntry<?> entry : page.entries()) {
-                if (!entry.isValue()) continue;
-                String key = entryKey(page, entry);
-                pendingValues.put(key, entry.defaultSnapshot());
-                invalidEntries.remove(key);
-                rawTextValues.remove(key);
+        // Prepare defaults across every editable page before changing any draft.
+        Map<String, Object> defaults = new HashMap<>();
+        try {
+            for (KTConfigPage page : pages) {
+                if (!KTConfigApi.canEdit(page)) continue;
+                for (KTConfigEntry<?> entry : page.entries()) {
+                    if (!entry.isValueEntry()) continue;
+                    defaults.put(entryKey(page, entry), entry.snapshot(entry.defaultValue()));
+                }
             }
+        } catch (Throwable failure) {
+            KineticRuntime.logger().error("Failed to reset module config", failure);
+            status = KineticText.translatable("gui.kineticcore.config.reset_failed",
+                    Component.literal(failure.getClass().getSimpleName()));
+            return;
+        }
+        pendingValues.putAll(defaults);
+        for (String key : defaults.keySet()) {
+            invalidEntries.remove(key);
+            rawTextValues.remove(key);
         }
         status = KineticText.translatable("gui.kineticcore.config.reset_done");
         rebuildUi();
@@ -586,9 +628,16 @@ public final class KTModuleConfigScreen extends KineticScreen {
         lastSaveSentServerRequest = false;
         for (KTConfigPage page : pages) {
             for (KTConfigEntry<?> entry : page.entries()) {
-                if (!entry.isValue()) continue;
+                if (!entry.isValueEntry()) continue;
                 String key = entryKey(page, entry);
-                if (!entry.accepts(pendingValues.get(key))) invalidEntries.add(key);
+                try {
+                    if (!entry.accepts(pendingValues.get(key))) invalidEntries.add(key);
+                } catch (RuntimeException invalidValue) {
+                    // A faulty add-on validator must reject this field, not crash the whole editor.
+                    KineticRuntime.logger().error("Failed to validate config entry {} on page {}",
+                            entry.id(), page.id(), invalidValue);
+                    invalidEntries.add(key);
+                }
             }
         }
 
@@ -603,7 +652,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
         Map<KTConfigPage, List<KTConfigEntry<?>>> changedByPage = new LinkedHashMap<>();
         for (KTConfigPage page : pages) {
             List<KTConfigEntry<?>> changed = page.entries().stream()
-                    .filter(KTConfigEntry::isValue)
+                    .filter(KTConfigEntry::isValueEntry)
                     .filter(entry -> {
                         String key = entryKey(page, entry);
                         return !Objects.equals(pendingValues.get(key), originalValues.get(key));
@@ -618,7 +667,24 @@ public final class KTModuleConfigScreen extends KineticScreen {
         }
 
         for (KTConfigPage page : changedByPage.keySet()) {
-            if (!ensurePageEditable(page)) return SaveOutcome.FAILED;
+            if (rejectUneditablePage(page)) return SaveOutcome.FAILED;
+        }
+
+        // Prepare the entire module before committing any individual page. A
+        // copier in a later page must not fail after an earlier page was saved.
+        Map<String, Object> committedSnapshots = new HashMap<>();
+        try {
+            for (Map.Entry<KTConfigPage, List<KTConfigEntry<?>>> pageChange : changedByPage.entrySet()) {
+                for (KTConfigEntry<?> entry : pageChange.getValue()) {
+                    String key = entryKey(pageChange.getKey(), entry);
+                    committedSnapshots.put(key, entry.snapshot(pendingValues.get(key)));
+                }
+            }
+        } catch (Throwable failure) {
+            KineticRuntime.logger().error("Failed to prepare module config for saving", failure);
+            status = KineticText.translatable("gui.kineticcore.config.save_failed",
+                    Component.literal(failure.getClass().getSimpleName()));
+            return SaveOutcome.FAILED;
         }
 
         for (Map.Entry<KTConfigPage, List<KTConfigEntry<?>>> pageChange : changedByPage.entrySet()) {
@@ -627,7 +693,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
                 Map<String, Object> changedValues = new LinkedHashMap<>();
                 for (KTConfigEntry<?> entry : pageChange.getValue()) {
                     String key = entryKey(page, entry);
-                    changedValues.put(entry.id(), entry.snapshot(pendingValues.get(key)));
+                    changedValues.put(entry.id(), committedSnapshots.get(key));
                 }
                 if (!KTServerConfigClient.save(page, changedValues)) {
                     status = KTConfigApi.unavailableReason(page);
@@ -639,8 +705,9 @@ public final class KTModuleConfigScreen extends KineticScreen {
                 try {
                     for (KTConfigEntry<?> entry : pageChange.getValue()) {
                         String key = entryKey(page, entry);
-                        entry.writeSnapshot(pendingValues.get(key));
+                        // Include the in-flight writer: it may mutate the value before throwing.
                         applied.add(entry);
+                        entry.writeSnapshot(pendingValues.get(key));
                     }
                     page.save();
                 } catch (Throwable throwable) {
@@ -656,7 +723,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
 
             for (KTConfigEntry<?> entry : pageChange.getValue()) {
                 String key = entryKey(page, entry);
-                originalValues.put(key, entry.snapshot(pendingValues.get(key)));
+                originalValues.put(key, committedSnapshots.get(key));
             }
         }
 
@@ -664,11 +731,11 @@ public final class KTModuleConfigScreen extends KineticScreen {
         return SaveOutcome.SAVED;
     }
 
-    private boolean ensurePageEditable(KTConfigPage page) {
-        if (KTConfigApi.canEdit(page)) return true;
+    private boolean rejectUneditablePage(KTConfigPage page) {
+        if (KTConfigApi.canEdit(page)) return false;
         status = KTConfigApi.unavailableReason(page);
-        GuiOverlay.toast("kineticcore_config_unavailable", status);
-        return false;
+        KineticOverlays.toast("kineticcore_config_unavailable", status, KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
+        return true;
     }
 
     private boolean shouldShowImmediateSavedToast(SaveOutcome outcome) {
@@ -685,7 +752,9 @@ public final class KTModuleConfigScreen extends KineticScreen {
     }
 
     private void rollbackOriginalValues(KTConfigPage page, List<KTConfigEntry<?>> appliedEntries) {
-        for (KTConfigEntry<?> entry : appliedEntries) {
+        // Reverse write order so dependent fields are restored before their prerequisites.
+        for (int index = appliedEntries.size() - 1; index >= 0; index--) {
+            KTConfigEntry<?> entry = appliedEntries.get(index);
             try {
                 entry.writeSnapshot(originalValues.get(entryKey(page, entry)));
             } catch (Throwable rollbackFailure) {
@@ -777,8 +846,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
             );
         }
 
-        GuiTheme.scrollbar(
-                rowScroll,
+        rowScroll.render(
                 graphics,
                 mouseX,
                 mouseY,
@@ -832,7 +900,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
         };
 
         if (tooltip != null) {
-            showTooltip(tooltip, 400);
+            showTooltip(List.of(tooltip), 400);
         }
     }
 
@@ -876,18 +944,16 @@ public final class KTModuleConfigScreen extends KineticScreen {
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
         if (mouseX >= 28 && mouseX <= 620
                 && mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
-                && rowScroll.scroll(delta)) {
+                && rowScroll.scroll(delta, 1.0D)) {
             return true;
         }
         return super.canvasMouseScrolled(mouseX, mouseY, delta);
     }
 
     @Override
-    public void onClose() {
-        Minecraft client = Minecraft.getInstance();
-        if (!isDirty()) {
-            navigateBack();
-            return;
+    protected boolean handleCloseRequest() {
+        if (isClean()) {
+            return false;
         }
 
         openDialog(
@@ -903,6 +969,7 @@ public final class KTModuleConfigScreen extends KineticScreen {
                 },
                 () -> navigateBack()
         );
+        return true;
     }
 
     @Override
@@ -917,24 +984,52 @@ public final class KTModuleConfigScreen extends KineticScreen {
                 .orElse(null);
         if (page == null) return;
 
-        for (KTConfigEntry<?> entry : page.entries()) {
-            if (!entry.isValue()) continue;
-            String key = entryKey(page, entry);
-            Object value;
-            try {
-                value = entry.readSnapshot();
-            } catch (Throwable throwable) {
-                KineticRuntime.logger().error("Failed to refresh server config value {} from page {}", entry.id(), page.id(), throwable);
-                value = entry.defaultSnapshot();
+        // Update only the matching page, and publish it as one transaction.
+        // If an add-on reader or copier fails, keep every existing baseline and draft.
+        Map<String, Object> nextOriginal = new HashMap<>();
+        Map<String, Object> nextPending = new HashMap<>();
+        Set<String> cleanKeys = new HashSet<>();
+        try {
+            for (KTConfigEntry<?> entry : page.entries()) {
+                if (!entry.isValueEntry()) continue;
+                String key = entryKey(page, entry);
+                boolean hasLocalDraft = !Objects.equals(pendingValues.get(key), originalValues.get(key))
+                        || invalidEntries.contains(key) || rawTextValues.containsKey(key);
+                Object value;
+                try {
+                    value = entry.read();
+                } catch (Throwable throwable) {
+                    KineticRuntime.logger().error("Failed to refresh server config value {} from page {}",
+                            entry.id(), page.id(), throwable);
+                    value = entry.defaultValue();
+                }
+                boolean accepted;
+                try {
+                    accepted = entry.accepts(value);
+                } catch (RuntimeException invalidValue) {
+                    KineticRuntime.logger().error("Failed to validate server config entry {} on page {}",
+                            entry.id(), page.id(), invalidValue);
+                    accepted = false;
+                }
+                if (!accepted) value = entry.defaultValue();
+                Object snapshot = entry.snapshot(value);
+                nextOriginal.put(key, entry.snapshot(snapshot));
+                if (!hasLocalDraft) {
+                    nextPending.put(key, snapshot);
+                    cleanKeys.add(key);
+                }
             }
-            if (!entry.accepts(value)) value = entry.defaultSnapshot();
-            Object snapshot = entry.snapshot(value);
-            pendingValues.put(key, snapshot);
-            originalValues.put(key, entry.snapshot(snapshot));
+        } catch (Throwable failure) {
+            KineticRuntime.logger().error("Failed to synchronize module config page {}", page.id(), failure);
+            return;
+        }
+        originalValues.putAll(nextOriginal);
+        pendingValues.putAll(nextPending);
+        for (String key : cleanKeys) {
             invalidEntries.remove(key);
             rawTextValues.remove(key);
         }
-        if (minecraft != null) rebuildUi();
+        if (KineticClientRuntime.currentScreen() == this) rebuildUi();
     }
 
     private void rebuildRows() {

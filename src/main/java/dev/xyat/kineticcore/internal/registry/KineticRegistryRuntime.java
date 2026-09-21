@@ -7,16 +7,20 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.IForgeRegistry;
 import net.minecraftforge.registries.RegistryManager;
 
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Optional;
 
@@ -24,10 +28,12 @@ public final class KineticRegistryRuntime {
     private static final KineticRegistryView<Item> ITEMS = new View<>(ForgeRegistries.ITEMS);
     private static final KineticRegistryView<EntityType<?>> ENTITY_TYPES = new View<>(ForgeRegistries.ENTITY_TYPES);
     private static final KineticRegistryView<Block> BLOCKS = new View<>(ForgeRegistries.BLOCKS);
+    private static final KineticRegistryView<Fluid> FLUIDS = new View<>(ForgeRegistries.FLUIDS);
     private static final KineticRegistryView<MobEffect> MOB_EFFECTS = new View<>(ForgeRegistries.MOB_EFFECTS);
     private static final KineticRegistryView<Attribute> ATTRIBUTES = new View<>(ForgeRegistries.ATTRIBUTES);
     private static final KineticRegistryView<Enchantment> ENCHANTMENTS = new View<>(ForgeRegistries.ENCHANTMENTS);
     private static final KineticRegistryView<RecipeType<?>> RECIPE_TYPES = new View<>(ForgeRegistries.RECIPE_TYPES);
+    private static final KineticRegistryView<VillagerProfession> VILLAGER_PROFESSIONS = new View<>(ForgeRegistries.VILLAGER_PROFESSIONS);
 
     private KineticRegistryRuntime() {
     }
@@ -44,6 +50,10 @@ public final class KineticRegistryRuntime {
         return BLOCKS;
     }
 
+    public static KineticRegistryView<Fluid> fluids() {
+        return FLUIDS;
+    }
+
     public static KineticRegistryView<MobEffect> mobEffects() {
         return MOB_EFFECTS;
     }
@@ -58,6 +68,10 @@ public final class KineticRegistryRuntime {
 
     public static KineticRegistryView<RecipeType<?>> recipeTypes() {
         return RECIPE_TYPES;
+    }
+
+    public static KineticRegistryView<VillagerProfession> villagerProfessions() {
+        return VILLAGER_PROFESSIONS;
     }
 
     @SuppressWarnings("unchecked")
@@ -88,6 +102,16 @@ public final class KineticRegistryRuntime {
         @Override
         public Collection<T> values() {
             return List.copyOf(registry.getValues());
+        }
+
+        @Override
+        public Map<ResourceLocation, T> entries() {
+            Map<ResourceLocation, T> result = new LinkedHashMap<>();
+            for (T value : registry.getValues()) {
+                ResourceLocation id = registry.getKey(value);
+                if (id != null) result.put(id, value);
+            }
+            return Map.copyOf(result);
         }
 
         @Override

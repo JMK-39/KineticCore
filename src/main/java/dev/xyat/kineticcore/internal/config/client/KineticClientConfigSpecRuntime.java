@@ -38,15 +38,17 @@ public final class KineticClientConfigSpecRuntime {
         Objects.requireNonNull(spec, "spec");
         String normalized = Objects.requireNonNull(fileName, "fileName").trim();
         if (normalized.isEmpty()) throw new IllegalArgumentException("fileName cannot be blank");
-        String existing = REGISTERED_FILES.get(spec);
-        if (existing != null) {
-            if (!existing.equals(normalized)) {
-                throw new IllegalStateException("Client config spec already registered as " + existing);
+        synchronized (REGISTERED_FILES) {
+            String existing = REGISTERED_FILES.get(spec);
+            if (existing != null) {
+                if (!existing.equals(normalized)) {
+                    throw new IllegalStateException("Client config spec already registered as " + existing);
+                }
+                return;
             }
-            return;
+            ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, nativeSpec(spec), normalized);
+            REGISTERED_FILES.put(spec, normalized);
         }
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, nativeSpec(spec), normalized);
-        REGISTERED_FILES.put(spec, normalized);
     }
 
     @SuppressWarnings("unchecked")
@@ -58,7 +60,20 @@ public final class KineticClientConfigSpecRuntime {
     @SuppressWarnings({"rawtypes", "unchecked"})
     public static <T> void set(KTClientConfigSpec.Value<T> value, T next) {
         ForgeConfigSpec.ConfigValue nativeValue = VALUES.get(value);
-        if (nativeValue != null) nativeValue.set(next);
+        if (nativeValue == null) return;
+        Object previous = nativeValue.get();
+        try {
+            nativeValue.set(next);
+        } catch (RuntimeException | Error failure) {
+            // Forge setters may mutate the underlying config before signaling failure.
+            // Keep the native value consistent with the public Value's local fallback.
+            try {
+                nativeValue.set(previous);
+            } catch (RuntimeException | Error rollbackFailure) {
+                if (rollbackFailure != failure) failure.addSuppressed(rollbackFailure);
+            }
+            throw failure;
+        }
     }
 
     public static void save(KTClientConfigSpec spec) {
@@ -68,6 +83,9 @@ public final class KineticClientConfigSpecRuntime {
 
     private static ForgeConfigSpec build(KTClientConfigSpec spec) {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        // Keep native bindings private until the entire Forge specification is built.
+        // An invalid later entry must not leave earlier values bound to an orphan spec.
+        Map<KTClientConfigSpec.Value<?>, ForgeConfigSpec.ConfigValue<?>> pendingValues = new IdentityHashMap<>();
         for (KTClientConfigSpec.Operation operation : spec.operations()) {
             if (operation instanceof KTClientConfigSpec.SectionStart section) {
                 applyMetadata(builder, section.comments(), section.translationKey());
@@ -81,10 +99,14 @@ public final class KineticClientConfigSpecRuntime {
             if (operation instanceof KTClientConfigSpec.EntryDefinition entry) {
                 applyMetadata(builder, entry.comments(), entry.translationKey());
                 ForgeConfigSpec.ConfigValue<?> nativeValue = define(builder, entry);
-                VALUES.put(entry.value(), nativeValue);
+                pendingValues.put(entry.value(), nativeValue);
             }
         }
-        return builder.build();
+        ForgeConfigSpec built = builder.build();
+        synchronized (VALUES) {
+            VALUES.putAll(pendingValues);
+        }
+        return built;
     }
 
     private static void applyMetadata(ForgeConfigSpec.Builder builder, java.util.List<String> comments, String translationKey) {

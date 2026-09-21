@@ -40,6 +40,11 @@ public final class KineticMenuTypeRegistryRuntime {
 
     private record Handle<T>(ResourceLocation id, RegistryObject<T> object) implements KineticRegistryHandle<T> {
         @Override
+        public boolean isPresent() {
+            return object.isPresent();
+        }
+
+        @Override
         public T get() {
             return object.get();
         }

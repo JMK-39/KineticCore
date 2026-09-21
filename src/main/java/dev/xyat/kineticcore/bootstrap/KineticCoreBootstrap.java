@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.bootstrap;
 
 import dev.xyat.kineticcore.feature.attribute.event.AttributeFixHandler;
+import dev.xyat.kineticcore.api.flight.KineticFlightAttributes;
 import dev.xyat.kineticcore.feature.worldinit.event.WorldInitHandler;
 import dev.xyat.kineticcore.feature.voiddamage.event.VoidDamageEvent;
 import dev.xyat.kineticcore.feature.tps.logic.TpsHudManager;
@@ -16,6 +17,7 @@ import dev.xyat.kineticcore.feature.cobweb.event.AxesEventHandler;
 import dev.xyat.kineticcore.feature.bee.event.BeeSizeHandler;
 import dev.xyat.kineticcore.bootstrap.command.KineticCoreCommandExtension;
 import dev.xyat.kineticcore.api.hook.CommonHooks;
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.feature.crawl.event.CrawlingStateHandler;
 import dev.xyat.kineticcore.feature.despawn.LetMeDespawnLogic;
 import dev.xyat.kineticcore.feature.crawl.network.PlayerNetwork;
@@ -39,62 +41,52 @@ import dev.xyat.kineticcore.feature.tps.network.TpsNetwork;
 import dev.xyat.kineticcore.feature.worldinit.config.WorldInitConfig;
 
 public final class KineticCoreBootstrap {
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATIONS = new KineticRegistrationBatch();
 
     private KineticCoreBootstrap() {
     }
 
     public static void register() {
-        if (registered) return;
-        registered = true;
-
-        registerNetworks();
-        KineticCoreCommandExtension.register();
-        registerCommonModules();
-    }
-
-    private static void registerNetworks() {
-        PlayerNetwork.register();
-        FlightNetwork.register();
-        MiningModeNetwork.register();
-        NbtNetwork.register();
-        PvpNetwork.register();
-        SetSpawnNetwork.register();
-        SpawnEggNetwork.register();
-        TpsNetwork.register();
-    }
-
-    private static void registerCommonModules() {
-        SpawnEggInit.register();
-        PackModule.register();
-        AttributeFixHandler.register();
-
-        CrawlingStateHandler.load();
-        PackModule.load();
-        PlayerConfig.load();
-        LogCleanerModule.load();
-        GeneralMechanicsConfig.load();
-        CommonHooks.onRecipeBookRemoval(() -> GeneralMechanicsConfig.removeRecipeBook);
-        LetMeDespawnLogic.registerHooks();
-        NetworkConfig.load();
-        SetSpawnConfig.load();
-        SetSpawnHandler.registerHooks();
-        SpawnEggConfig.load();
-        ThrowSpawnEggEvent.register();
-        WorldInitConfig.load();
-
-        BeeSizeHandler.register();
-        AxesEventHandler.register();
-        GeneralEvents.register();
-        EntityAttributeFixer.register();
-        XPDropHandler.register();
-        FirstJoinHandler.register();
-        FlightEvents.register();
-        FoodAndToolTweaks.register();
-        FarmlandProtectionHandler.register();
-        PvpEventHandler.register();
-        TpsHudManager.register();
-        VoidDamageEvent.register();
-        WorldInitHandler.register();
+        REGISTRATIONS.run(
+                KineticFlightAttributes::register,
+                PlayerNetwork::register,
+                FlightNetwork::register,
+                MiningModeNetwork::register,
+                NbtNetwork::register,
+                PvpNetwork::register,
+                SetSpawnNetwork::register,
+                SpawnEggNetwork::register,
+                TpsNetwork::register,
+                KineticCoreCommandExtension::register,
+                SpawnEggInit::register,
+                PackModule::register,
+                AttributeFixHandler::register,
+                CrawlingStateHandler::load,
+                PackModule::load,
+                PlayerConfig::load,
+                LogCleanerModule::load,
+                GeneralMechanicsConfig::load,
+                () -> CommonHooks.onRecipeBookRemoval(() -> GeneralMechanicsConfig.removeRecipeBook),
+                LetMeDespawnLogic::registerHooks,
+                NetworkConfig::load,
+                SetSpawnConfig::load,
+                SetSpawnHandler::registerHooks,
+                SpawnEggConfig::load,
+                ThrowSpawnEggEvent::register,
+                WorldInitConfig::load,
+                BeeSizeHandler::register,
+                AxesEventHandler::register,
+                GeneralEvents::register,
+                EntityAttributeFixer::register,
+                XPDropHandler::register,
+                FirstJoinHandler::register,
+                FlightEvents::register,
+                FoodAndToolTweaks::register,
+                FarmlandProtectionHandler::register,
+                PvpEventHandler::register,
+                TpsHudManager::register,
+                VoidDamageEvent::register,
+                WorldInitHandler::register
+        );
     }
 }

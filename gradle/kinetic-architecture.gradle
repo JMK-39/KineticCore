@@ -1,20 +1,23 @@
+import groovy.json.JsonSlurper
 import java.util.regex.Pattern
 
 def kineticJavaRoot = file('src/main/java/dev/xyat/kineticcore')
 def kineticApiRoot = file('src/main/java/dev/xyat/kineticcore/api')
+def kineticMixinResourceRoot = file('src/main/resources')
 def kineticInternalPackage = 'dev.xyat.kineticcore.internal'
 def kineticFeaturePackage = 'dev.xyat.kineticcore.feature'
 def kineticApiPackage = 'dev.xyat.kineticcore.api'
 
 def kineticImportPattern = Pattern.compile('(?m)^\\s*import\\s+(?:static\\s+)?(dev\\.xyat\\.kineticcore\\.[A-Za-z0-9_$.*]+)\\s*;')
-
-def declarationPattern = Pattern.compile('(?s)\\b(public|protected)\\b[^;{]*(?:[;{])')
+def declarationPattern = Pattern.compile('(?s)\\b(public|protected)\\b[^;{]*[;{]')
 def internalImportPattern = Pattern.compile('(?m)^\\s*import\\s+dev\\.xyat\\.kineticcore\\.internal(?:\\.[A-Za-z0-9_$.*]+)?\\s*;')
 
 def forbiddenBusinessPatterns = [
         'Button.builder',
         'new EditBox',
         'new MultiLineEditBox',
+        'new NumericEditBox',
+        'new NumericAutoCompleteBox',
         'new ConfirmScreen',
         'Tooltip.create',
         'addRenderableWidget(',
@@ -28,9 +31,18 @@ def forbiddenBusinessPatterns = [
         '.getFocused()',
         '.isFocused()',
         '.setScreen(',
+        'Minecraft.getInstance()',
+        'ForgeRegistries',
+        'BuiltInRegistries',
+        'new ResourceLocation(',
+        'ResourceLocation.tryParse(',
+        'FMLPaths',
+        'DistExecutor',
+        'FluidUtil',
+        'I18n.get(',
+        'Component.translatable(',
         'Minecraft.getInstance().execute(',
         'SimpleChannel',
-        'FriendlyByteBuf',
         'PacketDistributor',
         'NetworkEvent.Context',
         'NetworkRegistry',
@@ -80,87 +92,105 @@ def internalSimpleNames = { String source ->
     names
 }
 
+def kineticRelativeJavaPath = { File javaFile ->
+    kineticJavaRoot.toPath().relativize(javaFile.toPath()).toString().replace('\\', '/')
+}
+
+def kineticMixinSourceForEntry = { String packageName, String mixinEntry ->
+    String topLevelEntry = mixinEntry.contains('$') ? mixinEntry.substring(0, mixinEntry.indexOf('$')) : mixinEntry
+    String relativeClass = packageName.replace('.', '/') + '/' + topLevelEntry.replace('.', '/') + '.java'
+    file('src/main/java/' + relativeClass)
+}
+
 tasks.register('checkKineticArchitecture') {
     group = 'verification'
-    description = 'Rejects invalid API/internal/feature dependency directions and internal type leaks from the public API.'
+    description = 'Enforces the KineticCore 26.9.20 API/internal/feature architecture before Java compilation.'
 
     inputs.files(fileTree('src/main/java') { include '**/*.java' })
+    inputs.files(fileTree('src/main/resources') { include '**/*mixins*.json' })
 
     doLast {
         def violations = []
 
-        if (kineticJavaRoot.exists()) {
-            fileTree(kineticJavaRoot) {
-                include '**/*.java'
-            }.files.each { File javaFile ->
-                String normalized = javaFile.absolutePath.replace('\\', '/')
-                boolean isApi = normalized.contains('/dev/xyat/kineticcore/api/')
-                boolean isInternal = normalized.contains('/dev/xyat/kineticcore/internal/')
-                boolean isFeature = normalized.contains('/dev/xyat/kineticcore/feature/')
-                boolean isMixinImplementation = normalized.contains('/dev/xyat/kineticcore/internal/mixin/')
-                String source = javaFile.getText('UTF-8')
+        if (!kineticJavaRoot.exists()) {
+            throw new GradleException("Kinetic source root does not exist: ${kineticJavaRoot}")
+        }
 
-                if (!isMixinImplementation && source.contains('dev.xyat.kineticcore.internal.mixin')) {
-                    violations.add("RUNTIME -> MIXIN PACKAGE direct reference is forbidden: ${project.relativePath(javaFile)}")
-                }
+        fileTree(kineticJavaRoot) {
+            include '**/*.java'
+        }.files.sort { it.absolutePath }.each { File javaFile ->
+            String relative = kineticRelativeJavaPath(javaFile)
+            boolean isApi = relative.startsWith('api/')
+            boolean isInternal = relative.startsWith('internal/')
+            boolean isFeature = relative.startsWith('feature/')
+            boolean isBootstrap = relative.startsWith('bootstrap/')
+            boolean isMixin = relative.contains('/mixin/') || relative.startsWith('internal/mixin/')
+            boolean isInternalMixin = relative.startsWith('internal/mixin/')
+            boolean isApiImplementationMixin = relative.startsWith('internal/mixin/api/')
+            boolean isMixinPlugin = relative == 'internal/mixin/KineticMixinPlugin.java'
+            String source = javaFile.getText('UTF-8')
 
-                if (!isApi && !isInternal && source.contains(kineticInternalPackage)) {
-                    violations.add("BUSINESS -> INTERNAL is forbidden: ${project.relativePath(javaFile)}")
-                }
+            if (isInternalMixin && !isApiImplementationMixin && !isMixinPlugin) {
+                violations.add("Legacy feature-specific internal Mixin location is forbidden: ${project.relativePath(javaFile)}")
+            }
 
-                if (isInternal && source.contains(kineticFeaturePackage)) {
-                    violations.add("INTERNAL -> FEATURE is forbidden: ${project.relativePath(javaFile)}")
-                }
+            if (!isMixin && source.contains('dev.xyat.kineticcore.internal.mixin')) {
+                violations.add("Runtime code must not reference the Mixin package directly: ${project.relativePath(javaFile)}")
+            }
 
-                if (isApi && source.contains(kineticFeaturePackage)) {
-                    violations.add("API -> FEATURE is forbidden: ${project.relativePath(javaFile)}")
-                }
+            if (!isApi && !isInternal && source.contains(kineticInternalPackage)) {
+                violations.add("BUSINESS/BOOTSTRAP -> INTERNAL is forbidden: ${project.relativePath(javaFile)}")
+            }
 
-                if (isApi && (source.contains('import net.minecraftforge.client.event.')
-                        || source.contains('import net.minecraftforge.event.')
-                        || source.contains('import net.minecraftforge.fml.event.'))) {
-                    violations.add("API must not expose Forge event implementation types: ${project.relativePath(javaFile)}")
-                }
+            if (isInternal && source.contains(kineticFeaturePackage)) {
+                violations.add("INTERNAL -> FEATURE is forbidden: ${project.relativePath(javaFile)}")
+            }
 
+            if (isApi && source.contains(kineticFeaturePackage)) {
+                violations.add("API -> FEATURE is forbidden: ${project.relativePath(javaFile)}")
+            }
 
-                def imports = []
-                def importMatcher = kineticImportPattern.matcher(source)
-                while (importMatcher.find()) imports.add(importMatcher.group(1))
+            def imports = []
+            def importMatcher = kineticImportPattern.matcher(source)
+            while (importMatcher.find()) imports.add(importMatcher.group(1))
 
-                if (isApi) {
-                    imports.each { String imported ->
-                        if (!imported.startsWith(kineticApiPackage + '.')
-                                && !imported.startsWith(kineticInternalPackage + '.')) {
-                            violations.add("API -> NON-API KINETIC TYPE is forbidden: ${project.relativePath(javaFile)} -> ${imported}")
-                        }
+            if (isApi) {
+                imports.each { String imported ->
+                    if (!imported.startsWith(kineticApiPackage + '.')
+                            && !imported.startsWith(kineticInternalPackage + '.')) {
+                        violations.add("API -> NON-API KINETIC TYPE is forbidden: ${project.relativePath(javaFile)} -> ${imported}")
                     }
                 }
+            }
 
-                if (isFeature) {
-                    def featureMatch = (normalized =~ /\/feature\/([^\/]+)\//)
-                    String ownFeature = featureMatch.find() ? featureMatch.group(1) : null
-                    imports.each { String imported ->
-                        if (imported.startsWith(kineticApiPackage + '.')) return
-                        String ownPrefix = ownFeature == null ? '' : kineticFeaturePackage + '.' + ownFeature + '.'
-                        if (!ownPrefix.isEmpty() && imported.startsWith(ownPrefix)) return
-                        violations.add("FEATURE -> NON-API/CROSS-FEATURE is forbidden: ${project.relativePath(javaFile)} -> ${imported}")
+            if (isFeature) {
+                def featureMatch = Pattern.compile('^feature/([^/]+)/').matcher(relative)
+                String ownFeature = featureMatch.find() ? featureMatch.group(1) : null
+                imports.each { String imported ->
+                    if (imported.startsWith(kineticApiPackage + '.')) return
+                    String ownPrefix = ownFeature == null ? '' : kineticFeaturePackage + '.' + ownFeature + '.'
+                    if (!ownPrefix.isEmpty() && imported.startsWith(ownPrefix)) return
+                    violations.add("FEATURE -> NON-API/CROSS-FEATURE is forbidden: ${project.relativePath(javaFile)} -> ${imported}")
+                }
+            }
+
+            if (!isApi && !isInternal && !isMixin) {
+                if (Pattern.compile('\\bnew\\s+(?:[\\w$]+\\.)*(?:EditBox|MultiLineEditBox|NumericEditBox|NumericAutoCompleteBox|KineticEditBox|ValidationEditBox)\\s*\\(').matcher(source).find()) {
+                    violations.add("BUSINESS RAW INPUT is forbidden; use Kinetic add/create factories: ${project.relativePath(javaFile)}")
+                }
+                forbiddenBusinessPatterns.each { String pattern ->
+                    if (source.contains(pattern)) {
+                        violations.add("BUSINESS BYPASS is forbidden: ${project.relativePath(javaFile)} -> ${pattern}")
                     }
                 }
+            }
 
-                if (!isApi && !isInternal) {
-                    if ((source =~ /\bnew\s+(?:[\w$]+\.)*(?:EditBox|MultiLineEditBox|NumericEditBox|NumericAutoCompleteBox|KineticEditBox|ValidationEditBox)\s*\(/).find()) {
-                        violations.add("BUSINESS RAW KINETIC INPUT is forbidden; use addXxx/createXxx: ${project.relativePath(javaFile)}")
-                    }
-                    forbiddenBusinessPatterns.each { String pattern ->
-                        if (source.contains(pattern)) {
-                            violations.add("BUSINESS BYPASS is forbidden: ${project.relativePath(javaFile)} -> ${pattern}")
-                        }
-                    }
-                }
+            if (!isMixin && isFeature && Pattern.compile('\\bextends\\s+(?:Screen|AbstractContainerScreen)\\b').matcher(source).find()) {
+                violations.add("FEATURE RAW SCREEN is forbidden: ${project.relativePath(javaFile)}")
+            }
 
-                if (isFeature && (source =~ /\bextends\s+(?:Screen|AbstractContainerScreen)\b/).find()) {
-                    violations.add("FEATURE RAW SCREEN is forbidden: ${project.relativePath(javaFile)}")
-                }
+            if (isBootstrap && source.contains(kineticInternalPackage)) {
+                violations.add("BOOTSTRAP must orchestrate through API/feature entry points, never internal: ${project.relativePath(javaFile)}")
             }
         }
 
@@ -171,7 +201,7 @@ tasks.register('checkKineticArchitecture') {
                 String source = javaFile.getText('UTF-8')
                 Set<String> importedInternalTypes = internalSimpleNames(source)
 
-                def fqLeak = Pattern.compile('(?s)\\b(public|protected)\\b[^;{]*dev\\.xyat\\.kineticcore\\.internal[^;{]*(?:[;{])').matcher(source)
+                def fqLeak = Pattern.compile('(?s)\\b(public|protected)\\b[^;{]*dev\\.xyat\\.kineticcore\\.internal[^;{]*[;{]').matcher(source)
                 while (fqLeak.find()) {
                     violations.add("API exposes an internal type: ${project.relativePath(javaFile)} -> ${fqLeak.group().replaceAll('\\s+', ' ').trim()}")
                 }
@@ -188,17 +218,83 @@ tasks.register('checkKineticArchitecture') {
             }
         }
 
+        def mixinConfigs = fileTree(kineticMixinResourceRoot) {
+            include 'kineticcore.mixins*.json'
+        }.files.sort { it.absolutePath }
+
+        if (mixinConfigs.isEmpty()) {
+            violations.add("KineticCore must have at least one root-level kineticcore.mixins*.json config")
+        }
+
+        def configuredMixins = [:]
+        mixinConfigs.each { File mixinConfig ->
+            if (mixinConfig.parentFile.canonicalFile != kineticMixinResourceRoot.canonicalFile) {
+                violations.add("KineticCore Mixin configs must live directly under src/main/resources, not a mixins subdirectory: ${project.relativePath(mixinConfig)}")
+            }
+            if (!(mixinConfig.name ==~ /kineticcore\.mixins(?:\.[A-Za-z0-9_-]+)?\.json/)) {
+                violations.add("KineticCore Mixin config must use the kineticcore.mixins*.json naming scheme: ${project.relativePath(mixinConfig)}")
+            }
+
+            try {
+                def parsed = new JsonSlurper().parse(mixinConfig, 'UTF-8')
+                String packageName = parsed.package?.toString()
+                boolean safeMixinPackage = packageName != null && (
+                        packageName ==~ /dev\.xyat\.kineticcore\.feature\.[^.]+\.mixin/
+                                || packageName == 'dev.xyat.kineticcore.internal.mixin.api'
+                )
+                if (!safeMixinPackage) {
+                    violations.add("Mixin package must be a dedicated feature/<feature>/mixin or internal/mixin/api package, never the KineticCore root: ${project.relativePath(mixinConfig)} -> ${packageName}")
+                }
+                if (parsed.plugin?.toString() != 'dev.xyat.kineticcore.internal.mixin.KineticMixinPlugin') {
+                    violations.add("Mixin plugin must be KineticMixinPlugin: ${project.relativePath(mixinConfig)}")
+                }
+
+                def entries = []
+                if (parsed.mixins instanceof Collection) entries.addAll(parsed.mixins)
+                if (parsed.client instanceof Collection) entries.addAll(parsed.client)
+                if (parsed.server instanceof Collection) entries.addAll(parsed.server)
+
+                if (entries.isEmpty()) {
+                    violations.add("Mixin config contains no entries: ${project.relativePath(mixinConfig)}")
+                }
+
+                def duplicateEntries = entries.groupBy { it.toString() }.findAll { String key, List values -> values.size() > 1 }
+                duplicateEntries.keySet().sort().each { String entry ->
+                    violations.add("Duplicate Mixin config entry: ${project.relativePath(mixinConfig)} -> ${entry}")
+                }
+
+                if (packageName != null) {
+                    entries.each { Object entryValue ->
+                        String entry = entryValue.toString()
+                        String fullMixinName = packageName + '.' + entry
+                        if (configuredMixins.containsKey(fullMixinName)) {
+                            violations.add("Duplicate Mixin across configs: ${fullMixinName} -> ${configuredMixins[fullMixinName]}, ${project.relativePath(mixinConfig)}")
+                        } else {
+                            configuredMixins[fullMixinName] = project.relativePath(mixinConfig)
+                        }
+
+                        File sourceFile = kineticMixinSourceForEntry(packageName, entry)
+                        if (!sourceFile.exists()) {
+                            violations.add("Mixin config entry has no source file: ${fullMixinName} -> ${project.relativePath(sourceFile)}")
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                violations.add("Cannot parse KineticCore Mixin config ${project.relativePath(mixinConfig)}: ${ex.message}")
+            }
+        }
+
         if (!violations.isEmpty()) {
             throw new GradleException(
                     "Kinetic architecture check failed:\n - " + violations.unique().join('\n - ')
                             + "\n\nRules:\n"
-                            + "  feature/config/other business code -> api only (internal is invisible)\n"
-                            + "  public api -> internal; business must never call internal\n"
-                            + "  public/protected API signatures must never expose internal types\n"
+                            + "  feature code -> public api + its own feature package only\n"
+                            + "  bootstrap/business -> public api/feature entry points, never internal\n"
                             + "  internal -> feature and api -> feature are forbidden\n"
-                            + "  feature code may depend only on public api and its own feature package\n"
-                            + "  public api may depend only on api/internal plus Minecraft/Forge/external libraries\n"
-                            + "  Mixin/Hook implementations are allowed when the public API does not already provide the capability; do not duplicate shared capabilities"
+                            + "  public/protected API signatures must never expose internal types\n"
+                            + "  shared GUI/input/network/event/registry/resource/runtime capabilities must use Kinetic API facades\n"
+                            + "  feature Mixins live under feature/<feature>/mixin; API implementation Mixins live under internal/mixin/api\n"
+                            + "  KineticCore Mixin configs live at src/main/resources/kineticcore.mixins*.json, use dedicated mixin-only packages, and every entry maps to source"
             )
         }
     }
@@ -210,19 +306,18 @@ tasks.matching { it.name == 'compileJava' }.configureEach {
 
 tasks.register('apiSourceZip', Zip) {
     group = 'distribution'
-    description = 'Packages only the public Kinetic API sources and API reference for addon/AI development.'
+    description = 'Packages the public Kinetic API sources, module introduction, and generated Javadoc.'
     archiveFileName.set("${project.name}-api-sources-${project.version}.zip")
     destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+    dependsOn tasks.named('kineticApiJavadoc')
 
     from('src/main/java/dev/xyat/kineticcore/api') {
         into 'src/main/java/dev/xyat/kineticcore/api'
     }
     from('README.md')
-    from('API_REFERENCE.md')
-    from('API_ARCHITECTURE.md')
-    from('API_TUTORIAL.md')
-    from('KINETIC_API_GUIDE.md')
-    from('AGENTS.md')
+    from(layout.projectDirectory.dir('javadoc')) {
+        into 'javadoc'
+    }
 }
 
 tasks.register('apiJar', Jar) {

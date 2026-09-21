@@ -1,8 +1,9 @@
 package dev.xyat.kineticcore.feature.logcleaner;
 
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.feature.logcleaner.config.LogCleanerConfig;
-import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,21 +15,24 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 public class LogCleanerModule {
-    private static boolean shutdownHookInstalled;
+    private static final KineticRegistrationBatch LOAD_SEQUENCE = new KineticRegistrationBatch();
 
     public static void load() {
-        LogCleanerConfig.load();
-        DuplicateLogFilter.inject();
-        if (shutdownHookInstalled) return;
-        shutdownHookInstalled = true;
+        LOAD_SEQUENCE.runSequential(
+                LogCleanerConfig::load,
+                DuplicateLogFilter::inject,
+                LogCleanerModule::installShutdownHook
+        );
+    }
 
+    private static void installShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (!LogCleanerConfig.enableCleanup) return;
 
-            cleanDirectory(FMLPaths.GAMEDIR.get().resolve("crash-reports"), LogCleanerConfig.maxCrashReports,
+            cleanDirectory(KineticPlatform.gameDirectory().resolve("crash-reports"), LogCleanerConfig.maxCrashReports,
                     p -> true);
 
-            Path logsDir = FMLPaths.GAMEDIR.get().resolve("logs");
+            Path logsDir = KineticPlatform.gameDirectory().resolve("logs");
             if (Files.exists(logsDir)) {
                 cleanDirectory(logsDir, LogCleanerConfig.maxLogs, p -> {
                     String name = p.getFileName().toString();

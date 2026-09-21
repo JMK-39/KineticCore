@@ -13,10 +13,16 @@ public final class KTClientConfigAdapter {
     private KTClientConfigAdapter() {
     }
 
+    /**
+     * Registers spec.
+     */
     public static void registerSpec(KTClientConfigSpec spec, String fileName) {
         KTClientConfigAdapterRuntime.registerSpec(spec, fileName);
     }
 
+    /**
+     * Performs the page builder API operation.
+     */
     public static KTConfigPage.Builder pageBuilder(
             String pageId,
             Component title,
@@ -25,7 +31,10 @@ public final class KTClientConfigAdapter {
         return KTClientConfigAdapterRuntime.pageBuilder(pageId, title, spec);
     }
 
-    public static KTConfigPage.Builder pageBuilder(
+    /**
+     * Performs the filtered page builder API operation.
+     */
+    public static KTConfigPage.Builder filteredPageBuilder(
             String pageId,
             Component title,
             KTClientConfigSpec spec,
@@ -34,6 +43,9 @@ public final class KTClientConfigAdapter {
         return KTClientConfigAdapterRuntime.pageBuilder(pageId, title, spec, includePath);
     }
 
+    /**
+     * Appends entries.
+     */
     public static KTConfigPage.Builder appendEntries(
             KTConfigPage.Builder page,
             KTClientConfigSpec spec
@@ -41,7 +53,10 @@ public final class KTClientConfigAdapter {
         return KTClientConfigAdapterRuntime.appendEntries(page, spec);
     }
 
-    public static KTConfigPage.Builder appendEntries(
+    /**
+     * Appends filtered entries.
+     */
+    public static KTConfigPage.Builder appendFilteredEntries(
             KTConfigPage.Builder page,
             KTClientConfigSpec spec,
             Predicate<String> includePath
@@ -49,11 +64,17 @@ public final class KTClientConfigAdapter {
         return KTClientConfigAdapterRuntime.appendEntries(page, spec, includePath);
     }
 
+    /**
+     * Infers apply timing.
+     */
     public static KTConfigPage.ApplyTiming inferApplyTiming(KTClientConfigSpec spec) {
         return KTClientConfigAdapterRuntime.inferApplyTiming(spec);
     }
 
-    public static KTConfigPage.ApplyTiming inferApplyTiming(
+    /**
+     * Infers filtered apply timing.
+     */
+    public static KTConfigPage.ApplyTiming inferFilteredApplyTiming(
             KTClientConfigSpec spec,
             Predicate<String> includePath
     ) {

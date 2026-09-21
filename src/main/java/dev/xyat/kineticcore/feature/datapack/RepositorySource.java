@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.datapack;
 
+
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.feature.datapack.util.ColorText;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -314,7 +316,7 @@ public class RepositorySource extends FolderRepositorySource {
             try (Stream<Path> stream = Files.walk(directory)) {
                 stream.filter(Files::isRegularFile).forEach(file -> {
                     String relative = namespaceDirectory.relativize(file).toString().replace('\\', '/');
-                    output.accept(new ResourceLocation(namespace, relative), IoSupplier.create(file));
+                    output.accept(KineticResourceIds.of(namespace, relative), IoSupplier.create(file));
                 });
             } catch (Exception ignored) {
             }

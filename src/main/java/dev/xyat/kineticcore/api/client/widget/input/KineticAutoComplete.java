@@ -1,190 +1,73 @@
 package dev.xyat.kineticcore.api.client.widget.input;
 
-import net.minecraft.client.Minecraft;
+import dev.xyat.kineticcore.api.client.widget.KineticWidgets.FactoryAccess;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import org.jetbrains.annotations.NotNull;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
+import dev.xyat.kineticcore.internal.client.input.NumericInputRules;
+import dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime;
 import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
-import static dev.xyat.kineticcore.api.client.widget.KineticWidgets.attachTooltip;
 
-/** 控件实现分组；附属统一从 KineticWidgets 工厂进入。 */
+/**
+ * Autocomplete controls returned by Kinetic screen and detached-widget factories.
+ * Suggestions keep persisted {@code value} separate from display-only {@code translation}.
+ */
 public final class KineticAutoComplete {
     private KineticAutoComplete() {}
 
-    public static AutoCompleteBox createAutoCompleteField(
-            Font font,
-            int x,
-            int y,
-            int width,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            Component tooltip
-    ) {
-        return createAutoCompleteField(
-                font, x, y, width, message, null, dictionarySupplier, tooltip
-        );
+    /**
+     * One autocomplete candidate. {@code value} is the only text written into the input;
+     * {@code translation} is display-only and is hidden while the game language is English.
+     */
+    public record Suggestion(String value, Component translation) {
+        /** Normalizes nullable suggestion value and translation metadata. */
+        public Suggestion {
+            value = value == null ? "" : value;
+            translation = translation == null ? Component.empty() : translation;
+        }
     }
 
-    public static AutoCompleteBox createAutoCompleteField(
-            Font font,
-            int x,
-            int y,
-            int width,
-            Component message,
-            Component placeholder,
-            Supplier<List<String>> dictionarySupplier,
-            Component tooltip
-    ) {
-        AutoCompleteBox box = new AutoCompleteBox(
-                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
-                message == null ? Component.empty() : message,
-                dictionarySupplier
-        );
-        box.setPlaceholder(placeholder);
-        attachTooltip(box, tooltip);
-        return box;
+    /** Adapts a legacy/raw string dictionary to value-only suggestions with no display translation. */
+    public static Supplier<List<Suggestion>> stringDictionary(Supplier<? extends List<String>> dictionarySupplier) {
+        return () -> {
+            List<String> values = dictionarySupplier == null ? null : dictionarySupplier.get();
+            if (values == null || values.isEmpty()) return List.of();
+            return values.stream().map(value -> new Suggestion(value, Component.empty())).toList();
+        };
     }
 
-    public static NumericAutoCompleteBox createIntegerAutoCompleteField(
-            Font font,
-            int x,
-            int y,
-            int width,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Integer minValue,
-            Integer maxValue,
-            Component tooltip
-    ) {
-        return createIntegerAutoCompleteField(font, x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, null, tooltip);
-    }
-
-    public static NumericAutoCompleteBox createIntegerAutoCompleteField(
-            Font font,
-            int x,
-            int y,
-            int width,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Integer minValue,
-            Integer maxValue,
-            Predicate<Number> validator,
-            Component tooltip
-    ) {
-        NumericAutoCompleteBox box = integer(
-                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
-                message == null ? Component.empty() : message,
-                dictionarySupplier,
-                allowNegative, minValue, maxValue, validator
-        );
-        attachTooltip(box, tooltip);
-        return box;
-    }
-
-    public static NumericAutoCompleteBox createLongAutoCompleteField(
-            Font font,
-            int x,
-            int y,
-            int width,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Long minValue,
-            Long maxValue,
-            Component tooltip
-    ) {
-        return createLongAutoCompleteField(font, x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, null, tooltip);
-    }
-
-    public static NumericAutoCompleteBox createLongAutoCompleteField(
-            Font font,
-            int x,
-            int y,
-            int width,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Long minValue,
-            Long maxValue,
-            Predicate<Number> validator,
-            Component tooltip
-    ) {
-        NumericAutoCompleteBox box = longInteger(
-                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
-                message == null ? Component.empty() : message,
-                dictionarySupplier,
-                allowNegative, minValue, maxValue, validator
-        );
-        attachTooltip(box, tooltip);
-        return box;
-    }
-
-    public static NumericAutoCompleteBox createDecimalAutoCompleteField(
-            Font font,
-            int x,
-            int y,
-            int width,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Double minValue,
-            Double maxValue,
-            Component tooltip
-    ) {
-        return createDecimalAutoCompleteField(font, x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, null, tooltip);
-    }
-
-    public static NumericAutoCompleteBox createDecimalAutoCompleteField(
-            Font font,
-            int x,
-            int y,
-            int width,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Double minValue,
-            Double maxValue,
-            Predicate<Number> validator,
-            Component tooltip
-    ) {
-        NumericAutoCompleteBox box = decimal(
-                font, x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
-                message == null ? Component.empty() : message,
-                dictionarySupplier,
-                allowNegative, minValue, maxValue, validator
-        );
-        attachTooltip(box, tooltip);
-        return box;
-    }
-
+    /** Standard Kinetic text field with API-managed suggestion expansion. */
     public static class AutoCompleteBox extends KineticEditBox {
-        private final Supplier<List<String>> dictionarySupplier;
-        private List<String> suggestions = new ArrayList<>();
+        private final Supplier<List<Suggestion>> dictionarySupplier;
+        private List<Suggestion> suggestions = new ArrayList<>();
         private Consumer<String> externalResponder;
         private Consumer<String> selectionResponder;
+        private BiPredicate<Suggestion, String> suggestionMatcher;
 
         private final GridScrollController suggestionScroll =
                 new GridScrollController();
 
+        private static final int DEFAULT_MAX_VISIBLE = 8;
+
         private int selectedIndex = -1;
         private int maxSuggestionWidth = 0;
-        private static final int MAX_VISIBLE = 8;
+        private int maxVisibleSuggestions = DEFAULT_MAX_VISIBLE;
 
-        public AutoCompleteBox(Font font, int x, int y, int width, int height, Component message, Supplier<List<String>> dictionarySupplier) {
-            super(font, x, y, width, height, message);
+        /** Factory-only constructor; obtain instances from {@code KineticWidgets}. */
+        public AutoCompleteBox(FactoryAccess access, Font font, int x, int y, int width, int height, Component message, Supplier<List<Suggestion>> dictionarySupplier) {
+            super(access, font, x, y, width, height, message);
             this.dictionarySupplier = dictionarySupplier;
             this.setMaxLength(1024);
             this.setBordered(true);
@@ -200,21 +83,52 @@ public final class KineticAutoComplete {
             this.externalResponder = responder;
         }
 
+        /** Sets the callback invoked only when a suggestion is explicitly selected; it receives the raw suggestion value. */
         public void setSelectionResponder(Consumer<String> responder) {
             this.selectionResponder = responder;
         }
 
+        /**
+         * Sets an optional suggestion matcher for callers that need domain-specific search semantics.
+         * The matcher receives the suggestion and raw input text; null restores the standard value/translation contains match.
+         */
+        public void setSuggestionMatcher(BiPredicate<Suggestion, String> matcher) {
+            BiPredicate<Suggestion, String> previous = this.suggestionMatcher;
+            this.suggestionMatcher = matcher;
+            try {
+                updateSuggestions(this.getValue());
+            } catch (RuntimeException | Error failure) {
+                // A caller's matcher may throw mid-refresh. Preserve the previously
+                // working matcher rather than poisoning every subsequent keypress.
+                this.suggestionMatcher = previous;
+                throw failure;
+            }
+        }
+
+        /** Sets the maximum number of suggestion rows visible at once; values below one are clamped to one. */
+        public void setMaxVisibleSuggestions(int maxVisibleSuggestions) {
+            this.maxVisibleSuggestions = Math.max(1, maxVisibleSuggestions);
+            suggestionScroll.update(suggestions.size(), this.maxVisibleSuggestions);
+        }
+
+        /** Returns whether the focused field currently has an open suggestion popup. */
+        public boolean isSuggestionPopupOpen() {
+            return visible && active && isFocused() && !suggestions.isEmpty();
+        }
+
+        /** Returns whether the supplied UI-space point is inside the open suggestion popup. */
+        public boolean isSuggestionPopupHovered(double mouseX, double mouseY) {
+            if (!isSuggestionPopupOpen()) return false;
+            int x = this.getX() - 4;
+            int y = this.getY() + this.getHeight() + 4;
+            int listH = Math.min(suggestions.size(), maxVisibleSuggestions) * 12;
+            int w = this.maxSuggestionWidth + (suggestions.size() > maxVisibleSuggestions ? 10 : 0);
+            return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + listH;
+        }
+
         @Override
         public boolean isMouseOver(double mouseX, double mouseY) {
-            if (super.isMouseOver(mouseX, mouseY)) return true;
-            if (isFocused() && !suggestions.isEmpty()) {
-                int x = this.getX() - 4;
-                int y = this.getY() + this.getHeight() + 4;
-                int listH = Math.min(suggestions.size(), MAX_VISIBLE) * 12;
-                int w = this.maxSuggestionWidth + (suggestions.size() > MAX_VISIBLE ? 10 : 0);
-                return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + listH;
-            }
-            return false;
+            return super.isMouseOver(mouseX, mouseY) || isSuggestionPopupHovered(mouseX, mouseY);
         }
 
         @Override
@@ -224,6 +138,7 @@ public final class KineticAutoComplete {
             else clearSuggestions();
         }
 
+        /** Clears suggestions. */
         public void clearSuggestions() {
             this.suggestions.clear();
             this.suggestionScroll.reset();
@@ -231,49 +146,75 @@ public final class KineticAutoComplete {
             this.maxSuggestionWidth = 0;
         }
 
+        /** Loads suggestions. */
         public void loadSuggestions() {
             updateSuggestions(this.getValue());
         }
 
         private void updateSuggestions(String input) {
-            List<String> allItems = dictionarySupplier.get();
-            if (input.isEmpty()) {
-                suggestions = new ArrayList<>(allItems);
+            List<Suggestion> supplied = dictionarySupplier == null ? List.of() : dictionarySupplier.get();
+            List<Suggestion> allItems = supplied == null
+                    ? List.of()
+                    : supplied.stream()
+                    .filter(item -> item != null && !item.value().isBlank())
+                    .toList();
+
+            boolean showTranslations = shouldShowTranslations();
+            List<Suggestion> refreshed;
+            if (input == null || input.isEmpty()) {
+                refreshed = new ArrayList<>(allItems);
+            } else if (suggestionMatcher != null) {
+                refreshed = allItems.stream()
+                        .filter(item -> suggestionMatcher.test(item, input))
+                        .collect(Collectors.toList());
             } else {
-                String lower = input.toLowerCase();
-                suggestions = allItems.stream().filter(s -> s.toLowerCase().contains(lower)).collect(Collectors.toList());
+                String lower = input.toLowerCase(Locale.ROOT);
+                refreshed = allItems.stream()
+                        .filter(item -> item.value().toLowerCase(Locale.ROOT).contains(lower)
+                                || (showTranslations
+                                && !item.translation().getString().isBlank()
+                                && item.translation().getString().toLowerCase(Locale.ROOT).contains(lower)))
+                        .collect(Collectors.toList());
             }
 
-            Font font = Minecraft.getInstance().font;
+            Font font = KineticClientRuntime.font();
             int currentMax = this.width;
-            for (String s : suggestions) {
-                int w = font.width(s) + 10;
+            for (Suggestion suggestion : refreshed) {
+                int w = font.width(suggestion.value()) + 10;
+                if (showTranslations && !suggestion.translation().getString().isBlank()) {
+                    w += font.width("  ") + font.width(suggestion.translation());
+                }
                 if (w > currentMax) currentMax = w;
             }
-            this.maxSuggestionWidth = currentMax;
+            // Do not publish partially refreshed suggestions if an addon matcher,
+            // translator or font-width lookup fails midway through this refresh.
             suggestionScroll.reset();
             suggestionScroll.update(
-                    suggestions.size(),
-                    MAX_VISIBLE
+                    refreshed.size(),
+                    maxVisibleSuggestions
             );
+            this.suggestions = refreshed;
+            this.maxSuggestionWidth = currentMax;
             selectedIndex = -1;
         }
 
+        /** Scrolls the open suggestion list when this field is focused and suggestions are visible. */
         public boolean handleMouseScrolled(double delta) {
-            if (!isFocused() || suggestions.isEmpty()) {
+            if (!isSuggestionPopupOpen()) {
                 return false;
             }
 
             suggestionScroll.update(
                     suggestions.size(),
-                    MAX_VISIBLE
+                    maxVisibleSuggestions
             );
 
-            return suggestionScroll.scroll(delta);
+            return suggestionScroll.scroll(delta, 1.0D);
         }
 
-        public boolean handleKeyPressed(int keyCode) {
-            if (!isFocused()) return false;
+        /** Handles suggestion navigation/selection keys before delegating ordinary editing keys to the text field. */
+        public boolean handleKeyPressed(int keyCode, int scanCode, int modifiers) {
+            if (!visible || !active || !isFocused()) return false;
             if (!suggestions.isEmpty()) {
                 if (keyCode == 265) {
                     selectedIndex = (selectedIndex <= 0) ? suggestions.size() - 1 : selectedIndex - 1;
@@ -283,19 +224,27 @@ public final class KineticAutoComplete {
                     selectedIndex = (selectedIndex >= suggestions.size() - 1) ? 0 : selectedIndex + 1;
                     ensureVisible(); return true;
                 }
+                if (keyCode == 256) {
+                    clearSuggestions();
+                    return true;
+                }
+                if (keyCode == 258) {
+                    selectItem(selectedIndex >= 0 && selectedIndex < suggestions.size() ? selectedIndex : 0);
+                    return true;
+                }
                 if (keyCode == 257 || keyCode == 335) {
                     if (selectedIndex >= 0 && selectedIndex < suggestions.size()) {
                         selectItem(selectedIndex); return true;
                     }
                 }
             }
-            return super.keyPressed(keyCode, 0, 0);
+            return super.keyPressed(keyCode, scanCode, modifiers);
         }
 
         private void ensureVisible() {
             suggestionScroll.update(
                     suggestions.size(),
-                    MAX_VISIBLE
+                    maxVisibleSuggestions
             );
 
             if (selectedIndex < suggestionScroll.offset()) {
@@ -303,15 +252,15 @@ public final class KineticAutoComplete {
             }
 
             if (selectedIndex
-                    >= suggestionScroll.offset() + MAX_VISIBLE) {
+                    >= suggestionScroll.offset() + maxVisibleSuggestions) {
                 suggestionScroll.setOffset(
-                        selectedIndex - MAX_VISIBLE + 1
+                        selectedIndex - maxVisibleSuggestions + 1
                 );
             }
         }
 
         private void selectItem(int index) {
-            String val = normalizeValue(suggestions.get(index));
+            String val = suggestions.get(index).value();
             this.setValue(val);
             this.setCursorPosition(this.getValue().length());
             this.clearSuggestions();
@@ -320,19 +269,20 @@ public final class KineticAutoComplete {
             }
         }
 
+        /** Renders the open suggestion list with API-managed zebra rows, selection state, translation text, and scrollbar. */
         public void renderSuggestions(GuiGraphics gui, int mouseX, int mouseY) {
-            if (!isFocused() || suggestions.isEmpty()) return;
+            if (!isSuggestionPopupOpen()) return;
 
             int x = this.getX() - 4;
             int y = this.getY() + this.getHeight() + 4;
             int itemH = 12;
             int w = this.maxSuggestionWidth;
-            int visibleCount = Math.min(suggestions.size(), MAX_VISIBLE);
+            int visibleCount = Math.min(suggestions.size(), maxVisibleSuggestions);
             int totalH = visibleCount * itemH;
 
             suggestionScroll.update(
                     suggestions.size(),
-                    MAX_VISIBLE
+                    maxVisibleSuggestions
             );
 
             int firstIndex = suggestionScroll.smoothIndexOffset();
@@ -343,59 +293,72 @@ public final class KineticAutoComplete {
             );
 
             gui.pose().pushPose();
-            gui.pose().translate(0, 0, 600);
-            gui.fill(x, y, x + w, y + totalH, 0xFF0A0A0A);
-            gui.renderOutline(x, y, w, totalH, 0xFF555555);
-            gui.enableScissor(x, y, x + w, y + totalH);
+            try {
+                gui.pose().translate(0, 0, 600);
+                GuiTheme.Palette theme = GuiTheme.current();
+                boolean showTranslations = shouldShowTranslations();
+                gui.fill(x, y, x + w, y + totalH, theme.background());
+                gui.renderOutline(x, y, w, totalH, theme.border());
+                KineticRenderRuntime.enableScissor(gui, x, y, x + w, y + totalH);
+                try {
+                    for (int i = 0; i < rowsToRender; i++) {
+                        int index = firstIndex + i;
+                        int top = y + (i * itemH) - visualShift;
 
-            for (int i = 0; i < rowsToRender; i++) {
-                int index = firstIndex + i;
-                int top = y + (i * itemH) - visualShift;
+                        int rowBackground = (index & 1) == 0
+                                ? theme.panelAlt()
+                                : theme.field();
+                        gui.fill(x + 1, top, x + w - 1, top + itemH, rowBackground);
 
-                gui.fill(x + 1, top, x + w - 1, top + itemH, (index % 2 == 0) ? 0xFF1C1C1C : 0xFF0A0A0A);
+                        boolean hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY < y + totalH
+                                && mouseY >= top && mouseY < top + itemH;
+                        boolean selected = index == selectedIndex;
+                        if (hovered || selected) {
+                            gui.fill(x + 1, top, x + w - 1, top + itemH, theme.panel());
+                            GuiTheme.stateOutline(gui, x + 1, top, w - 2, itemH, selected, hovered, false);
+                        } else {
+                            GuiTheme.indicatorOutline(gui, x + 1, top, w - 2, itemH, GuiTheme.Indicator.MUTED);
+                        }
 
-                boolean hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY < y + totalH
-                        && mouseY >= top && mouseY < top + itemH;
-                boolean selected = index == selectedIndex;
-                if (hovered || selected) {
-                    gui.fill(x + 1, top, x + w - 1, top + itemH, 0xFF202020);
+                        Suggestion suggestion = suggestions.get(index);
+                        Font font = KineticClientRuntime.font();
+                        gui.drawString(font, suggestion.value(), x + 4, top + 2, GuiTheme.indicatorColor(GuiTheme.Indicator.INFO), false);
+                        if (showTranslations && !suggestion.translation().getString().isBlank()) {
+                            int detailX = x + 4 + font.width(suggestion.value()) + font.width("  ");
+                            gui.drawString(font, suggestion.translation(), detailX, top + 2, theme.translatedText(), false);
+                        }
+                    }
+
+                } finally {
+                    KineticRenderRuntime.disableScissor(gui);
                 }
-                GuiTheme.stateOutline(gui, x + 1, top, w - 2, itemH, selected, hovered, false);
-
-                String[] parts = suggestions.get(index).split(" - ", 2);
-                Font font = Minecraft.getInstance().font;
-                gui.drawString(font, parts[0], x + 4, top + 2, GuiTheme.current().text(), false);
-                if (parts.length > 1) {
-                    int detailX = x + 4 + font.width(parts[0]);
-                    gui.drawString(font, " - " + parts[1], detailX, top + 2, GuiTheme.current().mutedText(), false);
-                }
+                suggestionScroll.render(
+                        gui,
+                        mouseX,
+                        mouseY,
+                        x + w + 2,
+                        y,
+                        4,
+                        totalH,
+                        10
+                );
+            } finally {
+                gui.pose().popPose();
             }
-
-            gui.disableScissor();
-            suggestionScroll.render(
-                    gui,
-                    mouseX,
-                    mouseY,
-                    x + w + 2,
-                    y,
-                    4,
-                    totalH,
-                    10
-            );
-            gui.pose().popPose();
         }
 
+        /** Handles scrollbar interaction or suggestion selection inside the open suggestion popup. */
         public boolean handleMouseClick(double mouseX, double mouseY) {
-            if (!isFocused() || suggestions.isEmpty()) return false;
+            if (!isSuggestionPopupOpen()) return false;
             int x = this.getX() - 4;
             int y = this.getY() + this.getHeight() + 4;
             int itemH = 12;
             int w = this.maxSuggestionWidth;
-            int totalH = Math.min(suggestions.size(), MAX_VISIBLE) * itemH;
+            int totalH = Math.min(suggestions.size(), maxVisibleSuggestions) * itemH;
 
             suggestionScroll.update(
                     suggestions.size(),
-                    MAX_VISIBLE
+                    maxVisibleSuggestions
             );
 
             if (suggestionScroll.beginDrag(
@@ -421,62 +384,40 @@ public final class KineticAutoComplete {
             return false;
         }
 
-        public boolean handleMouseDragged(double mouseY) {
-            if (!Double.isFinite(mouseY) || !isFocused()) {
+        /** Handles suggestion-scroll dragging using explicit mouse coordinates. */
+        public boolean handleMouseDragged(
+                double mouseX,
+                double mouseY
+        ) {
+            if (!Double.isFinite(mouseX) || !Double.isFinite(mouseY) || !isSuggestionPopupOpen()) {
                 return false;
             }
 
             return suggestionScroll.drag(
                     mouseY,
                     this.getY() + this.getHeight() + 4,
-                    Math.min(
-                            suggestions.size(),
-                            MAX_VISIBLE
-                    ) * 12,
+                    Math.min(suggestions.size(), maxVisibleSuggestions) * 12,
                     10
             );
         }
 
-        public boolean handleMouseDragged(
-                double mouseX,
-                double mouseY
-        ) {
-            if (!Double.isFinite(mouseX)
-                    || !Double.isFinite(mouseY)) {
-                return false;
-            }
-
-            return handleMouseDragged(mouseY);
-        }
-
+        /** Ends an active suggestion-scroll drag for the supplied mouse button. */
         public boolean handleMouseReleased(int button) {
             return suggestionScroll.release(button);
         }
 
-        public String normalizedValue() {
-            return normalizeValue(getValue());
-        }
-
-        public static String normalizeValue(String value) {
-            if (value == null || value.isEmpty()) {
-                return "";
-            }
-
-            int separator = value.indexOf(" - ");
-
-            if (separator < 0) {
-                return value;
-            }
-
-            return value.substring(0, separator).trim();
+        private static boolean shouldShowTranslations() {
+            return !KineticClientRuntime.isEnglishLanguage();
         }
     }
 
+    /** Routes rendering and input for a group of detached auto-complete fields. */
     public static class AutoCompleteBoxGroup {
         private final List<AutoCompleteBox> boxes =
                 new ArrayList<>();
 
-        public void set(AutoCompleteBox... inputs) {
+        /** Replaces every autocomplete box routed by this group. */
+        public void setBoxes(AutoCompleteBox... inputs) {
             boxes.clear();
 
             if (inputs == null) {
@@ -485,14 +426,31 @@ public final class KineticAutoComplete {
 
             for (AutoCompleteBox input : inputs) {
                 if (input != null) {
+                    // A detached control can be supplied more than once by a panel
+                    // rebuild. Keep just its latest position in the z-order so it
+                    // is drawn and blurred exactly once.
+                    boxes.removeIf(registered -> registered == input);
                     boxes.add(input);
                 }
             }
         }
 
-        public boolean handleMouseScrolled(double delta) {
+        /** Returns whether any managed autocomplete field currently has an open suggestion popup. */
+        public boolean hasOpenPopup() {
             for (AutoCompleteBox box : boxes) {
-                if (box.handleMouseScrolled(delta)) {
+                if (box.isSuggestionPopupOpen()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /** Routes wheel scrolling to the first detached autocomplete popup that consumes it. */
+        public boolean handleMouseScrolled(double delta) {
+            for (int index = boxes.size() - 1; index >= 0; index--) {
+                AutoCompleteBox box = boxes.get(index);
+                if (box.isSuggestionPopupOpen()) {
+                    box.handleMouseScrolled(delta);
                     return true;
                 }
             }
@@ -500,15 +458,37 @@ public final class KineticAutoComplete {
             return false;
         }
 
+        /** Routes wheel scrolling only when the pointer is inside an open managed suggestion popup. */
+        public boolean handleHoveredMouseScrolled(double mouseX, double mouseY, double delta) {
+            for (int index = boxes.size() - 1; index >= 0; index--) {
+                AutoCompleteBox box = boxes.get(index);
+                if (box.isSuggestionPopupHovered(mouseX, mouseY)) {
+                    // The upper popup owns its region even when its scrollbar is already at the limit.
+                    box.handleMouseScrolled(delta);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /** Returns whether any open suggestion popup owns this point, including its scrollbar. */
+        public boolean isAnySuggestionPopupHovered(double mouseX, double mouseY) {
+            for (int index = boxes.size() - 1; index >= 0; index--) {
+                if (boxes.get(index).isSuggestionPopupHovered(mouseX, mouseY)) return true;
+            }
+            return false;
+        }
+
+        /** Routes one mouse click to the first detached autocomplete popup that consumes it. */
         public boolean handleSuggestionClick(
                 double mouseX,
                 double mouseY
         ) {
-            for (AutoCompleteBox box : boxes) {
-                if (box.handleMouseClick(
-                        mouseX,
-                        mouseY
-                )) {
+            for (int index = boxes.size() - 1; index >= 0; index--) {
+                AutoCompleteBox box = boxes.get(index);
+                if (box.isSuggestionPopupHovered(mouseX, mouseY)) {
+                    // Empty padding and scrollbar gaps must not dispatch clicks to a hidden popup.
+                    box.handleMouseClick(mouseX, mouseY);
                     return true;
                 }
             }
@@ -516,11 +496,13 @@ public final class KineticAutoComplete {
             return false;
         }
 
+        /** Routes suggestion-scroll dragging to the first detached autocomplete popup that consumes it. */
         public boolean handleMouseDragged(
                 double mouseX,
                 double mouseY
         ) {
-            for (AutoCompleteBox box : boxes) {
+            for (int index = boxes.size() - 1; index >= 0; index--) {
+                AutoCompleteBox box = boxes.get(index);
                 if (box.handleMouseDragged(
                         mouseX,
                         mouseY
@@ -532,8 +514,10 @@ public final class KineticAutoComplete {
             return false;
         }
 
+        /** Routes mouse release to managed suggestion scrollbars and reports whether one consumed it. */
         public boolean handleMouseReleased(int button) {
-            for (AutoCompleteBox box : boxes) {
+            for (int index = boxes.size() - 1; index >= 0; index--) {
+                AutoCompleteBox box = boxes.get(index);
                 if (box.handleMouseReleased(button)) {
                     return true;
                 }
@@ -542,9 +526,11 @@ public final class KineticAutoComplete {
             return false;
         }
 
-        public boolean handleKeyPressed(int keyCode) {
-            for (AutoCompleteBox box : boxes) {
-                if (box.handleKeyPressed(keyCode)) {
+        /** Routes one key press to the first detached autocomplete box that consumes it. */
+        public boolean handleKeyPressed(int keyCode, int scanCode, int modifiers) {
+            for (int index = boxes.size() - 1; index >= 0; index--) {
+                AutoCompleteBox box = boxes.get(index);
+                if (box.handleKeyPressed(keyCode, scanCode, modifiers)) {
                     return true;
                 }
             }
@@ -552,6 +538,7 @@ public final class KineticAutoComplete {
             return false;
         }
 
+        /** Clears focus from each managed autocomplete box that does not contain the supplied pointer position. */
         public void clearFocusOutside(
                 double mouseX,
                 double mouseY
@@ -566,6 +553,7 @@ public final class KineticAutoComplete {
             }
         }
 
+        /** Renders suggestion popups for every managed detached autocomplete box. */
         public void renderSuggestions(
                 GuiGraphics graphics,
                 int mouseX,
@@ -581,51 +569,31 @@ public final class KineticAutoComplete {
         }
     }
 
+    /** Standard Kinetic numeric field with API-managed suggestions. */
     public static class NumericAutoCompleteBox extends AutoCompleteBox {
-        public enum Type {
-            INTEGER,
-            LONG,
-            DECIMAL
-        }
-
-
-        private final NumericAutoCompleteBox.Type type;
+        private final KineticNumericFields.Type type;
         private final boolean allowNegative;
         private final Number minValue;
         private final Number maxValue;
         private final Predicate<Number> validator;
 
+        /** Factory-only constructor; obtain instances from {@code KineticWidgets}. */
         public NumericAutoCompleteBox(
+                FactoryAccess access,
                 Font font,
                 int x,
                 int y,
                 int width,
                 int height,
                 Component message,
-                Supplier<List<String>> dictionarySupplier,
-                NumericAutoCompleteBox.Type type,
-                boolean allowNegative,
-                Number minValue,
-                Number maxValue
-        ) {
-            this(font, x, y, width, height, message, dictionarySupplier, type, allowNegative, minValue, maxValue, null);
-        }
-
-        public NumericAutoCompleteBox(
-                Font font,
-                int x,
-                int y,
-                int width,
-                int height,
-                Component message,
-                Supplier<List<String>> dictionarySupplier,
-                NumericAutoCompleteBox.Type type,
+                Supplier<List<Suggestion>> dictionarySupplier,
+                KineticNumericFields.Type type,
                 boolean allowNegative,
                 Number minValue,
                 Number maxValue,
                 Predicate<Number> validator
         ) {
-            super(font, x, y, width, height, message, dictionarySupplier);
+            super(access, font, x, y, width, height, message, dictionarySupplier);
             this.type = type;
             this.allowNegative = allowNegative;
             this.minValue = minValue;
@@ -634,45 +602,22 @@ public final class KineticAutoComplete {
             setFilter(this::isAllowedText);
         }
 
-        /** 返回通过范围与业务校验的数值；空值、编辑中间态、格式错误或校验失败返回 null。 */
+        /** Returns the validated integer value, or {@code null} while the text is incomplete or invalid. */
         public Integer getIntValue() {
-            String raw = getValue().trim();
-            if (raw.isEmpty() || "-".equals(raw)) return null;
-
-            try {
-                int value = Integer.parseInt(raw);
-                return isInLongRange(value) && validator.test(value) ? value : null;
-            } catch (NumberFormatException ignored) {
-                return null;
-            }
+            return NumericInputRules.integerValue(getValue(), minValue, maxValue, validator);
         }
 
-        /** 返回通过范围与业务校验的数值；空值、编辑中间态、格式错误或校验失败返回 null。 */
+        /** Returns the validated long value, or {@code null} while the text is incomplete or invalid. */
         public Long getLongValue() {
-            String raw = getValue().trim();
-            if (raw.isEmpty() || "-".equals(raw)) return null;
-
-            try {
-                long value = Long.parseLong(raw);
-                return isInLongRange(value) && validator.test(value) ? value : null;
-            } catch (NumberFormatException ignored) {
-                return null;
-            }
+            return NumericInputRules.longValue(getValue(), minValue, maxValue, validator);
         }
 
-        /** 返回通过范围与业务校验的数值；空值、编辑中间态、格式错误或校验失败返回 null。 */
+        /** Returns the validated decimal value, or {@code null} while the text is incomplete or invalid. */
         public Double getDoubleValue() {
-            String raw = getValue().trim();
-            if (raw.isEmpty() || "-".equals(raw) || ".".equals(raw) || "-.".equals(raw)) return null;
-
-            try {
-                double value = Double.parseDouble(raw);
-                return Double.isFinite(value) && isInDoubleRange(value) && validator.test(value) ? value : null;
-            } catch (NumberFormatException ignored) {
-                return null;
-            }
+            return NumericInputRules.doubleValue(getValue(), minValue, maxValue, validator);
         }
 
+        /** Returns whether the current raw input satisfies this field's numeric validation rules. */
         public boolean isValueValid() {
             return switch (type) {
                 case INTEGER -> getIntValue() != null;
@@ -681,160 +626,24 @@ public final class KineticAutoComplete {
             };
         }
 
+        /** Sets int value. */
         public void setIntValue(int value) {
             setValue(Integer.toString(value));
         }
 
+        /** Sets long value. */
         public void setLongValue(long value) {
             setValue(Long.toString(value));
         }
 
+        /** Sets a decimal value using Kinetic's stable non-scientific formatting when possible. */
         public void setDoubleValue(double value) {
-            setValue(format(value));
-        }
-
-        public static String format(double value) {
-            if (!Double.isFinite(value)) return Double.toString(value);
-            return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
+            setValue(NumericInputRules.formatDouble(value));
         }
 
         private boolean isAllowedText(String value) {
-            if (value == null || value.isEmpty()) return true;
-            if ("-".equals(value)) return allowNegative;
-
-            int start = value.charAt(0) == '-' ? 1 : 0;
-            if (start == 1 && !allowNegative) return false;
-
-            if (type != NumericAutoCompleteBox.Type.DECIMAL) {
-                for (int i = start; i < value.length(); i++) {
-                    if (!Character.isDigit(value.charAt(i))) return false;
-                }
-                return true;
-            }
-
-            boolean dotSeen = false;
-            for (int i = start; i < value.length(); i++) {
-                char c = value.charAt(i);
-                if (c == '.') {
-                    if (dotSeen) return false;
-                    dotSeen = true;
-                } else if (!Character.isDigit(c)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        private boolean isInLongRange(long value) {
-            if (minValue != null && value < minValue.longValue()) return false;
-            return maxValue == null || value <= maxValue.longValue();
-        }
-
-        private boolean isInDoubleRange(double value) {
-            if (minValue != null && value < minValue.doubleValue()) return false;
-            return maxValue == null || value <= maxValue.doubleValue();
+            return NumericInputRules.isAllowedText(value, type, allowNegative);
         }
     }
 
-    private static NumericAutoCompleteBox integer(
-            Font font,
-            int x,
-            int y,
-            int width,
-            int height,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Integer minValue,
-            Integer maxValue
-    ) {
-        return integer(font, x, y, width, height, message, dictionarySupplier, allowNegative, minValue, maxValue, null);
-    }
-
-    private static NumericAutoCompleteBox integer(
-            Font font,
-            int x,
-            int y,
-            int width,
-            int height,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Integer minValue,
-            Integer maxValue,
-            Predicate<Number> validator
-    ) {
-        return new NumericAutoCompleteBox(
-                font, x, y, width, height, message, dictionarySupplier,
-                NumericAutoCompleteBox.Type.INTEGER, allowNegative, minValue, maxValue, validator
-        );
-    }
-
-    private static NumericAutoCompleteBox longInteger(
-            Font font,
-            int x,
-            int y,
-            int width,
-            int height,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Long minValue,
-            Long maxValue
-    ) {
-        return longInteger(font, x, y, width, height, message, dictionarySupplier, allowNegative, minValue, maxValue, null);
-    }
-
-    private static NumericAutoCompleteBox longInteger(
-            Font font,
-            int x,
-            int y,
-            int width,
-            int height,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Long minValue,
-            Long maxValue,
-            Predicate<Number> validator
-    ) {
-        return new NumericAutoCompleteBox(
-                font, x, y, width, height, message, dictionarySupplier,
-                NumericAutoCompleteBox.Type.LONG, allowNegative, minValue, maxValue, validator
-        );
-    }
-
-    private static NumericAutoCompleteBox decimal(
-            Font font,
-            int x,
-            int y,
-            int width,
-            int height,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Double minValue,
-            Double maxValue
-    ) {
-        return decimal(font, x, y, width, height, message, dictionarySupplier, allowNegative, minValue, maxValue, null);
-    }
-
-    private static NumericAutoCompleteBox decimal(
-            Font font,
-            int x,
-            int y,
-            int width,
-            int height,
-            Component message,
-            Supplier<List<String>> dictionarySupplier,
-            boolean allowNegative,
-            Double minValue,
-            Double maxValue,
-            Predicate<Number> validator
-    ) {
-        return new NumericAutoCompleteBox(
-                font, x, y, width, height, message, dictionarySupplier,
-                NumericAutoCompleteBox.Type.DECIMAL, allowNegative, minValue, maxValue, validator
-        );
-    }
 }

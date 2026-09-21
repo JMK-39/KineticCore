@@ -1,5 +1,8 @@
 package dev.xyat.kineticcore.feature.spawnegg.event;
 
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
+import dev.xyat.kineticcore.api.player.event.KineticPlayerEvents;
 import dev.xyat.kineticcore.feature.spawnegg.config.SpawnEggConfig;
 import dev.xyat.kineticcore.feature.spawnegg.entity.ThrowSpawnEgg;
 import net.minecraft.nbt.CompoundTag;
@@ -9,29 +12,25 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SpawnEggItem;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
 public final class ThrowSpawnEggEvent {
     private static final String MODE_KEY = "DisableEggThrow";
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
 
     private ThrowSpawnEggEvent() {
     }
 
     public static void register() {
-        if (registered) return;
-        registered = true;
-        MinecraftForge.EVENT_BUS.addListener(ThrowSpawnEggEvent::throwingSpawn);
+        REGISTRATION.run(() -> KineticPlayerEvents.onRightClickItem(KineticEventPriority.NORMAL, ThrowSpawnEggEvent::throwingSpawn));
     }
 
-    private static void throwingSpawn(PlayerInteractEvent.RightClickItem event) {
+    private static void throwingSpawn(KineticPlayerEvents.RightClickItemContext context) {
         if (!SpawnEggConfig.enableSpawnEggThrow) return;
 
-        Player player = event.getEntity();
+        Player player = context.player();
         if (player.getPersistentData().getBoolean(MODE_KEY)) return;
 
-        ItemStack stack = event.getItemStack();
+        ItemStack stack = context.stack();
         if (!(stack.getItem() instanceof SpawnEggItem)) return;
 
         player.getCooldowns().removeCooldown(stack.getItem());
@@ -41,8 +40,8 @@ public final class ThrowSpawnEggEvent {
             stack.shrink(1);
         }
 
-        event.setCancellationResult(InteractionResult.sidedSuccess(player.level().isClientSide));
-        event.setCanceled(true);
+        context.cancellationResult(InteractionResult.sidedSuccess(player.level().isClientSide));
+        context.cancel();
     }
 
     private static void throwSpawnEgg(Player player, ItemStack stack) {

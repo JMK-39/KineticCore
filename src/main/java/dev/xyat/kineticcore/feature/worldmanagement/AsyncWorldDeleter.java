@@ -1,8 +1,12 @@
 package dev.xyat.kineticcore.feature.worldmanagement;
 
+
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import com.sun.jna.platform.FileUtils;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 import dev.xyat.kineticcore.api.hook.ServerHooks;
 import dev.xyat.kineticcore.api.minecraft.MinecraftScreens;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
@@ -10,8 +14,6 @@ import dev.xyat.kineticcore.feature.worldmanagement.client.NotificationOverlay;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -19,12 +21,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class AsyncWorldDeleter {
-    private static boolean hookRegistered;
+    private static final KineticRegistrationBatch HOOK_REGISTRATION = new KineticRegistrationBatch();
 
     public static void registerHook() {
-        if (hookRegistered) return;
-        hookRegistered = true;
-        ServerHooks.onWorldDeletion(new ServerHooks.WorldDeletionHandler() {
+        HOOK_REGISTRATION.run(() -> ServerHooks.onWorldDeletion(new ServerHooks.WorldDeletionHandler() {
             @Override
             public boolean shouldRecycle(Path worldPath) {
                 return KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "recycle_bin", true);
@@ -34,12 +34,12 @@ public class AsyncWorldDeleter {
             public void recycle(Path worldPath) {
                 AsyncWorldDeleter.moveToTrash(worldPath);
             }
-        });
+        }));
     }
     private static final AtomicBoolean IS_DELETING = new AtomicBoolean(false);
     private static final AtomicBoolean SHUTDOWN_HOOK_REGISTERED = new AtomicBoolean(false);
     private static final AtomicReference<Thread> ACTIVE_DELETE_THREAD = new AtomicReference<>();
-    private static final Component DELETING_MSG = Component.translatable("msg.kineticcore.deleting_archive");
+    private static final Component DELETING_MSG = KineticI18n.translatable("msg.kineticcore.deleting_archive");
 
     public static boolean moveToTrash(Path worldPath) {
         if (!IS_DELETING.compareAndSet(false, true)) {
@@ -57,7 +57,7 @@ public class AsyncWorldDeleter {
     }
 
     private static void showDeletingNotification() {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
+        KineticPlatform.runOnClient(() -> () ->
                 KineticClientRuntime.execute(() -> NotificationOverlay.addNotification(DELETING_MSG, true))
         );
     }
@@ -90,7 +90,7 @@ public class AsyncWorldDeleter {
     }
 
     private static void handleCompletion(boolean success) {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
+        KineticPlatform.runOnClient(() -> () ->
                 KineticClientRuntime.execute(() -> {
                     NotificationOverlay.removeNotification(DELETING_MSG);
                     Screen currentScreen = KineticClientRuntime.currentScreen();
@@ -99,7 +99,7 @@ public class AsyncWorldDeleter {
                         KineticClientRuntime.openScreen(new SelectWorldScreen(parentScreen));
                     }
 
-                    NotificationOverlay.addNotification(Component.translatable(
+                    NotificationOverlay.addNotification(KineticI18n.translatable(
                             success ? "msg.kineticcore.archive_deleted" : "msg.kineticcore.archive_delete_failed"
                     ));
                 })

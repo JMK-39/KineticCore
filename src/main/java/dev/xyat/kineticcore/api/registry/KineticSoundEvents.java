@@ -7,10 +7,14 @@ import net.minecraft.sounds.SoundEvent;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+/** Public Kinetic API facade for sound events. */
 public final class KineticSoundEvents {
     private KineticSoundEvents() {
     }
 
+    /**
+     * Registers this API capability.
+     */
     public static KineticRegistryHandle<SoundEvent> register(
             ResourceLocation id,
             Supplier<? extends SoundEvent> factory
@@ -21,11 +25,4 @@ public final class KineticSoundEvents {
         );
     }
 
-    public static KineticRegistryHandle<SoundEvent> register(
-            String namespace,
-            String path,
-            Supplier<? extends SoundEvent> factory
-    ) {
-        return register(new ResourceLocation(namespace, path), factory);
-    }
 }

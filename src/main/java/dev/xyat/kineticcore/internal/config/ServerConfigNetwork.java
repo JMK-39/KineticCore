@@ -7,17 +7,16 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
-import dev.xyat.kineticcore.api.network.ClientboundSender;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.api.network.KineticCompression;
-import dev.xyat.kineticcore.api.network.KineticNetwork;
-import dev.xyat.kineticcore.api.network.NetworkChannel;
+import dev.xyat.kineticcore.api.network.NetworkVersionPolicy;
 import dev.xyat.kineticcore.api.network.NetworkCodec;
-import dev.xyat.kineticcore.api.network.ServerboundSender;
+import dev.xyat.kineticcore.api.network.PacketChannel;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,85 +26,120 @@ public final class ServerConfigNetwork {
     private static final int MAX_COMPRESSED_BYTES = 2 * 1024 * 1024;
     private static final int MAX_DECOMPRESSED_BYTES = 8 * 1024 * 1024;
     private static final Gson GSON = new Gson();
-    private static final NetworkChannel CHANNEL = KineticNetwork.channel(
-            new ResourceLocation(KineticRuntime.MOD_ID, "server_config")
+    private static final PacketChannel CHANNEL = PacketChannel.create(
+            KineticResourceIds.of(KineticRuntime.MOD_ID, "server_config"),
+            "1",
+            NetworkVersionPolicy.EXACT
     );
 
-    private static ServerboundSender<RequestPacket> requestSender;
-    private static ServerboundSender<SavePacket> saveSender;
-    private static ClientboundSender<SyncPacket> syncSender;
+    private static boolean requestPacketRegistered;
+    private static boolean savePacketRegistered;
+    private static boolean syncPacketRegistered;
+    private static volatile boolean networkRegistered;
 
     private ServerConfigNetwork() {
     }
 
-    public static void register() {
-        requestSender = CHANNEL.registerServerbound(
-                RequestPacket.class,
-                NetworkCodec.of(
-                        (buffer, packet) -> buffer.writeUtf(packet.pageId(), 256),
-                        buffer -> new RequestPacket(buffer.readUtf(256))
-                ),
-                (packet, context) -> sendSnapshot(context.sender(), packet.pageId(), false, true, "")
-        );
+    public static synchronized void register() {
+        if (networkRegistered) return;
 
-        saveSender = CHANNEL.registerServerbound(
-                SavePacket.class,
-                NetworkCodec.of(
-                        (buffer, packet) -> {
-                            buffer.writeUtf(packet.pageId(), 256);
-                            buffer.writeByteArray(packet.payload());
-                        },
-                        buffer -> new SavePacket(buffer.readUtf(256), buffer.readByteArray(MAX_COMPRESSED_BYTES))
-                ),
-                (packet, context) -> handleSave(context.sender(), packet)
-        );
+        Throwable failure = null;
+        if (!requestPacketRegistered) {
+            try {
+            CHANNEL.registerServerbound(0,
+                    RequestPacket.class,
+                    NetworkCodec.of(
+                            (buffer, packet) -> buffer.writeUtf(packet.pageId(), 256),
+                            buffer -> new RequestPacket(buffer.readUtf(256))
+                    ),
+                    (packet, context) -> sendSnapshot(context.sender(), packet.pageId(), false, true, "")
+            );
+                requestPacketRegistered = true;
+            } catch (RuntimeException | Error exception) {
+                failure = exception;
+            }
+        }
 
-        syncSender = CHANNEL.registerClientbound(
-                SyncPacket.class,
-                NetworkCodec.of(
-                        (buffer, packet) -> {
-                            buffer.writeUtf(packet.pageId(), 256);
-                            buffer.writeBoolean(packet.editable());
-                            buffer.writeBoolean(packet.saveResponse());
-                            buffer.writeBoolean(packet.success());
-                            buffer.writeUtf(packet.messageKey() == null ? "" : packet.messageKey(), 256);
-                            buffer.writeByteArray(packet.payload());
-                        },
-                        buffer -> new SyncPacket(
-                                buffer.readUtf(256),
-                                buffer.readBoolean(),
-                                buffer.readBoolean(),
-                                buffer.readBoolean(),
-                                buffer.readUtf(256),
-                                buffer.readByteArray(MAX_COMPRESSED_BYTES)
-                        )
-                ),
-                packet -> ServerConfigClientDispatch.handleSync(
-                        packet.pageId(),
-                        packet.editable(),
-                        packet.saveResponse(),
-                        packet.success(),
-                        packet.messageKey(),
-                        packet.payload()
-                )
-        );
+        if (!savePacketRegistered) {
+            try {
+            CHANNEL.registerServerbound(1,
+                    SavePacket.class,
+                    NetworkCodec.of(
+                            (buffer, packet) -> {
+                                buffer.writeUtf(packet.pageId(), 256);
+                                buffer.writeByteArray(packet.payload(), MAX_COMPRESSED_BYTES);
+                            },
+                            buffer -> new SavePacket(buffer.readUtf(256), buffer.readByteArray(MAX_COMPRESSED_BYTES))
+                    ),
+                    (packet, context) -> handleSave(context.sender(), packet)
+            );
+                savePacketRegistered = true;
+            } catch (RuntimeException | Error exception) {
+                if (failure == null) failure = exception;
+                else if (failure != exception) failure.addSuppressed(exception);
+            }
+        }
+
+        if (!syncPacketRegistered) {
+            try {
+            CHANNEL.registerClientbound(2,
+                    SyncPacket.class,
+                    NetworkCodec.of(
+                            (buffer, packet) -> {
+                                buffer.writeUtf(packet.pageId(), 256);
+                                buffer.writeBoolean(packet.editable());
+                                buffer.writeBoolean(packet.saveResponse());
+                                buffer.writeBoolean(packet.success());
+                                buffer.writeUtf(packet.messageKey() == null ? "" : packet.messageKey(), 256);
+                                buffer.writeByteArray(packet.payload(), MAX_COMPRESSED_BYTES);
+                            },
+                            buffer -> new SyncPacket(
+                                    buffer.readUtf(256),
+                                    buffer.readBoolean(),
+                                    buffer.readBoolean(),
+                                    buffer.readBoolean(),
+                                    buffer.readUtf(256),
+                                    buffer.readByteArray(MAX_COMPRESSED_BYTES)
+                            )
+                    ),
+                    packet -> ServerConfigClientDispatch.handleSync(
+                            packet.pageId(),
+                            packet.editable(),
+                            packet.saveResponse(),
+                            packet.success(),
+                            packet.messageKey(),
+                            packet.payload()
+                    )
+            );
+                syncPacketRegistered = true;
+            } catch (RuntimeException | Error exception) {
+                if (failure == null) failure = exception;
+                else if (failure != exception) failure.addSuppressed(exception);
+            }
+        }
+
+        networkRegistered = requestPacketRegistered && savePacketRegistered && syncPacketRegistered;
+        if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+        if (failure instanceof Error errorFailure) throw errorFailure;
     }
 
     public static void requestPage(String pageId) {
-        if (requestSender != null) {
-            requestSender.send(new RequestPacket(pageId));
+        if (!networkRegistered) {
+            throw new IllegalStateException("Server config network not registered");
         }
+        CHANNEL.sendToServer(new RequestPacket(pageId));
     }
 
     public static void savePage(String pageId, byte[] payload) {
-        if (saveSender != null) {
-            saveSender.send(new SavePacket(pageId, payload));
+        if (!networkRegistered) {
+            throw new IllegalStateException("Server config network not registered");
         }
+        CHANNEL.sendToServer(new SavePacket(pageId, payload));
     }
 
     public static byte[] encodeValues(Map<String, Object> values) {
         String json = GSON.toJson(values == null ? Map.of() : values);
-        byte[] compressed = KineticCompression.compressUtf8(json);
+        byte[] compressed = KineticCompression.compressUtf8(json, MAX_COMPRESSED_BYTES, MAX_DECOMPRESSED_BYTES);
         if (compressed.length > MAX_COMPRESSED_BYTES) {
             throw new IllegalArgumentException("Compressed server config payload exceeds limit");
         }
@@ -155,8 +189,11 @@ public final class ServerConfigNetwork {
 
         String number = primitive.getAsString();
         if (number.indexOf('.') >= 0 || number.indexOf('e') >= 0 || number.indexOf('E') >= 0) {
-            double value = Double.parseDouble(number);
-            if (!Double.isFinite(value)) {
+            // Preserve the JSON token until the receiving entry has performed precise
+            // bounds/integrality validation; double rounding here can turn invalid
+            // values into valid integers or in-range decimals before validation.
+            BigDecimal value = new BigDecimal(number);
+            if (!Double.isFinite(value.doubleValue())) {
                 throw new IllegalArgumentException("Non-finite server config number");
             }
             return value;
@@ -213,8 +250,8 @@ public final class ServerConfigNetwork {
             }
         }
 
-        if (syncSender != null) {
-            syncSender.send(
+        if (networkRegistered) {
+            CHANNEL.sendToPlayer(
                     player,
                     new SyncPacket(pageId, editable, saveResponse, actualSuccess, actualMessageKey, payload)
             );

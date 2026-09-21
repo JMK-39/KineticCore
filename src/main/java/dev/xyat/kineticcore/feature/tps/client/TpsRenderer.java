@@ -1,10 +1,14 @@
 package dev.xyat.kineticcore.feature.tps.client;
 
+
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.feature.tps.config.TpsClientConfig;
 import dev.xyat.kineticcore.feature.tps.network.TpsNetwork;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -16,7 +20,7 @@ import java.util.Locale;
 public final class TpsRenderer {
     private static final long DATA_TIMEOUT_MILLIS = 5000L;
 
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
     private static boolean hasData;
     private static double cachedTps = 20.0D;
     private static double cachedMspt;
@@ -26,10 +30,10 @@ public final class TpsRenderer {
     }
 
     public static void register() {
-        if (registered) return;
-        KineticClientEvents.onHudRender(KineticClientEvents.HudStage.AFTER_CHAT, TpsRenderer::onRenderOverlay);
-        KineticClientEvents.onLogin(TpsRenderer::onClientLogin);
-        registered = true;
+        REGISTRATION.run(
+                () -> KineticClientEvents.onHudRender(KineticClientEvents.HudStage.AFTER_CHAT, TpsRenderer::onRenderOverlay),
+                () -> KineticClientEvents.onLogin(TpsRenderer::onClientLogin)
+        );
     }
 
     private static void onClientLogin() {
@@ -62,43 +66,45 @@ public final class TpsRenderer {
     public static void renderLines(GuiGraphics graphics, Font font, List<Component> lines, int x, int y) {
         int lineY = y;
         for (Component line : lines) {
-            graphics.drawString(font, line, x, lineY, 0xFFFFFF, true);
+            graphics.drawString(font, line, x, lineY, GuiTheme.current().text(), true);
             lineY += font.lineHeight;
         }
     }
 
     private static void onRenderOverlay(GuiGraphics graphics, float partialTick) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.screen instanceof TpsHudEditorScreen) return;
+        if (KineticClientRuntime.currentScreen() instanceof TpsHudEditorScreen) return;
         if (!TpsClientConfig.isHudEnabled()
                 || !hasData
                 || System.currentTimeMillis() - lastUpdateMillis > DATA_TIMEOUT_MILLIS) return;
-        if (minecraft.options.hideGui || minecraft.level == null || minecraft.options.renderDebug) return;
+        if (KineticClientRuntime.guiHidden()
+                || KineticClientRuntime.currentLevel() == null
+                || KineticClientRuntime.debugScreenVisible()) return;
 
+        Font font = KineticClientRuntime.font();
         List<Component> lines = List.of(createTpsText(cachedTps, cachedMspt));
-        int contentWidth = getContentWidth(minecraft.font, lines);
-        int contentHeight = getContentHeight(minecraft.font, lines.size());
+        int contentWidth = getContentWidth(font, lines);
+        int contentHeight = getContentHeight(font, lines.size());
         double scale = TpsClientConfig.getHudScale();
         int scaledWidth = scaledSize(contentWidth, scale);
         int scaledHeight = scaledSize(contentHeight, scale);
-        int screenWidth = minecraft.getWindow().getGuiScaledWidth();
-        int screenHeight = minecraft.getWindow().getGuiScaledHeight();
+        int screenWidth = KineticClientRuntime.guiScaledWidth();
+        int screenHeight = KineticClientRuntime.guiScaledHeight();
         int x = Mth.clamp(screenWidth - scaledWidth - 2 - TpsClientConfig.getHudOffsetX(), 0, Math.max(0, screenWidth - scaledWidth));
         int y = Mth.clamp(screenHeight - scaledHeight - 2 - TpsClientConfig.getHudOffsetY(), 0, Math.max(0, screenHeight - scaledHeight));
 
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0.0F);
         graphics.pose().scale((float) scale, (float) scale, 1.0F);
-        renderLines(graphics, minecraft.font, lines, 0, 0);
+        renderLines(graphics, font, lines, 0, 0);
         graphics.pose().popPose();
     }
 
     private static Component createTpsText(double tps, double mspt) {
         return Component.empty()
-                .append(Component.translatable("gui.kineticcore.tps.label.tps"))
+                .append(KineticI18n.translatable("gui.kineticcore.tps.label.tps"))
                 .append(formatTpsValue(String.format(Locale.ROOT, "%.1f", tps), tps))
-                .append(Component.translatable("gui.kineticcore.tps.separator"))
-                .append(Component.translatable("gui.kineticcore.tps.label.mspt"))
+                .append(KineticI18n.translatable("gui.kineticcore.tps.separator"))
+                .append(KineticI18n.translatable("gui.kineticcore.tps.label.mspt"))
                 .append(formatMsptValue(String.format(Locale.ROOT, "%.1f", mspt), mspt));
     }
 

@@ -8,10 +8,14 @@ import net.minecraft.world.entity.EntityType;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+/** Public Kinetic API facade for entity types. */
 public final class KineticEntityTypes {
     private KineticEntityTypes() {
     }
 
+    /**
+     * Registers this API capability.
+     */
     public static <T extends Entity> KineticRegistryHandle<EntityType<T>> register(
             ResourceLocation id,
             Supplier<? extends EntityType<T>> factory
@@ -22,11 +26,4 @@ public final class KineticEntityTypes {
         );
     }
 
-    public static <T extends Entity> KineticRegistryHandle<EntityType<T>> register(
-            String namespace,
-            String path,
-            Supplier<? extends EntityType<T>> factory
-    ) {
-        return register(new ResourceLocation(namespace, path), factory);
-    }
 }

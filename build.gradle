@@ -58,13 +58,10 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
-def mixinConfigList = []
-def mixinDir = file('src/main/resources/mixins')
-if (mixinDir.exists()) {
-    fileTree(dir: mixinDir, include: 'kineticcore.mixins*.json').each { File file ->
-        mixinConfigList.add("mixins/${file.name}")
-    }
-}
+def mixinConfigList = fileTree(
+        dir: 'src/main/resources',
+        include: 'kineticcore.mixins*.json'
+).files.collect { File file -> file.name }.sort()
 
 minecraft {
     mappings channel: project.findProperty('mapping_channel')?.toString() ?: 'official',
@@ -197,8 +194,8 @@ dependencies {
 
     embed 'com.github.promeg:tinypinyin:2.0.3'
 
-    implementation fg.deobf(localMod('curios'))
-    implementation fg.deobf(localMod('jei'))
+    compileOnly fg.deobf(localMod('curios'))
+    compileOnly fg.deobf(localMod('jei'))
 }
 
 tasks.named('processResources', ProcessResources).configure {
@@ -293,6 +290,44 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs.addAll(['-nowarn', '-Xlint:none', '-Amixin.target.allowUnresolvedTarget=true', '-Amixin.suppressTargetWarnings=true'])
 }
 
+def kineticApiJavadoc = tasks.register('kineticApiJavadoc', Javadoc) {
+    group = 'documentation'
+    description = 'Generates browsable Javadoc for the public Kinetic API.'
+
+    source = fileTree('src/main/java') {
+        include 'dev/xyat/kineticcore/api/**/*.java'
+    }
+    classpath = sourceSets.main.compileClasspath + sourceSets.main.output
+    destinationDir = layout.projectDirectory.dir('javadoc').asFile
+
+    options.encoding = 'UTF-8'
+    options.charSet = 'UTF-8'
+    options.docEncoding = 'UTF-8'
+    options.windowTitle = "KineticCore ${project.version} API"
+    options.docTitle = "KineticCore ${project.version} API"
+    options.addBooleanOption('Xdoclint:none', true)
+    options.quiet()
+    options.addStringOption('sourcepath', file('src/main/java').absolutePath)
+    failOnError = true
+
+    onlyIf {
+        def compileTask = tasks.named('compileJava').get()
+        compileTask.state.failure == null
+    }
+}
+
+// This task is opt-in: normal build/compileJava must not generate Javadoc.
+tasks.register('buildJavaDOC', Zip) {
+    group = 'build'
+    description = 'Generate public KineticCore API Javadoc and package it as a shareable ZIP.'
+    dependsOn kineticApiJavadoc
+
+    archiveFileName.set("KineticCore-javadoc-${project.version}.zip")
+    destinationDirectory.set(layout.projectDirectory)
+    from(layout.projectDirectory.dir('javadoc')) {
+        into 'javadoc'
+    }
+}
 
 apply from: 'gradle/kinetic-architecture.gradle'
 apply from: 'gradle/kinetic-api-verification.gradle'

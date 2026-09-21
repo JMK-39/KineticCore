@@ -11,10 +11,6 @@ public final class GzipCompression {
     private GzipCompression() {
     }
 
-    public static byte[] compress(byte[] data) {
-        return compress(data, Integer.MAX_VALUE);
-    }
-
     public static byte[] compress(byte[] data, int maxCompressedBytes) {
         if (maxCompressedBytes < 0) {
             throw new IllegalArgumentException("maxCompressedBytes must be non-negative");
@@ -39,10 +35,12 @@ public final class GzipCompression {
             int total = 0;
             int read;
             while ((read = gzip.read(chunk)) != -1) {
-                total += read;
-                if (total > maxDecompressedBytes) {
+                // Check before adding: total + read can overflow at a caller-supplied
+                // ceiling near Integer.MAX_VALUE and bypass the limit.
+                if (read > maxDecompressedBytes - total) {
                     throw new IllegalArgumentException("Decompressed network payload exceeds limit");
                 }
+                total += read;
                 output.write(chunk, 0, read);
             }
             return output.toByteArray();

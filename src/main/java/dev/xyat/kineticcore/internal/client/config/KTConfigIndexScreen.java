@@ -8,9 +8,8 @@ import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
-import net.minecraft.client.Minecraft;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -21,7 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class KTConfigIndexScreen extends KineticScreen {
+final class KTConfigIndexScreen extends KineticScreen {
     private static final int LIST_X = 62;
     private static final int LIST_Y = 86;
     private static final int LIST_WIDTH = 510;
@@ -46,7 +45,7 @@ public final class KTConfigIndexScreen extends KineticScreen {
         long entryCount() {
             return pages.stream()
                     .flatMap(page -> page.entries().stream())
-                    .filter(entry -> entry.isValue() || entry.type() == KTConfigEntry.Type.ACTION)
+                    .filter(entry -> entry.isValueEntry() || entry.type() == KTConfigEntry.Type.ACTION)
                     .count();
         }
     }
@@ -54,19 +53,19 @@ public final class KTConfigIndexScreen extends KineticScreen {
     private final Screen parent;
     private final String ownerNamespace;
     private final KineticSearch.Model<ModuleGroup> moduleModel =
-            new KineticSearch.Model<>(List.of(), KTConfigIndexScreen::buildModuleSearchData);
+            new KineticSearch.Model<>(List.of(), (entry, query) -> KineticSearch.match(buildModuleSearchData(entry), query));
     private final GridScrollController listScroll = new GridScrollController();
 
     private List<ModuleGroup> registeredModules = List.of();
-    private EditBox searchBox;
+    private KineticEditBox searchBox;
     private String searchQuery = "";
     private ModuleGroup hoveredModule;
 
-    public KTConfigIndexScreen(Screen parent) {
+    KTConfigIndexScreen(Screen parent) {
         this(parent, null);
     }
 
-    public KTConfigIndexScreen(Screen parent, String ownerNamespace) {
+    KTConfigIndexScreen(Screen parent, String ownerNamespace) {
         super(KineticText.translatable("gui.kineticcore.config.installed_plugins"));
         this.parent = parent;
         this.ownerNamespace = ownerNamespace;
@@ -91,7 +90,7 @@ public final class KTConfigIndexScreen extends KineticScreen {
                 430,
                 KineticText.translatable("gui.kineticcore.config.search_plugins"),
                 KineticText.translatable("gui.kineticcore.config.search_plugins"),
-                null
+                null, null
         );
         searchBox.setMaxLength(256);
         searchBox.setValue(searchQuery);
@@ -148,8 +147,7 @@ public final class KTConfigIndexScreen extends KineticScreen {
         );
         renderModuleRows(graphics, mouseX, mouseY);
 
-        GuiTheme.scrollbar(
-                listScroll,
+        listScroll.render(
                 graphics,
                 mouseX,
                 mouseY,
@@ -196,14 +194,10 @@ public final class KTConfigIndexScreen extends KineticScreen {
                 int y = LIST_Y + (int) Math.round((index - smoothOffset) * ROW_STRIDE);
                 boolean hovered = module == hoveredModule;
 
-                GuiTheme.panel(
-                        graphics,
-                        LIST_X,
-                        y,
-                        LIST_WIDTH,
-                        ROW_HEIGHT,
-                        hovered ? 0xFF343434 : 0xFF242424,
-                        hovered ? 0xFFFFAA00 : 0xFF555555
+                GuiTheme.stateSurface(
+                        graphics, LIST_X, y, LIST_WIDTH, ROW_HEIGHT,
+                        hovered ? GuiTheme.Surface.PANEL_ALT : GuiTheme.Surface.PANEL,
+                        false, hovered, false
                 );
 
                 KineticText.drawScrollingLeft(
@@ -272,7 +266,7 @@ public final class KTConfigIndexScreen extends KineticScreen {
             return true;
         }
 
-        if (button == 0 && minecraft != null) {
+        if (button == 0) {
             ModuleGroup selected = moduleAt(mouseX, mouseY);
             if (selected != null) {
                 KineticClientRuntime.openScreen(new KTModuleConfigScreen(
@@ -314,7 +308,7 @@ public final class KTConfigIndexScreen extends KineticScreen {
                 LIST_Y,
                 SCROLL_X + SCROLL_WIDTH - LIST_X,
                 LIST_HEIGHT
-        ) && listScroll.scroll(delta)) {
+        ) && listScroll.scroll(delta, 1.0D)) {
             return true;
         }
         return super.canvasMouseScrolled(mouseX, mouseY, delta);
@@ -390,12 +384,7 @@ public final class KTConfigIndexScreen extends KineticScreen {
             }
         }
         String raw = data.toString();
-        return raw + ' ' + KineticSearch.pinyin(raw);
-    }
-
-    @Override
-    public void onClose() {
-        navigateBack();
+        return raw;
     }
 
     @Override

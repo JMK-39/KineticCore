@@ -1,38 +1,28 @@
 package dev.xyat.kineticcore.feature.setspawn.client.gui;
 
+
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.client.text.KineticText;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
 import dev.xyat.kineticcore.api.client.widget.input.KineticAutoComplete.AutoCompleteBox;
+import dev.xyat.kineticcore.api.client.widget.input.KineticAutoComplete.Suggestion;
+import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.ActionItem;
+import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.ScrollableActionList;
+import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.kineticcore.feature.setspawn.network.SetSpawnNetwork;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.ObjectSelectionList;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.Resource;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 public class SetSpawnScreen extends KineticScreen {
-    private static final Map<String, String> ZH_CN_CACHE = new ConcurrentHashMap<>();
-    private static final Set<String> ZH_CN_LOADED_NAMESPACES = ConcurrentHashMap.newKeySet();
-
     private final String playerDim;
     private final String playerBiome;
     private final String playerStruct;
@@ -53,10 +43,10 @@ public class SetSpawnScreen extends KineticScreen {
     private int currentTab = 0;
 
     private AutoCompleteBox activeInput;
-    private StringListWidget activeListWidget;
+    private ScrollableActionList activeListWidget;
 
     public SetSpawnScreen(SetSpawnNetwork.OpenSetSpawnGuiPacket packet) {
-        super(Component.translatable("gui.kineticcore.setspawn.title"));
+        super(KineticI18n.translatable("gui.kineticcore.setspawn.title"));
 
         this.globalEnable = packet.globalEnable();
         this.dimEnable = packet.dimEnable();
@@ -82,33 +72,27 @@ public class SetSpawnScreen extends KineticScreen {
         int startX = 20;
         int topY = 16;
 
-        Button btnDim = addButton(
-                startX, topY, 80,
-                Component.translatable("gui.kineticcore.setspawn.dim"),
-                Component.translatable("gui.kineticcore.setspawn.tooltip.dim"),
-                () -> switchTab(0)
+        addTabBar(
+                startX,
+                topY,
+                250,
+                List.of(
+                        KineticI18n.translatable("gui.kineticcore.setspawn.dim"),
+                        KineticI18n.translatable("gui.kineticcore.setspawn.biome"),
+                        KineticI18n.translatable("gui.kineticcore.setspawn.struct")
+                ),
+                List.of(
+                        KineticI18n.translatable("gui.kineticcore.setspawn.tooltip.dim"),
+                        KineticI18n.translatable("gui.kineticcore.setspawn.tooltip.biome"),
+                        KineticI18n.translatable("gui.kineticcore.setspawn.tooltip.struct")
+                ),
+                currentTab,
+                this::switchTab
         );
-        btnDim.active = currentTab != 0;
-
-        Button btnBiome = addButton(
-                startX + 85, topY, 80,
-                Component.translatable("gui.kineticcore.setspawn.biome"),
-                Component.translatable("gui.kineticcore.setspawn.tooltip.biome"),
-                () -> switchTab(1)
-        );
-        btnBiome.active = currentTab != 1;
-
-        Button btnStruct = addButton(
-                startX + 170, topY, 80,
-                Component.translatable("gui.kineticcore.setspawn.struct"),
-                Component.translatable("gui.kineticcore.setspawn.tooltip.struct"),
-                () -> switchTab(2)
-        );
-        btnStruct.active = currentTab != 2;
 
         addButton(
                 startX + panelW - 145, topY, 80,
-                Component.translatable("gui.kineticcore.hud_editor.save"),
+                KineticI18n.translatable("gui.kineticcore.hud_editor.save"),
                 null,
                 () -> SetSpawnNetwork.saveToServer(new SetSpawnNetwork.SaveSetSpawnPacket(
                         globalEnable, dimEnable, dims, biomeEnable, biomes, structEnable, structs
@@ -116,7 +100,7 @@ public class SetSpawnScreen extends KineticScreen {
         );
         addButton(
                 startX + panelW - 60, topY, 60,
-                Component.translatable("gui.kineticcore.config.back"),
+                KineticI18n.translatable("gui.kineticcore.config.back"),
                 null,
                 this::onClose
         );
@@ -125,7 +109,7 @@ public class SetSpawnScreen extends KineticScreen {
         int switchesW = 270;
         int inputW = panelW - switchesW - 5;
 
-        Component inputPlaceholder = Component.translatable(
+        Component inputPlaceholder = KineticI18n.translatable(
                 currentTab == 0
                         ? "gui.kineticcore.setspawn.hint_dim"
                         : (currentTab == 1
@@ -139,15 +123,20 @@ public class SetSpawnScreen extends KineticScreen {
                 this::getActiveDict,
                 null
         );
+        activeInput.setSelectionResponder(value -> {
+            addToList(value);
+            activeInput.setValue("");
+        });
 
-        Component enabled = Component.translatable("gui.kineticcore.setspawn.enable");
-        Component disabled = Component.translatable("gui.kineticcore.setspawn.disable");
+        Component enabled = KineticI18n.translatable("gui.kineticcore.setspawn.enable");
+        Component disabled = KineticI18n.translatable("gui.kineticcore.setspawn.disable");
         addToggleButton(
                 startX + inputW + 5, searchY, 85,
                 globalEnable,
-                Component.translatable("gui.kineticcore.setspawn.global_btn", enabled),
-                Component.translatable("gui.kineticcore.setspawn.global_btn", disabled),
-                Component.translatable("gui.kineticcore.setspawn.tooltip.global"),
+                KineticText.translatable("gui.kineticcore.setspawn.global_btn", enabled),
+                KineticText.translatable("gui.kineticcore.setspawn.global_btn", disabled),
+                KineticI18n.translatable("gui.kineticcore.setspawn.tooltip.global"),
+                ignored -> true,
                 value -> globalEnable = value
         );
 
@@ -155,7 +144,7 @@ public class SetSpawnScreen extends KineticScreen {
         String tabPrefix = currentTab == 0
                 ? "gui.kineticcore.setspawn.dim_btn"
                 : (currentTab == 1 ? "gui.kineticcore.setspawn.biome_btn" : "gui.kineticcore.setspawn.struct_btn");
-        Component tabTooltip = Component.translatable(
+        Component tabTooltip = KineticI18n.translatable(
                 currentTab == 0
                         ? "gui.kineticcore.setspawn.tooltip.dim"
                         : (currentTab == 1 ? "gui.kineticcore.setspawn.tooltip.biome" : "gui.kineticcore.setspawn.tooltip.struct")
@@ -163,9 +152,10 @@ public class SetSpawnScreen extends KineticScreen {
         addToggleButton(
                 startX + inputW + 95, searchY, 85,
                 currentEnable,
-                Component.translatable(tabPrefix, enabled),
-                Component.translatable(tabPrefix, disabled),
+                KineticText.translatable(tabPrefix, enabled),
+                KineticText.translatable(tabPrefix, disabled),
                 tabTooltip,
+                ignored -> true,
                 value -> {
                     if (currentTab == 0) dimEnable = value;
                     else if (currentTab == 1) biomeEnable = value;
@@ -175,32 +165,43 @@ public class SetSpawnScreen extends KineticScreen {
 
         String currentEnv = currentTab == 0 ? playerDim : (currentTab == 1 ? playerBiome : playerStruct);
         boolean isOverworldDim = currentTab == 0 && "minecraft:overworld".equals(currentEnv);
-        Button envBtn = addButton(
+        StateButton envBtn = addButton(
                 startX + panelW - 85, searchY, 85,
-                Component.translatable("gui.kineticcore.setspawn.add_current_single"),
+                KineticI18n.translatable("gui.kineticcore.setspawn.add_current_single"),
                 Component.literal(toDisplayEntry(currentEnv, getCurrentPrefix())),
                 () -> {
                     if (currentEnv.equals("none") || currentEnv.isEmpty() || isOverworldDim) return;
                     addToList(currentEnv);
                 }
         );
-        envBtn.active = !(currentEnv.equals("none") || currentEnv.isEmpty() || isOverworldDim);
+        envBtn.setEnabled(!(currentEnv.equals("none") || currentEnv.isEmpty() || isOverworldDim));
 
         int listY = 76;
         int listH = canvasHeight() - listY - 16;
         List<String> activeData = currentTab == 0 ? dims : (currentTab == 1 ? biomes : structs);
 
-        activeListWidget = new StringListWidget(minecraft, panelW, listH, listY, listY + listH, 20, activeData);
-        activeListWidget.setLeftPos(startX);
-        addEventListWidget(activeListWidget);
+        activeListWidget = addScrollableActionList(
+                startX,
+                listY,
+                panelW,
+                listH,
+                activeListItems(activeData),
+                -1,
+                0,
+                38,
+                index -> {
+                    if (activeListWidget != null) activeListWidget.setSelectedIndex(-1);
+                },
+                this::removeActiveEntry
+        );
     }
 
     public void handleSaveResult(boolean success) {
         if (success) {
-            GuiOverlay.toast(Component.translatable("gui.kineticcore.setspawn.saved_toast"));
+            KineticOverlays.toast(null, KineticI18n.translatable("gui.kineticcore.setspawn.saved_toast"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
             this.onClose();
         } else {
-            GuiOverlay.toast(Component.translatable("gui.kineticcore.setspawn.save_invalid_toast"));
+            KineticOverlays.toast(null, KineticI18n.translatable("gui.kineticcore.setspawn.save_invalid_toast"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
         }
     }
 
@@ -210,36 +211,16 @@ public class SetSpawnScreen extends KineticScreen {
     }
 
     private void addToList(String rawValue) {
-        String val = stripDisplayText(rawValue);
+        String val = rawValue == null ? "" : rawValue.trim();
         if (!val.isEmpty()) {
             if (currentTab == 0 && val.equals("minecraft:overworld")) return;
 
             List<String> targetList = currentTab == 0 ? dims : (currentTab == 1 ? biomes : structs);
             if (!targetList.contains(val)) {
                 targetList.add(val);
-                if (activeListWidget != null) activeListWidget.refresh();
+                refreshActiveList();
             }
         }
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        if (activeInput != null) {
-            String val = activeInput.getValue();
-            if (val.contains(" - ")) {
-                addToList(val);
-                activeInput.setValue("");
-            }
-        }
-    }
-
-    private String stripDisplayText(String rawValue) {
-        if (rawValue == null) return "";
-        String val = rawValue.trim();
-        int split = val.indexOf(" - ");
-        if (split >= 0) val = val.substring(0, split).trim();
-        return val;
     }
 
     private String getCurrentPrefix() {
@@ -249,96 +230,25 @@ public class SetSpawnScreen extends KineticScreen {
     }
 
     private String toDisplayEntry(String id, String prefix) {
-        ResourceLocation loc = ResourceLocation.tryParse(id);
+        ResourceLocation loc = KineticResourceIds.tryParse(id);
         if (loc == null) return id;
-        String translated = getChineseTranslation(prefix, loc);
-        if (translated.isEmpty()) return id;
-        return id + " - " + translated;
+        String translated = getCurrentLanguageTranslation(prefix, loc);
+        return translated.isEmpty() ? id : id + " - " + translated;
     }
 
-    private String getChineseTranslation(String prefix, ResourceLocation loc) {
-        String key = prefix + "." + loc.getNamespace() + "." + loc.getPath();
-        String selectedLanguage = safeClientTranslate(key);
-        if (isValidChineseTranslation(key, selectedLanguage)) {
-            return selectedLanguage;
-        }
-
-        String zhCn = readZhCnTranslation(loc.getNamespace(), key);
-        if (isValidChineseTranslation(key, zhCn)) {
-            return zhCn;
-        }
-
-        if ("structure".equals(prefix)) {
-            for (String fallbackKey : getStructureFallbackKeys(loc)) {
-                selectedLanguage = safeClientTranslate(fallbackKey);
-                if (isValidChineseTranslation(fallbackKey, selectedLanguage)) {
-                    return selectedLanguage;
-                }
-
-                zhCn = readZhCnTranslation(loc.getNamespace(), fallbackKey);
-                if (isValidChineseTranslation(fallbackKey, zhCn)) {
-                    return zhCn;
-                }
-            }
-        }
-
-        return "";
+    private Suggestion toSuggestion(String id, String prefix) {
+        ResourceLocation loc = KineticResourceIds.tryParse(id);
+        if (loc == null) return new Suggestion(id, Component.empty());
+        String translated = getCurrentLanguageTranslation(prefix, loc);
+        return new Suggestion(id, translated.isEmpty() ? Component.empty() : Component.literal(translated));
     }
 
-    private String safeClientTranslate(String key) {
-        try {
-            return I18n.get(key);
-        } catch (Exception ignored) {
-            return "";
-        }
-    }
-
-    private String readZhCnTranslation(String namespace, String key) {
-        loadZhCnNamespace(namespace);
-        return ZH_CN_CACHE.getOrDefault(key, "");
-    }
-
-    private void loadZhCnNamespace(String namespace) {
-        if (namespace == null || namespace.isBlank()) return;
-        if (!ZH_CN_LOADED_NAMESPACES.add(namespace)) return;
-
-        try {
-            ResourceLocation langFile = new ResourceLocation(namespace, "lang/zh_cn.json");
-            Minecraft.getInstance().getResourceManager().getResource(langFile).ifPresent(this::loadZhCnResource);
-        } catch (Exception ignored) {
-        }
-    }
-
-    private void loadZhCnResource(Resource resource) {
-        try (InputStream input = resource.open(); InputStreamReader reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
-            JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
-            for (Map.Entry<String, JsonElement> entry : root.entrySet()) {
-                if (!entry.getValue().isJsonPrimitive()) continue;
-                String value = entry.getValue().getAsString();
-                if (containsChinese(value)) {
-                    ZH_CN_CACHE.put(entry.getKey(), value);
-                }
-            }
-        } catch (Exception ignored) {
-        }
-    }
-
-    private boolean isValidChineseTranslation(String key, String value) {
-        if (value == null || value.isBlank()) return false;
-        if (value.equals(key)) return false;
-        if (value.contains("%")) return false;
-        return containsChinese(value);
-    }
-
-    private boolean containsChinese(String value) {
-        if (value == null || value.isEmpty()) return false;
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if ((c >= '一' && c <= '鿿') || (c >= '㐀' && c <= '䶿') || (c >= '豈' && c <= '﫿')) {
-                return true;
-            }
-        }
-        return false;
+    private String getCurrentLanguageTranslation(String prefix, ResourceLocation loc) {
+        List<String> keys = new ArrayList<>();
+        keys.add(prefix + "." + loc.getNamespace() + "." + loc.getPath());
+        if ("structure".equals(prefix)) keys.addAll(getStructureFallbackKeys(loc));
+        String translated = KineticSearch.resolveTranslation(keys.toArray(String[]::new));
+        return translated == null ? "" : translated;
     }
 
     private List<String> getStructureFallbackKeys(ResourceLocation loc) {
@@ -365,29 +275,64 @@ public class SetSpawnScreen extends KineticScreen {
         return keys;
     }
 
-    private List<String> getActiveDict() {
+    private List<Suggestion> getActiveDict() {
         if (currentTab == 0) return getDimDict();
         if (currentTab == 1) return getBiomeDict();
         return getStructDict();
     }
 
-    private List<String> getDimDict() {
+    private List<Suggestion> getDimDict() {
         return this.serverDictDims.stream()
                 .filter(id -> !id.equals("minecraft:overworld"))
-                .map(id -> toDisplayEntry(id, "dimension"))
-                .collect(Collectors.toList());
+                .map(id -> toSuggestion(id, "dimension"))
+                .toList();
     }
 
-    private List<String> getBiomeDict() {
+    private List<Suggestion> getBiomeDict() {
         return this.serverDictBiomes.stream()
-                .map(id -> toDisplayEntry(id, "biome"))
-                .collect(Collectors.toList());
+                .map(id -> toSuggestion(id, "biome"))
+                .toList();
     }
 
-    private List<String> getStructDict() {
+    private List<Suggestion> getStructDict() {
         return this.serverDictStructs.stream()
-                .map(id -> toDisplayEntry(id, "structure"))
-                .collect(Collectors.toList());
+                .map(id -> toSuggestion(id, "structure"))
+                .toList();
+    }
+
+    private List<ActionItem> activeListItems(List<String> values) {
+        List<ActionItem> items = new ArrayList<>(values.size());
+        String prefix = getCurrentPrefix();
+        for (String value : values) {
+            ResourceLocation id = KineticResourceIds.tryParse(value);
+            String translated = id == null ? "" : getCurrentLanguageTranslation(prefix, id);
+            items.add(new ActionItem(
+                Component.literal(value),
+                translated.isEmpty() ? null : Component.literal(translated),
+                null,
+                true,
+                false,
+                false,
+                KineticI18n.translatable("gui.kineticcore.setspawn.remove_short"),
+                null,
+                true,
+                false));
+        }
+        return items;
+    }
+
+    private void refreshActiveList() {
+        if (activeListWidget == null) return;
+        List<String> activeData = currentTab == 0 ? dims : (currentTab == 1 ? biomes : structs);
+        activeListWidget.setItems(activeListItems(activeData));
+        activeListWidget.setSelectedIndex(-1);
+    }
+
+    private void removeActiveEntry(int index) {
+        List<String> activeData = currentTab == 0 ? dims : (currentTab == 1 ? biomes : structs);
+        if (index < 0 || index >= activeData.size()) return;
+        activeData.remove(index);
+        refreshActiveList();
     }
 
     @Override
@@ -401,173 +346,24 @@ public class SetSpawnScreen extends KineticScreen {
 
         GuiTheme.panel(g, 10, 8, this.canvasWidth() - 20, this.canvasHeight() - 16);
 
-        g.fill(16, 40, this.canvasWidth() - 16, 41, 0xFF444444);
-        g.fill(16, 71, this.canvasWidth() - 16, 72, 0xFF444444);
+        GuiTheme.separator(g, 16, 40, this.canvasWidth() - 32);
+        GuiTheme.separator(g, 16, 71, this.canvasWidth() - 32);
 
         GuiTheme.panelAlt(g, startX - 2, listY - 2, panelW + 4, listH + 4);
 
-        renderScaledList(activeListWidget, g, mx, my, pt);
     }
 
     @Override
-    protected void renderCanvasForeground(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        if (activeInput == null) return;
-        activeInput.renderSuggestions(g, mx, my);
-    }
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    protected boolean canvasKeyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 257 || keyCode == 335) {
-            if (activeInput != null && isControlFocused(activeInput) && !activeInput.getValue().isEmpty()) {
+            if (isControlFocused(activeInput) && !activeInput.getValue().isEmpty()) {
                 addToList(activeInput.getValue());
                 activeInput.setValue("");
                 return true;
             }
         }
-        if (activeInput != null && activeInput.handleKeyPressed(keyCode)) return true;
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return false;
     }
 
-    @Override
-    protected boolean canvasMouseClicked(double mx, double my, int btn) {
-        if (activeInput != null) {
-            if (!activeInput.isMouseOver(mx, my)) {
-                blurControl(activeInput);
-            } else {
-                focusControl(activeInput);
-            }
-            if (activeInput.handleMouseClick(mx, my)) return true;
-        }
-        return super.canvasMouseClicked(mx, my, btn);
-    }
 
-    @Override
-    protected boolean canvasMouseReleased(double mx, double my, int btn) {
-        if (activeInput != null && activeInput.handleMouseReleased(btn)) return true;
-        return super.canvasMouseReleased(mx, my, btn);
-    }
-
-    @Override
-    protected boolean canvasMouseDragged(double mx, double my, int btn, double dx, double dy) {
-        if (activeInput != null && activeInput.handleMouseDragged(my)) return true;
-        return super.canvasMouseDragged(mx, my, btn, dx, dy);
-    }
-
-    @Override
-    protected boolean canvasMouseScrolled(double mx, double my, double d) {
-        if (activeInput != null && activeInput.handleMouseScrolled(d)) return true;
-        return super.canvasMouseScrolled(mx, my, d);
-    }
-
-    class StringListWidget extends ObjectSelectionList<StringListWidget.Entry> {
-        private final int listTop;
-        private final int listBottom;
-        private final List<String> backingList;
-
-        public StringListWidget(Minecraft mc, int w, int h, int t, int b, int ih, List<String> backingList) {
-            super(mc, w, h, t, b, ih);
-            this.listTop = t;
-            this.listBottom = b;
-            this.backingList = backingList;
-            setRenderBackground(false);
-            setRenderTopAndBottom(false);
-            refresh();
-        }
-
-        @Override
-        public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-            super.render(g, mx, my, pt);
-            if (this.getMaxScroll() > 0) {
-                int barX = this.getScrollbarPosition();
-                int height = listBottom - listTop;
-                int thumbH = Math.max(20, (int) ((float) height * height / this.getMaxPosition()));
-                GuiTheme.scrollbar(
-                        g,
-                        mx,
-                        my,
-                        barX,
-                        listTop,
-                        4,
-                        height,
-                        thumbH,
-                        (int) (double) this.getMaxScroll(),
-                        this.getScrollAmount(),
-                        false
-                );
-            }
-        }
-
-        public void refresh() {
-            clearEntries();
-            for (int i = 0; i < backingList.size(); i++) {
-                addEntry(new Entry(i, backingList.get(i), backingList));
-            }
-        }
-
-        @Override
-        public int getRowLeft() {
-            return this.getLeft() + 2;
-        }
-
-        @Override
-        public int getRowWidth() {
-            return this.width - 12;
-        }
-
-        @Override
-        protected int getScrollbarPosition() {
-            return this.getLeft() + this.width - 8;
-        }
-
-        class Entry extends ObjectSelectionList.Entry<Entry> {
-            private final int index;
-            private final String text;
-            private final List<String> targetList;
-
-            public Entry(int index, String text, List<String> targetList) {
-                this.index = index;
-                this.text = text;
-                this.targetList = targetList;
-            }
-
-            @Override
-            public void render(@NotNull GuiGraphics g, int index, int t, int l, int w, int h, int mx, int my, boolean hv, float pt) {
-                int bgColor = hv ? 0x88777777 : ((index % 2 == 0) ? 0x88333333 : 0x881C1C1C);
-                g.fill(l, t, l + w, t + h - 1, bgColor);
-
-                int delW = 14;
-                int delX = l + w - delW - 6;
-                int delY = t + (h - 1 - delW) / 2;
-                boolean delHover = mx >= delX && mx < delX + delW && my >= delY && my < delY + delW;
-
-                g.fill(delX, delY, delX + delW, delY + delW, delHover ? 0xFFFF3333 : 0xFFCC0000);
-                g.drawCenteredString(Minecraft.getInstance().font, "✕", delX + delW / 2 + 1, delY + 3, 0xFFFFFF);
-
-                String disp = toDisplayEntry(this.text, getCurrentPrefix());
-                int maxW = delX - (l + 4) - 8;
-
-                int textY = t + (h - 1 - Minecraft.getInstance().font.lineHeight) / 2 + 1;
-                KineticText.drawScrollingLeft(g, Minecraft.getInstance().font, disp, l + 6, textY, maxW, 0xFFFFFF, false);
-            }
-
-            @Override
-            public boolean mouseClicked(double mx, double my, int btn) {
-                if (btn == 0) {
-                    int delW = 14;
-                    int delX = getLeft() + 2 + getRowWidth() - delW - 6;
-                    if (mx >= delX && mx < delX + delW) {
-                        targetList.remove(index);
-                        refresh();
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            @Override
-            public @NotNull Component getNarration() {
-                return Component.empty();
-            }
-        }
-    }
 }

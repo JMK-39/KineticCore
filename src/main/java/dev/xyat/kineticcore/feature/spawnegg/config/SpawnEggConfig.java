@@ -5,7 +5,7 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
-import net.minecraftforge.fml.loading.FMLPaths;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,7 +15,7 @@ public final class SpawnEggConfig {
     public static final double DEFAULT_SPEED = 1.5D;
     public static final double DEFAULT_INACCURACY = 0.2D;
 
-    private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("kineticcore/spawnegg.toml");
+    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/spawnegg.toml");
     private static CommentedFileConfig configData;
 
     public static boolean enableSpawnEggThrow = DEFAULT_ENABLED;

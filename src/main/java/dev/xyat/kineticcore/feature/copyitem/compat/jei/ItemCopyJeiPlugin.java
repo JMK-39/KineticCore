@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.copyitem.compat.jei;
 
+
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
@@ -15,7 +17,7 @@ public class ItemCopyJeiPlugin implements IModPlugin {
 
     @Override
     public @NotNull ResourceLocation getPluginUid() {
-        return new ResourceLocation(KineticRuntime.MOD_ID, "copyitem");
+        return KineticResourceIds.of(KineticRuntime.MOD_ID, "copyitem");
     }
 
     @Override

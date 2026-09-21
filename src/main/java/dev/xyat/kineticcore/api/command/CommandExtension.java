@@ -6,6 +6,7 @@ import net.minecraft.network.chat.MutableComponent;
 
 import java.util.List;
 
+/** Public API contract for command extension. */
 public interface CommandExtension {
     default void registerCommands(LiteralArgumentBuilder<CommandSourceStack> root) {
     }

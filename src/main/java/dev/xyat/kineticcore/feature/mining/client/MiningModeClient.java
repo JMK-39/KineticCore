@@ -1,14 +1,15 @@
 package dev.xyat.kineticcore.feature.mining.client;
 
+
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.feature.mining.network.MiningModeNetwork;
-import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 public final class MiningModeClient {
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
 
     public static boolean isSingleModeClientSide;
 
@@ -16,28 +17,29 @@ public final class MiningModeClient {
     }
 
     public static void register() {
-        if (registered) return;
-        registered = true;
-
-        KineticKeyBindings.builder("key.kineticcore.toggle_mining_mode")
+        REGISTRATION.run(() -> KineticKeyBindings.builder("key.kineticcore.toggle_mining_mode")
                 .category("key.kineticcore.category")
                 .context(KineticKeyBindings.Context.IN_GAME)
                 .modifier(KineticKeyBindings.Modifier.ALT)
-                .keyboardKey(GLFW.GLFW_KEY_H)
+                .keyboard(KineticKeyBindings.Key.H)
                 .onPressed(MiningModeClient::toggleMode)
-                .register();
+                .register());
     }
 
     private static boolean toggleMode() {
-        if (Minecraft.getInstance().player == null) return false;
+        if (KineticClientRuntime.localPlayer() == null) return false;
 
         isSingleModeClientSide = !isSingleModeClientSide;
-        GuiOverlay.toast(
-                "mining_mode_toggle",
-                Component.translatable(isSingleModeClientSide
+        KineticOverlays.toast(
+                          "mining_mode_toggle",
+                          KineticI18n.translatable(isSingleModeClientSide
                         ? "tip.kineticcore.mining.mode.single"
-                        : "tip.kineticcore.mining.mode.normal")
-        );
+                        : "tip.kineticcore.mining.mode.normal"),
+                          KineticOverlays.Position.BOTTOM_CENTER,
+                          5000,
+                          0,
+                          -30
+                  );
         MiningModeNetwork.sendToggleToServer();
         return true;
     }

@@ -8,10 +8,14 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+/** Public Kinetic API facade for recipe serializers. */
 public final class KineticRecipeSerializers {
     private KineticRecipeSerializers() {
     }
 
+    /**
+     * Registers this API capability.
+     */
     public static <R extends Recipe<?>, T extends RecipeSerializer<R>> KineticRegistryHandle<T> register(
             ResourceLocation id,
             Supplier<? extends T> factory
@@ -22,11 +26,4 @@ public final class KineticRecipeSerializers {
         );
     }
 
-    public static <R extends Recipe<?>, T extends RecipeSerializer<R>> KineticRegistryHandle<T> register(
-            String namespace,
-            String path,
-            Supplier<? extends T> factory
-    ) {
-        return register(new ResourceLocation(namespace, path), factory);
-    }
 }

@@ -1,20 +1,19 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
 import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
+import dev.xyat.kineticcore.api.minecraft.MinecraftKeys;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.SharedConstants;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,32 +23,30 @@ import java.util.function.Consumer;
 public class NbtEditorScreen extends KineticScreen {
     private final String initialNbt;
     private final Consumer<String> onSave;
-    private final Screen parentScreen;
 
     private NbtEditorWidget nbtEditor;
-    private EditBox searchBox;
+    private dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox searchBox;
 
     public NbtEditorScreen(String initialNbt, Consumer<String> onSave, Screen parentScreen) {
-        super(Component.translatable("screen.kineticcore.nbt_editor"));
+        super(KineticText.translatable("screen.kineticcore.nbt_editor"));
         this.initialNbt = initialNbt;
         this.onSave = onSave;
-        this.parentScreen = parentScreen;
     }
 
     @Override
     protected void buildUi() {
         searchBox = addTextField(
                 20, 10, 120,
-                Component.translatable("gui.kineticcore.search"),
-                Component.translatable("gui.kineticcore.search_hint"),
-                null
+                KineticText.translatable("gui.kineticcore.search"),
+                KineticText.translatable("gui.kineticcore.search_hint"),
+                null, null
         );
         searchBox.setResponder(query -> {
             if (nbtEditor != null) nbtEditor.setSearchQuery(query);
         });
 
-        addButton(145, 10, 20, Component.translatable("gui.kineticcore.symbol.up"), null, () -> nbtEditor.navigateSearch(-1));
-        addButton(170, 10, 20, Component.translatable("gui.kineticcore.symbol.down"), null, () -> nbtEditor.navigateSearch(1));
+        addButton(145, 10, 20, KineticText.translatable("gui.kineticcore.symbol.up"), null, () -> nbtEditor.navigateSearch(-1));
+        addButton(170, 10, 20, KineticText.translatable("gui.kineticcore.symbol.down"), null, () -> nbtEditor.navigateSearch(1));
 
         int btnW = 80;
         int gap = 10;
@@ -57,7 +54,7 @@ public class NbtEditorScreen extends KineticScreen {
         int saveX = closeX - gap - btnW;
         int clearX = saveX - gap - btnW;
 
-        addButton(saveX, 10, btnW, Component.translatable("gui.kineticcore.nbt.save"), null, () -> {
+        addButton(saveX, 10, btnW, KineticText.translatable("gui.kineticcore.nbt.save"), null, () -> {
             String val = nbtEditor.getValue().trim();
             if (val.isEmpty() || val.equals("{}")) {
                 onSave.accept("");
@@ -66,16 +63,16 @@ public class NbtEditorScreen extends KineticScreen {
                     TagParser.parseTag(val);
                     onSave.accept(val);
                 } catch (Exception e) {
-                    nbtEditor.setError(Component.translatable("gui.kineticcore.nbt.editor.invalid").getString());
+                    nbtEditor.setError(KineticText.translatable("gui.kineticcore.nbt.editor.invalid").getString());
                     return;
                 }
             }
-            KineticClientRuntime.openScreen(parentScreen);
+            navigateBack();
         });
 
-        addButton(clearX, 10, btnW, Component.translatable("gui.kineticcore.nbt.clear"), null, () -> nbtEditor.setValue(""));
-        addButton(closeX, 10, btnW, Component.translatable("gui.kineticcore.nbt.close"), null, () -> {
-            KineticClientRuntime.openScreen(parentScreen);
+        addButton(clearX, 10, btnW, KineticText.translatable("gui.kineticcore.nbt.clear"), null, () -> nbtEditor.setValue(""));
+        addButton(closeX, 10, btnW, KineticText.translatable("gui.kineticcore.nbt.close"), null, () -> {
+            navigateBack();
         });
 
         int editorX = 20;
@@ -138,40 +135,37 @@ public class NbtEditorScreen extends KineticScreen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    protected boolean canvasKeyPressed(int keyCode, int scanCode, int modifiers) {
         if (searchBox.isFocused()) {
-            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+            if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.ENTER, keyCode)
+                    || KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.KP_ENTER, keyCode)) {
                 nbtEditor.navigateSearch(1);
                 return true;
             }
-            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.ESCAPE, keyCode)) {
                 blurControl(searchBox);
                 return true;
             }
         }
 
-        if (Screen.hasControlDown() && keyCode == GLFW.GLFW_KEY_F) {
+        if (KineticClientRuntime.controlModifierDown()
+                && KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.F, keyCode)) {
             focusControl(searchBox);
             return true;
         }
 
         if (nbtEditor.keyPressed(keyCode)) return true;
 
-        assert this.minecraft != null;
-        if (this.minecraft.options.keyInventory.matches(keyCode, scanCode)) {
+        if (MinecraftKeys.inventoryMatches(keyCode, scanCode)) {
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            navigateBack();
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.canvasKeyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
-    public boolean charTyped(char codePoint, int modifiers) {
+    protected boolean canvasCharTyped(char codePoint, int modifiers) {
         if (nbtEditor.charTyped(codePoint)) return true;
-        return super.charTyped(codePoint, modifiers);
+        return super.canvasCharTyped(codePoint, modifiers);
     }
 
     private static final class NbtEditorWidget {
@@ -404,7 +398,7 @@ public class NbtEditorScreen extends KineticScreen {
             g.fill(x, y, x + width, y + height, 0xFF181818);
 
             if (value.isEmpty() && !isFocused && hint != null && !hint.isEmpty()) {
-                KineticText.drawScrollingLeft(g, font, hint, x + 6, y + 6, width - 18, 0xFF777777, false);
+                KineticText.drawScrollingLeft(g, font, Component.literal(hint), x + 6, y + 6, width - 18, 0xFF777777, false);
             }
 
             int maxVisible = getMaxVisibleLines();
@@ -413,7 +407,7 @@ public class NbtEditorScreen extends KineticScreen {
             int minPos = Math.min(selectPos, cursorPos);
             int maxPos = Math.max(selectPos, cursorPos);
 
-            double visualScroll = smoothScroll.follow(scrollOffset, maxScroll());
+            double visualScroll = smoothScroll.follow(scrollOffset, maxScroll(), false);
             int visualStart = Math.max(0, Math.min((int) Math.floor(visualScroll), maxScroll()));
             int visualShift = (int) Math.round((visualScroll - visualStart) * font.lineHeight);
             int visualEnd = Math.min(lines.size(), visualStart + maxVisible + 2);
@@ -510,23 +504,30 @@ public class NbtEditorScreen extends KineticScreen {
             g.fill(x, footerY - 4, x + width, y + height, 0xFF222222);
 
             if (errorMsg != null && !errorMsg.isEmpty()) {
-                KineticText.drawScrollingLeft(g, font, "❌ " + errorMsg, x + 4, footerY, Math.max(0, width - 100), 0xFF5555, false);
+                KineticText.drawScrollingLeft(g, font, KineticText.translatable("gui.kineticcore.nbt.editor.error_prefix", errorMsg),
+                        x + 4, footerY, Math.max(0, width - 100), GuiTheme.current().text(), false);
             } else if (!value.trim().isEmpty() && !value.trim().equals("{}")) {
                 g.drawString(font, "✅", x + 4, footerY, 0x55FF55, false);
             }
             String lenStr = value.length() + "/32767";
             g.drawString(font, lenStr, x + width - 4 - font.width(lenStr), footerY, 0xAAAAAA, false);
 
-            int outlineColor = isFocused ? 0xFFFFFFFF : 0xFFAAAAAA;
-            if (!value.isEmpty() && !value.equals("{}")) {
-                outlineColor = (errorMsg != null && !errorMsg.isEmpty()) ? 0xFFFF5555 : 0xFF55FF55;
+            boolean hasValue = !value.isEmpty() && !value.equals("{}");
+            boolean hasError = errorMsg != null && !errorMsg.isEmpty();
+            if (hasValue) {
+                GuiTheme.Indicator indicator = hasError
+                        ? GuiTheme.Indicator.DANGER
+                        : GuiTheme.Indicator.SUCCESS;
+                GuiTheme.indicatorOutline(g, x, y, width, height, indicator);
+                GuiTheme.indicatorOutline(g, x - 1, y - 1, width + 2, height + 2, indicator);
+            } else {
+                GuiTheme.stateOutline(g, x, y, width, height, false, isFocused, false);
+                GuiTheme.stateOutline(g, x - 1, y - 1, width + 2, height + 2, false, isFocused, false);
             }
-            g.renderOutline(x, y, width, height, outlineColor);
-            g.renderOutline(x - 1, y - 1, width + 2, height + 2, outlineColor);
         }
 
         private int getCursorAt(double mx, double my) {
-            double visualScroll = smoothScroll.follow(scrollOffset, maxScroll());
+            double visualScroll = smoothScroll.follow(scrollOffset, maxScroll(), false);
             int relY = (int) my - (y + 4);
             int cLine = (int) Math.floor(relY / (double) font.lineHeight + visualScroll);
             cLine = Math.max(0, Math.min(cLine, lines.size() - 1));
@@ -583,7 +584,7 @@ public class NbtEditorScreen extends KineticScreen {
                         isDraggingText = false;
                     } else {
                         cursorPos = c;
-                        if (!Screen.hasShiftDown()) selectPos = c;
+                        if (!KineticClientRuntime.shiftModifierDown()) selectPos = c;
                         isDraggingText = true;
                     }
 
@@ -610,7 +611,7 @@ public class NbtEditorScreen extends KineticScreen {
 
         public boolean mouseScrolled(double delta) {
             if (isFocused && maxScroll() > 0) {
-                scrollOffset = smoothScroll.wheel(scrollOffset, delta, 1.0D / 3.0D, maxScroll());
+                scrollOffset = smoothScroll.wheel(scrollOffset, delta, 1.0D, maxScroll());
                 return true;
             }
             return false;
@@ -658,42 +659,42 @@ public class NbtEditorScreen extends KineticScreen {
         public boolean keyPressed(int keyCode) {
             if (!isFocused) return false;
 
-            if (Screen.isSelectAll(keyCode)) { selectPos = 0; cursorPos = value.length(); scrollToCursor(); return true; }
-            if (Screen.isCopy(keyCode)) { Minecraft.getInstance().keyboardHandler.setClipboard(getSelectedText()); return true; }
-            if (Screen.isPaste(keyCode)) { insertText(Minecraft.getInstance().keyboardHandler.getClipboard()); return true; }
-            if (Screen.isCut(keyCode)) { Minecraft.getInstance().keyboardHandler.setClipboard(getSelectedText()); deleteSelection(); return true; }
+            if (KineticClientRuntime.isSelectAllShortcut(keyCode)) { selectPos = 0; cursorPos = value.length(); scrollToCursor(); return true; }
+            if (KineticClientRuntime.isCopyShortcut(keyCode)) { KineticClientRuntime.setClipboard(getSelectedText()); return true; }
+            if (KineticClientRuntime.isPasteShortcut(keyCode)) { insertText(KineticClientRuntime.clipboard()); return true; }
+            if (KineticClientRuntime.isCutShortcut(keyCode)) { KineticClientRuntime.setClipboard(getSelectedText()); deleteSelection(); return true; }
 
-            if (keyCode == GLFW.GLFW_KEY_LEFT) { cursorPos = Math.max(0, cursorPos - 1); if (!Screen.hasShiftDown()) selectPos = cursorPos; scrollToCursor(); return true; }
-            if (keyCode == GLFW.GLFW_KEY_RIGHT) { cursorPos = Math.min(value.length(), cursorPos + 1); if (!Screen.hasShiftDown()) selectPos = cursorPos; scrollToCursor(); return true; }
-            if (keyCode == GLFW.GLFW_KEY_UP || keyCode == GLFW.GLFW_KEY_DOWN) {
+            if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.LEFT, keyCode)) { cursorPos = Math.max(0, cursorPos - 1); if (!KineticClientRuntime.shiftModifierDown()) selectPos = cursorPos; scrollToCursor(); return true; }
+            if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.RIGHT, keyCode)) { cursorPos = Math.min(value.length(), cursorPos + 1); if (!KineticClientRuntime.shiftModifierDown()) selectPos = cursorPos; scrollToCursor(); return true; }
+            if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.UP, keyCode) || KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.DOWN, keyCode)) {
                 int cLine = 0;
                 for (int i = 0; i < lines.size(); i++) { if (cursorPos >= lines.get(i).rawStartIndex && cursorPos <= lines.get(i).rawEndIndex) { cLine = i; break; } }
                 int px = getPixelX(lines.get(cLine), cursorPos);
-                if (keyCode == GLFW.GLFW_KEY_UP && cLine > 0) cursorPos = getRawIndex(lines.get(cLine - 1), px);
-                if (keyCode == GLFW.GLFW_KEY_DOWN && cLine < lines.size() - 1) cursorPos = getRawIndex(lines.get(cLine + 1), px);
-                if (!Screen.hasShiftDown()) selectPos = cursorPos; scrollToCursor(); return true;
+                if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.UP, keyCode) && cLine > 0) cursorPos = getRawIndex(lines.get(cLine - 1), px);
+                if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.DOWN, keyCode) && cLine < lines.size() - 1) cursorPos = getRawIndex(lines.get(cLine + 1), px);
+                if (!KineticClientRuntime.shiftModifierDown()) selectPos = cursorPos; scrollToCursor(); return true;
             }
-            if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
+            if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.BACKSPACE, keyCode)) {
                 if (cursorPos != selectPos) deleteSelection();
                 else if (cursorPos > 0) {
                     value = value.substring(0, cursorPos - 1) + value.substring(cursorPos); cursorPos--; selectPos = cursorPos; onValueChange(); scrollToCursor();
                 }
                 return true;
             }
-            if (keyCode == GLFW.GLFW_KEY_DELETE) {
+            if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.DELETE, keyCode)) {
                 if (cursorPos != selectPos) deleteSelection();
                 else if (cursorPos < value.length()) {
                     value = value.substring(0, cursorPos) + value.substring(cursorPos + 1); onValueChange();
                 }
                 return true;
             }
-            if (keyCode == GLFW.GLFW_KEY_HOME) {
+            if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.HOME, keyCode)) {
                 for (LineInfo l : lines) if (cursorPos >= l.rawStartIndex && cursorPos <= l.rawEndIndex) { cursorPos = l.rawStartIndex; break; }
-                if (!Screen.hasShiftDown()) selectPos = cursorPos; scrollToCursor(); return true;
+                if (!KineticClientRuntime.shiftModifierDown()) selectPos = cursorPos; scrollToCursor(); return true;
             }
-            if (keyCode == GLFW.GLFW_KEY_END) {
+            if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.END, keyCode)) {
                 for (LineInfo l : lines) if (cursorPos >= l.rawStartIndex && cursorPos <= l.rawEndIndex) { cursorPos = l.rawEndIndex; break; }
-                if (!Screen.hasShiftDown()) selectPos = cursorPos; scrollToCursor(); return true;
+                if (!KineticClientRuntime.shiftModifierDown()) selectPos = cursorPos; scrollToCursor(); return true;
             }
             return false;
         }

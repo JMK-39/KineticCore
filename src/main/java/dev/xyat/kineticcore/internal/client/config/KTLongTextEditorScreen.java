@@ -5,9 +5,8 @@ import dev.xyat.kineticcore.api.config.client.*;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.MultiLineEditBox;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticMultiLineEditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -32,7 +31,7 @@ final class KTLongTextEditorScreen extends KineticScreen {
     private final Screen parent;
     private final Consumer<String> onApply;
     private String draftValue;
-    private MultiLineEditBox editor;
+    private KineticMultiLineEditBox editor;
 
     KTLongTextEditorScreen(Screen parent, Component title, String initialValue, Consumer<String> onApply) {
         super(Objects.requireNonNull(title, "title"));
@@ -55,21 +54,20 @@ final class KTLongTextEditorScreen extends KineticScreen {
 
         addButton(
                 PANEL_X + PANEL_W - 154, PANEL_Y + PANEL_H - 30, 68,
-                Component.translatable("gui.kineticcore.config.long_text.cancel"),
+                KineticText.translatable("gui.kineticcore.config.long_text.cancel"),
                 null,
                 this::onClose
         );
         addButton(
                 PANEL_X + PANEL_W - 78, PANEL_Y + PANEL_H - 30, 68,
-                Component.translatable("gui.kineticcore.config.long_text.apply"),
+                KineticText.translatable("gui.kineticcore.config.long_text.apply"),
                 null,
                 this::applyAndClose
         );
     }
 
     @Override
-    public void tick() {
-        super.tick();
+    protected void canvasTick() {
         if (editor != null) editor.tick();
     }
 
@@ -95,8 +93,4 @@ final class KTLongTextEditorScreen extends KineticScreen {
         onClose();
     }
 
-    @Override
-    public void onClose() {
-        KineticClientRuntime.openScreen(parent);
-    }
 }

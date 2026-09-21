@@ -120,7 +120,9 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
 
     @Override
     public void writeUtf(String value, int maxLength) {
-        buffer.writeUtf(value, maxLength);
+        byte[] encoded = NetworkUtf8.encode(value, maxLength);
+        buffer.writeVarInt(encoded.length);
+        buffer.writeBytes(encoded);
     }
 
     @Override
@@ -130,7 +132,15 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
 
     @Override
     public String readUtf(int maxLength) {
-        return buffer.readUtf(maxLength);
+        if (maxLength < 0) throw new IllegalArgumentException("maxLength must be non-negative");
+        int byteLength = buffer.readVarInt();
+        if (byteLength < 0 || byteLength > (long) maxLength * 3L
+                || byteLength > buffer.readableBytes()) {
+            throw new IllegalArgumentException("Network string exceeds byte limit");
+        }
+        byte[] encoded = new byte[byteLength];
+        buffer.readBytes(encoded);
+        return NetworkUtf8.decode(encoded, maxLength);
     }
 
     @Override
@@ -278,9 +288,19 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
         if (safe.size() > maxEntries) {
             throw new IllegalArgumentException("Network string list exceeds entry limit");
         }
-        buffer.writeVarInt(safe.size());
+        // Validate and freeze the entire list before writing its entry count. A
+        // malformed later entry must not leave an incomplete packet in the buffer.
+        List<byte[]> encodedValues = new ArrayList<>(safe.size());
         for (String value : safe) {
-            buffer.writeUtf(value == null ? "" : value, maxStringLength);
+            if (value == null) {
+                throw new IllegalArgumentException("Network string list contains a null entry");
+            }
+            encodedValues.add(NetworkUtf8.encode(value, maxStringLength));
+        }
+        buffer.writeVarInt(encodedValues.size());
+        for (byte[] encoded : encodedValues) {
+            buffer.writeVarInt(encoded.length);
+            buffer.writeBytes(encoded);
         }
     }
 
@@ -307,7 +327,7 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
         }
         List<String> result = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            result.add(buffer.readUtf(maxStringLength));
+            result.add(readUtf(maxStringLength));
         }
         return result;
     }

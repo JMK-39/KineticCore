@@ -1,18 +1,20 @@
 package dev.xyat.kineticcore.feature.firstjoin.config;
 
+
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.fml.loading.FMLPaths;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.nio.file.Path;
 import java.util.*;
@@ -26,7 +28,7 @@ public class PlayerConfig {
     public static final String DEFAULT_BOOTS = "1x minecraft:leather_boots{Enchantments:[{id:\"minecraft:unbreaking\",lvl:2s},{id:\"minecraft:protection\",lvl:2s}]}";
     public static final String DEFAULT_OFFHAND = "1x minecraft:shield";
 
-    private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("kineticcore/player.toml");
+    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/player.toml");
     private static CommentedFileConfig configData;
 
     // 逻辑开关
@@ -219,9 +221,9 @@ public class PlayerConfig {
             itemId = itemId.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_\\-:.]", "");
             if (!itemId.contains(":")) itemId = "minecraft:" + itemId;
 
-            ResourceLocation loc = ResourceLocation.tryParse(itemId);
+            ResourceLocation loc = KineticResourceIds.tryParse(itemId);
             if (loc != null) {
-                Item item = ForgeRegistries.ITEMS.getValue(loc);
+                Item item = KineticRegistries.items().get(loc);
                 if (item != null && item != Items.AIR) {
                     ItemStack stack = new ItemStack(item, count);
                     if (!nbtStr.isEmpty()) {
@@ -241,7 +243,7 @@ public class PlayerConfig {
      */
     public static String serializeItemStack(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return "";
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation id = KineticRegistries.items().id(stack.getItem());
         if (id == null) return "";
 
         String res = stack.getCount() + "x " + id;

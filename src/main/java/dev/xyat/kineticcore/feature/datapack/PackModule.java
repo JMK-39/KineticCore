@@ -1,5 +1,9 @@
 package dev.xyat.kineticcore.feature.datapack;
 
+
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.text.KineticI18n;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
 import dev.xyat.kineticcore.api.hook.ServerHooks;
 import dev.xyat.kineticcore.api.resource.KineticPackSources;
 import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
@@ -7,10 +11,10 @@ import dev.xyat.kineticcore.feature.datapack.util.ColorText;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.PackType;
-import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -38,9 +42,8 @@ public class PackModule {
     public static final Set<Component> FAILED_PACK_COMPONENTS = new HashSet<>();
 
     private static final Set<String> FAILED_PACK_NAMES = new HashSet<>();
-    private static boolean forgeEventsRegistered;
-    private static boolean packSourcesRegistered;
-    private static boolean hookRegistered;
+    private static final KineticRegistrationBatch HOOK_REGISTRATION = new KineticRegistrationBatch();
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
 
     public static final FileFilter PACK_FILTER = file -> {
         if (file.getName().equals("logs")) return false;
@@ -62,9 +65,7 @@ public class PackModule {
 
 
     private static void registerHook() {
-        if (hookRegistered) return;
-        hookRegistered = true;
-        ServerHooks.onDataPackOrder(new ServerHooks.DataPackOrderProvider() {
+        HOOK_REGISTRATION.run(() -> ServerHooks.onDataPackOrder(new ServerHooks.DataPackOrderProvider() {
             @Override
             public void refresh() {
                 PackModule.refreshDataPacksOnly();
@@ -74,7 +75,7 @@ public class PackModule {
             public List<String> order() {
                 return PackModule.datapackOrderSnapshot();
             }
-        });
+        }));
     }
 
     public static synchronized void refreshDataPacksOnly() {
@@ -103,7 +104,7 @@ public class PackModule {
 
     private static void initializePaths() {
         if (BASE_PACK_DIR == null) {
-            BASE_PACK_DIR = new File(FMLPaths.CONFIGDIR.get().toString(), "kineticcore/datapack");
+            BASE_PACK_DIR = new File(KineticPlatform.configDirectory().toString(), "kineticcore/datapack");
         }
         if (DATA_PACK_DIR == null) {
             DATA_PACK_DIR = Paths.get(BASE_PACK_DIR.toString(), "data");
@@ -296,23 +297,18 @@ public class PackModule {
     }
 
     public static void register() {
-        if (!packSourcesRegistered) {
-            packSourcesRegistered = true;
-            KineticPackSources.register(PackType.CLIENT_RESOURCES, () -> {
-                initializePaths();
-                return new RepositorySource(RESOURCE_PACK_DIR, PackType.CLIENT_RESOURCES);
-            });
-            KineticPackSources.register(PackType.SERVER_DATA, () -> {
-                initializePaths();
-                refreshDataPacksOnly();
-                return new RepositorySource(DATA_PACK_DIR, PackType.SERVER_DATA);
-            });
-        }
-
-        if (!forgeEventsRegistered) {
-            KineticServerEvents.onPlayerLogin(PackModule::onPlayerLogin);
-            forgeEventsRegistered = true;
-        }
+        REGISTRATION.run(
+                () -> KineticPackSources.register(PackType.CLIENT_RESOURCES, () -> {
+                    initializePaths();
+                    return new RepositorySource(RESOURCE_PACK_DIR, PackType.CLIENT_RESOURCES);
+                }),
+                () -> KineticPackSources.register(PackType.SERVER_DATA, () -> {
+                    initializePaths();
+                    refreshDataPacksOnly();
+                    return new RepositorySource(DATA_PACK_DIR, PackType.SERVER_DATA);
+                }),
+                () -> KineticServerEvents.onPlayerLogin(KineticEventPriority.NORMAL, PackModule::onPlayerLogin)
+        );
     }
 
     public static void addFailedPack(String packName, Component i18nReason) {
@@ -329,7 +325,7 @@ public class PackModule {
         player.sendSystemMessage(ColorText.translatable("datapack.kineticcore.failed.title"));
 
         for (Component failedPack : FAILED_PACK_COMPONENTS) {
-            player.sendSystemMessage(Component.translatable("msg.kineticcore.datapack.failed_entry", failedPack));
+            player.sendSystemMessage(KineticI18n.translatable("msg.kineticcore.datapack.failed_entry", failedPack));
         }
     }
 

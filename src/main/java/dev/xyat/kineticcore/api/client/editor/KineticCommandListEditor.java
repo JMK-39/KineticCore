@@ -3,19 +3,20 @@ package dev.xyat.kineticcore.api.client.editor;
 import dev.xyat.kineticcore.internal.client.editor.CommandListEditorScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-@OnlyIn(Dist.CLIENT)
+/**
+ * Public Kinetic client API for command list editor.
+ */
 public final class KineticCommandListEditor {
     private KineticCommandListEditor() {
     }
 
+    /** Creates the standard command-list editor screen bound to the supplied getter, setter, and server config entry. */
     public static Screen create(
             Screen parent,
             Supplier<List<String>> commandGetter,
@@ -34,6 +35,7 @@ public final class KineticCommandListEditor {
         );
     }
 
+    /** Immutable translatable/display text bundle used by the command-list editor and its nested editor screen. */
     public record Text(
             Component title,
             Component addEditorTitle,
@@ -44,6 +46,7 @@ public final class KineticCommandListEditor {
             Component saveFailedMessage,
             Component variableHint
     ) {
+        /** Validates the required text bundle used by the reusable command-list editor. */
         public Text {
             Objects.requireNonNull(title, "title");
             Objects.requireNonNull(addEditorTitle, "addEditorTitle");

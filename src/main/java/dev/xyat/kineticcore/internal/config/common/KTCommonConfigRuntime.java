@@ -65,6 +65,7 @@ public final class KTCommonConfigRuntime {
     }
 
     public static SpecHandle build(BuilderHandle handle) {
+        Objects.requireNonNull(handle, "handle");
         if (handle.built) {
             throw new IllegalStateException("Config builder has already been built");
         }
@@ -74,7 +75,27 @@ public final class KTCommonConfigRuntime {
     }
 
     public static void registerCommon(SpecHandle handle, String fileName) {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, spec(handle), fileName);
+        SpecHandle safeHandle = Objects.requireNonNull(handle, "handle");
+        String normalized = Objects.requireNonNull(fileName, "fileName").trim();
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException("fileName must not be blank");
+        }
+        synchronized (safeHandle) {
+            if (safeHandle.registeredFile != null) {
+                if (safeHandle.registeredFile.equals(normalized)) {
+                    return;
+                }
+                throw new IllegalStateException(
+                        "Common config spec already registered as " + safeHandle.registeredFile
+                );
+            }
+            ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, safeHandle.spec, normalized);
+            safeHandle.registeredFile = normalized;
+        }
+    }
+
+    public static boolean isLoaded(SpecHandle handle) {
+        return spec(handle).isLoaded();
     }
 
     public static <T> T get(ValueHandle<T> handle) {
@@ -109,9 +130,8 @@ public final class KTCommonConfigRuntime {
         return Objects.requireNonNull(handle, "handle").spec;
     }
 
-    @SuppressWarnings("unchecked")
     private static <T> ConfigValueAdapter<T> value(ValueHandle<T> handle) {
-        return (ConfigValueAdapter<T>) Objects.requireNonNull(handle, "handle").adapter;
+        return Objects.requireNonNull(handle, "handle").adapter;
     }
 
     public static final class BuilderHandle {
@@ -125,6 +145,7 @@ public final class KTCommonConfigRuntime {
 
     public static final class SpecHandle {
         private final ForgeConfigSpec spec;
+        private String registeredFile;
 
         private SpecHandle(ForgeConfigSpec spec) {
             this.spec = spec;

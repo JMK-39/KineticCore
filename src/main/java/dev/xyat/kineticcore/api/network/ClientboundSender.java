@@ -3,6 +3,7 @@ package dev.xyat.kineticcore.api.network;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
+/** Sending contract for clientbound messages. */
 @FunctionalInterface
 public interface ClientboundSender<T> {
     void send(ServerPlayer player, T message);

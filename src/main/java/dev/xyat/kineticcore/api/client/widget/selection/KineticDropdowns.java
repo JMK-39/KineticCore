@@ -1,118 +1,121 @@
 package dev.xyat.kineticcore.api.client.widget.selection;
 
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
+import dev.xyat.kineticcore.internal.client.widget.KineticValidation;
+import dev.xyat.kineticcore.api.client.widget.KineticWidgets.FactoryAccess;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import org.jetbrains.annotations.NotNull;
-import java.util.ArrayList;
+
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
-import static dev.xyat.kineticcore.api.client.widget.KineticWidgets.attachTooltip;
 
-/** 控件实现分组；附属统一从 KineticWidgets 工厂进入。 */
+/**
+ * Defines Kinetic dropdown option data and the standard dropdown widget implementation.
+ * Addons create dropdowns through a Kinetic screen or {@code KineticWidgets}; option translations are display-only.
+ */
 public final class KineticDropdowns {
-    private KineticDropdowns() {}
-
-    public static Dropdown createDropdown(
-            int x,
-            int y,
-            int width,
-            List<? extends Component> options,
-            int selectedIndex,
-            Component tooltip,
-            Consumer<Integer> responder,
-            Consumer<Dropdown> opener
-    ) {
-        return createDropdown(
-                x, y, width, options, selectedIndex, tooltip,
-                ignored -> true, responder, opener
-        );
+    private KineticDropdowns() {
     }
 
-    public static Dropdown createDropdown(
-            int x,
-            int y,
-            int width,
-            List<? extends Component> options,
-            int selectedIndex,
-            Component tooltip,
-            Predicate<Integer> validator,
-            Consumer<Integer> responder,
-            Consumer<Dropdown> opener
-    ) {
-        List<Component> normalizedOptions = options == null ? List.of() : new ArrayList<>(options);
-        Dropdown dropdown = new Dropdown(
-                x, y, width, KineticScreen.STANDARD_CONTROL_HEIGHT,
-                normalizedOptions, selectedIndex, validator, responder, opener
-        );
-        attachTooltip(dropdown, tooltip);
-        return dropdown;
+    /**
+     * One dropdown choice. {@code value} is the stored business value; {@code translation} is optional display-only text.
+     * When present, the translation is always used for display while {@code value} remains the stored business value.
+     */
+    public record Option(String value, Component translation, Component tooltip) {
+        /** Normalizes one dropdown option while preserving raw value separately from display metadata. */
+        public Option {
+            value = Objects.requireNonNull(value, "value").trim();
+            if (value.isEmpty()) throw new IllegalArgumentException("dropdown value cannot be blank");
+            translation = Objects.requireNonNullElse(translation, Component.empty());
+            tooltip = Objects.requireNonNullElse(tooltip, Component.empty());
+        }
     }
 
+    /** Standard Kinetic dropdown widget. Creation is routed through Kinetic screen helpers or {@code KineticWidgets}. */
     public static class Dropdown extends StateButton {
-        private final List<Component> options;
-        private final Predicate<Integer> validator;
-        private final Consumer<Integer> responder;
+        private final List<Option> options;
+        private final Predicate<String> validator;
+        private final Consumer<String> responder;
         private final Consumer<Dropdown> opener;
         private int selectedIndex;
 
+        /** Creates the fully configured dropdown implementation used by Kinetic factories. */
         public Dropdown(
+                FactoryAccess access,
                 int x,
                 int y,
                 int width,
                 int height,
-                List<Component> options,
-                int selectedIndex,
-                Consumer<Integer> responder
-        ) {
-            this(x, y, width, height, options, selectedIndex, ignored -> true, responder, null);
-        }
-
-        public Dropdown(
-                int x,
-                int y,
-                int width,
-                int height,
-                List<Component> options,
-                int selectedIndex,
-                Predicate<Integer> validator,
-                Consumer<Integer> responder,
+                List<Option> options,
+                String selectedValue,
+                Predicate<String> validator,
+                Consumer<String> responder,
                 Consumer<Dropdown> opener
         ) {
-            super(x, y, width, height, messageAt(options, selectedIndex), ignored -> { });
+            super(access, x, y, width, height, Component.empty(), ignored -> { });
             this.options = options == null ? List.of() : List.copyOf(options);
             this.validator = validator == null ? ignored -> true : validator;
             this.responder = responder == null ? ignored -> { } : responder;
             this.opener = opener;
-            this.selectedIndex = normalizeIndex(selectedIndex, this.options.size());
-            setMessage(messageAt(this.options, this.selectedIndex));
-            setError(!this.options.isEmpty() && !this.validator.test(this.selectedIndex));
+            this.selectedIndex = indexOfValue(selectedValue, this.options);
+            refreshState();
         }
 
-        public List<Component> options() {
+        /** Returns the immutable dropdown choices, including display-only translations and tooltips. */
+        public List<Option> options() {
             return options;
         }
 
+        /** Returns the selected option index, or {@code -1} when the dropdown has no choices. */
         public int selectedIndex() {
             return selectedIndex;
         }
 
-        public Component selected() {
-            return messageAt(options, selectedIndex);
+        /** Returns the raw selected value, or an empty string when the dropdown has no choices. */
+        public String selectedValue() {
+            Option selected = selectedOption();
+            return selected == null ? "" : selected.value();
         }
 
-        public void setSelectedIndex(int index) {
-            selectedIndex = normalizeIndex(index, options.size());
-            setMessage(messageAt(options, selectedIndex));
-            setError(!options.isEmpty() && !validator.test(selectedIndex));
+        /** Returns the selected option, or {@code null} when the dropdown has no choices. */
+        public Option selectedOption() {
+            return selectedIndex >= 0 && selectedIndex < options.size() ? options.get(selectedIndex) : null;
         }
 
+        /** Selects one option by its raw value without invoking the responder. */
+        public void setSelectedValue(String value) {
+            selectedIndex = indexOfValue(value, options);
+            refreshState();
+        }
+
+        /** Selects one option by index and sends only its raw value to the responder. */
         public void choose(int index) {
             if (options.isEmpty()) return;
-            setSelectedIndex(index);
-            responder.accept(selectedIndex);
+            int nextIndex = normalizeIndex(index, options.size());
+            // Reject invalid choices before changing the selected value or
+            // forwarding it to an add-on's configuration writer.
+            if (!KineticValidation.accepts(validator, options.get(nextIndex).value())) return;
+            int previousIndex = selectedIndex;
+            selectedIndex = nextIndex;
+            try {
+                // The selected value has just passed validation. Rendering must not
+                // run the add-on's potentially stateful validator a second time.
+                refreshState(true);
+                responder.accept(selectedValue());
+            } catch (RuntimeException | Error failure) {
+                // The responder can fail while persisting a config value. Never
+                // leave the control showing a value that was not accepted.
+                selectedIndex = previousIndex;
+                try {
+                    refreshState();
+                } catch (RuntimeException | Error restoreFailure) {
+                    if (restoreFailure != failure) failure.addSuppressed(restoreFailure);
+                }
+                throw failure;
+            }
         }
 
         @Override
@@ -130,16 +133,35 @@ public final class KineticDropdowns {
             super.renderWidget(graphics, mouseX, mouseY, partialTick);
         }
 
+        private void refreshState() {
+            Option selected = selectedOption();
+            refreshState(selected == null || KineticValidation.accepts(validator, selected.value()));
+        }
+
+        private void refreshState(boolean validSelection) {
+            Option selected = selectedOption();
+            String value = selected == null ? "" : selected.value();
+            Component display = selected == null || selected.translation().getString().isBlank()
+                    ? Component.literal(value)
+                    : selected.translation();
+            setMessage(display);
+            setError(selected != null && !validSelection);
+        }
+
+        private static int indexOfValue(String value, List<Option> options) {
+            if (options == null || options.isEmpty()) return -1;
+            if (value != null) {
+                for (int index = 0; index < options.size(); index++) {
+                    if (options.get(index).value().equals(value)) return index;
+                }
+            }
+            return 0;
+        }
+
         private static int normalizeIndex(int index, int size) {
             if (size <= 0) return -1;
             int normalized = index % size;
             return normalized < 0 ? normalized + size : normalized;
-        }
-
-        private static Component messageAt(List<Component> options, int index) {
-            if (options == null || options.isEmpty()) return Component.empty();
-            int normalized = normalizeIndex(index, options.size());
-            return options.get(normalized);
         }
     }
 }

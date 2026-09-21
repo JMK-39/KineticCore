@@ -1,24 +1,25 @@
 package dev.xyat.kineticcore.feature.firstjoin.client;
 
+
+import dev.xyat.kineticcore.api.text.KineticI18n;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
 
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.config.client.KTServerConfigClient;
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfigGui;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedHashMap;
@@ -48,7 +49,7 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
     private String hoveredSlot;
 
     public FirstJoinEquipmentScreen(Screen parent) {
-        super(Component.translatable("gui.kineticcore.firstjoin.equipment.title"));
+        super(KineticI18n.translatable("gui.kineticcore.firstjoin.equipment.title"));
         this.parent = parent;
         loadStacks();
     }
@@ -89,12 +90,12 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
                 itemId = "minecraft:" + itemId;
             }
 
-            ResourceLocation id = ResourceLocation.tryParse(itemId);
+            ResourceLocation id = KineticResourceIds.tryParse(itemId);
             if (id == null) {
                 return ItemStack.EMPTY;
             }
 
-            Item item = ForgeRegistries.ITEMS.getValue(id);
+            Item item = KineticRegistries.items().get(id);
             if (item == null || item == Items.AIR) {
                 return ItemStack.EMPTY;
             }
@@ -113,14 +114,14 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
     protected void buildUi() {
         addButton(
                 270, 292, 100,
-                Component.translatable("gui.kineticcore.config.back"),
+                KineticI18n.translatable("gui.kineticcore.config.back"),
                 null,
                 this::saveAndClose
         );
     }
 
     private void openItemSelector(String slotKey) {
-        KineticSelectors.openItemSelector(this, selection -> {
+        KineticSelectors.openItemSelector(this, null, selection -> {
                 if (selection == null || !selection.isItem()) {
                     return;
                 }
@@ -162,7 +163,7 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
         values.put("boots", PlayerConfig.serializeItemStack(stacks.get("boots")));
         values.put("offhand", PlayerConfig.serializeItemStack(stacks.get("offhand")));
         if (!KTServerConfigClient.savePartial(PlayerConfigGui.PAGE_ID, values)) {
-            GuiOverlay.toast(Component.translatable("gui.kineticcore.config.server.save_failed"));
+            KineticOverlays.toast(null, KineticI18n.translatable("gui.kineticcore.config.server.save_failed"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
             return;
         }
         if (minecraft != null) {
@@ -187,7 +188,7 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         GuiTheme.panel(graphics, 70, 42, 500, 226);
-        graphics.drawCenteredString(font, title, canvasWidth() / 2, 58, 0xFFFFFF);
+        graphics.drawCenteredString(font, title, canvasWidth() / 2, 58, GuiTheme.current().text());
         hoveredSlot = slotAt(mouseX, mouseY);
 
         for (int index = 0; index < SLOT_DEFINITIONS.size(); index++) {
@@ -198,12 +199,12 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
 
             graphics.drawCenteredString(
                     font,
-                    Component.translatable(definition.labelKey()),
+                    KineticI18n.translatable(definition.labelKey()),
                     x + SLOT_SIZE / 2,
                     SLOT_Y - 17,
-                    0xFFFFFF
+                    GuiTheme.current().text()
             );
-            GuiTheme.itemSlot(graphics, x, SLOT_Y, SLOT_SIZE, 4, hovered);
+            GuiTheme.itemSlot(graphics, x, SLOT_Y, SLOT_SIZE, SLOT_SIZE, 4, false, hovered, false);
             GuiTheme.item(
                     graphics,
                     font,
@@ -218,10 +219,10 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
 
         graphics.drawCenteredString(
                 font,
-                Component.translatable("gui.kineticcore.firstjoin.equipment.hint"),
+                KineticI18n.translatable("gui.kineticcore.firstjoin.equipment.hint"),
                 canvasWidth() / 2,
                 210,
-                0xFFFFFF
+                GuiTheme.current().text()
         );
     }
 
@@ -266,8 +267,9 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
     }
 
     @Override
-    public void onClose() {
+    protected boolean handleCloseRequest() {
         saveAndClose();
+        return true;
     }
 
     @Override

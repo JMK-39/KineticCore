@@ -5,12 +5,12 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.network.KineticNetwork;
 import dev.xyat.kineticcore.api.network.NetworkTransportLimits;
-import net.minecraftforge.fml.loading.FMLPaths;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 
 import java.nio.file.Path;
 
 public class NetworkConfig {
-    private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("kineticcore/network.toml");
+    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/network.toml");
     private static CommentedFileConfig configData;
 
     public static int timeout = 120;

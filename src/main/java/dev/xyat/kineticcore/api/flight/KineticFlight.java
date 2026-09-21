@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
+/** Public Kinetic API facade for flight. */
 public final class KineticFlight {
     private static final String NBT_FLIGHT_SOURCES = "flight_sources_list";
     private static final String NBT_LAST_FLYING = "last_known_flying";
@@ -20,26 +21,47 @@ public final class KineticFlight {
     private static final Set<UUID> DEBOUNCING_PLAYERS = new HashSet<>();
     private static volatile BiConsumer<ServerPlayer, Boolean> noclipSyncSender = (player, enabled) -> { };
 
+    /**
+     * Exposes the is processing explicit cancel API value.
+     */
     public static boolean isProcessingExplicitCancel;
+    /**
+     * Exposes the is internal update API value.
+     */
     public static boolean isInternalUpdate;
+    /**
+     * Exposes the is gamemode switching API value.
+     */
     public static boolean isGamemodeSwitching;
 
     private KineticFlight() {
     }
 
+    /**
+     * Performs the install noclip sync sender API operation.
+     */
     public static void installNoclipSyncSender(BiConsumer<ServerPlayer, Boolean> sender) {
         noclipSyncSender = sender == null ? (player, enabled) -> { } : sender;
     }
 
+    /**
+     * Returns whether debouncing.
+     */
     public static boolean isDebouncing(Player player) {
         return DEBOUNCING_PLAYERS.contains(player.getUUID());
     }
 
+    /**
+     * Updates debouncing.
+     */
     public static void setDebouncing(Player player, boolean value) {
         if (value) DEBOUNCING_PLAYERS.add(player.getUUID());
         else DEBOUNCING_PLAYERS.remove(player.getUUID());
     }
 
+    /**
+     * Returns the sources.
+     */
     public static Set<String> sources(Player player) {
         Set<String> sources = new HashSet<>();
         ListTag list = player.getPersistentData().getList(NBT_FLIGHT_SOURCES, Tag.TAG_STRING);
@@ -49,6 +71,9 @@ public final class KineticFlight {
         return sources;
     }
 
+    /**
+     * Adds source.
+     */
     public static void addSource(LivingEntity entity, String sourceId) {
         if (!(entity instanceof Player player)) return;
         Set<String> sources = sources(player);
@@ -58,6 +83,9 @@ public final class KineticFlight {
         }
     }
 
+    /**
+     * Removes source.
+     */
     public static void removeSource(LivingEntity entity, String sourceId) {
         if (!(entity instanceof Player player)) return;
         Set<String> sources = sources(player);
@@ -73,18 +101,30 @@ public final class KineticFlight {
         player.getPersistentData().put(NBT_FLIGHT_SOURCES, list);
     }
 
+    /**
+     * Updates last known flying.
+     */
     public static void setLastKnownFlying(Player player, boolean flying) {
         player.getPersistentData().putBoolean(NBT_LAST_FLYING, flying);
     }
 
+    /**
+     * Performs the last known flying API operation.
+     */
     public static boolean lastKnownFlying(Player player) {
         return player.getPersistentData().getBoolean(NBT_LAST_FLYING);
     }
 
+    /**
+     * Returns whether flight allowed.
+     */
     public static boolean isFlightAllowed(Player player) {
         return player.isCreative() || player.isSpectator() || !sources(player).isEmpty();
     }
 
+    /**
+     * Refreshes the current API state.
+     */
     public static void refresh(Player player) {
         if (player.level().isClientSide) return;
 
@@ -103,10 +143,16 @@ public final class KineticFlight {
     }
 
 
+    /**
+     * Performs the noclip enabled API operation.
+     */
     public static boolean noclipEnabled(Player player) {
         return player.getPersistentData().getBoolean(NBT_NOCLIP);
     }
 
+    /**
+     * Copies persistent state.
+     */
     public static void copyPersistentState(ServerPlayer oldPlayer, ServerPlayer newPlayer) {
         if (oldPlayer.getPersistentData().contains(NBT_FLIGHT_SOURCES)) {
             Tag sources = oldPlayer.getPersistentData().get(NBT_FLIGHT_SOURCES);
@@ -123,10 +169,16 @@ public final class KineticFlight {
         newPlayer.refreshDimensions();
     }
 
+    /**
+     * Performs the server noclip enabled API operation.
+     */
     public static boolean serverNoclipEnabled(Player player) {
         return noclipEnabled(player);
     }
 
+    /**
+     * Applies server noclip.
+     */
     public static void applyServerNoclip(ServerPlayer player, boolean requestedState) {
         boolean enabled = requestedState && player.isCreative();
         player.getPersistentData().putBoolean(NBT_NOCLIP, enabled);
@@ -135,6 +187,9 @@ public final class KineticFlight {
         noclipSyncSender.accept(player, enabled);
     }
 
+    /**
+     * Performs the sync server noclip API operation.
+     */
     public static void syncServerNoclip(ServerPlayer player) {
         applyServerNoclip(player, serverNoclipEnabled(player));
     }

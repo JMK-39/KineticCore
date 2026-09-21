@@ -18,9 +18,9 @@ public final class KineticCommandRuntime {
     public static synchronized void initialize(Consumer<CommandDispatcher<CommandSourceStack>> rootRegistrar) {
         Objects.requireNonNull(rootRegistrar, "rootRegistrar");
         if (initialized) return;
+        MinecraftForge.EVENT_BUS.addListener(KineticCommandRuntime::onRegisterCommands);
         registrar = rootRegistrar;
         initialized = true;
-        MinecraftForge.EVENT_BUS.addListener(KineticCommandRuntime::onRegisterCommands);
     }
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {

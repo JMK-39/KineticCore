@@ -1,307 +1,74 @@
 package dev.xyat.kineticcore.api.client.search;
 
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
-import com.github.promeg.pinyinhelper.Pinyin;
-import net.minecraft.client.Minecraft;
+import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.widget.input.KineticAutoComplete.Suggestion;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.internal.client.search.KineticSearchRuntime;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
+/**
+ * Public search facade for Kinetic text matching, localized suggestion dictionaries, and reusable filtered models.
+ * Text normalization and pinyin indexing remain internal so add-ons depend only on stable matching behavior.
+ */
 public final class KineticSearch {
-    private static final PinyinData EMPTY_PINYIN = new PinyinData("", "", "", new String[0], "");
-    private static final ThreadLocal<MatchBuffer> MATCH_BUFFER = ThreadLocal.withInitial(MatchBuffer::new);
-
-    private static List<String> attributeDictionary;
-    private static List<String> potionDictionary;
-    private static List<String> damageDictionary;
-    private static List<String> specificDamageDictionary;
+    private static final Pattern UNRESOLVED_FORMAT_ARGUMENT = Pattern.compile("%(?:\\d+\\$)?[a-zA-Z]");
+    private static List<Suggestion> itemDictionary;
+    private static List<Suggestion> enchantmentDictionary;
+    private static List<Suggestion> attributeDictionary;
+    private static List<Suggestion> potionDictionary;
+    private static List<Suggestion> damageDictionary;
+    private static List<Suggestion> specificDamageDictionary;
+    private static String dictionaryLanguage;
+    private static long damageDictionaryConnectionRevision = Long.MIN_VALUE;
+    private static Object damageDictionaryLevelToken;
 
     private KineticSearch() {
     }
 
+    /** Returns whether the supplied text matches the query using Kinetic search and pinyin rules. */
     public static boolean match(String text, String query) {
-        if (query == null || query.isBlank()) return true;
-        if (text == null || text.isBlank()) return false;
-
-        String preparedText = normalize(text);
-        String[] tokens = queryTokens(query);
-        if (tokens.length == 0) return true;
-
-        PinyinData pinyin = null;
-        for (String token : tokens) {
-            if (preparedText.contains(token)) continue;
-            if (pinyin == null) pinyin = preparePinyin(text);
-            if (!pinyin.matches(token)) return false;
-        }
-        return true;
+        return KineticSearchRuntime.match(text, query);
     }
 
-    public static String normalize(String input) {
-        if (input == null || input.isBlank()) return "";
-        String lower = input.toLowerCase(Locale.ROOT);
-        StringBuilder builder = new StringBuilder(lower.length());
-        boolean lastSpace = true;
-
-        for (int index = 0; index < lower.length(); index++) {
-            char c = lower.charAt(index);
-            if (isSearchChar(c)) {
-                builder.append(c);
-                lastSpace = false;
-            } else if (!lastSpace) {
-                builder.append(' ');
-                lastSpace = true;
-            }
-        }
-
-        if (!builder.isEmpty() && builder.charAt(builder.length() - 1) == ' ') {
-            builder.setLength(builder.length() - 1);
-        }
-        return builder.toString();
+    /** Prepares reusable search data once for lists that repeatedly match the same source text. */
+    public static PreparedText prepare(String text) {
+        return new PreparedText(text);
     }
 
-    public static String[] queryTokens(String query) {
-        String normalized = normalize(query);
-        return normalized.isBlank() ? new String[0] : normalized.split(" +");
-    }
-
-    public static boolean matchPrepared(String preparedText, String[] preparedQueryTokens) {
-        if (preparedQueryTokens == null || preparedQueryTokens.length == 0) return true;
-        if (preparedText == null || preparedText.isBlank()) return false;
-        for (String token : preparedQueryTokens) {
-            if (token != null && !token.isBlank() && !preparedText.contains(token)) return false;
-        }
-        return true;
-    }
-
+    /** Returns the reusable pinyin search text for compatibility with existing Kinetic add-ons. */
     public static String pinyin(String text) {
-        return preparePinyin(text).searchData();
+        return KineticSearchRuntime.pinyinSearchData(text);
     }
 
+    /** Returns reusable pinyin parts for callers that need stable search ranking. */
     public static PinyinData preparePinyin(String text) {
-        if (text == null || text.isEmpty()) return EMPTY_PINYIN;
-        String rawLower = text.toLowerCase(Locale.ROOT);
-        StringBuilder full = new StringBuilder();
-        StringBuilder initials = new StringBuilder();
-        StringBuilder spaced = new StringBuilder();
-        List<String> syllables = new ArrayList<>(Math.min(text.length(), 32));
-
-        for (char c : text.toCharArray()) {
-            if (!Pinyin.isChinese(c)) continue;
-            String pinyin = Pinyin.toPinyin(c);
-            if (pinyin == null || pinyin.isEmpty()) continue;
-            String lower = pinyin.toLowerCase(Locale.ROOT);
-            full.append(lower);
-            initials.append(lower.charAt(0));
-            if (!spaced.isEmpty()) spaced.append(' ');
-            spaced.append(lower);
-            syllables.add(lower);
-        }
-
-        if (syllables.isEmpty()) return new PinyinData(rawLower, "", "", new String[0], "");
-        String fullValue = full.toString();
-        String initialsValue = initials.toString();
+        KineticSearchRuntime.PinyinSnapshot snapshot = KineticSearchRuntime.pinyinSnapshot(text);
         return new PinyinData(
-                rawLower,
-                fullValue,
-                initialsValue,
-                syllables.toArray(String[]::new),
-                fullValue + " " + initialsValue + " " + spaced
+                snapshot.rawLower(),
+                snapshot.full(),
+                snapshot.initials(),
+                snapshot.syllables(),
+                snapshot.searchData()
         );
     }
 
-    public static String cleanTranslatedName(String... keys) {
-        for (String key : keys) {
-            String translated = Component.translatable(key).getString();
-            if (!translated.equals(key)
-                    && !translated.contains("%")
-                    && translated.matches(".*[\\u4e00-\\u9fa5].*")) {
-                return translated;
-            }
-        }
-        return null;
-    }
-
-    public static String dictionaryName(String id, List<String> dictionary) {
-        if (id == null || dictionary == null) return id;
-        for (String entry : dictionary) {
-            if (entry.startsWith(id + " - ")) return entry.substring(entry.indexOf(" - ") + 3);
-        }
-        return id;
-    }
-
-    public static List<String> attributeDictionary() {
-        if (attributeDictionary == null) {
-            attributeDictionary = KineticRegistries.attributes().values().stream().map(value -> {
-                ResourceLocation registryId = KineticRegistries.attributes().id(value);
-                String id = registryId == null ? "" : registryId.toString();
-                String translated = cleanTranslatedName(value.getDescriptionId());
-                return translated != null ? id + " - " + translated : id;
-            }).collect(Collectors.toList());
-        }
-        return attributeDictionary;
-    }
-
-    public static List<String> potionDictionary() {
-        if (potionDictionary == null) {
-            potionDictionary = KineticRegistries.mobEffects().values().stream().map(value -> {
-                ResourceLocation registryId = KineticRegistries.mobEffects().id(value);
-                String id = registryId == null ? "" : registryId.toString();
-                String translated = cleanTranslatedName(value.getDescriptionId());
-                return translated != null ? id + " - " + translated : id;
-            }).collect(Collectors.toList());
-        }
-        return potionDictionary;
-    }
-
-    public static List<String> damageDictionary() {
-        if (damageDictionary == null) damageDictionary = buildDamageDictionary(true);
-        return damageDictionary;
-    }
-
-    public static List<String> specificDamageDictionary() {
-        if (specificDamageDictionary == null) specificDamageDictionary = buildDamageDictionary(false);
-        return specificDamageDictionary;
-    }
-
-    public static List<String> getAttributeDict() {
-        return attributeDictionary();
-    }
-
-    public static List<String> getPotionDict() {
-        return potionDictionary();
-    }
-
-    public static List<String> getDamageDict() {
-        return damageDictionary();
-    }
-
-    public static List<String> getSpecificDamageDict() {
-        return specificDamageDictionary();
-    }
-
-    public static void clearDictionaries() {
-        attributeDictionary = null;
-        potionDictionary = null;
-        damageDictionary = null;
-        specificDamageDictionary = null;
-    }
-
-    private static List<String> buildDamageDictionary(boolean includeAllAndTags) {
-        List<String> result = new ArrayList<>();
-        if (includeAllAndTags) {
-            String translated = cleanTranslatedName("gui.kineticcore.damage.all");
-            result.add(translated != null ? "all - " + translated : "all");
-        }
-
-        if (Minecraft.getInstance().level == null) return result;
-        var registry = Minecraft.getInstance().level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE);
-        Set<String> addedMessageIds = new HashSet<>();
-        registry.entrySet().forEach(entry -> {
-            ResourceLocation location = entry.getKey().location();
-            String messageId = entry.getValue().msgId();
-            if (!addedMessageIds.add(messageId)) return;
-            String translated = cleanTranslatedName(
-                    "damage_type." + messageId.replace(":", "."),
-                    "dmg." + messageId,
-                    "damage_type." + location.getNamespace() + "." + location.getPath()
-            );
-            result.add(translated != null ? messageId + " - " + translated : messageId);
-        });
-
-        if (includeAllAndTags) {
-            registry.getTagNames().forEach(tag -> {
-                ResourceLocation location = tag.location();
-                String translated = cleanTranslatedName(
-                        "tag.damage_type." + location.getNamespace() + "." + location.getPath(),
-                        "tag." + location.getNamespace() + "." + location.getPath(),
-                        "tag." + location.getPath()
-                );
-                result.add(translated != null ? "#" + location + " - " + translated : "#" + location);
-            });
-        }
-        return result;
-    }
-
-    private static boolean isSearchChar(char c) {
-        return Character.isLetterOrDigit(c)
-                || c == '_'
-                || c == '-'
-                || c == '.'
-                || c == ':'
-                || c == '@'
-                || c == '#'
-                || (c >= '一' && c <= '鿿');
-    }
-
-    private static boolean matchPinyin(PinyinData data, String query) {
-        if (data == null || query == null || query.isBlank()) return false;
-        String lowerQuery = query.toLowerCase(Locale.ROOT).trim();
-        if (lowerQuery.isEmpty()) return false;
-        if (!data.rawLower().isEmpty() && data.rawLower().contains(lowerQuery)) return true;
-
-        String compact = compactLatin(lowerQuery);
-        if (compact.isEmpty() || data.syllables().length == 0) return false;
-        if (data.full().contains(compact) || data.initials().contains(compact)) return true;
-        return matchHybrid(data.syllables(), compact);
-    }
-
-    private static String compactLatin(String input) {
-        StringBuilder out = null;
-        for (int index = 0; index < input.length(); index++) {
-            char c = input.charAt(index);
-            if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
-                if (out != null) out.append(c);
-                continue;
-            }
-            if (out == null) {
-                out = new StringBuilder(input.length());
-                out.append(input, 0, index);
-            }
-        }
-        return out == null ? input : out.toString();
-    }
-
-    private static boolean matchHybrid(String[] syllables, String query) {
-        int queryLength = query.length();
-        MatchBuffer buffer = MATCH_BUFFER.get();
-        buffer.ensureCapacity(queryLength + 1);
-        boolean[] current = buffer.current;
-        boolean[] next = buffer.next;
-        Arrays.fill(current, 0, queryLength + 1, false);
-        current[0] = true;
-
-        for (String syllable : syllables) {
-            Arrays.fill(next, 0, queryLength + 1, false);
-            current[0] = true;
-            for (int position = 0; position < queryLength; position++) {
-                if (!current[position]) continue;
-                int max = Math.min(syllable.length(), queryLength - position);
-                for (int length = 1; length <= max; length++) {
-                    if (query.charAt(position + length - 1) != syllable.charAt(length - 1)) break;
-                    int end = position + length;
-                    if (end == queryLength) return true;
-                    next[end] = true;
-                }
-            }
-            boolean[] swap = current;
-            current = next;
-            next = swap;
-        }
-        return false;
-    }
-
+    /** Immutable pinyin data data exposed by this API. */
     public record PinyinData(
             String rawLower,
             String full,
@@ -309,105 +76,286 @@ public final class KineticSearch {
             String[] syllables,
             String searchData
     ) {
+        /** Normalizes nullable pinyin fields to stable non-null values. */
+        public PinyinData {
+            syllables = syllables == null ? new String[0] : syllables.clone();
+        }
+
+        @Override
+        public String[] syllables() {
+            return syllables.clone();
+        }
+
+        /** Returns whether this cached pinyin/search snapshot matches the supplied query. */
         public boolean matches(String query) {
-            return KineticSearch.matchPinyin(this, query);
+            return KineticSearchRuntime.match(rawLower, query);
         }
     }
 
+    /** Opaque reusable search data that keeps pinyin/index implementation details behind the public facade. */
+    public static final class PreparedText {
+        private final KineticSearchRuntime.PreparedSearch prepared;
+
+        private PreparedText(String text) {
+            this.prepared = KineticSearchRuntime.prepare(text);
+        }
+
+        /** Returns whether this prepared source matches the supplied query using Kinetic search rules. */
+        public boolean matches(String query) {
+            return prepared.matches(query);
+        }
+
+        /**
+         * Returns a stable search rank: exact/empty=0, direct prefix=1, full-pinyin prefix=2,
+         * pinyin-initial prefix=3, other Kinetic match=4, and no match=-1.
+         */
+        public int matchRank(String query) {
+            return prepared.matchRank(query);
+        }
+    }
+
+    /**
+     * Resolves the first available translation for the current game language.
+     * English locales intentionally omit translations because registry IDs already provide the English-facing value.
+     */
+    public static String resolveTranslation(String... keys) {
+        if (KineticClientRuntime.isEnglishLanguage()) return null;
+        for (String key : keys) {
+            if (key == null || key.isBlank() || !KineticText.hasTranslation(key)) continue;
+            String translated = KineticText.get(key);
+            if (!translated.equals(key) && !translated.isBlank() && hasResolvedFormat(translated)) {
+                return translated;
+            }
+        }
+        return null;
+    }
+
+    /** Literal percent signs are valid labels; only unresolved formatting tokens need another candidate. */
+    private static boolean hasResolvedFormat(String text) {
+        return !UNRESOLVED_FORMAT_ARGUMENT.matcher(text).find();
+    }
+
+    /** Returns the display translation for a suggestion value, or the raw value when no translation is available. */
+    public static String dictionaryName(String value, List<Suggestion> dictionary) {
+        return suggestionDisplayName(value, dictionary);
+    }
+
+    /** Returns the display translation for a suggestion value, or the raw value when no translation is available. */
+    public static String suggestionDisplayName(String value, List<Suggestion> dictionary) {
+        if (value == null) return null;
+        // A cached dictionary may have been built under the previous language.
+        // English-facing controls always display the persistent raw identifier.
+        if (KineticClientRuntime.isEnglishLanguage() || dictionary == null || dictionary.isEmpty()) return value;
+        for (Suggestion suggestion : dictionary) {
+            if (suggestion == null || !value.equals(suggestion.value())) continue;
+            String translated = suggestion.translation().getString();
+            return translated.isBlank() ? value : translated;
+        }
+        return value;
+    }
+
+
+    /** Returns the cached item-ID suggestion dictionary for the current game language. */
+    public static List<Suggestion> itemDictionary() {
+        ensureDictionaryLanguage();
+        if (itemDictionary == null) {
+            itemDictionary = KineticRegistries.items().values().stream().map(value -> {
+                ResourceLocation registryId = KineticRegistries.items().id(value);
+                String id = registryId == null ? "" : registryId.toString();
+                String translated = resolveTranslation(value.getDescriptionId());
+                return new Suggestion(id, translated == null ? Component.empty() : Component.literal(translated));
+            }).toList();
+        }
+        return itemDictionary;
+    }
+
+    /** Returns the cached enchantment-ID suggestion dictionary for the current game language. */
+    public static List<Suggestion> enchantmentDictionary() {
+        ensureDictionaryLanguage();
+        if (enchantmentDictionary == null) {
+            enchantmentDictionary = KineticRegistries.enchantments().values().stream().map(value -> {
+                ResourceLocation registryId = KineticRegistries.enchantments().id(value);
+                String id = registryId == null ? "" : registryId.toString();
+                String translated = resolveTranslation(value.getDescriptionId());
+                return new Suggestion(id, translated == null ? Component.empty() : Component.literal(translated));
+            }).toList();
+        }
+        return enchantmentDictionary;
+    }
+
+    /** Returns the cached attribute-ID suggestion dictionary for the current game language. */
+    public static List<Suggestion> attributeDictionary() {
+        ensureDictionaryLanguage();
+        if (attributeDictionary == null) {
+            attributeDictionary = KineticRegistries.attributes().values().stream().map(value -> {
+                ResourceLocation registryId = KineticRegistries.attributes().id(value);
+                String id = registryId == null ? "" : registryId.toString();
+                String translated = resolveTranslation(value.getDescriptionId());
+                return new Suggestion(id, translated == null ? Component.empty() : Component.literal(translated));
+            }).toList();
+        }
+        return attributeDictionary;
+    }
+
+    /** Returns the cached mob-effect-ID suggestion dictionary for the current game language. */
+    public static List<Suggestion> potionDictionary() {
+        ensureDictionaryLanguage();
+        if (potionDictionary == null) {
+            potionDictionary = KineticRegistries.mobEffects().values().stream().map(value -> {
+                ResourceLocation registryId = KineticRegistries.mobEffects().id(value);
+                String id = registryId == null ? "" : registryId.toString();
+                String translated = resolveTranslation(value.getDescriptionId());
+                return new Suggestion(id, translated == null ? Component.empty() : Component.literal(translated));
+            }).toList();
+        }
+        return potionDictionary;
+    }
+
+    /** Returns damage suggestions containing {@code all}, damage-type tags, and concrete damage message ids. */
+    public static List<Suggestion> damageDictionary() {
+        ensureDictionaryLanguage();
+        ensureDamageDictionaryContext();
+        if (damageDictionary == null) damageDictionary = buildDamageDictionary(true);
+        return damageDictionary;
+    }
+
+    /** Returns damage suggestions containing only concrete damage message ids. */
+    public static List<Suggestion> specificDamageDictionary() {
+        ensureDictionaryLanguage();
+        ensureDamageDictionaryContext();
+        if (specificDamageDictionary == null) specificDamageDictionary = buildDamageDictionary(false);
+        return specificDamageDictionary;
+    }
+
+    private static void ensureDictionaryLanguage() {
+        String currentLanguage = KineticClientRuntime.selectedLanguage();
+        if (Objects.equals(dictionaryLanguage, currentLanguage)) return;
+        itemDictionary = null;
+        enchantmentDictionary = null;
+        attributeDictionary = null;
+        potionDictionary = null;
+        damageDictionary = null;
+        specificDamageDictionary = null;
+        dictionaryLanguage = currentLanguage;
+    }
+
+    private static void ensureDamageDictionaryContext() {
+        long currentConnectionRevision = KineticClientRuntime.connectionRevision();
+        Object currentLevel = KineticClientRuntime.currentLevel();
+        if (damageDictionaryConnectionRevision == currentConnectionRevision && damageDictionaryLevelToken == currentLevel) {
+            return;
+        }
+        damageDictionary = null;
+        specificDamageDictionary = null;
+        damageDictionaryConnectionRevision = currentConnectionRevision;
+        damageDictionaryLevelToken = currentLevel;
+    }
+
+    private static List<Suggestion> buildDamageDictionary(boolean includeAllAndTags) {
+        List<Suggestion> result = new ArrayList<>();
+        if (includeAllAndTags) {
+            String translated = resolveTranslation("gui.kineticcore.damage.all");
+            result.add(new Suggestion("all", translated == null ? Component.empty() : Component.literal(translated)));
+        }
+
+        var level = KineticClientRuntime.currentLevel();
+        if (level == null) return List.copyOf(result);
+        var registry = level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE);
+        Set<String> addedMessageIds = new HashSet<>();
+        registry.entrySet().forEach(entry -> {
+            ResourceLocation location = entry.getKey().location();
+            String messageId = entry.getValue().msgId();
+            if (!addedMessageIds.add(messageId)) return;
+            String translated = resolveTranslation(
+                    "damage_type." + messageId.replace(":", "."),
+                    "dmg." + messageId,
+                    "damage_type." + location.getNamespace() + "." + location.getPath()
+            );
+            result.add(new Suggestion(messageId, translated == null ? Component.empty() : Component.literal(translated)));
+        });
+
+        if (includeAllAndTags) {
+            registry.getTagNames().forEach(tag -> {
+                ResourceLocation location = tag.location();
+                String translated = resolveTranslation(
+                        "tag.damage_type." + location.getNamespace() + "." + location.getPath(),
+                        "tag." + location.getNamespace() + "." + location.getPath(),
+                        "tag." + location.getPath()
+                );
+                result.add(new Suggestion("#" + location, translated == null ? Component.empty() : Component.literal(translated)));
+            });
+        }
+        return List.copyOf(result);
+    }
+
+    /** Reusable searchable model that keeps raw values separate from prepared search data. */
     public static final class Model<T> {
         private final List<T> source = new ArrayList<>();
         private final List<T> visible = new ArrayList<>();
+        private final List<T> visibleView = Collections.unmodifiableList(visible);
         private final BiPredicate<T, String> matcher;
         private Comparator<T> comparator;
+        private Comparator<T> lastSuccessfulComparator;
 
-        public Model(Collection<T> source, Function<T, String> searchData) {
-            this(source, (entry, query) -> KineticSearch.match(searchData.apply(entry), query));
-        }
-
+        /** Creates a searchable model backed by an internal copy of the supplied source collection. */
         public Model(Collection<T> source, BiPredicate<T, String> matcher) {
-            this.matcher = matcher;
+            this.matcher = Objects.requireNonNull(matcher, "matcher");
             setSource(source);
         }
 
-        public void setSource(Collection<T> entries) {
-            source.clear();
-            if (entries != null) source.addAll(entries);
+        /**
+         * Creates a searchable model from a reusable text extractor; matching still uses the standard Kinetic search rules.
+         */
+        public Model(Collection<T> source, Function<T, String> searchText) {
+            Function<T, String> safeSearchText = Objects.requireNonNull(searchText, "searchText");
+            this.matcher = (value, query) -> {
+                String text = safeSearchText.apply(value);
+                return KineticSearch.match(text == null ? "" : text, query);
+            };
+            setSource(source);
         }
 
+        /** Replaces the model source; call {@link #refresh(String)} to rebuild visible items for a query. */
+        public void setSource(Collection<T> entries) {
+            // Build the replacement before touching the old source. A failing iterator
+            // must not leave the search model without its previously valid entries.
+            List<T> replacement = entries == null ? List.of() : new ArrayList<>(entries);
+            source.clear();
+            source.addAll(replacement);
+        }
+
+        /** Sets the optional comparator applied to visible matches after each refresh; {@code null} keeps source order. */
         public void setComparator(Comparator<T> comparator) {
             this.comparator = comparator;
         }
 
+        /** Refreshes the filtered model using the supplied search query. */
         public void refresh(String query) {
             String normalized = query == null ? "" : query.toLowerCase(Locale.ROOT).trim();
-            visible.clear();
+            // Match and sort in a temporary list; commit only after both operations
+            // succeed so an addon callback cannot destroy the last valid results.
+            List<T> replacement = new ArrayList<>();
             for (T entry : source) {
-                if (normalized.isEmpty() || matcher.test(entry, normalized)) visible.add(entry);
+                if (normalized.isEmpty() || matcher.test(entry, normalized)) replacement.add(entry);
             }
-            if (comparator != null) visible.sort(comparator);
+            if (comparator != null) {
+                try {
+                    replacement.sort(comparator);
+                } catch (RuntimeException | Error failure) {
+                    // A rejected replacement comparator must not poison all later refreshes.
+                    comparator = lastSuccessfulComparator;
+                    throw failure;
+                }
+            }
+            visible.clear();
+            visible.addAll(replacement);
+            lastSuccessfulComparator = comparator;
         }
 
+        /** Returns an unmodifiable live view of the items produced by the most recent {@link #refresh(String)}. */
         public List<T> items() {
-            return visible;
+            return visibleView;
         }
     }
 
-    public static final class EditedTracker<T> {
-        private final java.util.Map<T, Long> editedOrder = new java.util.HashMap<>();
-        private long sequence;
-
-        public void refresh(Collection<T> entries, java.util.function.Predicate<T> editedPredicate) {
-            editedOrder.clear();
-            for (T entry : entries) if (editedPredicate.test(entry)) editedOrder.put(entry, 0L);
-        }
-
-        public boolean update(T entry, boolean edited) {
-            boolean wasEdited = editedOrder.containsKey(entry);
-            if (edited) {
-                if (!wasEdited) {
-                    editedOrder.put(entry, ++sequence);
-                    return true;
-                }
-                return false;
-            }
-            return editedOrder.remove(entry) != null;
-        }
-
-        public boolean isEdited(T entry) {
-            return editedOrder.containsKey(entry);
-        }
-
-        public Comparator<T> comparator(Comparator<T> fallback) {
-            return (left, right) -> {
-                boolean leftEdited = isEdited(left);
-                boolean rightEdited = isEdited(right);
-                if (leftEdited != rightEdited) return leftEdited ? -1 : 1;
-                if (leftEdited) {
-                    int recent = Long.compare(
-                            editedOrder.getOrDefault(right, 0L),
-                            editedOrder.getOrDefault(left, 0L)
-                    );
-                    if (recent != 0) return recent;
-                }
-                return fallback.compare(left, right);
-            };
-        }
-
-        public void clear() {
-            editedOrder.clear();
-        }
-    }
-
-    private static final class MatchBuffer {
-        private boolean[] current = new boolean[32];
-        private boolean[] next = new boolean[32];
-
-        private void ensureCapacity(int required) {
-            if (current.length >= required) return;
-            int size = current.length;
-            while (size < required) size <<= 1;
-            current = new boolean[size];
-            next = new boolean[size];
-        }
-    }
 }

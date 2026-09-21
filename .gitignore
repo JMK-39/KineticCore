@@ -16,6 +16,8 @@ out
 # gradle
 build
 .gradle
+# Generated Javadoc at the project root
+/javadoc/
 
 # other
 eclipse

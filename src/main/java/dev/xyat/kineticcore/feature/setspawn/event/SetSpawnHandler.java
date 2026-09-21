@@ -1,5 +1,8 @@
 package dev.xyat.kineticcore.feature.setspawn.event;
 
+
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.api.hook.ServerHooks;
 import dev.xyat.kineticcore.feature.setspawn.config.SetSpawnConfig;
 import dev.xyat.kineticcore.feature.setspawn.data.SetSpawnData;
@@ -48,12 +51,10 @@ import java.util.stream.Stream;
 public class SetSpawnHandler {
 
     public static boolean isInternalModifying = false;
-    private static boolean hooksRegistered;
+    private static final KineticRegistrationBatch HOOK_REGISTRATION = new KineticRegistrationBatch();
 
     public static void registerHooks() {
-        if (hooksRegistered) return;
-        hooksRegistered = true;
-        ServerHooks.onSpawnOverride(new ServerHooks.SpawnOverride() {
+        HOOK_REGISTRATION.run(() -> ServerHooks.onSpawnOverride(new ServerHooks.SpawnOverride() {
             @Override
             public void beforePrepareLevels(MinecraftServer server) {
                 SetSpawnHandler.applyCachedOverworldSpawnBeforeVanillaSpawnChunks(server);
@@ -118,7 +119,7 @@ public class SetSpawnHandler {
             public Optional<BlockPos> sharedSpawn(MinecraftServer server, ServerLevel level) {
                 return SetSpawnHandler.getSavedSpawnPosForLevel(server, level);
             }
-        });
+        }));
     }
 
     private static final int SAFE_SEARCH_RADIUS = 96;
@@ -435,7 +436,7 @@ public class SetSpawnHandler {
         SetSpawnData data = SetSpawnData.get(server.overworld());
 
         if (data.isSpawnCalculated()) {
-            ResourceKey<Level> dimKey = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(data.getSpawnDim()));
+            ResourceKey<Level> dimKey = ResourceKey.create(Registries.DIMENSION, KineticResourceIds.parse(data.getSpawnDim()));
             ServerLevel level = server.getLevel(dimKey);
             if (level == null) {
                 debug("getOrCreateGlobalSpawn abort: dimension not found, dim=" + data.getSpawnDim());
@@ -486,7 +487,7 @@ public class SetSpawnHandler {
         }
 
         if (createdPlatform) {
-            if (!isProtectedSpawnSafe(level, safePos)) {
+            if (isProtectedSpawnUnsafe(level, safePos)) {
                 debug("ensureFinalSafeSpawn: Protected platform safety check failed, rebuilding at " + posToString(safePos));
                 safePos = buildProtectedSpawnPlatform(level, safePos);
             }
@@ -540,7 +541,7 @@ public class SetSpawnHandler {
         boolean useBiomes = SetSpawnConfig.enableBiomes && !SetSpawnConfig.setspawnBiomes.isEmpty();
         boolean useDimensionFallback = SetSpawnConfig.enableDimensions && !SetSpawnConfig.setspawnDimensions.isEmpty();
 
-        ResourceKey<Level> dimKey = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(dimId));
+        ResourceKey<Level> dimKey = ResourceKey.create(Registries.DIMENSION, KineticResourceIds.parse(dimId));
         ServerLevel level = server.getLevel(dimKey);
         if (level == null) {
             debug("calculateConfiguredSpawn abort: target dimension not loaded/exists: " + dimId);
@@ -789,7 +790,7 @@ public class SetSpawnHandler {
             return;
         }
 
-        ResourceKey<Level> dimKey = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(data.getOriginalSpawnDim()));
+        ResourceKey<Level> dimKey = ResourceKey.create(Registries.DIMENSION, KineticResourceIds.parse(data.getOriginalSpawnDim()));
         ServerLevel level = server.getLevel(dimKey);
         if (level == null) {
             return;
@@ -859,7 +860,7 @@ public class SetSpawnHandler {
             if (id == null || id.isBlank()) continue;
 
             try {
-                ResourceLocation loc = new ResourceLocation(id.trim());
+                ResourceLocation loc = KineticResourceIds.parse(id.trim());
                 Optional<Holder.Reference<Structure>> holder = registry.getHolder(ResourceKey.create(Registries.STRUCTURE, loc));
                 if (holder.isPresent()) {
                     holders.add(holder.get());
@@ -1047,8 +1048,8 @@ public class SetSpawnHandler {
         return isSolidSafeFloor(level, centerPos.below()) && isPlayerBodySpaceSafe(level, centerPos);
     }
 
-    private static boolean isProtectedSpawnSafe(ServerLevel level, BlockPos centerPos) {
-        return isSolidSafeFloor(level, centerPos.below()) && isForcedAirSpaceReady(level, centerPos);
+    private static boolean isProtectedSpawnUnsafe(ServerLevel level, BlockPos centerPos) {
+        return !isSolidSafeFloor(level, centerPos.below()) || isForcedAirSpaceBlocked(level, centerPos);
     }
 
     private static boolean isPlayerBodySpaceSafe(ServerLevel level, BlockPos centerPos) {
@@ -1063,16 +1064,16 @@ public class SetSpawnHandler {
         return true;
     }
 
-    private static boolean isForcedAirSpaceReady(ServerLevel level, BlockPos centerPos) {
+    private static boolean isForcedAirSpaceBlocked(ServerLevel level, BlockPos centerPos) {
         for (int x = -PLATFORM_RADIUS; x <= PLATFORM_RADIUS; x++) {
             for (int z = -PLATFORM_RADIUS; z <= PLATFORM_RADIUS; z++) {
                 for (int y = 0; y < FORCED_AIR_HEIGHT; y++) {
-                    if (!isPureAir(level, centerPos.offset(x, y, z))) return false;
+                    if (isNotPureAir(level, centerPos.offset(x, y, z))) return true;
                 }
             }
         }
 
-        return true;
+        return false;
     }
 
     private static boolean isSolidSafeFloor(ServerLevel level, BlockPos pos) {
@@ -1085,9 +1086,9 @@ public class SetSpawnHandler {
                 && !isDangerousBlock(state);
     }
 
-    private static boolean isPureAir(ServerLevel level, BlockPos pos) {
+    private static boolean isNotPureAir(ServerLevel level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        return state.isAir() && level.getFluidState(pos).isEmpty();
+        return !state.isAir() || !level.getFluidState(pos).isEmpty();
     }
 
     private static boolean isDangerousBlock(BlockState state) {

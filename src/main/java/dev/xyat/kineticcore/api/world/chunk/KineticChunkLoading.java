@@ -6,10 +6,14 @@ import net.minecraft.server.level.ServerLevel;
 
 import java.util.Objects;
 
+/** Public Kinetic API facade for chunk loading. */
 public final class KineticChunkLoading {
     private KineticChunkLoading() {
     }
 
+    /**
+     * Updates forced.
+     */
     public static void setForced(
             ServerLevel level,
             String ownerModId,

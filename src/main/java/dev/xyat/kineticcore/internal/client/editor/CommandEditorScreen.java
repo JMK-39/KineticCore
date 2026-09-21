@@ -1,13 +1,12 @@
 package dev.xyat.kineticcore.internal.client.editor;
 
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
-import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.command.KineticCommandSuggestions;
+import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.CommandSuggestions;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
@@ -16,8 +15,8 @@ import org.jetbrains.annotations.NotNull;
 final class CommandEditorScreen extends KineticScreen {
     private final CommandListEditorScreen parent;
     private final int editingIndex;
-    private EditBox input;
-    private CommandSuggestions commandSuggestions;
+    private KineticEditBox input;
+    private KineticCommandSuggestions.Session commandSuggestions;
 
     CommandEditorScreen(CommandListEditorScreen parent, int editingIndex) {
         super(parent.editorTitle(editingIndex));
@@ -36,34 +35,28 @@ final class CommandEditorScreen extends KineticScreen {
                 44,
                 278,
                 552,
-                Component.translatable("gui.kineticcore.command_edit.input")
+                KineticText.translatable("gui.kineticcore.command_edit.input"), null, null, null
         );
         input.setCanLoseFocus(false);
         input.setMaxLength(2048);
         input.setValue(toEditorText(initial));
         focusControl(input);
 
-        commandSuggestions = new CommandSuggestions(
-                minecraft,
-                this,
+        commandSuggestions = KineticCommandSuggestions.create(
                 input,
-                font,
-                false,
-                false,
-                1,
-                10,
-                true,
-                0xD0000000
+                canvasWidth(),
+                canvasHeight(),
+                KineticCommandSuggestions.Options.fieldAligned(false, false, 10, 0xD0000000)
         );
         commandSuggestions.setAllowSuggestions(true);
-        input.setResponder(value -> commandSuggestions.updateCommandInfo());
-        commandSuggestions.updateCommandInfo();
+        input.setResponder(value -> commandSuggestions.update());
+        commandSuggestions.update();
 
         addButton(
                 208,
                 314,
                 96,
-                Component.translatable("gui.kineticcore.command_edit.save"),
+                KineticText.translatable("gui.kineticcore.command_edit.save"),
                 null,
                 this::saveCommand
         );
@@ -71,7 +64,7 @@ final class CommandEditorScreen extends KineticScreen {
                 336,
                 314,
                 96,
-                Component.translatable("gui.kineticcore.command_edit.back"),
+                KineticText.translatable("gui.kineticcore.command_edit.back"),
                 null,
                 this::closeToParent
         );
@@ -84,7 +77,7 @@ final class CommandEditorScreen extends KineticScreen {
         graphics.drawCenteredString(font, title, canvasWidth() / 2, 30, 0xFFFFFF);
         graphics.drawString(
                 font,
-                Component.translatable("gui.kineticcore.command_edit.hint"),
+                KineticText.translatable("gui.kineticcore.command_edit.hint"),
                 44,
                 56,
                 0xFFFFFF,
@@ -120,7 +113,7 @@ final class CommandEditorScreen extends KineticScreen {
     private void saveCommand() {
         String command = normalizeForStorage(input.getValue());
         if (command.isBlank()) {
-            GuiOverlay.toast(Component.translatable("msg.kineticcore.command_edit.empty"));
+            KineticOverlays.toast(null, KineticText.translatable("msg.kineticcore.command_edit.empty"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
             return;
         }
 
@@ -128,16 +121,13 @@ final class CommandEditorScreen extends KineticScreen {
             parent.saveEditedCommand(editingIndex, command);
             closeToParent();
         } catch (Throwable throwable) {
-            GuiOverlay.toast(parent.saveFailedMessage());
+            KineticOverlays.toast(null, parent.saveFailedMessage(), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
         }
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (commandSuggestions != null && commandSuggestions.keyPressed(keyCode, scanCode, modifiers)) {
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    protected boolean canvasKeyPressed(int keyCode, int scanCode, int modifiers) {
+        return commandSuggestions != null && commandSuggestions.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -157,12 +147,7 @@ final class CommandEditorScreen extends KineticScreen {
     }
 
     private void closeToParent() {
-        KineticClientRuntime.openScreen(parent);
-    }
-
-    @Override
-    public void onClose() {
-        closeToParent();
+        navigateBack();
     }
 
     @Override

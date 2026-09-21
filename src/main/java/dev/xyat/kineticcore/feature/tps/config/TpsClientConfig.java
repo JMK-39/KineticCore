@@ -32,7 +32,7 @@ public final class TpsClientConfig {
         HUD_SCALE = builder.comment(
                 "HUD 缩放比例；编辑界面可用鼠标滚轮调整。",
                 "HUD scale; use the mouse wheel in the editor to adjust it."
-        ).translation("cfg.kineticcore.hud.scale").defineDouble("scale", 1.0D, TpsClientConfig::isValidScale);
+        ).translation("cfg.kineticcore.hud.scale").defineDoubleValidated("scale", 1.0D, TpsClientConfig::isValidScale);
 
         builder.pop();
         SPEC = builder.build();

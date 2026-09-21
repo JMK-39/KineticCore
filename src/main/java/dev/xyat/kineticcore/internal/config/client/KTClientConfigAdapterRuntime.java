@@ -168,7 +168,7 @@ public final class KTClientConfigAdapterRuntime {
         String id = stableEntryId(entry.path());
 
         if (defaultValue instanceof Boolean value) {
-            page.booleanValue(
+            page.booleanValueValidated(
                     id, label,
                     () -> (Boolean) entry.configValue().get(),
                     next -> set(entry, next),
@@ -180,7 +180,7 @@ public final class KTClientConfigAdapterRuntime {
             ForgeConfigSpec.Range<?> range = entry.valueSpec().getRange();
             int minimum = range == null ? Integer.MIN_VALUE : ((Number) range.getMin()).intValue();
             int maximum = range == null ? Integer.MAX_VALUE : ((Number) range.getMax()).intValue();
-            page.intValue(
+            page.intValueValidated(
                     id, label,
                     () -> ((Number) entry.configValue().get()).intValue(),
                     next -> set(entry, next),
@@ -192,7 +192,7 @@ public final class KTClientConfigAdapterRuntime {
             ForgeConfigSpec.Range<?> range = entry.valueSpec().getRange();
             long minimum = range == null ? Long.MIN_VALUE : ((Number) range.getMin()).longValue();
             long maximum = range == null ? Long.MAX_VALUE : ((Number) range.getMax()).longValue();
-            page.longValue(
+            page.longValueValidated(
                     id, label,
                     () -> ((Number) entry.configValue().get()).longValue(),
                     next -> set(entry, next),
@@ -208,7 +208,7 @@ public final class KTClientConfigAdapterRuntime {
             ForgeConfigSpec.Range<?> range = entry.valueSpec().getRange();
             double minimum = finiteBound(range == null ? null : range.getMin(), -Double.MAX_VALUE);
             double maximum = finiteBound(range == null ? null : range.getMax(), Double.MAX_VALUE);
-            page.doubleValue(
+            page.doubleValueValidated(
                     id, label,
                     () -> ((Number) entry.configValue().get()).doubleValue(),
                     next -> set(entry, next),
@@ -224,7 +224,7 @@ public final class KTClientConfigAdapterRuntime {
             ForgeConfigSpec.Range<?> range = entry.valueSpec().getRange();
             double minimum = finiteBound(range == null ? null : range.getMin(), -Float.MAX_VALUE);
             double maximum = finiteBound(range == null ? null : range.getMax(), Float.MAX_VALUE);
-            page.doubleValue(
+            page.doubleValueValidated(
                     id, label,
                     () -> ((Number) entry.configValue().get()).doubleValue(),
                     next -> set(entry, next.floatValue()),
@@ -234,7 +234,7 @@ public final class KTClientConfigAdapterRuntime {
             return;
         }
         if (defaultValue instanceof String value) {
-            page.stringValue(
+            page.stringValueValidated(
                     id, label,
                     () -> String.valueOf(entry.configValue().get()),
                     next -> set(entry, next),
@@ -261,7 +261,7 @@ public final class KTClientConfigAdapterRuntime {
                         return new KTConfigEntry.ChoiceOption(stored, optionLabel, optionTooltip);
                     })
                     .toArray(KTConfigEntry.ChoiceOption[]::new);
-            page.choice(
+            page.choiceOptionsValidated(
                     id, label,
                     () -> ((Enum<?>) entry.configValue().get()).name(),
                     next -> set(entry, enumValue(enumClass, next)),
@@ -299,7 +299,7 @@ public final class KTClientConfigAdapterRuntime {
         }
         if (defaults.stream().allMatch(Integer.class::isInstance)) {
             List<Integer> defaultValues = defaults.stream().map(Integer.class::cast).toList();
-            page.intList(
+            page.intListValidated(
                     id, label,
                     () -> integerList(entry.configValue().get()),
                     next -> set(entry, new ArrayList<>(next)),
@@ -309,7 +309,7 @@ public final class KTClientConfigAdapterRuntime {
         }
         if (defaults.stream().allMatch(String.class::isInstance)) {
             List<String> defaultValues = defaults.stream().map(String.class::cast).toList();
-            page.stringList(
+            page.stringListValidated(
                     id, label,
                     () -> stringList(entry.configValue().get()),
                     next -> set(entry, new ArrayList<>(next)),

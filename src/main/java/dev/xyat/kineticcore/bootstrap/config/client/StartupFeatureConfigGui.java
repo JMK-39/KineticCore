@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.bootstrap.config.client;
 
+
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
@@ -19,10 +21,10 @@ public final class StartupFeatureConfigGui {
         List<KineticFeatureSwitches.Descriptor> descriptors = KineticFeatureSwitches.descriptors();
         if (descriptors.isEmpty()) return;
 
-        Component restartNotice = Component.translatable("cfg.kineticcore.startup_features.restart");
+        Component restartNotice = KineticI18n.translatable("cfg.kineticcore.startup_features.restart");
         KTConfigPage.Builder page = KTConfigPage.builder(
                         PAGE_ID,
-                        Component.translatable("cfg.kineticcore.startup_features.title")
+                        KineticI18n.translatable("cfg.kineticcore.startup_features.title")
                 )
                 .scope(KTConfigScope.LOCAL_INSTALLATION)
                 .applyTiming(KTConfigPage.ApplyTiming.RESTART_GAME)
@@ -34,18 +36,18 @@ public final class StartupFeatureConfigGui {
         int index = 0;
         for (KineticFeatureSwitches.Descriptor descriptor : descriptors) {
             if (!descriptor.sectionTranslationKey().equals(previousSection)) {
-                page.section(Component.translatable(descriptor.sectionTranslationKey()));
+                page.section(KineticI18n.translatable(descriptor.sectionTranslationKey()));
                 previousSection = descriptor.sectionTranslationKey();
             }
 
             String featureId = descriptor.id();
             page.booleanValue(
                     "startup_feature_" + index++,
-                    Component.translatable(descriptor.nameTranslationKey()),
+                    KineticI18n.translatable(descriptor.nameTranslationKey()),
                     () -> KineticFeatureSwitches.configuredEnabled(featureId),
                     value -> KineticFeatureSwitches.setConfiguredEnabled(featureId, value),
                     descriptor.defaultEnabled(),
-                    Component.translatable(descriptor.tooltipTranslationKey())
+                    KineticI18n.translatable(descriptor.tooltipTranslationKey())
                             .copy()
                             .append("\n")
                             .append(restartNotice)
@@ -56,6 +58,6 @@ public final class StartupFeatureConfigGui {
     }
 
     public static Screen create(Screen parent) {
-        return KTConfigApi.createScreen(parent, PAGE_ID);
+        return KTConfigApi.createRegisteredPageScreen(parent, PAGE_ID);
     }
 }

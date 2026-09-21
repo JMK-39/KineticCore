@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.feature.datapack;
 
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LogEvent;
@@ -11,7 +12,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class PackErrorAppender extends AbstractAppender {
-    private static boolean registered = false;
+    private static final PackErrorAppender APPENDER = new PackErrorAppender();
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
     // 匹配 ID 的正则
     private static final Pattern ID_PATTERN = Pattern.compile("([a-z0-9_.-]+):([a-z0-9_.-/]+)");
     // 匹配致命错误列表开头的正则 (例如 ]: [philipsruins:ancient_ruin )
@@ -23,13 +25,15 @@ public class PackErrorAppender extends AbstractAppender {
     }
 
     public static void register() {
-        if (registered) return;
-        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-        PackErrorAppender appender = new PackErrorAppender();
-        appender.start();
-        ctx.getRootLogger().addAppender(appender);
-        ctx.updateLoggers();
-        registered = true;
+        REGISTRATION.runSequential(
+                APPENDER::start,
+                () -> loggerContext().getRootLogger().addAppender(APPENDER),
+                () -> loggerContext().updateLoggers()
+        );
+    }
+
+    private static LoggerContext loggerContext() {
+        return (LoggerContext) LogManager.getContext(false);
     }
 
     @Override

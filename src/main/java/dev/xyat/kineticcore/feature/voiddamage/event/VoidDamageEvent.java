@@ -1,7 +1,11 @@
 package dev.xyat.kineticcore.feature.voiddamage.event;
 
-import net.minecraftforge.common.MinecraftForge;
-import dev.xyat.kineticcore.api.runtime.KineticRuntime;
+
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
+import dev.xyat.kineticcore.api.entity.event.KineticLivingEvents;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -10,30 +14,25 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.List;
 
 public class VoidDamageEvent {
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
 
     public static void register() {
-        if (registered) return;
-        registered = true;
-        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGH, VoidDamageEvent::onVoidHurt);
+        REGISTRATION.run(() -> KineticLivingEvents.onHurt(KineticEventPriority.HIGH, VoidDamageEvent::onVoidHurt));
     }
 
 
-    public static void onVoidHurt(LivingHurtEvent event) {
-        LivingEntity entity = event.getEntity();
+    public static void onVoidHurt(KineticLivingEvents.HurtContext context) {
+        LivingEntity entity = context.entity();
 
         if (entity.level().isClientSide() || entity instanceof Player) {
             return;
         }
 
-        if (event.getSource().is(DamageTypes.FELL_OUT_OF_WORLD)) {
+        if (context.source().is(DamageTypes.FELL_OUT_OF_WORLD)) {
             if (isWhiteListed(entity)) {
                 return;
             }
@@ -43,7 +42,7 @@ public class VoidDamageEvent {
             float calcDamage = maxHealth * percentage;
             float finalDamage = Math.max(calcDamage, 4.0f);
 
-            event.setAmount(finalDamage);
+            context.amount(finalDamage);
         }
     }
 
@@ -52,7 +51,7 @@ public class VoidDamageEvent {
             return false;
         }
 
-        ResourceLocation entityId = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
+        ResourceLocation entityId = KineticRegistries.entityTypes().id(entity.getType());
         if (entityId == null) {
             return false;
         }
@@ -71,7 +70,7 @@ public class VoidDamageEvent {
                 }
             } else if (rule.startsWith("#")) {
                 try {
-                    ResourceLocation tagId = new ResourceLocation(rule.substring(1));
+                    ResourceLocation tagId = KineticResourceIds.parse(rule.substring(1));
                     TagKey<EntityType<?>> tagKey = TagKey.create(Registries.ENTITY_TYPE, tagId);
                     if (entity.getType().is(tagKey)) {
                         return true;

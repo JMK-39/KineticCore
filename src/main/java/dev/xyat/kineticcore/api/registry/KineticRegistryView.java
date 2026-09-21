@@ -6,14 +6,18 @@ import net.minecraft.tags.TagKey;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+/** Public API contract for kinetic registry view. */
 public interface KineticRegistryView<T> {
     T get(ResourceLocation id);
 
     ResourceLocation id(T value);
 
     Collection<T> values();
+
+    Map<ResourceLocation, T> entries();
 
     Set<ResourceLocation> ids();
 

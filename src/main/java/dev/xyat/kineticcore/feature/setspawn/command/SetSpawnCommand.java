@@ -75,10 +75,8 @@ public class SetSpawnCommand {
             MutableComponent msg = KineticI18n.translatable("msg.kineticcore.list.structures", Component.literal(String.valueOf(ids.size())));
             if (!ids.isEmpty()) {
                 msg.append(Component.literal("  "));
-                msg.append(KineticI18n.translatable("msg.kineticcore.copy_all")
+                msg.append(KineticI18n.styled("fmt.kineticcore.bold_underlined", KineticI18n.translatable("msg.kineticcore.copy_all"))
                         .withStyle(style -> style
-                                .withBold(true)
-                                .withUnderlined(true)
                                 .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, allIdsStr))
                                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, KineticI18n.translatable("cmd.kineticcore.copy.too_long")))
                         ));

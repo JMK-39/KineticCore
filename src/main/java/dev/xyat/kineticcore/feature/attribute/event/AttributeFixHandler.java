@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.feature.attribute.event;
 
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
 import dev.xyat.kineticcore.api.runtime.KineticModLifecycle;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
@@ -12,19 +13,15 @@ import net.minecraft.client.gui.screens.TitleScreen;
  * 负责属性上限的应用以及客户端配置翻译的刷新
  */
 public class AttributeFixHandler {
-    private static boolean commonRegistered;
-    private static boolean clientRegistered;
+    private static final KineticRegistrationBatch COMMON_REGISTRATION = new KineticRegistrationBatch();
+    private static final KineticRegistrationBatch CLIENT_REGISTRATION = new KineticRegistrationBatch();
 
     public static void register() {
-        if (commonRegistered) return;
-        commonRegistered = true;
-        KineticModLifecycle.onLoadComplete(AttributeConfig::loadAndApply);
+        COMMON_REGISTRATION.run(() -> KineticModLifecycle.onLoadComplete(AttributeConfig::loadAndApply));
     }
 
     public static void registerClient() {
-        if (clientRegistered) return;
-        clientRegistered = true;
-        KineticClientEvents.onScreenInitAfter(AttributeFixHandler::onScreenInit);
+        CLIENT_REGISTRATION.run(() -> KineticClientEvents.onScreenInitAfter(context -> onScreenInit(context.screen())));
     }
 
 

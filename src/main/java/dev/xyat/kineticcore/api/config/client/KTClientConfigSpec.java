@@ -1,10 +1,15 @@
 package dev.xyat.kineticcore.api.config.client;
 
+import dev.xyat.kineticcore.api.config.common.KineticConfigNumbers;
 import dev.xyat.kineticcore.internal.config.client.KineticClientConfigSpecRuntime;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -20,26 +25,40 @@ public final class KTClientConfigSpec {
         this.operations = List.copyOf(operations);
     }
 
+    /**
+     * Creates a new builder.
+     */
     public static Builder builder() {
         return new Builder();
     }
 
+    /**
+     * Returns the operations.
+     */
     public List<Operation> operations() {
         return operations;
     }
 
+    /**
+     * Saves the current values.
+     */
     public void save() {
         KineticClientConfigSpecRuntime.save(this);
     }
 
+    /** Public API contract for operation. */
     public sealed interface Operation permits SectionStart, SectionEnd, EntryDefinition {
     }
 
+    /** Immutable section start data exposed by this API. */
     public record SectionStart(
             String name,
             String translationKey,
             List<String> comments
     ) implements Operation {
+        /**
+         * Validates and normalizes this section start value.
+         */
         public SectionStart {
             Objects.requireNonNull(name, "name");
             translationKey = translationKey == null ? "" : translationKey;
@@ -47,9 +66,11 @@ public final class KTClientConfigSpec {
         }
     }
 
+    /** Immutable section end data exposed by this API. */
     public record SectionEnd() implements Operation {
     }
 
+    /** Supported value type values exposed by this API. */
     public enum ValueType {
         BOOLEAN,
         INTEGER,
@@ -59,6 +80,7 @@ public final class KTClientConfigSpec {
         ENUM
     }
 
+    /** Immutable entry definition data exposed by this API. */
     public record EntryDefinition(
             Value<?> value,
             String name,
@@ -69,6 +91,9 @@ public final class KTClientConfigSpec {
             Number maximum,
             Predicate<Object> validator
     ) implements Operation {
+        /**
+         * Validates and normalizes this entry definition value.
+         */
         public EntryDefinition {
             Objects.requireNonNull(value, "value");
             Objects.requireNonNull(name, "name");
@@ -79,6 +104,7 @@ public final class KTClientConfigSpec {
         }
     }
 
+    /** Typed value wrapper exposed by the configuration API. */
     public abstract static class Value<T> {
         private final T defaultValue;
         private volatile T localValue;
@@ -89,62 +115,81 @@ public final class KTClientConfigSpec {
             this.localValue = defaultValue;
         }
 
+        /**
+         * Performs the get API operation.
+         */
         public final T get() {
             return KineticClientConfigSpecRuntime.get(this, localValue);
         }
 
+        /**
+         * Performs the set API operation.
+         */
         public final void set(T value) {
             T next = Objects.requireNonNull(value, "value");
             if (!validator.test(next)) {
                 throw new IllegalArgumentException("Value rejected by client config validator");
             }
-            localValue = next;
+            // Publish the local fallback only after the native config accepted the update.
             KineticClientConfigSpecRuntime.set(this, next);
+            localValue = next;
         }
 
+        /**
+         * Returns the default value.
+         */
         public final T defaultValue() {
             return defaultValue;
         }
     }
 
+    /** Typed boolean value wrapper exposed by the configuration API. */
     public static final class BooleanValue extends Value<Boolean> {
         private BooleanValue(boolean defaultValue) {
             super(defaultValue);
         }
     }
 
+    /** Typed int value wrapper exposed by the configuration API. */
     public static final class IntValue extends Value<Integer> {
         private IntValue(int defaultValue) {
             super(defaultValue);
         }
     }
 
+    /** Typed long value wrapper exposed by the configuration API. */
     public static final class LongValue extends Value<Long> {
         private LongValue(long defaultValue) {
             super(defaultValue);
         }
     }
 
+    /** Typed double value wrapper exposed by the configuration API. */
     public static final class DoubleValue extends Value<Double> {
         private DoubleValue(double defaultValue) {
             super(defaultValue);
         }
     }
 
+    /** Typed string value wrapper exposed by the configuration API. */
     public static final class StringValue extends Value<String> {
         private StringValue(String defaultValue) {
             super(defaultValue);
         }
     }
 
+    /** Typed enum value wrapper exposed by the configuration API. */
     public static final class EnumValue<E extends Enum<E>> extends Value<E> {
         private EnumValue(E defaultValue) {
             super(defaultValue);
         }
     }
 
+    /** Builder for definitions owned by the enclosing API. */
     public static final class Builder {
         private final List<Operation> operations = new ArrayList<>();
+        private final List<String> sectionPath = new ArrayList<>();
+        private final Set<List<String>> entryPaths = new HashSet<>();
         private List<String> pendingComments = List.of();
         private String pendingTranslation = "";
         private int depth;
@@ -153,6 +198,9 @@ public final class KTClientConfigSpec {
         private Builder() {
         }
 
+        /**
+         * Performs the comment API operation.
+         */
         public Builder comment(String... comments) {
             ensureMutable();
             if (comments == null || comments.length == 0) {
@@ -167,36 +215,53 @@ public final class KTClientConfigSpec {
             return this;
         }
 
+        /**
+         * Performs the translation API operation.
+         */
         public Builder translation(String translationKey) {
             ensureMutable();
             pendingTranslation = translationKey == null ? "" : translationKey.trim();
             return this;
         }
 
+        /**
+         * Performs the push API operation.
+         */
         public Builder push(String name) {
             ensureMutable();
             String normalized = requireName(name);
             operations.add(new SectionStart(normalized, pendingTranslation, pendingComments));
+            sectionPath.add(normalized);
             clearPendingMetadata();
             depth++;
             return this;
         }
 
+        /**
+         * Performs the pop API operation.
+         */
         public Builder pop() {
             ensureMutable();
             if (depth <= 0) throw new IllegalStateException("No client config section to close");
             operations.add(new SectionEnd());
             depth--;
+            sectionPath.remove(sectionPath.size() - 1);
             clearPendingMetadata();
             return this;
         }
 
+        /**
+         * Performs the define boolean API operation.
+         */
         public BooleanValue defineBoolean(String name, boolean defaultValue) {
             BooleanValue value = new BooleanValue(defaultValue);
             addEntry(value, name, ValueType.BOOLEAN, null, null, ignored -> true);
             return value;
         }
 
+        /**
+         * Performs the define int API operation.
+         */
         public IntValue defineInt(String name, int defaultValue, int minimum, int maximum) {
             if (minimum > maximum) throw new IllegalArgumentException("minimum cannot exceed maximum");
             if (defaultValue < minimum || defaultValue > maximum) {
@@ -204,12 +269,13 @@ public final class KTClientConfigSpec {
             }
             IntValue value = new IntValue(defaultValue);
             addEntry(value, name, ValueType.INTEGER, minimum, maximum,
-                    raw -> raw instanceof Number number
-                            && number.intValue() >= minimum
-                            && number.intValue() <= maximum);
+                    raw -> isExactIntegerInRange(raw, minimum, maximum));
             return value;
         }
 
+        /**
+         * Performs the define long API operation.
+         */
         public LongValue defineLong(String name, long defaultValue, long minimum, long maximum) {
             if (minimum > maximum) throw new IllegalArgumentException("minimum cannot exceed maximum");
             if (defaultValue < minimum || defaultValue > maximum) {
@@ -217,12 +283,13 @@ public final class KTClientConfigSpec {
             }
             LongValue value = new LongValue(defaultValue);
             addEntry(value, name, ValueType.LONG, minimum, maximum,
-                    raw -> raw instanceof Number number
-                            && number.longValue() >= minimum
-                            && number.longValue() <= maximum);
+                    raw -> isExactIntegerInRange(raw, minimum, maximum));
             return value;
         }
 
+        /**
+         * Performs the define double API operation.
+         */
         public DoubleValue defineDouble(String name, double defaultValue, double minimum, double maximum) {
             if (!Double.isFinite(defaultValue) || !Double.isFinite(minimum) || !Double.isFinite(maximum)) {
                 throw new IllegalArgumentException("Double config values must be finite");
@@ -233,23 +300,30 @@ public final class KTClientConfigSpec {
             }
             DoubleValue value = new DoubleValue(defaultValue);
             addEntry(value, name, ValueType.DOUBLE, minimum, maximum,
-                    raw -> raw instanceof Number number
-                            && Double.isFinite(number.doubleValue())
-                            && number.doubleValue() >= minimum
-                            && number.doubleValue() <= maximum);
+                    raw -> isFiniteNumberInRange(raw, minimum, maximum));
             return value;
         }
 
-        public DoubleValue defineDouble(String name, double defaultValue, Predicate<Object> validator) {
+        /**
+         * Performs the define double validated API operation.
+         */
+        public DoubleValue defineDoubleValidated(String name, double defaultValue, Predicate<Object> validator) {
             Objects.requireNonNull(validator, "validator");
+            if (!Double.isFinite(defaultValue)) {
+                throw new IllegalArgumentException("Double config values must be finite");
+            }
             if (!validator.test(defaultValue)) {
                 throw new IllegalArgumentException("defaultValue is rejected by validator");
             }
             DoubleValue value = new DoubleValue(defaultValue);
-            addEntry(value, name, ValueType.DOUBLE, null, null, validator);
+            addEntry(value, name, ValueType.DOUBLE, null, null,
+                    raw -> raw instanceof Double number && Double.isFinite(number) && validator.test(number));
             return value;
         }
 
+        /**
+         * Performs the define string API operation.
+         */
         public StringValue defineString(String name, String defaultValue, Predicate<String> validator) {
             Objects.requireNonNull(validator, "validator");
             if (!validator.test(defaultValue)) {
@@ -261,6 +335,9 @@ public final class KTClientConfigSpec {
             return value;
         }
 
+        /**
+         * Performs the define enum API operation.
+         */
         public <E extends Enum<E>> EnumValue<E> defineEnum(String name, E defaultValue) {
             EnumValue<E> value = new EnumValue<>(Objects.requireNonNull(defaultValue, "defaultValue"));
             addEntry(value, name, ValueType.ENUM, null, null,
@@ -268,12 +345,33 @@ public final class KTClientConfigSpec {
             return value;
         }
 
+        /**
+         * Builds the configured API value.
+         */
         public KTClientConfigSpec build() {
             ensureMutable();
             if (depth != 0) throw new IllegalStateException("Unclosed client config section");
             built = true;
             clearPendingMetadata();
             return new KTClientConfigSpec(operations);
+        }
+
+        /** Compare precise decimal metadata before it can be rounded into an allowed double range. */
+        private static boolean isFiniteNumberInRange(Object raw, double minimum, double maximum) {
+            return raw instanceof Number number
+                    && KineticConfigNumbers.finiteDoubleInRange(number, minimum, maximum) != null;
+        }
+
+        /** Reject fractional, overflowing and non-finite values before exposing config metadata. */
+        private static boolean isExactIntegerInRange(Object raw, long minimum, long maximum) {
+            if (!(raw instanceof Number number)) return false;
+            try {
+                BigInteger integer = new BigDecimal(number.toString()).toBigIntegerExact();
+                return integer.compareTo(BigInteger.valueOf(minimum)) >= 0
+                        && integer.compareTo(BigInteger.valueOf(maximum)) <= 0;
+            } catch (NumberFormatException | ArithmeticException invalid) {
+                return false;
+            }
         }
 
         private void addEntry(
@@ -285,17 +383,25 @@ public final class KTClientConfigSpec {
                 Predicate<Object> validator
         ) {
             ensureMutable();
-            value.validator = validator;
-            operations.add(new EntryDefinition(
+            String normalizedName = requireName(name);
+            List<String> path = new ArrayList<>(sectionPath);
+            path.add(normalizedName);
+            if (entryPaths.contains(path)) {
+                throw new IllegalArgumentException("Duplicate client config entry path: " + String.join(".", path));
+            }
+            EntryDefinition entry = new EntryDefinition(
                     value,
-                    requireName(name),
+                    normalizedName,
                     type,
                     pendingTranslation,
                     pendingComments,
                     minimum,
                     maximum,
                     validator
-            ));
+            );
+            operations.add(entry);
+            entryPaths.add(List.copyOf(path));
+            value.validator = validator;
             clearPendingMetadata();
         }
 

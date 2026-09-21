@@ -13,6 +13,7 @@ import java.util.function.Supplier;
 public final class KineticClientRendererRuntime {
     private static final List<EntityRendererRegistration<?>> ENTITY_RENDERERS = new ArrayList<>();
     private static boolean listenerRegistered;
+    private static boolean registrationClosed;
 
     private KineticClientRendererRuntime() {
     }
@@ -21,24 +22,36 @@ public final class KineticClientRendererRuntime {
             Supplier<? extends EntityType<T>> entityType,
             EntityRendererProvider<T> provider
     ) {
-        ENTITY_RENDERERS.add(new EntityRendererRegistration<>(entityType, provider));
+        if (registrationClosed) {
+            throw new IllegalStateException("Entity renderer registration window has already closed");
+        }
+        // Do not retain an entry when Forge rejects the listener installation.
         ensureListener();
+        ENTITY_RENDERERS.add(new EntityRendererRegistration<>(entityType, provider));
     }
 
     private static void ensureListener() {
         if (listenerRegistered) return;
-        listenerRegistered = true;
         FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticClientRendererRuntime::onRegisterRenderers);
+        listenerRegistered = true;
     }
 
     private static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         List<EntityRendererRegistration<?>> registrations;
         synchronized (KineticClientRendererRuntime.class) {
+            registrationClosed = true;
             registrations = List.copyOf(ENTITY_RENDERERS);
         }
+        RuntimeException failure = null;
         for (EntityRendererRegistration<?> registration : registrations) {
-            registration.register(event);
+            try {
+                registration.register(event);
+            } catch (RuntimeException exception) {
+                if (failure == null) failure = exception;
+                else if (failure != exception) failure.addSuppressed(exception);
+            }
         }
+        if (failure != null) throw failure;
     }
 
     private record EntityRendererRegistration<T extends Entity>(

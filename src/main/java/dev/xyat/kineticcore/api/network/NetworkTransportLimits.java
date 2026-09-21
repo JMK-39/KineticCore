@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.api.network;
 
+/** Immutable network transport limits data exposed by this API. */
 public record NetworkTransportLimits(
         int timeoutSeconds,
         int customPayloadBytes,
@@ -11,6 +12,9 @@ public record NetworkTransportLimits(
         int varLongBytes,
         int varInt21Bytes
 ) {
+    /**
+     * Creates a new network transport limits instance.
+     */
     public static final NetworkTransportLimits DEFAULT = new NetworkTransportLimits(
             30,
             1_048_576,
@@ -23,6 +27,9 @@ public record NetworkTransportLimits(
             3
     );
 
+    /**
+     * Validates and normalizes this network transport limits value.
+     */
     public NetworkTransportLimits {
         requirePositive(timeoutSeconds, "timeoutSeconds");
         requirePositive(customPayloadBytes, "customPayloadBytes");

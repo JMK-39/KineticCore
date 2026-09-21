@@ -1,16 +1,23 @@
 package dev.xyat.kineticcore.internal.runtime.event;
 
+import dev.xyat.kineticcore.internal.runtime.KineticCallbackBatch;
+
+import dev.xyat.kineticcore.internal.runtime.KineticForgeListenerRegistrations;
 import dev.xyat.kineticcore.api.entity.event.KineticLivingEvents;
-import dev.xyat.kineticcore.api.hook.HookRegistration;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
+import dev.xyat.kineticcore.api.event.KineticEventSubscription;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.EntityEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
@@ -30,20 +37,23 @@ import java.util.EnumMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class KineticLivingEventRuntime {
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.LivingHandler>> TICK = livingHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.UseItemFinishHandler>> USE_ITEM_FINISH = useItemFinishHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.KnockbackHandler>> KNOCKBACK = knockbackHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.EquipmentChangeHandler>> EQUIPMENT_CHANGE = equipmentHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.DeathHandler>> DEATH = deathHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.DeathHandler>> DEATH_RECEIVE_CANCELLED = deathHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.HurtHandler>> HURT = hurtHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.DamageHandler>> DAMAGE = damageHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.HealHandler>> HEAL = healHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.AttackHandler>> ATTACK = attackHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.PotionApplicableHandler>> POTION_APPLICABLE = potionHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.ExperienceDropHandler>> EXPERIENCE_DROP = experienceDropHandlers();
-    private static final EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.DropsHandler>> DROPS = dropsHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.SizeHandler>> SIZE = buckets();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.LivingHandler>> TICK = livingHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.UseItemFinishHandler>> USE_ITEM_FINISH = useItemFinishHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.KnockbackHandler>> KNOCKBACK = knockbackHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.EquipmentChangeHandler>> EQUIPMENT_CHANGE = equipmentHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.DeathHandler>> DEATH = deathHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.DeathHandler>> DEATH_RECEIVE_CANCELLED = deathHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.HurtHandler>> HURT = hurtHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.DamageHandler>> DAMAGE = damageHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.HealHandler>> HEAL = healHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.AttackHandler>> ATTACK = attackHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.TargetChangeHandler>> TARGET_CHANGE = buckets();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.PotionApplicableHandler>> POTION_APPLICABLE = potionHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.ExperienceDropHandler>> EXPERIENCE_DROP = experienceDropHandlers();
+    private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.DropsHandler>> DROPS = dropsHandlers();
 
+    private static final KineticForgeListenerRegistrations LISTENER_REGISTRATIONS = new KineticForgeListenerRegistrations();
     private static boolean initialized;
 
     private KineticLivingEventRuntime() {
@@ -51,48 +61,58 @@ public final class KineticLivingEventRuntime {
 
     public static synchronized void initialize() {
         if (initialized) return;
-        initialized = true;
+        var attempt = LISTENER_REGISTRATIONS.begin();
+        int slot = 0;
 
-        for (KineticLivingEvents.Priority priority : KineticLivingEvents.Priority.values()) {
+        for (KineticEventPriority priority : KineticEventPriority.values()) {
             EventPriority forgePriority = toForge(priority);
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEvent.LivingTickEvent event) -> onTick(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEntityUseItemEvent.Finish event) -> onUseItemFinish(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingKnockBackEvent event) -> onKnockback(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEquipmentChangeEvent event) -> onEquipmentChange(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDeathEvent event) -> onDeath(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, true, (LivingDeathEvent event) -> onDeathReceiveCancelled(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingHurtEvent event) -> onHurt(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDamageEvent event) -> onDamage(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingHealEvent event) -> onHeal(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingAttackEvent event) -> onAttack(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (MobEffectEvent.Applicable event) -> onPotionApplicable(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingExperienceDropEvent event) -> onExperienceDrop(priority, event));
-            MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDropsEvent event) -> onDrops(priority, event));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityEvent.Size event) -> onSize(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEvent.LivingTickEvent event) -> onTick(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEntityUseItemEvent.Finish event) -> onUseItemFinish(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingKnockBackEvent event) -> onKnockback(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEquipmentChangeEvent event) -> onEquipmentChange(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDeathEvent event) -> onDeath(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, true, (LivingDeathEvent event) -> onDeathReceiveCancelled(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingHurtEvent event) -> onHurt(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDamageEvent event) -> onDamage(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingHealEvent event) -> onHeal(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingAttackEvent event) -> onAttack(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingChangeTargetEvent event) -> onTargetChange(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (MobEffectEvent.Applicable event) -> onPotionApplicable(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingExperienceDropEvent event) -> onExperienceDrop(priority, event)));
+            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDropsEvent event) -> onDrops(priority, event)));
         }
+        attempt.finish();
+        initialized = true;
     }
 
-    public static HookRegistration registerTick(KineticLivingEvents.Priority priority, KineticLivingEvents.LivingHandler handler) {
+    public static KineticEventSubscription registerSize(KineticEventPriority priority, KineticLivingEvents.SizeHandler handler) {
+        initialize();
+        return add(SIZE, priority, handler);
+    }
+
+    public static KineticEventSubscription registerTick(KineticEventPriority priority, KineticLivingEvents.LivingHandler handler) {
         initialize();
         return add(TICK, priority, handler);
     }
 
-    public static HookRegistration registerUseItemFinish(KineticLivingEvents.Priority priority, KineticLivingEvents.UseItemFinishHandler handler) {
+    public static KineticEventSubscription registerUseItemFinish(KineticEventPriority priority, KineticLivingEvents.UseItemFinishHandler handler) {
         initialize();
         return add(USE_ITEM_FINISH, priority, handler);
     }
 
-    public static HookRegistration registerKnockback(KineticLivingEvents.Priority priority, KineticLivingEvents.KnockbackHandler handler) {
+    public static KineticEventSubscription registerKnockback(KineticEventPriority priority, KineticLivingEvents.KnockbackHandler handler) {
         initialize();
         return add(KNOCKBACK, priority, handler);
     }
 
-    public static HookRegistration registerEquipmentChange(KineticLivingEvents.Priority priority, KineticLivingEvents.EquipmentChangeHandler handler) {
+    public static KineticEventSubscription registerEquipmentChange(KineticEventPriority priority, KineticLivingEvents.EquipmentChangeHandler handler) {
         initialize();
         return add(EQUIPMENT_CHANGE, priority, handler);
     }
 
-    public static HookRegistration registerDeath(
-            KineticLivingEvents.Priority priority,
+    public static KineticEventSubscription registerDeath(
+            KineticEventPriority priority,
             boolean receiveCancelled,
             KineticLivingEvents.DeathHandler handler
     ) {
@@ -100,138 +120,153 @@ public final class KineticLivingEventRuntime {
         return add(receiveCancelled ? DEATH_RECEIVE_CANCELLED : DEATH, priority, handler);
     }
 
-    public static HookRegistration registerHurt(KineticLivingEvents.Priority priority, KineticLivingEvents.HurtHandler handler) {
+    public static KineticEventSubscription registerHurt(KineticEventPriority priority, KineticLivingEvents.HurtHandler handler) {
         initialize();
         return add(HURT, priority, handler);
     }
 
-    public static HookRegistration registerDamage(KineticLivingEvents.Priority priority, KineticLivingEvents.DamageHandler handler) {
+    public static KineticEventSubscription registerDamage(KineticEventPriority priority, KineticLivingEvents.DamageHandler handler) {
         initialize();
         return add(DAMAGE, priority, handler);
     }
 
-    public static HookRegistration registerHeal(KineticLivingEvents.Priority priority, KineticLivingEvents.HealHandler handler) {
+    public static KineticEventSubscription registerHeal(KineticEventPriority priority, KineticLivingEvents.HealHandler handler) {
         initialize();
         return add(HEAL, priority, handler);
     }
 
-    public static HookRegistration registerAttack(KineticLivingEvents.Priority priority, KineticLivingEvents.AttackHandler handler) {
+    public static KineticEventSubscription registerAttack(KineticEventPriority priority, KineticLivingEvents.AttackHandler handler) {
         initialize();
         return add(ATTACK, priority, handler);
     }
 
-    public static HookRegistration registerPotionApplicable(KineticLivingEvents.Priority priority, KineticLivingEvents.PotionApplicableHandler handler) {
+    public static KineticEventSubscription registerTargetChange(KineticEventPriority priority, KineticLivingEvents.TargetChangeHandler handler) {
+        initialize();
+        return add(TARGET_CHANGE, priority, handler);
+    }
+
+    public static KineticEventSubscription registerPotionApplicable(KineticEventPriority priority, KineticLivingEvents.PotionApplicableHandler handler) {
         initialize();
         return add(POTION_APPLICABLE, priority, handler);
     }
 
-    public static HookRegistration registerExperienceDrop(KineticLivingEvents.Priority priority, KineticLivingEvents.ExperienceDropHandler handler) {
+    public static KineticEventSubscription registerExperienceDrop(KineticEventPriority priority, KineticLivingEvents.ExperienceDropHandler handler) {
         initialize();
         return add(EXPERIENCE_DROP, priority, handler);
     }
 
-    public static HookRegistration registerDrops(KineticLivingEvents.Priority priority, KineticLivingEvents.DropsHandler handler) {
+    public static KineticEventSubscription registerDrops(KineticEventPriority priority, KineticLivingEvents.DropsHandler handler) {
         initialize();
         return add(DROPS, priority, handler);
     }
 
-    private static void onTick(KineticLivingEvents.Priority priority, LivingEvent.LivingTickEvent event) {
-        for (KineticLivingEvents.LivingHandler handler : TICK.get(priority)) {
-            handler.handle(event.getEntity());
-        }
+    private static void onSize(KineticEventPriority priority, EntityEvent.Size event) {
+        if (!(event.getEntity() instanceof LivingEntity living)) return;
+        SizeContextImpl context = new SizeContextImpl(event, living);
+        KineticCallbackBatch.runAll(SIZE.get(priority), handler -> handler.handle(context));
     }
 
-    private static void onUseItemFinish(KineticLivingEvents.Priority priority, LivingEntityUseItemEvent.Finish event) {
+    private static void onTick(KineticEventPriority priority, LivingEvent.LivingTickEvent event) {
+        KineticCallbackBatch.runAll(TICK.get(priority), handler -> handler.handle(event.getEntity()));
+    }
+
+    private static void onUseItemFinish(KineticEventPriority priority, LivingEntityUseItemEvent.Finish event) {
         UseItemFinishContextImpl context = new UseItemFinishContextImpl(event);
-        for (KineticLivingEvents.UseItemFinishHandler handler : USE_ITEM_FINISH.get(priority)) {
-            handler.handle(context);
-        }
+        KineticCallbackBatch.runAll(USE_ITEM_FINISH.get(priority), handler -> handler.handle(context));
     }
 
-    private static void onKnockback(KineticLivingEvents.Priority priority, LivingKnockBackEvent event) {
+    private static void onKnockback(KineticEventPriority priority, LivingKnockBackEvent event) {
         KnockbackContextImpl context = new KnockbackContextImpl(event);
-        for (KineticLivingEvents.KnockbackHandler handler : KNOCKBACK.get(priority)) {
-            handler.handle(context);
-            if (context.cancelled()) break;
-        }
+        KineticCallbackBatch.runUntilCancelled(
+                KNOCKBACK.get(priority),
+                handler -> handler.handle(context),
+                context::cancelled
+        );
     }
 
-    private static void onEquipmentChange(KineticLivingEvents.Priority priority, LivingEquipmentChangeEvent event) {
-        for (KineticLivingEvents.EquipmentChangeHandler handler : EQUIPMENT_CHANGE.get(priority)) {
-            handler.handle(event.getEntity(), event.getSlot(), event.getFrom(), event.getTo());
-        }
+    private static void onEquipmentChange(KineticEventPriority priority, LivingEquipmentChangeEvent event) {
+        KineticCallbackBatch.runAll(EQUIPMENT_CHANGE.get(priority), handler -> handler.handle(event.getEntity(), event.getSlot(), event.getFrom(), event.getTo()));
     }
 
-    private static void onDeath(KineticLivingEvents.Priority priority, LivingDeathEvent event) {
+    private static void onDeath(KineticEventPriority priority, LivingDeathEvent event) {
         DeathContextImpl context = new DeathContextImpl(event);
-        for (KineticLivingEvents.DeathHandler handler : DEATH.get(priority)) {
-            handler.handle(context);
-            if (context.cancelled()) break;
-        }
+        KineticCallbackBatch.runUntilCancelled(
+                DEATH.get(priority),
+                handler -> handler.handle(context),
+                context::cancelled
+        );
     }
 
-    private static void onDeathReceiveCancelled(KineticLivingEvents.Priority priority, LivingDeathEvent event) {
+    private static void onDeathReceiveCancelled(KineticEventPriority priority, LivingDeathEvent event) {
         DeathContextImpl context = new DeathContextImpl(event);
-        for (KineticLivingEvents.DeathHandler handler : DEATH_RECEIVE_CANCELLED.get(priority)) {
-            handler.handle(context);
-        }
+        KineticCallbackBatch.runAll(DEATH_RECEIVE_CANCELLED.get(priority), handler -> handler.handle(context));
     }
 
-    private static void onHurt(KineticLivingEvents.Priority priority, LivingHurtEvent event) {
+    private static void onHurt(KineticEventPriority priority, LivingHurtEvent event) {
         HurtContextImpl context = new HurtContextImpl(event);
-        for (KineticLivingEvents.HurtHandler handler : HURT.get(priority)) {
-            handler.handle(context);
-            if (context.cancelled()) break;
-        }
+        KineticCallbackBatch.runUntilCancelled(
+                HURT.get(priority),
+                handler -> handler.handle(context),
+                context::cancelled
+        );
     }
 
-    private static void onDamage(KineticLivingEvents.Priority priority, LivingDamageEvent event) {
+    private static void onDamage(KineticEventPriority priority, LivingDamageEvent event) {
         DamageContextImpl context = new DamageContextImpl(event);
-        for (KineticLivingEvents.DamageHandler handler : DAMAGE.get(priority)) {
-            handler.handle(context);
-        }
+        KineticCallbackBatch.runAll(DAMAGE.get(priority), handler -> handler.handle(context));
     }
 
-    private static void onHeal(KineticLivingEvents.Priority priority, LivingHealEvent event) {
+    private static void onHeal(KineticEventPriority priority, LivingHealEvent event) {
         HealContextImpl context = new HealContextImpl(event);
-        for (KineticLivingEvents.HealHandler handler : HEAL.get(priority)) {
-            handler.handle(context);
-            if (context.cancelled()) break;
-        }
+        KineticCallbackBatch.runUntilCancelled(
+                HEAL.get(priority),
+                handler -> handler.handle(context),
+                context::cancelled
+        );
     }
 
-    private static void onAttack(KineticLivingEvents.Priority priority, LivingAttackEvent event) {
+    private static void onAttack(KineticEventPriority priority, LivingAttackEvent event) {
         AttackContextImpl context = new AttackContextImpl(event);
-        for (KineticLivingEvents.AttackHandler handler : ATTACK.get(priority)) {
-            handler.handle(context);
-            if (context.cancelled()) break;
-        }
+        KineticCallbackBatch.runUntilCancelled(
+                ATTACK.get(priority),
+                handler -> handler.handle(context),
+                context::cancelled
+        );
     }
 
-    private static void onPotionApplicable(KineticLivingEvents.Priority priority, MobEffectEvent.Applicable event) {
+    private static void onTargetChange(KineticEventPriority priority, LivingChangeTargetEvent event) {
+        TargetChangeContextImpl context = new TargetChangeContextImpl(event);
+        KineticCallbackBatch.runUntilCancelled(
+                TARGET_CHANGE.get(priority),
+                handler -> handler.handle(context),
+                context::cancelled
+        );
+    }
+
+    private static void onPotionApplicable(KineticEventPriority priority, MobEffectEvent.Applicable event) {
         PotionApplicableContextImpl context = new PotionApplicableContextImpl(event);
-        for (KineticLivingEvents.PotionApplicableHandler handler : POTION_APPLICABLE.get(priority)) {
-            handler.handle(context);
-        }
+        KineticCallbackBatch.runAll(POTION_APPLICABLE.get(priority), handler -> handler.handle(context));
     }
 
-    private static void onExperienceDrop(KineticLivingEvents.Priority priority, LivingExperienceDropEvent event) {
+    private static void onExperienceDrop(KineticEventPriority priority, LivingExperienceDropEvent event) {
         ExperienceDropContextImpl context = new ExperienceDropContextImpl(event);
-        for (KineticLivingEvents.ExperienceDropHandler handler : EXPERIENCE_DROP.get(priority)) {
-            handler.handle(context);
-            if (context.cancelled()) break;
-        }
+        KineticCallbackBatch.runUntilCancelled(
+                EXPERIENCE_DROP.get(priority),
+                handler -> handler.handle(context),
+                context::cancelled
+        );
     }
 
-    private static void onDrops(KineticLivingEvents.Priority priority, LivingDropsEvent event) {
+    private static void onDrops(KineticEventPriority priority, LivingDropsEvent event) {
         DropsContextImpl context = new DropsContextImpl(event);
-        for (KineticLivingEvents.DropsHandler handler : DROPS.get(priority)) {
-            handler.handle(context);
-            if (context.cancelled()) break;
-        }
+        KineticCallbackBatch.runUntilCancelled(
+                DROPS.get(priority),
+                handler -> handler.handle(context),
+                context::cancelled
+        );
     }
 
-    private static EventPriority toForge(KineticLivingEvents.Priority priority) {
+    private static EventPriority toForge(KineticEventPriority priority) {
         return switch (priority) {
             case HIGHEST -> EventPriority.HIGHEST;
             case HIGH -> EventPriority.HIGH;
@@ -239,6 +274,29 @@ public final class KineticLivingEventRuntime {
             case LOW -> EventPriority.LOW;
             case LOWEST -> EventPriority.LOWEST;
         };
+    }
+
+    private record SizeContextImpl(EntityEvent.Size event, LivingEntity entity) implements KineticLivingEvents.SizeContext {
+        @Override
+        public Pose pose() { return event.getPose(); }
+
+        @Override
+        public EntityDimensions oldSize() { return event.getOldSize(); }
+
+        @Override
+        public EntityDimensions newSize() { return event.getNewSize(); }
+
+        @Override
+        public void newSize(EntityDimensions size) { event.setNewSize(size); }
+
+        @Override
+        public float oldEyeHeight() { return event.getOldEyeHeight(); }
+
+        @Override
+        public float newEyeHeight() { return event.getNewEyeHeight(); }
+
+        @Override
+        public void newEyeHeight(float height) { event.setNewEyeHeight(height); }
     }
 
     private record UseItemFinishContextImpl(LivingEntityUseItemEvent.Finish event) implements KineticLivingEvents.UseItemFinishContext {
@@ -408,6 +466,26 @@ public final class KineticLivingEventRuntime {
         }
     }
 
+    private record TargetChangeContextImpl(LivingChangeTargetEvent event) implements KineticLivingEvents.TargetChangeContext {
+        @Override
+        public LivingEntity entity() { return event.getEntity(); }
+
+        @Override
+        public LivingEntity originalTarget() { return event.getOriginalTarget(); }
+
+        @Override
+        public LivingEntity newTarget() { return event.getNewTarget(); }
+
+        @Override
+        public void newTarget(LivingEntity target) { event.setNewTarget(target); }
+
+        @Override
+        public boolean cancelled() { return event.isCanceled(); }
+
+        @Override
+        public void cancel() { event.setCanceled(true); }
+    }
+
     private record ExperienceDropContextImpl(LivingExperienceDropEvent event) implements KineticLivingEvents.ExperienceDropContext {
         @Override
         public LivingEntity entity() {
@@ -507,67 +585,67 @@ public final class KineticLivingEventRuntime {
         }
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.UseItemFinishHandler>> useItemFinishHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.UseItemFinishHandler>> useItemFinishHandlers() {
         return buckets();
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.KnockbackHandler>> knockbackHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.KnockbackHandler>> knockbackHandlers() {
         return buckets();
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.LivingHandler>> livingHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.LivingHandler>> livingHandlers() {
         return buckets();
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.EquipmentChangeHandler>> equipmentHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.EquipmentChangeHandler>> equipmentHandlers() {
         return buckets();
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.DeathHandler>> deathHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.DeathHandler>> deathHandlers() {
         return buckets();
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.HurtHandler>> hurtHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.HurtHandler>> hurtHandlers() {
         return buckets();
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.DamageHandler>> damageHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.DamageHandler>> damageHandlers() {
         return buckets();
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.HealHandler>> healHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.HealHandler>> healHandlers() {
         return buckets();
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.AttackHandler>> attackHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.AttackHandler>> attackHandlers() {
         return buckets();
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.PotionApplicableHandler>> potionHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.PotionApplicableHandler>> potionHandlers() {
         return buckets();
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.ExperienceDropHandler>> experienceDropHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.ExperienceDropHandler>> experienceDropHandlers() {
         return buckets();
     }
 
-    private static EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<KineticLivingEvents.DropsHandler>> dropsHandlers() {
+    private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.DropsHandler>> dropsHandlers() {
         return buckets();
     }
 
-    private static <T> EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<T>> buckets() {
-        EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<T>> result = new EnumMap<>(KineticLivingEvents.Priority.class);
-        for (KineticLivingEvents.Priority priority : KineticLivingEvents.Priority.values()) {
+    private static <T> EnumMap<KineticEventPriority, CopyOnWriteArrayList<T>> buckets() {
+        EnumMap<KineticEventPriority, CopyOnWriteArrayList<T>> result = new EnumMap<>(KineticEventPriority.class);
+        for (KineticEventPriority priority : KineticEventPriority.values()) {
             result.put(priority, new CopyOnWriteArrayList<>());
         }
         return result;
     }
 
-    private static <T> HookRegistration add(EnumMap<KineticLivingEvents.Priority, CopyOnWriteArrayList<T>> listeners,
-                                            KineticLivingEvents.Priority priority,
+    private static <T> KineticEventSubscription add(EnumMap<KineticEventPriority, CopyOnWriteArrayList<T>> listeners,
+                                            KineticEventPriority priority,
                                             T listener) {
         CopyOnWriteArrayList<T> bucket = listeners.get(priority);
         bucket.add(listener);
-        return () -> bucket.remove(listener);
+        return KineticEventSubscription.once(() -> bucket.remove(listener));
     }
 }

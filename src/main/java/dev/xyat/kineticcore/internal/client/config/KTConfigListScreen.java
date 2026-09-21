@@ -3,15 +3,13 @@ package dev.xyat.kineticcore.internal.client.config;
 import dev.xyat.kineticcore.api.config.client.*;
 
 import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
-import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
-import net.minecraft.client.Minecraft;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -76,14 +74,14 @@ final class KTConfigListScreen extends KineticScreen {
         for (int index = 0; index < values.size(); index++) {
             int capturedIndex = index;
             int y = LIST_Y + index * ROW_HEIGHT;
-            EditBox box;
+            KineticEditBox box;
             if (integerList) {
                 box = addIntegerField(
                         EDIT_X, y + 4, EDIT_WIDTH, title,
-                        true, Integer.MIN_VALUE, Integer.MAX_VALUE, null
+                        true, Integer.MIN_VALUE, Integer.MAX_VALUE, null, null
                 );
             } else {
-                box = addTextField(EDIT_X, y + 4, EDIT_WIDTH, title);
+                box = addTextField(EDIT_X, y + 4, EDIT_WIDTH, title, null, null, null);
                 box.setMaxLength(32767);
             }
             box.setValue(values.get(index));
@@ -92,28 +90,28 @@ final class KTConfigListScreen extends KineticScreen {
 
             addListScrollableWidget(addButton(
                     476, y + 4, 28,
-                    Component.translatable("gui.kineticcore.config.move_up"),
+                    KineticText.translatable("gui.kineticcore.config.move_up"),
                     null,
                     () -> move(capturedIndex, -1)
             ));
             addListScrollableWidget(addButton(
                     510, y + 4, 28,
-                    Component.translatable("gui.kineticcore.config.move_down"),
+                    KineticText.translatable("gui.kineticcore.config.move_down"),
                     null,
                     () -> move(capturedIndex, 1)
             ));
             addListScrollableWidget(addButton(
                     544, y + 4, 34,
-                    Component.translatable("gui.kineticcore.config.remove_short"),
+                    KineticText.translatable("gui.kineticcore.config.remove_short"),
                     null,
                     () -> remove(capturedIndex)
             ));
         }
 
         int footerY = 326;
-        addButton(166, footerY, 92, Component.translatable("gui.kineticcore.config.add"), null, this::add);
-        addButton(274, footerY, 92, Component.translatable("gui.kineticcore.config.back"), null, this::onClose);
-        addButton(382, footerY, 92, Component.translatable("gui.done"), null, this::finish);
+        addButton(166, footerY, 92, KineticText.translatable("gui.kineticcore.config.add"), null, this::add);
+        addButton(274, footerY, 92, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
+        addButton(382, footerY, 92, KineticText.translatable("gui.done"), null, this::finish);
     }
 
     private double listPixelOffset() {
@@ -122,14 +120,17 @@ final class KTConfigListScreen extends KineticScreen {
 
     private <T extends AbstractWidget> T addListScrollableWidget(T widget) {
         listWidgets.add(widget);
-        return attachScrollableWidget(
-                widget,
+        if (!(widget instanceof dev.xyat.kineticcore.api.client.widget.KineticControl control)) {
+            throw new IllegalArgumentException("Scrollable widget must be an API-created control");
+        }
+        addScrollableWidget(control,
                 LIST_X,
                 LIST_Y,
                 SCROLL_X - 2,
                 LIST_Y + LIST_HEIGHT,
                 this::listPixelOffset
         );
+        return widget;
     }
 
     private void setListWidgetsVisible(boolean visible) {
@@ -243,7 +244,7 @@ final class KTConfigListScreen extends KineticScreen {
             try {
                 parsed.add(Integer.parseInt(value.trim()));
             } catch (NumberFormatException ignored) {
-                status = Component.translatable("gui.kineticcore.config.list_invalid");
+                status = KineticText.translatable("gui.kineticcore.config.list_invalid");
                 return;
             }
         }
@@ -252,16 +253,8 @@ final class KTConfigListScreen extends KineticScreen {
     }
 
     private void renderSnapshotButton(GuiGraphics graphics, int x, int y, int width, Component label, boolean lifted) {
-        int border = lifted ? GuiTheme.current().accentHover() : GuiTheme.current().border();
-        GuiTheme.panel(
-                graphics,
-                x,
-                y,
-                width,
-                20,
-                GuiTheme.current().panelAlt(),
-                border
-        );
+        GuiTheme.stateSurface(graphics, x, y, width, 20,
+                GuiTheme.Surface.PANEL_ALT, false, lifted, false);
         graphics.drawCenteredString(font, label, x + width / 2, y + 6, GuiTheme.current().text());
     }
 
@@ -275,9 +268,8 @@ final class KTConfigListScreen extends KineticScreen {
     ) {
         int dx = rowX - LIST_X;
         int rowWidth = ROW_RIGHT - LIST_X - 4;
-        int border = lifted ? GuiTheme.current().accentHover() : GuiTheme.current().border();
-        int background = lifted ? GuiTheme.current().panelAlt() : GuiTheme.current().panel();
-        GuiTheme.panel(graphics, rowX + 2, y + 1, rowWidth, ROW_HEIGHT - 2, background, border);
+        GuiTheme.stateSurface(graphics, rowX + 2, y + 1, rowWidth, ROW_HEIGHT - 2,
+                lifted ? GuiTheme.Surface.PANEL_ALT : GuiTheme.Surface.PANEL, false, lifted, false);
         graphics.drawString(
                 font,
                 Integer.toString(rank + 1),
@@ -286,19 +278,12 @@ final class KTConfigListScreen extends KineticScreen {
                 rank == 0 ? GuiTheme.current().accentHover() : GuiTheme.current().mutedText(),
                 false
         );
-        GuiTheme.panel(
-                graphics,
-                EDIT_X + dx,
-                y + 4,
-                EDIT_WIDTH,
-                20,
-                GuiTheme.current().field(),
-                lifted ? GuiTheme.current().accentHover() : GuiTheme.current().border()
-        );
+        GuiTheme.stateSurface(graphics, EDIT_X + dx, y + 4, EDIT_WIDTH, 20,
+                GuiTheme.Surface.FIELD, false, lifted, false);
         KineticText.drawScrollingLeft(
                 graphics,
                 font,
-                values.get(valueIndex),
+                Component.literal(values.get(valueIndex)),
                 EDIT_X + dx + 4,
                 y + 10,
                 EDIT_WIDTH - 8,
@@ -307,15 +292,15 @@ final class KTConfigListScreen extends KineticScreen {
         );
         renderSnapshotButton(
                 graphics, 476 + dx, y + 4, 28,
-                Component.translatable("gui.kineticcore.config.move_up"), lifted
+                KineticText.translatable("gui.kineticcore.config.move_up"), lifted
         );
         renderSnapshotButton(
                 graphics, 510 + dx, y + 4, 28,
-                Component.translatable("gui.kineticcore.config.move_down"), lifted
+                KineticText.translatable("gui.kineticcore.config.move_down"), lifted
         );
         renderSnapshotButton(
                 graphics, 544 + dx, y + 4, 34,
-                Component.translatable("gui.kineticcore.config.remove_short"), lifted
+                KineticText.translatable("gui.kineticcore.config.remove_short"), lifted
         );
     }
 
@@ -336,20 +321,9 @@ final class KTConfigListScreen extends KineticScreen {
 
             int gapY = LIST_Y + dragTargetIndex * ROW_HEIGHT - offsetPixels;
             if (gapY + ROW_HEIGHT > LIST_Y && gapY < LIST_Y + LIST_HEIGHT) {
-                graphics.fill(
-                        LIST_X + 2,
-                        gapY + 2,
-                        ROW_RIGHT - 2,
-                        gapY + ROW_HEIGHT - 2,
-                        GuiTheme.current().field()
-                );
-                graphics.renderOutline(
-                        LIST_X + 2,
-                        gapY + 1,
-                        ROW_RIGHT - LIST_X - 4,
-                        ROW_HEIGHT - 2,
-                        GuiTheme.current().accentHover()
-                );
+                GuiTheme.stateSurface(graphics, LIST_X + 2, gapY + 1,
+                        ROW_RIGHT - LIST_X - 4, ROW_HEIGHT - 2,
+                        GuiTheme.Surface.FIELD, true, false, false);
             }
         } finally {
             disableUiScissor(graphics);
@@ -401,11 +375,11 @@ final class KTConfigListScreen extends KineticScreen {
         }
 
         if (values.isEmpty()) {
-            graphics.drawCenteredString(font, Component.translatable("gui.kineticcore.config.list_empty"),
+            graphics.drawCenteredString(font, KineticText.translatable("gui.kineticcore.config.list_empty"),
                     canvasWidth() / 2, LIST_Y + LIST_HEIGHT / 2 - 4, GuiTheme.current().mutedText());
         }
-        GuiTheme.scrollbar(
-                listScroll, graphics, mouseX, mouseY,
+        listScroll.render(
+                graphics, mouseX, mouseY,
                 SCROLL_X, LIST_Y, SCROLL_WIDTH, LIST_HEIGHT, 18
         );
         if (status != null) {
@@ -445,7 +419,7 @@ final class KTConfigListScreen extends KineticScreen {
                 mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_WIDTH, LIST_HEIGHT, 18, 2)) {
             return true;
         }
-        if (button == 0 && Screen.hasControlDown() && inList(mouseX, mouseY)) {
+        if (button == 0 && KineticClientRuntime.controlModifierDown() && inList(mouseX, mouseY)) {
             int index = rowAt(mouseY);
             if (index >= 0) {
                 int sourceY = LIST_Y + index * ROW_HEIGHT - (int) Math.round(listPixelOffset());
@@ -456,7 +430,7 @@ final class KTConfigListScreen extends KineticScreen {
                 dragGrabOffsetX = mouseX - LIST_X;
                 dragGrabOffsetY = mouseY - sourceY;
                 lastDragScrollNanos = System.nanoTime();
-                setFocused(null);
+                clearControlFocus();
                 setListWidgetsVisible(false);
                 return true;
             }
@@ -496,29 +470,28 @@ final class KTConfigListScreen extends KineticScreen {
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
         if (mouseX >= LIST_X && mouseX <= SCROLL_X - 4
                 && mouseY >= LIST_Y && mouseY < LIST_Y + LIST_HEIGHT
-                && listScroll.scroll(delta)) {
+                && listScroll.scroll(delta, 1.0D)) {
             return true;
         }
         return super.canvasMouseScrolled(mouseX, mouseY, delta);
     }
 
     @Override
-    public void onClose() {
+    protected boolean handleCloseRequest() {
         clearDragState();
-        Minecraft client = Minecraft.getInstance();
         if (values.equals(originalValues)) {
-            navigateBack();
-            return;
+            return false;
         }
 
         openDialog(
-                Component.translatable("gui.kineticcore.config.unsaved_action.title"),
-                Component.translatable("gui.kineticcore.config.unsaved_list.message"),
-                Component.translatable("gui.yes"),
-                Component.translatable("gui.no"),
+                KineticText.translatable("gui.kineticcore.config.unsaved_action.title"),
+                KineticText.translatable("gui.kineticcore.config.unsaved_list.message"),
+                KineticText.translatable("gui.yes"),
+                KineticText.translatable("gui.no"),
                 this::finish,
                 () -> navigateBack()
         );
+        return true;
     }
 
     @Override

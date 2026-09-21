@@ -1,35 +1,30 @@
 package dev.xyat.kineticcore.internal.client.config;
 
-import dev.xyat.kineticcore.api.config.client.*;
-
-import net.minecraft.client.resources.language.I18n;
+import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.fml.ModList;
 
-public final class KTModuleDisplay {
+final class KTModuleDisplay {
     private KTModuleDisplay() {
     }
 
     public static Component moduleName(String modId) {
         String key = nameKey(modId);
-        if (I18n.exists(key)) {
-            return Component.translatable(key);
+        if (KineticText.hasTranslation(key)) {
+            return KineticText.translatable(key);
         }
-        String fallback = ModList.get()
-                .getModContainerById(modId)
-                .map(container -> container.getModInfo().getDisplayName())
-                .orElse(modId);
+        String fallback = KineticPlatform.displayName(modId);
         return Component.literal(removeWhitespace(fallback));
     }
 
     public static Component moduleFunction(String modId) {
         String key = functionKey(modId);
-        return I18n.exists(key) ? Component.translatable(key) : Component.empty();
+        return KineticText.hasTranslation(key) ? KineticText.translatable(key) : Component.empty();
     }
 
     public static Component moduleTooltip(String modId) {
         String key = tooltipKey(modId);
-        return I18n.exists(key) ? Component.translatable(key) : null;
+        return KineticText.hasTranslation(key) ? KineticText.translatable(key) : null;
     }
 
     public static String nameKey(String modId) {

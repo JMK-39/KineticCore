@@ -24,8 +24,8 @@ import java.util.function.Consumer;
 public final class ForgeNetworkChannel implements NetworkChannel {
     private final ResourceLocation id;
     private final SimpleChannel channel;
-    private final Set<Class<?>> serverboundTypes = new HashSet<>();
-    private final Set<Class<?>> clientboundTypes = new HashSet<>();
+    private final Set<Class<?>> registeredTypes = new HashSet<>();
+    private final Set<Integer> registeredPacketIds = new HashSet<>();
     private int nextPacketId;
 
     public ForgeNetworkChannel(
@@ -66,27 +66,46 @@ public final class ForgeNetworkChannel implements NetworkChannel {
             NetworkCodec<T> codec,
             ServerboundPacketHandler<T> handler
     ) {
+        return registerServerbound(nextPacketId, messageType, codec, handler);
+    }
+
+    @Override
+    public synchronized <T> ServerboundSender<T> registerServerbound(
+            int discriminator,
+            Class<T> messageType,
+            NetworkCodec<T> codec,
+            ServerboundPacketHandler<T> handler
+    ) {
         Objects.requireNonNull(messageType, "messageType");
         Objects.requireNonNull(codec, "codec");
         Objects.requireNonNull(handler, "handler");
-        if (!serverboundTypes.add(messageType)) {
+        if (registeredTypes.contains(messageType)) {
             throw new IllegalStateException(
-                    "Serverbound packet type is already registered on " + id + ": " + messageType.getName()
+                    "Packet type is already registered on " + id + ": " + messageType.getName()
             );
         }
 
-        channel.messageBuilder(messageType, nextPacketId++, NetworkDirection.PLAY_TO_SERVER)
+        validateDiscriminator(discriminator);
+        // A failed add() must not change the next automatically assigned number;
+        // callers that need failure-safe wire IDs should always supply fixed IDs.
+        channel.messageBuilder(messageType, discriminator, NetworkDirection.PLAY_TO_SERVER)
                 .encoder((message, buffer) -> codec.encode(new ForgeNetworkBuffer(buffer), message))
                 .decoder(buffer -> codec.decode(new ForgeNetworkBuffer(buffer)))
                 .consumerMainThread((message, contextSupplier) -> {
                     NetworkEvent.Context context = contextSupplier.get();
-                    if (context.getSender() != null) {
-                        handler.handle(message, new ServerPacketContext(context.getSender()));
+                    try {
+                        if (context.getSender() != null) {
+                            handler.handle(message, new ServerPacketContext(context.getSender()));
+                        }
+                    } finally {
+                        context.setPacketHandled(true);
                     }
-                    context.setPacketHandled(true);
                 })
                 .add();
 
+        registeredTypes.add(messageType);
+        registeredPacketIds.add(discriminator);
+        nextPacketId = Math.max(nextPacketId, discriminator + 1);
         return message -> channel.send(PacketDistributor.SERVER.noArg(), message);
     }
 
@@ -96,25 +115,42 @@ public final class ForgeNetworkChannel implements NetworkChannel {
             NetworkCodec<T> codec,
             Consumer<T> handler
     ) {
+        return registerClientbound(nextPacketId, messageType, codec, handler);
+    }
+
+    @Override
+    public synchronized <T> ClientboundSender<T> registerClientbound(
+            int discriminator,
+            Class<T> messageType,
+            NetworkCodec<T> codec,
+            Consumer<T> handler
+    ) {
         Objects.requireNonNull(messageType, "messageType");
         Objects.requireNonNull(codec, "codec");
         Objects.requireNonNull(handler, "handler");
-        if (!clientboundTypes.add(messageType)) {
+        if (registeredTypes.contains(messageType)) {
             throw new IllegalStateException(
-                    "Clientbound packet type is already registered on " + id + ": " + messageType.getName()
+                    "Packet type is already registered on " + id + ": " + messageType.getName()
             );
         }
 
-        channel.messageBuilder(messageType, nextPacketId++, NetworkDirection.PLAY_TO_CLIENT)
+        validateDiscriminator(discriminator);
+        channel.messageBuilder(messageType, discriminator, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder((message, buffer) -> codec.encode(new ForgeNetworkBuffer(buffer), message))
                 .decoder(buffer -> codec.decode(new ForgeNetworkBuffer(buffer)))
                 .consumerMainThread((message, contextSupplier) -> {
                     NetworkEvent.Context context = contextSupplier.get();
-                    DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> handler.accept(message));
-                    context.setPacketHandled(true);
+                    try {
+                        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> handler.accept(message));
+                    } finally {
+                        context.setPacketHandled(true);
+                    }
                 })
                 .add();
 
+        registeredTypes.add(messageType);
+        registeredPacketIds.add(discriminator);
+        nextPacketId = Math.max(nextPacketId, discriminator + 1);
         return new ClientboundSender<>() {
             @Override
             public void send(net.minecraft.server.level.ServerPlayer player, T message) {
@@ -132,4 +168,13 @@ public final class ForgeNetworkChannel implements NetworkChannel {
             }
         };
     }
+    private void validateDiscriminator(int discriminator) {
+        if (discriminator < 0 || discriminator == Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Packet discriminator must be within 0..2147483646: " + discriminator);
+        }
+        if (registeredPacketIds.contains(discriminator)) {
+            throw new IllegalStateException("Packet discriminator is already registered on " + id + ": " + discriminator);
+        }
+    }
+
 }

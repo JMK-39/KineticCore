@@ -1,23 +1,23 @@
 package dev.xyat.kineticcore.feature.firstjoin.client;
 
+
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
 
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
+import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
 import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
 import dev.xyat.kineticcore.api.config.client.KTServerConfigClient;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfigGui;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
@@ -52,14 +52,14 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
     private final List<RewardEntry> entries = new ArrayList<>();
     private final List<RewardEntry> savedEntries = new ArrayList<>();
     private final GridScrollController scroll = new GridScrollController();
-    private final List<EditBox> countFields = new ArrayList<>();
-    private final List<Button> upButtons = new ArrayList<>();
-    private final List<Button> downButtons = new ArrayList<>();
-    private final List<Button> deleteButtons = new ArrayList<>();
+    private final List<NumericEditBox> countFields = new ArrayList<>();
+    private final List<StateButton> upButtons = new ArrayList<>();
+    private final List<StateButton> downButtons = new ArrayList<>();
+    private final List<StateButton> deleteButtons = new ArrayList<>();
     private boolean updatingCountFields;
 
     public FirstJoinRewardItemsScreen(Screen parent) {
-        super(Component.translatable("gui.kineticcore.firstjoin.reward_items.title"));
+        super(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.title"));
         this.parent = parent;
         List<String> rawItems = KTServerConfigClient.getStringList(
                 PlayerConfigGui.PAGE_ID,
@@ -107,14 +107,14 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
             final int entryIndex = index;
             int y = LIST_Y + index * ROW_H + 6;
 
-            EditBox countField = addIntegerField(
+            NumericEditBox countField = addIntegerField(
                     COUNT_FIELD_X, y, COUNT_FIELD_W,
-                    Component.translatable("gui.kineticcore.firstjoin.reward_items.count"),
-                    false, 1, 999, null
+                    KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.count"),
+                    false, 1, 999, null, null
             );
             countField.setMaxLength(3);
             countField.setResponder(value -> applyCount(entryIndex, value));
-            countFields.add(attachScrollableWidget(
+            countFields.add(addScrollableWidget(
                     countField,
                     LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
                     () -> scroll.smoothOffset() * ROW_H
@@ -122,21 +122,21 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
 
             upButtons.add(addScrollableButton(
                     upX, y, MOVE_BUTTON_W,
-                    Component.translatable("gui.kineticcore.symbol.up"), null,
+                    KineticI18n.translatable("gui.kineticcore.symbol.up"), null,
                     () -> moveIndex(entryIndex, -1),
                     LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
                     () -> scroll.smoothOffset() * ROW_H
             ));
             downButtons.add(addScrollableButton(
                     downX, y, MOVE_BUTTON_W,
-                    Component.translatable("gui.kineticcore.symbol.down"), null,
+                    KineticI18n.translatable("gui.kineticcore.symbol.down"), null,
                     () -> moveIndex(entryIndex, 1),
                     LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
                     () -> scroll.smoothOffset() * ROW_H
             ));
             deleteButtons.add(addScrollableButton(
                     deleteX, y, DELETE_BUTTON_W,
-                    Component.translatable("gui.kineticcore.firstjoin.reward_items.delete"), null,
+                    KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.delete"), null,
                     () -> deleteIndex(entryIndex),
                     LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
                     () -> scroll.smoothOffset() * ROW_H
@@ -145,17 +145,17 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
 
         addButton(
                 44, 314, 110,
-                Component.translatable("gui.kineticcore.firstjoin.reward_items.add"),
+                KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.add"),
                 null, this::addEntry
         );
         addButton(
                 265, 314, 110,
-                Component.translatable("gui.kineticcore.firstjoin.reward_items.back"),
+                KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.back"),
                 null, this::requestClose
         );
         addButton(
                 472, 314, 110,
-                Component.translatable("gui.kineticcore.firstjoin.reward_items.save"),
+                KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.save"),
                 null, this::saveAndClose
         );
         updateRowButtons();
@@ -173,9 +173,9 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                 boolean visible = index < widgetCount;
                 boolean stackable = visible && entries.get(index).stack().getMaxStackSize() > 1;
 
-                EditBox countField = countFields.get(index);
+                NumericEditBox countField = countFields.get(index);
                 countField.setVisible(stackable);
-                countField.setEditable(stackable);
+                countField.setTextEditable(stackable);
                 if (stackable) {
                     String value = String.valueOf(entries.get(index).stack().getCount());
                     if (!isControlFocused(countField) && !value.equals(countField.getValue())) {
@@ -188,13 +188,13 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                     }
                 }
 
-                upButtons.get(index).visible = visible;
-                downButtons.get(index).visible = visible;
-                deleteButtons.get(index).visible = visible;
+                upButtons.get(index).setVisible(visible);
+                downButtons.get(index).setVisible(visible);
+                deleteButtons.get(index).setVisible(visible);
                 if (visible) {
-                    upButtons.get(index).active = index > 0;
-                    downButtons.get(index).active = index < entries.size() - 1;
-                    deleteButtons.get(index).active = true;
+                    upButtons.get(index).setEnabled(index > 0);
+                    downButtons.get(index).setEnabled(index < entries.size() - 1);
+                    deleteButtons.get(index).setEnabled(true);
                 }
             }
         } finally {
@@ -233,14 +233,14 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
     }
 
     private void clearCountFieldFocus() {
-        for (EditBox countField : countFields) {
+        for (NumericEditBox countField : countFields) {
             blurControl(countField);
         }
     }
 
     private void addEntry() {
         clearCountFieldFocus();
-        KineticSelectors.openItemSelector(this, selection -> {
+        KineticSelectors.openItemSelector(this, null, selection -> {
                 if (selection == null || !selection.isItem()) return;
                 entries.add(new RewardEntry(firstFreeInventorySlot(), selection.stack().copy()));
                 updateScrollRange();
@@ -269,7 +269,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
     private void openItemSelector(int index) {
         clearCountFieldFocus();
         if (index < 0 || index >= entries.size()) return;
-        KineticSelectors.openItemSelector(this, selection -> {
+        KineticSelectors.openItemSelector(this, null, selection -> {
                 if (selection == null || !selection.isItem() || index >= entries.size()) return;
                 ItemStack selected = selection.stack().copy();
                 int oldCount = entries.get(index).stack().getCount();
@@ -310,7 +310,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
             }
         }
         if (!KTServerConfigClient.savePartial(PlayerConfigGui.PAGE_ID, Map.of("items", saved))) {
-            GuiOverlay.toast(Component.translatable("gui.kineticcore.config.server.save_failed"));
+            KineticOverlays.toast(null, KineticI18n.translatable("gui.kineticcore.config.server.save_failed"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
             return;
         }
         if (minecraft != null) navigateBack();
@@ -318,39 +318,38 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
 
     private void requestClose() {
         clearCountFieldFocus();
-        Minecraft client = Minecraft.getInstance();
-        if (!hasUnsavedChanges()) {
+        if (hasNoUnsavedChanges()) {
             navigateBack();
             return;
         }
 
         openDialog(
-                Component.translatable("gui.kineticcore.config.unsaved_action.title"),
-                Component.translatable("gui.kineticcore.firstjoin.reward_items.unsaved"),
-                Component.translatable("gui.yes"),
-                Component.translatable("gui.no"),
+                KineticI18n.translatable("gui.kineticcore.config.unsaved_action.title"),
+                KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.unsaved"),
+                KineticI18n.translatable("gui.yes"),
+                KineticI18n.translatable("gui.no"),
                 this::saveAndClose,
                 () -> navigateBack()
         );
     }
 
-    private boolean hasUnsavedChanges() {
-        if (entries.size() != savedEntries.size()) return true;
+    private boolean hasNoUnsavedChanges() {
+        if (entries.size() != savedEntries.size()) return false;
         for (int i = 0; i < entries.size(); i++) {
             RewardEntry current = entries.get(i);
             RewardEntry saved = savedEntries.get(i);
-            if (current.slot() != saved.slot()) return true;
-            if (!sameStack(current.stack(), saved.stack())) return true;
+            if (current.slot() != saved.slot()) return false;
+            if (stacksDiffer(current.stack(), saved.stack())) return false;
         }
-        return false;
+        return true;
     }
 
-    private static boolean sameStack(ItemStack left, ItemStack right) {
+    private static boolean stacksDiffer(ItemStack left, ItemStack right) {
         CompoundTag leftTag = new CompoundTag();
         CompoundTag rightTag = new CompoundTag();
         left.save(leftTag);
         right.save(rightTag);
-        return leftTag.equals(rightTag);
+        return !leftTag.equals(rightTag);
     }
 
     private static RewardEntry copyEntry(RewardEntry entry) {
@@ -379,10 +378,10 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         int hoveredIndex = rowIndex(mouseY);
         updateRowButtons();
-        graphics.fillGradient(0, 0, canvasWidth(), canvasHeight(), 0xFF171717, 0xFF0E0E0E);
+        GuiTheme.canvasBackground(graphics, canvasWidth(), canvasHeight());
         GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_W, PANEL_H);
         GuiTheme.panelAlt(graphics, LIST_X - 4, LIST_Y - 4, LIST_W + 8, LIST_H + 8);
-        graphics.drawCenteredString(font, title, canvasWidth() / 2, 30, 0xFFFFFF);
+        graphics.drawCenteredString(font, title, canvasWidth() / 2, 30, GuiTheme.current().text());
 
         scroll.update(entries.size(), VISIBLE_ROWS);
         double smoothOffset = scroll.smoothOffset();
@@ -393,8 +392,17 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
             for (int index = first; index < end; index++) {
                 int y = LIST_Y + (int) Math.round((index - smoothOffset) * ROW_H);
                 boolean rowHovered = index == hoveredIndex;
-                graphics.fill(LIST_X, y, LIST_X + LIST_W, y + ROW_H - 2, index % 2 == 0 ? 0xCC181818 : 0xCC111111);
-                graphics.renderOutline(LIST_X, y, LIST_W, ROW_H - 2, rowHovered ? GuiTheme.current().accentHover() : 0xFF555555);
+                GuiTheme.stateSurface(
+                        graphics,
+                        LIST_X,
+                        y,
+                        LIST_W,
+                        ROW_H - 2,
+                        index % 2 == 0 ? GuiTheme.Surface.PANEL_ALT : GuiTheme.Surface.PANEL,
+                        false,
+                        rowHovered,
+                        false
+                );
 
                 RewardEntry entry = entries.get(index);
                 ItemStack stack = entry.stack();
@@ -403,15 +411,15 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                 if (!stack.isEmpty() && stack.getMaxStackSize() > 1) {
                     graphics.drawString(
                             font,
-                            Component.translatable("gui.kineticcore.firstjoin.reward_items.count"),
+                            KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.count"),
                             COUNT_LABEL_X,
                             y + 12,
-                            0xFFFFFFFF,
+                            GuiTheme.current().text(),
                             false
                     );
                 }
 
-                GuiTheme.itemSlot(graphics, ITEM_X, itemY, SLOT_SIZE, 4, itemHovered);
+                GuiTheme.itemSlot(graphics, ITEM_X, itemY, SLOT_SIZE, SLOT_SIZE, 4, false, itemHovered, false);
                 GuiTheme.item(graphics, font, stack, ITEM_X, itemY, SLOT_SIZE, 1.0F, false);
 
                 KineticText.drawScrollingLeft(
@@ -421,7 +429,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
                         ITEM_X + SLOT_SIZE + 8,
                         y + 11,
                         220,
-                        0xFFFFFFFF,
+                        GuiTheme.current().text(),
                         false
                 );
             }
@@ -429,22 +437,22 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
             disableUiScissor(graphics);
         }
 
-        GuiTheme.scrollbar(scroll, graphics, mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18);
+        scroll.render(graphics, mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18);
         if (entries.isEmpty()) {
             graphics.drawCenteredString(
                     font,
-                    Component.translatable("gui.kineticcore.firstjoin.reward_items.empty"),
+                    KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.empty"),
                     LIST_X + LIST_W / 2,
                     LIST_Y + LIST_H / 2,
-                    0xFFFFFFFF
+                    GuiTheme.current().text()
             );
         }
         graphics.drawCenteredString(
                 font,
-                Component.translatable("gui.kineticcore.firstjoin.reward_items.hint"),
+                KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.hint"),
                 canvasWidth() / 2,
                 292,
-                0xFFFFFFFF
+                GuiTheme.current().text()
         );
     }
 
@@ -490,7 +498,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
 
     @Override
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
-        if (inList(mouseX, mouseY) && scroll.scroll(delta)) {
+        if (inList(mouseX, mouseY) && scroll.scroll(delta, 1.0D)) {
             clearCountFieldFocus();
             return true;
         }
@@ -498,8 +506,9 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
     }
 
     @Override
-    public void onClose() {
+    protected boolean handleCloseRequest() {
         requestClose();
+        return true;
     }
 
     @Override

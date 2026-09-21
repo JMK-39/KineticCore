@@ -1,8 +1,9 @@
 package dev.xyat.kineticcore.internal.client;
 
+import dev.xyat.kineticcore.internal.runtime.KineticForgeListenerRegistrations;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.internal.client.config.ServerConfigClientRuntime;
-import dev.xyat.kineticcore.internal.client.gpu.GpuMemLeakFixHandler;
 import dev.xyat.kineticcore.internal.client.input.KineticKeyBindingRuntime;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
@@ -12,12 +13,13 @@ import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.network.chat.Component;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -32,26 +34,37 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class KineticClientRuntimeImpl {
-    private static boolean initialized;
+    private static final KineticForgeListenerRegistrations LISTENER_REGISTRATIONS = new KineticForgeListenerRegistrations();
+    private static final KineticRegistrationBatch INITIALIZATION = new KineticRegistrationBatch();
+    private static Object connectionRevisionOwner;
+    private static long connectionRevision;
 
     private KineticClientRuntimeImpl() {
     }
 
-    public static void initialize() {
-        if (initialized) return;
-        initialized = true;
+    public static synchronized void initialize() {
+        INITIALIZATION.run(
+                KineticKeyBindingRuntime::initialize,
+                KineticClientEventRuntime::initialize,
+                KineticItemTooltipRuntime::initialize,
+                ServerConfigClientRuntime::initialize,
+                KineticClientRuntimeImpl::installRuntimeListeners
+        );
+    }
 
-        KineticKeyBindingRuntime.initialize();
-        KineticClientEventRuntime.initialize();
-        KineticItemTooltipRuntime.initialize();
-        ServerConfigClientRuntime.initialize();
-        MinecraftForge.EVENT_BUS.addListener(GuiOverlayBridge::onRenderGui);
-        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, GuiOverlayBridge::onRenderScreenPre);
-        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GuiOverlayBridge::onRenderScreenPost);
-        MinecraftForge.EVENT_BUS.addListener(GuiSessionBridge::onScreenOpening);
-        MinecraftForge.EVENT_BUS.addListener(GuiSessionBridge::onPlainScreenEscape);
-        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticEffectDisplayBridge::onInventoryEffects);
-        GpuMemLeakFixHandler.register();
+    private static void installRuntimeListeners() {
+        var attempt = LISTENER_REGISTRATIONS.begin();
+        int slot = 0;
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(GuiOverlayBridge::onRenderGui));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, GuiOverlayBridge::onRenderScreenPre));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GuiOverlayBridge::onRenderScreenPost));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(GuiSessionBridge::onScreenOpening));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(GuiSessionBridge::onPlainScreenEscape));
+        attempt.finish();
+    }
+
+    public static Minecraft client() {
+        return Minecraft.getInstance();
     }
 
     public static void execute(Runnable action) {
@@ -85,8 +98,18 @@ public final class KineticClientRuntimeImpl {
         });
     }
 
+    public static void saveOptions() {
+        Minecraft.getInstance().options.save();
+    }
+
     public static LocalPlayer localPlayer() {
         return Minecraft.getInstance().player;
+    }
+
+    public static void displayClientMessage(Component message, boolean overlay) {
+        if (message == null) return;
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player != null) player.displayClientMessage(message, overlay);
     }
 
     public static Font font() {
@@ -113,6 +136,10 @@ public final class KineticClientRuntimeImpl {
         return Minecraft.getInstance().options.chatScale().get();
     }
 
+    public static String username() {
+        return Minecraft.getInstance().getUser().getName();
+    }
+
     public static Collection<PlayerInfo> onlinePlayers() {
         var connection = Minecraft.getInstance().getConnection();
         return connection == null ? List.of() : List.copyOf(connection.getOnlinePlayers());
@@ -124,13 +151,13 @@ public final class KineticClientRuntimeImpl {
         return connection == null ? null : connection.getPlayerInfo(uuid);
     }
 
-    public static Object connectionToken() {
-        return Minecraft.getInstance().getConnection();
-    }
-
-    public static List<Component> itemTooltip(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) return List.of();
-        return List.copyOf(Screen.getTooltipFromItem(Minecraft.getInstance(), stack));
+    public static synchronized long connectionRevision() {
+        Object currentConnection = Minecraft.getInstance().getConnection();
+        if (currentConnection != connectionRevisionOwner) {
+            connectionRevisionOwner = currentConnection;
+            connectionRevision++;
+        }
+        return connectionRevision;
     }
 
     public static boolean paused() {
@@ -141,8 +168,16 @@ public final class KineticClientRuntimeImpl {
         return Minecraft.getInstance().options.hideGui;
     }
 
+    public static boolean debugScreenVisible() {
+        return Minecraft.getInstance().options.renderDebug;
+    }
+
     public static boolean attackKeyDown() {
         return Minecraft.getInstance().options.keyAttack.isDown();
+    }
+
+    public static void setAttackKeyDown(boolean down) {
+        Minecraft.getInstance().options.keyAttack.setDown(down);
     }
 
     public static boolean useKeyDown() {
@@ -151,6 +186,54 @@ public final class KineticClientRuntimeImpl {
 
     public static boolean shiftKeyDown() {
         return Minecraft.getInstance().options.keyShift.isDown();
+    }
+
+    public static boolean forwardKeyDown() {
+        return Minecraft.getInstance().options.keyUp.isDown();
+    }
+
+    public static boolean backKeyDown() {
+        return Minecraft.getInstance().options.keyDown.isDown();
+    }
+
+    public static boolean leftKeyDown() {
+        return Minecraft.getInstance().options.keyLeft.isDown();
+    }
+
+    public static boolean rightKeyDown() {
+        return Minecraft.getInstance().options.keyRight.isDown();
+    }
+
+    public static boolean controlModifierDown() {
+        return Screen.hasControlDown();
+    }
+
+    public static boolean shiftModifierDown() {
+        return Screen.hasShiftDown();
+    }
+
+    public static boolean altModifierDown() {
+        return Screen.hasAltDown();
+    }
+
+    public static boolean isSelectAllShortcut(int keyCode) {
+        return Screen.isSelectAll(keyCode);
+    }
+
+    public static boolean isCopyShortcut(int keyCode) {
+        return Screen.isCopy(keyCode);
+    }
+
+    public static boolean isPasteShortcut(int keyCode) {
+        return Screen.isPaste(keyCode);
+    }
+
+    public static boolean isCutShortcut(int keyCode) {
+        return Screen.isCut(keyCode);
+    }
+
+    public static boolean jumpKeyDown() {
+        return Minecraft.getInstance().options.keyJump.isDown();
     }
 
     public static void setJumpKeyDown(boolean down) {
@@ -234,6 +317,15 @@ public final class KineticClientRuntimeImpl {
     public static Set<ResourceKey<Level>> knownLevels() {
         var connection = Minecraft.getInstance().getConnection();
         return connection == null ? Set.of() : Set.copyOf(connection.levels());
+    }
+
+    public static <T> Set<ResourceLocation> registryKeys(ResourceKey<? extends Registry<T>> registryKey) {
+        if (registryKey == null) return Set.of();
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) return Set.of();
+        return level.registryAccess().registry(registryKey)
+                .map(registry -> Set.copyOf(registry.keySet()))
+                .orElseGet(Set::of);
     }
 
     public static void openScreen(Screen screen) {

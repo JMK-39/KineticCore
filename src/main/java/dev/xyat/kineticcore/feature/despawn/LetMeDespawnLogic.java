@@ -1,8 +1,9 @@
 package dev.xyat.kineticcore.feature.despawn;
 
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.hook.CommonHooks;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -18,12 +19,10 @@ import java.util.regex.Pattern;
 
 public class LetMeDespawnLogic {
 
-    private static boolean hooksRegistered;
+    private static final KineticRegistrationBatch HOOK_REGISTRATION = new KineticRegistrationBatch();
 
     public static void registerHooks() {
-        if (hooksRegistered) return;
-        hooksRegistered = true;
-        CommonHooks.onMobPersistence(new CommonHooks.MobPersistenceHandler() {
+        HOOK_REGISTRATION.run(() -> CommonHooks.onMobPersistence(new CommonHooks.MobPersistenceHandler() {
             @Override
             public boolean enabled() {
                 return KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "let_me_despawn", true);
@@ -43,7 +42,7 @@ public class LetMeDespawnLogic {
             public void dropPickedEquipment(Mob mob) {
                 LetMeDespawnLogic.dropPickedEquipment(mob);
             }
-        });
+        }));
     }
 
     private static final Pattern IGNORE_NAME_PATTERN = Pattern.compile(".* x\\d+");
@@ -72,7 +71,7 @@ public class LetMeDespawnLogic {
     private static boolean isWhitelisted(Mob entity) {
         updateCacheIfNeeded();
         return WHITELIST_CACHE.computeIfAbsent(entity.getType(), type -> {
-            ResourceLocation rl = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+            ResourceLocation rl = KineticRegistries.entityTypes().id(type);
             if (whitelistIds.contains(rl.toString())) return true;
             return whitelistMods.contains(rl.getNamespace());
         });

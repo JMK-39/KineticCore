@@ -1,5 +1,10 @@
 package dev.xyat.kineticcore.feature.attribute.config;
 
+
+
+import dev.xyat.kineticcore.api.text.KineticI18n;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
@@ -7,13 +12,12 @@ import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
 import dev.xyat.kineticcore.api.minecraft.MinecraftAttributes;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
-import net.minecraft.network.chat.Component;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
-import net.minecraftforge.fml.loading.FMLPaths;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -21,7 +25,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class AttributeConfig {
-    private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("kineticcore/attributes.toml");
+    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/attributes.toml");
     private static CommentedFileConfig configData;
 
     private static final Map<ResourceLocation, DefaultEntry> PREDEFINED_DEFAULTS = new HashMap<>();
@@ -162,9 +166,9 @@ public class AttributeConfig {
         autoScan = configData.getOrElse(scanPath, true);
 
         if (autoScan) {
-            Set<String> validAttributeIds = ForgeRegistries.ATTRIBUTES.getEntries().stream()
+            Set<String> validAttributeIds = KineticRegistries.attributes().entries().entrySet().stream()
                     .filter(e -> e.getValue() instanceof RangedAttribute)
-                    .map(e -> e.getKey().location().toString())
+                    .map(e -> e.getKey().toString())
                     .collect(Collectors.toSet());
 
             List<String> keysToRemove = new ArrayList<>();
@@ -190,7 +194,8 @@ public class AttributeConfig {
     }
 
     private static List<Map.Entry<ResourceKey<Attribute>, Attribute>> getSortedAttributes() {
-        return ForgeRegistries.ATTRIBUTES.getEntries().stream()
+        return KineticRegistries.attributes().entries().entrySet().stream()
+                .map(entry -> Map.entry(ResourceKey.create(Registries.ATTRIBUTE, entry.getKey()), entry.getValue()))
                 .sorted(Comparator.comparing(e -> e.getKey().location().toString()))
                 .collect(Collectors.toList());
     }
@@ -336,7 +341,7 @@ public class AttributeConfig {
     }
 
     private static RangedAttribute requireRangedAttribute(ResourceLocation id) {
-        Attribute attribute = ForgeRegistries.ATTRIBUTES.getValue(id);
+        Attribute attribute = KineticRegistries.attributes().get(id);
         if (!(attribute instanceof RangedAttribute ranged)) {
             throw new IllegalArgumentException("Not a registered ranged attribute: " + id);
         }
@@ -351,7 +356,7 @@ public class AttributeConfig {
 
     private static void applyToAttributes() {
         int count = 0;
-        for (Map.Entry<ResourceKey<Attribute>, Attribute> entry : ForgeRegistries.ATTRIBUTES.getEntries()) {
+        for (Map.Entry<ResourceKey<Attribute>, Attribute> entry : getSortedAttributes()) {
             if (entry.getValue() instanceof RangedAttribute ranged) {
                 String idStr = entry.getKey().location().toString();
                 List<String> pathEnabled = Arrays.asList(idStr, "enabled");
@@ -368,7 +373,7 @@ public class AttributeConfig {
     }
 
     private static void addDefault(String id, boolean enabled, double min, double max) {
-        PREDEFINED_DEFAULTS.put(new ResourceLocation(id), new DefaultEntry(enabled, min, max));
+        PREDEFINED_DEFAULTS.put(KineticResourceIds.parse(id), new DefaultEntry(enabled, min, max));
     }
 
     private record DefaultEntry(boolean enabled, double min, double max) {}
@@ -393,7 +398,7 @@ public class AttributeConfig {
 
     private static String getAttributeComment(ResourceLocation id, RangedAttribute ranged) {
         String descKey = ranged.getDescriptionId();
-        String localizedText = Component.translatable(descKey).getString();
+        String localizedText = KineticI18n.translatable(descKey).getString();
         AttributeSettings defaults = getDefaultSettings(id);
 
         StringBuilder sb = new StringBuilder();

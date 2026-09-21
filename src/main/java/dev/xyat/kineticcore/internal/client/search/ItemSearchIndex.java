@@ -1,8 +1,8 @@
 package dev.xyat.kineticcore.internal.client.search;
 
 import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
-import dev.xyat.kineticcore.api.client.search.KineticSearch;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -11,7 +11,6 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
@@ -28,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class ItemSearchIndex {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -53,7 +53,6 @@ public final class ItemSearchIndex {
     public static class CachedItem {
         public final ItemStack stack;
         public final String idStr;
-        public final String uniqueKey;
         public final String displayName;
         public final String namespace;
         public final List<String> tagIds;
@@ -63,30 +62,24 @@ public final class ItemSearchIndex {
             this(stack, null);
         }
 
-        private CachedItem(ItemStack stack, String idOverride) {
+        private CachedItem(ItemStack stack, String identifierOverride) {
             this.stack = stack == null ? ItemStack.EMPTY : stack.copy();
-            String clean = idOverride == null ? cleanId(this.stack) : idOverride.trim();
-            this.idStr = clean;
-            this.uniqueKey = idOverride == null ? uniqueKey(this.stack, this.idStr) : clean;
+            this.idStr = identifierOverride == null ? cleanId(this.stack) : identifierOverride.trim();
             this.displayName = getDisplayName(this.stack);
-            ResourceLocation location = ForgeRegistries.ITEMS.getKey(this.stack.getItem());
+            ResourceLocation location = KineticRegistries.items().id(this.stack.getItem());
             this.namespace = location == null ? "" : location.getNamespace();
             this.tagIds = List.copyOf(getRegistryTagIds(this.stack));
             this.searchData = buildSearchData(this.displayName, this.idStr, this.namespace, this.tagIds);
         }
 
+
         private CachedItem(ItemSnapshot snapshot, String searchData) {
             this.stack = snapshot.stack == null ? ItemStack.EMPTY : snapshot.stack;
             this.idStr = snapshot.idStr == null ? "" : snapshot.idStr;
-            this.uniqueKey = snapshot.uniqueKey == null ? this.idStr : snapshot.uniqueKey;
             this.displayName = snapshot.displayName == null ? "" : snapshot.displayName;
             this.namespace = snapshot.namespace == null ? "" : snapshot.namespace;
             this.tagIds = snapshot.tags == null ? List.of() : snapshot.tags;
             this.searchData = searchData == null ? "" : searchData;
-        }
-
-        public static CachedItem custom(ItemStack stack, String idStr) {
-            return new CachedItem(stack, idStr);
         }
 
         private static String getDisplayName(ItemStack stack) {
@@ -100,7 +93,7 @@ public final class ItemSearchIndex {
 
         private static String cleanId(ItemStack stack) {
             if (stack == null || stack.isEmpty()) return "";
-            ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+            ResourceLocation id = KineticRegistries.items().id(stack.getItem());
             return id == null ? "" : id.toString();
         }
 
@@ -127,14 +120,11 @@ public final class ItemSearchIndex {
     private static volatile boolean isCaching = false;
     private static volatile boolean cacheReady = false;
     private static volatile int lastProgress = -1;
+    private static String cacheLanguage;
+    private static Object cacheConnectionToken;
+    private static Object cacheLevelToken;
 
-    public static String getUniqueKey(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) return "";
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
-        return id == null ? "" : CachedItem.uniqueKey(stack, id.toString());
-    }
-
-    public static Set<String> getRegistryTagIds(ItemStack stack) {
+    private static Set<String> getRegistryTagIds(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return Set.of();
 
         Set<String> tags = new TreeSet<>();
@@ -146,12 +136,22 @@ public final class ItemSearchIndex {
         return tags.isEmpty() ? Set.of() : Set.copyOf(tags);
     }
 
+    public static CachedItem customItem(ItemStack stack, String identifier) {
+        return new CachedItem(stack, identifier);
+    }
+
     public static List<CachedItem> getItems() {
-        return CACHED_ITEMS;
+        synchronized (CACHE_LOCK) {
+            synchronizeCacheContextLocked();
+            return CACHED_ITEMS;
+        }
     }
 
     public static boolean isReady() {
-        return cacheReady && !isCaching;
+        synchronized (CACHE_LOCK) {
+            synchronizeCacheContextLocked();
+            return cacheReady && !isCaching;
+        }
     }
 
     public static void clear() {
@@ -163,12 +163,12 @@ public final class ItemSearchIndex {
             cacheReady = false;
             lastProgress = -1;
         }
-        executeOnClient(() -> GuiOverlay.removeToast(CACHE_TOAST_ID));
     }
 
     public static void prepareCache(Runnable onDone) {
         int generation;
         synchronized (CACHE_LOCK) {
+            synchronizeCacheContextLocked();
             if (isReady()) {
                 runCallback(onDone);
                 return;
@@ -194,12 +194,36 @@ public final class ItemSearchIndex {
         startBuildTask(generation);
     }
 
+    private static void synchronizeCacheContextLocked() {
+        Minecraft minecraft = Minecraft.getInstance();
+        String currentLanguage = minecraft.getLanguageManager().getSelected();
+        Object currentConnection = minecraft.getConnection();
+        Object currentLevel = minecraft.level;
+        if (java.util.Objects.equals(cacheLanguage, currentLanguage)
+                && cacheConnectionToken == currentConnection
+                && cacheLevelToken == currentLevel) {
+            return;
+        }
+
+        if (isCaching) {
+            CACHE_GENERATION.incrementAndGet();
+        }
+        CACHED_ITEMS = Collections.emptyList();
+        PENDING_CALLBACKS.clear();
+        isCaching = false;
+        cacheReady = false;
+        lastProgress = -1;
+        cacheLanguage = currentLanguage;
+        cacheConnectionToken = currentConnection;
+        cacheLevelToken = currentLevel;
+    }
+
     private static void startBuildTask(int generation) {
         executeOnClient(() -> {
-            if (!isCurrentGeneration(generation)) return;
+            if (isStaleGeneration(generation)) return;
             try {
                 List<ItemSnapshot> snapshots = collectSnapshots(generation);
-                if (!isCurrentGeneration(generation)) return;
+                if (isStaleGeneration(generation)) return;
                 updateProgressIfChanged(generation, 10);
                 buildSnapshotsAsync(snapshots, generation);
             } catch (Throwable throwable) {
@@ -212,7 +236,7 @@ public final class ItemSearchIndex {
         Set<String> seen = new HashSet<>();
         List<ItemSnapshot> snapshots = new ArrayList<>();
 
-        var items = ForgeRegistries.ITEMS.getValues();
+        var items = KineticRegistries.items().values();
         int itemTotal = Math.max(1, items.size());
         int itemCount = 0;
 
@@ -244,7 +268,7 @@ public final class ItemSearchIndex {
     private static void addSnapshot(ItemStack stack, Set<String> seen, List<ItemSnapshot> snapshots) {
         if (stack == null || stack.isEmpty()) return;
 
-        ResourceLocation idLoc = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation idLoc = KineticRegistries.items().id(stack.getItem());
         if (idLoc == null) return;
 
         ItemStack copy = stack.copy();
@@ -264,7 +288,7 @@ public final class ItemSearchIndex {
     }
 
     private static void buildSnapshotsAsync(List<ItemSnapshot> snapshots, int generation) {
-        if (!isCurrentGeneration(generation)) return;
+        if (isStaleGeneration(generation)) return;
         if (snapshots.isEmpty()) {
             executeOnClient(() -> finishBuild(generation, Collections.emptyList()));
             return;
@@ -283,7 +307,7 @@ public final class ItemSearchIndex {
 
         CompletableFuture<?>[] futureArray = futures.toArray(new CompletableFuture<?>[0]);
         CompletableFuture.allOf(futureArray).whenComplete((ignored, throwable) -> {
-            if (!isCurrentGeneration(generation)) return;
+            if (isStaleGeneration(generation)) return;
             if (throwable != null) {
                 executeOnClient(() -> failBuild(generation, throwable));
                 return;
@@ -309,7 +333,7 @@ public final class ItemSearchIndex {
         List<CachedItem> result = new ArrayList<>(snapshots.size());
 
         for (ItemSnapshot snapshot : snapshots) {
-            if (!isCurrentGeneration(generation)) break;
+            if (isStaleGeneration(generation)) break;
             try {
                 String searchData = buildSearchData(snapshot);
                 result.add(new CachedItem(snapshot, searchData));
@@ -335,20 +359,20 @@ public final class ItemSearchIndex {
     private static String buildFinalSearchData(String raw) {
         String searchRaw = raw == null ? "" : raw.toLowerCase(Locale.ROOT);
         try {
-            return KineticSearch.normalize(searchRaw + " " + KineticSearch.pinyin(searchRaw));
+            return KineticSearchRuntime.normalize(searchRaw + " " + KineticSearchRuntime.pinyinSearchData(searchRaw));
         } catch (Throwable ignored) {
-            return KineticSearch.normalize(searchRaw);
+            return KineticSearchRuntime.normalize(searchRaw);
         }
     }
 
-    private static boolean isCurrentGeneration(int generation) {
-        return generation == CACHE_GENERATION.get();
+    private static boolean isStaleGeneration(int generation) {
+        return generation != CACHE_GENERATION.get();
     }
 
     private static void updateProgressIfChanged(int generation, int progress) {
         int safeProgress = Math.max(0, Math.min(99, progress));
         synchronized (CACHE_LOCK) {
-            if (!isCurrentGeneration(generation) || !isCaching || safeProgress <= lastProgress) return;
+            if (isStaleGeneration(generation) || !isCaching || safeProgress <= lastProgress) return;
             lastProgress = safeProgress;
         }
         showProgressToast(generation, safeProgress);
@@ -356,11 +380,11 @@ public final class ItemSearchIndex {
 
     private static void showProgressToast(int generation, int progress) {
         executeOnClient(() -> {
-            if (!isCurrentGeneration(generation) || !isCaching) return;
-            GuiOverlay.toast(
+            if (isStaleGeneration(generation) || !isCaching) return;
+            KineticOverlays.toast(
                     CACHE_TOAST_ID,
                     KineticText.translatable("gui.kineticcore.items.cache.building", Component.literal(progress + "%")),
-                    GuiOverlay.Position.BOTTOM_CENTER,
+                    KineticOverlays.Position.BOTTOM_CENTER,
                     3000,
                     0,
                     -30
@@ -372,7 +396,7 @@ public final class ItemSearchIndex {
         List<Runnable> callbacks;
 
         synchronized (CACHE_LOCK) {
-            if (!isCurrentGeneration(generation) || !isCaching) return;
+            if (isStaleGeneration(generation) || !isCaching) return;
             CACHED_ITEMS = List.copyOf(tempCache);
             isCaching = false;
             cacheReady = true;
@@ -381,14 +405,20 @@ public final class ItemSearchIndex {
             PENDING_CALLBACKS.clear();
         }
 
-        GuiOverlay.toast(
-                CACHE_TOAST_ID,
-                KineticText.translatable("gui.kineticcore.items.cache.done", Component.literal(String.valueOf(tempCache.size()))),
-                GuiOverlay.Position.BOTTOM_CENTER,
-                2500,
-                0,
-                -30
-        );
+        try {
+            KineticOverlays.toast(
+                    CACHE_TOAST_ID,
+                    KineticText.translatable("gui.kineticcore.items.cache.done", Component.literal(String.valueOf(tempCache.size()))),
+                    KineticOverlays.Position.BOTTOM_CENTER,
+                    2500,
+                    0,
+                    -30
+            );
+        } catch (RuntimeException | Error failure) {
+            // Publishing the completion toast is optional. All selectors waiting for
+            // this successful cache build must still receive their callbacks.
+            LOGGER.error("Failed to show completed item-search cache notification", failure);
+        }
 
         for (Runnable callback : callbacks) {
             runCallback(callback);
@@ -397,7 +427,7 @@ public final class ItemSearchIndex {
 
     private static void failBuild(int generation, Throwable throwable) {
         synchronized (CACHE_LOCK) {
-            if (!isCurrentGeneration(generation) || !isCaching) return;
+            if (isStaleGeneration(generation) || !isCaching) return;
             CACHED_ITEMS = Collections.emptyList();
             isCaching = false;
             cacheReady = false;
@@ -407,10 +437,10 @@ public final class ItemSearchIndex {
 
         LOGGER.error("Cache build failed", throwable);
 
-        GuiOverlay.toast(
+        KineticOverlays.toast(
                 CACHE_TOAST_ID,
                 KineticText.translatable("gui.kineticcore.items.cache.failed"),
-                GuiOverlay.Position.BOTTOM_CENTER,
+                KineticOverlays.Position.BOTTOM_CENTER,
                 4000,
                 0,
                 -30
@@ -419,15 +449,30 @@ public final class ItemSearchIndex {
 
     private static void runCallback(Runnable callback) {
         if (callback == null) return;
-        executeOnClient(callback);
+        // One addon callback must not interrupt delivery to other waiting selectors.
+        executeOnClient(() -> {
+            try {
+                callback.run();
+            } catch (Throwable failure) {
+                LOGGER.error("Item-search cache callback failed", failure);
+            }
+        });
     }
 
     private static void executeOnClient(Runnable runnable) {
+        // Some executors run tasks synchronously and propagate task failures;
+        // others can throw after accepting a task. The fallback must never run
+        // an already accepted task a second time.
+        AtomicBoolean started = new AtomicBoolean();
+        Runnable guarded = () -> {
+            if (started.compareAndSet(false, true)) runnable.run();
+        };
         try {
             Minecraft minecraft = Minecraft.getInstance();
-            minecraft.execute(runnable);
-        } catch (Throwable ignored) {
-            runnable.run();
+            minecraft.execute(guarded);
+        } catch (Throwable failure) {
+            if (started.get()) throw failure;
+            guarded.run();
         }
     }
 }

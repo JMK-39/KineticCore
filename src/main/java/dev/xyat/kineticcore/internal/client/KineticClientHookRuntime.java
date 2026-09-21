@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client;
 
+import dev.xyat.kineticcore.internal.runtime.KineticCallbackBatch;
+import dev.xyat.kineticcore.internal.runtime.KineticCallbackQueries;
 import dev.xyat.kineticcore.api.hook.ClientHooks;
 import dev.xyat.kineticcore.api.hook.HookRegistration;
 import net.minecraft.client.Options;
@@ -18,36 +20,27 @@ public final class KineticClientHookRuntime {
 
     public static HookRegistration registerOptionsLoading(ClientHooks.OptionsLoadHandler handler) {
         OPTIONS_LOADING.add(handler);
-        return () -> OPTIONS_LOADING.remove(handler);
+        return HookRegistration.once(() -> OPTIONS_LOADING.remove(handler));
     }
 
     public static HookRegistration registerResourceReloadUi(ClientHooks.ResourceReloadUi handler) {
         RESOURCE_RELOAD_UI.add(handler);
-        return () -> RESOURCE_RELOAD_UI.remove(handler);
+        return HookRegistration.once(() -> RESOURCE_RELOAD_UI.remove(handler));
     }
 
     public static void fireOptionsLoading(Options options) {
-        for (ClientHooks.OptionsLoadHandler handler : OPTIONS_LOADING) {
-            handler.beforeLoad(options);
-        }
+        KineticCallbackBatch.runAll(OPTIONS_LOADING, handler -> handler.beforeLoad(options));
     }
 
     public static boolean interceptResourceReloadStart() {
-        for (ClientHooks.ResourceReloadUi handler : RESOURCE_RELOAD_UI) {
-            if (handler.interceptReloadStart()) return true;
-        }
-        return false;
+        return KineticCallbackQueries.anyMatch(RESOURCE_RELOAD_UI, ClientHooks.ResourceReloadUi::interceptReloadStart);
     }
 
     public static void setPackScreenClosing(boolean closing) {
-        for (ClientHooks.ResourceReloadUi handler : RESOURCE_RELOAD_UI) {
-            handler.setPackScreenClosing(closing);
-        }
+        KineticCallbackBatch.runAll(RESOURCE_RELOAD_UI, handler -> handler.setPackScreenClosing(closing));
     }
 
     public static void renderResourceReloadUi(GuiGraphics graphics, int width, int height) {
-        for (ClientHooks.ResourceReloadUi handler : RESOURCE_RELOAD_UI) {
-            handler.render(graphics, width, height);
-        }
+        KineticCallbackBatch.runAll(RESOURCE_RELOAD_UI, handler -> handler.render(graphics, width, height));
     }
 }

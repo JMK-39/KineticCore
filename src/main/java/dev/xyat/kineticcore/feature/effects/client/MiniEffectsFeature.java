@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.feature.effects.client;
 
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.client.effect.KineticEffectDisplay;
 import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
 import dev.xyat.kineticcore.api.config.client.KTClientConfigSpec;
@@ -12,7 +13,7 @@ public class MiniEffectsFeature {
     public static final ClientConfig CLIENT;
 
     public static boolean hasEffectsLeft;
-    private static boolean initialized;
+    private static final KineticRegistrationBatch INITIALIZATION = new KineticRegistrationBatch();
 
     static {
         KTClientConfigSpec.Builder builder = KTClientConfigSpec.builder();
@@ -53,18 +54,20 @@ public class MiniEffectsFeature {
     }
 
     public static void init() {
-        if (initialized) return;
-        initialized = true;
-        KTClientConfigAdapter.registerSpec(
-                CLIENT_SPEC,
-                KineticRuntime.MOD_ID + "/mini_effects_client.toml"
-        );
-        hasEffectsLeft = KineticPlatform.isModLoaded("effectsleft");
-        KineticEffectDisplay.configure(
-                MiniEffectsFeature::isLeftSide,
-                MiniEffectsFeature::requiresHoldingTab,
-                MiniEffectsFeature::potionItemIcon,
-                availableSpace -> availableSpace < 120
+        INITIALIZATION.run(
+                () -> KTClientConfigAdapter.registerSpec(
+                        CLIENT_SPEC,
+                        KineticRuntime.MOD_ID + "/mini_effects_client.toml"
+                ),
+                () -> {
+                    hasEffectsLeft = KineticPlatform.isModLoaded("effectsleft");
+                },
+                () -> KineticEffectDisplay.configure(
+                        MiniEffectsFeature::isLeftSide,
+                        MiniEffectsFeature::requiresHoldingTab,
+                        MiniEffectsFeature::potionItemIcon,
+                        availableSpace -> availableSpace < 120
+                )
         );
     }
 

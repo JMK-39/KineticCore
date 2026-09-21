@@ -9,18 +9,14 @@ import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
-import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.ColorPreviewButton;
 import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
 import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -36,7 +32,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /** Generic editor for one module-owned {@link KTConfigPage}. */
-public final class KTConfigScreen extends KineticScreen {
+final class KTConfigScreen extends KineticScreen {
     private enum SaveOutcome {
         FAILED,
         UNCHANGED,
@@ -65,16 +61,16 @@ public final class KTConfigScreen extends KineticScreen {
     private final Set<String> invalidEntries = new HashSet<>();
     private final Map<KTConfigEntry<?>, Integer> visibleRows = new HashMap<>();
     private final KineticSearch.Model<KTConfigEntry<?>> entryModel =
-            new KineticSearch.Model<>(List.of(), KTConfigScreen::buildSearchData);
+            new KineticSearch.Model<>(List.of(), (entry, query) -> KineticSearch.match(buildSearchData(entry), query));
     private final GridScrollController entryScroll = new GridScrollController();
     private Component status;
-    private EditBox searchBox;
+    private KineticEditBox searchBox;
     private KTConfigEntry<?> hoveredEntry;
     private String searchQuery = "";
     private boolean searchDirty;
     private final boolean showApplyTiming;
 
-    public KTConfigScreen(Screen parent, KTConfigPage configPage) {
+    KTConfigScreen(Screen parent, KTConfigPage configPage) {
         super(configPage.title());
         this.parent = parent;
         this.configPage = configPage;
@@ -91,36 +87,56 @@ public final class KTConfigScreen extends KineticScreen {
      * returning so a later page save cannot restore stale values.
      */
     public void refreshFromSource() {
+        // Assemble a complete replacement before changing the active draft.
+        // A faulty add-on copier must not leave a half-refreshed editor.
+        Map<String, Object> refreshedPending = new HashMap<>();
+        Map<String, Object> refreshedOriginal = new HashMap<>();
+        try {
+
+            for (KTConfigEntry<?> entry : configPage.entries()) {
+                if (!entry.isValueEntry()) continue;
+                Object value;
+                try {
+                    value = entry.read();
+                } catch (Throwable throwable) {
+                    KineticRuntime.logger().error("Failed to read config value {} from page {}",
+                            entry.id(), configPage.id(), throwable);
+                    value = entry.defaultValue();
+                }
+                boolean accepted;
+                try {
+                    accepted = entry.accepts(value);
+                } catch (RuntimeException invalidValue) {
+                    KineticRuntime.logger().error("Failed to validate config entry {} on page {}",
+                            entry.id(), configPage.id(), invalidValue);
+                    accepted = false;
+                }
+                if (!accepted) {
+                    KineticRuntime.logger().warn("Invalid config value {} on page {}; using its default",
+                            entry.id(), configPage.id());
+                    value = entry.defaultValue();
+                }
+                Object snapshot = entry.snapshot(value);
+                refreshedPending.put(entry.id(), snapshot);
+                refreshedOriginal.put(entry.id(), entry.snapshot(snapshot));
+            }
+        } catch (Throwable failure) {
+            KineticRuntime.logger().error("Failed to refresh config page {}", configPage.id(), failure);
+            return;
+        }
         pendingValues.clear();
+        pendingValues.putAll(refreshedPending);
         originalValues.clear();
+        originalValues.putAll(refreshedOriginal);
         rawTextValues.clear();
         invalidEntries.clear();
         status = null;
-        for (KTConfigEntry<?> entry : configPage.entries()) {
-            if (!entry.isValue()) continue;
-            Object value;
-            try {
-                value = entry.readSnapshot();
-            } catch (Throwable throwable) {
-                KineticRuntime.logger().error("Failed to read config value {} from page {}",
-                        entry.id(), configPage.id(), throwable);
-                value = entry.defaultSnapshot();
-            }
-            if (!entry.accepts(value)) {
-                KineticRuntime.logger().warn("Invalid config value {} on page {}; using its default",
-                        entry.id(), configPage.id());
-                value = entry.defaultSnapshot();
-            }
-            Object snapshot = entry.snapshot(value);
-            pendingValues.put(entry.id(), snapshot);
-            originalValues.put(entry.id(), entry.snapshot(snapshot));
-        }
     }
 
     private DraftState captureDraftState() {
         Map<String, Object> values = new HashMap<>();
         for (KTConfigEntry<?> entry : configPage.entries()) {
-            if (!entry.isValue()) continue;
+            if (!entry.isValueEntry()) continue;
             Object value = pendingValues.get(entry.id());
             values.put(entry.id(), value == null ? null : entry.snapshot(value));
         }
@@ -129,18 +145,27 @@ public final class KTConfigScreen extends KineticScreen {
 
     private void restoreDraftState(DraftState state) {
         if (state == null) return;
-        pendingValues.clear();
-        for (KTConfigEntry<?> entry : configPage.entries()) {
-            if (!entry.isValue()) continue;
-            Object value = state.values().get(entry.id());
-            pendingValues.put(entry.id(), value == null ? null : entry.snapshot(value));
+        // Prepare every snapshot before replacing the current draft. An add-on
+        // copier can fail midway; existing unsaved edits must remain intact.
+        Map<String, Object> restored = new HashMap<>();
+        try {
+            for (KTConfigEntry<?> entry : configPage.entries()) {
+                if (!entry.isValueEntry()) continue;
+                Object value = state.values().get(entry.id());
+                restored.put(entry.id(), value == null ? null : entry.snapshot(value));
+            }
+        } catch (Throwable failure) {
+            KineticRuntime.logger().error("Failed to restore config draft for page {}", configPage.id(), failure);
+            return;
         }
+        pendingValues.clear();
+        pendingValues.putAll(restored);
         rawTextValues.clear();
         rawTextValues.putAll(state.rawValues());
         invalidEntries.clear();
         invalidEntries.addAll(state.invalid());
         status = null;
-        if (minecraft != null) rebuildUi();
+        if (KineticClientRuntime.currentScreen() == this) rebuildUi();
     }
 
     @Override
@@ -154,7 +179,7 @@ public final class KTConfigScreen extends KineticScreen {
                 38, 37, 430,
                 KineticText.translatable("gui.kineticcore.config.search_fields"),
                 KineticText.translatable("gui.kineticcore.config.search_fields"),
-                null
+                null, null
         );
         searchBox.setMaxLength(256);
         searchBox.setValue(searchQuery);
@@ -169,7 +194,7 @@ public final class KTConfigScreen extends KineticScreen {
             KTConfigEntry<?> entry = entries.get(index);
             int y = ROW_TOP + index * ROW_HEIGHT;
             visibleRows.put(entry, y);
-            if (entry.isValue()) {
+            if (entry.isValueEntry()) {
                 addValueWidgets(entry, y);
             } else if (entry.type() == KTConfigEntry.Type.ACTION) {
                 addActionWidget(entry, y);
@@ -209,14 +234,17 @@ public final class KTConfigScreen extends KineticScreen {
     }
 
     private <T extends AbstractWidget> T addEntryScrollableWidget(T widget) {
-        return attachScrollableWidget(
-                widget,
+        if (!(widget instanceof dev.xyat.kineticcore.api.client.widget.KineticControl control)) {
+            throw new IllegalArgumentException("Scrollable widget must be an API-created control");
+        }
+        addScrollableWidget(control,
                 28,
                 ROW_TOP,
                 SCROLL_X - 2,
                 ROW_TOP + LIST_HEIGHT,
                 this::entryPixelOffset
         );
+        return widget;
     }
 
     private void addValueWidgets(KTConfigEntry<?> entry, int y) {
@@ -286,7 +314,7 @@ public final class KTConfigScreen extends KineticScreen {
                 );
                 box.setMaxLength(350);
                 box.setValue(rawTextValues.getOrDefault(entry.id(),
-                        NumericEditBox.format(((Number) pendingValues.get(entry.id())).doubleValue())));
+                        dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.formatDecimal(((Number) pendingValues.get(entry.id())).doubleValue())));
                 box.setResponder(raw -> {
                     Double parsed = box.getDoubleValue();
                     setParsedValue(entry.id(), entry, parsed, box);
@@ -313,22 +341,15 @@ public final class KTConfigScreen extends KineticScreen {
             );
             case CHOICE -> {
                 List<KTConfigEntry.ChoiceOption> choiceOptions = entry.choiceOptions();
-                List<String> choices = choiceOptions.stream().map(KTConfigEntry.ChoiceOption::value).toList();
                 String current = String.valueOf(pendingValues.get(entry.id()));
-                int selectedIndex = Math.max(0, choices.indexOf(current));
                 editor = addDropdown(
                         editorX, y, editorWidth,
-                        choiceOptions.stream().map(KTConfigEntry.ChoiceOption::label).toList(),
-                        choiceOptions.stream().map(KTConfigEntry.ChoiceOption::tooltip).toList(),
-                        selectedIndex,
-                        null,
-                        selected -> selected >= 0 && selected < choices.size()
-                                && entry.accepts(choices.get(selected)),
-                        selected -> {
-                            if (selected >= 0 && selected < choices.size()) {
-                                updateValidation(entry.id(), entry, choices.get(selected));
-                            }
-                        }
+                        choiceOptions.stream().map(option -> new dev.xyat.kineticcore.api.client.widget.selection.KineticDropdowns.Option(
+                                option.value(), option.translation(), option.tooltip()
+                        )).toList(),
+                        current, null,
+                        entry::accepts,
+                        selected -> updateValidation(entry.id(), entry, selected)
                 );
             }
             case STRING_LIST, ITEM_LIST, ITEM_RULE_LIST, ENTITY_LIST, INTEGER_LIST -> {
@@ -378,8 +399,12 @@ public final class KTConfigScreen extends KineticScreen {
             editorTooltip = entry.tooltip();
         }
         editor.active = editable;
-        KineticWidgets.setButtonError(editor instanceof Button button ? button : null, invalidEntries.contains(entry.id()));
-        registerWidgetTooltip(editor, editorTooltip);
+        if (editor instanceof dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton stateButton) {
+            stateButton.setError(invalidEntries.contains(entry.id()));
+        }
+        if (editor instanceof dev.xyat.kineticcore.api.client.widget.KineticControl control) {
+            registerWidgetTooltip(control, editorTooltip);
+        }
         addEntryScrollableWidget(editor);
 
         Button reset = addButton(
@@ -389,7 +414,7 @@ public final class KTConfigScreen extends KineticScreen {
                         ? KineticText.translatable("gui.kineticcore.config.reset.tooltip")
                         : KTConfigApi.unavailableReason(configPage),
                 () -> {
-                    pendingValues.put(entry.id(), entry.defaultSnapshot());
+                    pendingValues.put(entry.id(), entry.defaultValue());
                     invalidEntries.remove(entry.id());
                     rawTextValues.remove(entry.id());
                     status = null;
@@ -414,8 +439,8 @@ public final class KTConfigScreen extends KineticScreen {
     }
 
     private void requestAction(KTConfigEntry<?> entry) {
-        if (minecraft == null) return;
-        if (!isDirty()) {
+        if (KineticClientRuntime.currentScreen() != this) return;
+        if (isClean()) {
             runAction(entry);
             return;
         }
@@ -436,7 +461,7 @@ public final class KTConfigScreen extends KineticScreen {
     }
 
     private void runAction(KTConfigEntry<?> entry) {
-        if (!ensurePageEditable()) return;
+        if (rejectUneditablePage()) return;
         try {
             entry.runAction();
         } catch (Throwable throwable) {
@@ -449,19 +474,19 @@ public final class KTConfigScreen extends KineticScreen {
         }
     }
 
-    private boolean isDirty() {
-        if (!invalidEntries.isEmpty()) return true;
+    private boolean isClean() {
+        if (!invalidEntries.isEmpty()) return false;
         for (KTConfigEntry<?> entry : configPage.entries()) {
-            if (entry.isValue() && !Objects.equals(
+            if (entry.isValueEntry() && !Objects.equals(
                     pendingValues.get(entry.id()), originalValues.get(entry.id()))) {
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     private void openLongTextEditor(KTConfigEntry<?> entry) {
-        if (minecraft == null) return;
+        if (KineticClientRuntime.currentScreen() != this) return;
         String current = String.valueOf(pendingValues.getOrDefault(entry.id(), ""));
         KineticClientRuntime.openScreen(new KTLongTextEditorScreen(
                 this,
@@ -477,7 +502,7 @@ public final class KTConfigScreen extends KineticScreen {
     }
 
     private void openListEditor(KTConfigEntry<?> entry) {
-        if (minecraft == null) return;
+        if (KineticClientRuntime.currentScreen() != this) return;
         List<?> values = listValue(entry.id());
         if (entry.type() == KTConfigEntry.Type.ENTITY_LIST) {
             List<String> entityIds = values.stream().map(String::valueOf).toList();
@@ -524,7 +549,14 @@ public final class KTConfigScreen extends KineticScreen {
 
     private void updateValidation(String id, KTConfigEntry<?> entry, Object value) {
         pendingValues.put(id, value);
-        if (entry.accepts(value)) {
+        boolean valid;
+        try {
+            valid = entry.accepts(value);
+        } catch (RuntimeException failure) {
+            KineticRuntime.logger().error("Failed to validate config entry {}", entry.id(), failure);
+            valid = false;
+        }
+        if (valid) {
             invalidEntries.remove(id);
         } else {
             invalidEntries.add(id);
@@ -539,7 +571,14 @@ public final class KTConfigScreen extends KineticScreen {
 
     private void setParsedValue(String id, KTConfigEntry<?> entry, Object value, KineticEditBox box) {
         rawTextValues.put(id, box.getValue());
-        boolean valid = value != null && entry.accepts(value);
+        boolean valid = false;
+        if (value != null) {
+            try {
+                valid = entry.accepts(value);
+            } catch (RuntimeException failure) {
+                KineticRuntime.logger().error("Failed to validate config entry {}", entry.id(), failure);
+            }
+        }
         box.setValidationError(!valid);
         if (!valid) {
             invalidEntries.add(id);
@@ -550,8 +589,7 @@ public final class KTConfigScreen extends KineticScreen {
     }
 
     @Override
-    public void tick() {
-        super.tick();
+    protected void canvasTick() {
         if (!searchDirty) return;
 
         searchDirty = false;
@@ -565,9 +603,19 @@ public final class KTConfigScreen extends KineticScreen {
     }
 
     private void resetAll() {
-        for (KTConfigEntry<?> entry : configPage.entries()) {
-            if (entry.isValue()) pendingValues.put(entry.id(), entry.defaultSnapshot());
+        // A failed default supplier or snapshot must not half-reset the editor.
+        Map<String, Object> defaults = new HashMap<>();
+        try {
+            for (KTConfigEntry<?> entry : configPage.entries()) {
+                if (entry.isValueEntry()) defaults.put(entry.id(), entry.snapshot(entry.defaultValue()));
+            }
+        } catch (Throwable failure) {
+            KineticRuntime.logger().error("Failed to reset config page {}", configPage.id(), failure);
+            status = KineticText.translatable("gui.kineticcore.config.reset_failed",
+                    Component.literal(failure.getClass().getSimpleName()));
+            return;
         }
+        pendingValues.putAll(defaults);
         invalidEntries.clear();
         rawTextValues.clear();
         status = KineticText.translatable("gui.kineticcore.config.reset_done");
@@ -583,10 +631,16 @@ public final class KTConfigScreen extends KineticScreen {
     }
 
     private SaveOutcome persistPendingValues() {
-        if (!ensurePageEditable()) return SaveOutcome.FAILED;
+        if (rejectUneditablePage()) return SaveOutcome.FAILED;
 
         for (KTConfigEntry<?> entry : configPage.entries()) {
-            if (entry.isValue() && !entry.accepts(pendingValues.get(entry.id()))) {
+            if (!entry.isValueEntry()) continue;
+            try {
+                if (!entry.accepts(pendingValues.get(entry.id()))) invalidEntries.add(entry.id());
+            } catch (RuntimeException invalidValue) {
+                // An add-on validator failure is an invalid field, not a fatal screen error.
+                KineticRuntime.logger().error("Failed to validate config entry {} on page {}",
+                        entry.id(), configPage.id(), invalidValue);
                 invalidEntries.add(entry.id());
             }
         }
@@ -596,7 +650,7 @@ public final class KTConfigScreen extends KineticScreen {
         }
 
         List<KTConfigEntry<?>> changedEntries = configPage.entries().stream()
-                .filter(KTConfigEntry::isValue)
+                .filter(KTConfigEntry::isValueEntry)
                 .filter(entry -> !Objects.equals(
                         pendingValues.get(entry.id()), originalValues.get(entry.id())))
                 .toList();
@@ -605,12 +659,22 @@ public final class KTConfigScreen extends KineticScreen {
             return SaveOutcome.UNCHANGED;
         }
 
-        if (configPage.scope() == KTConfigScope.SERVER_AUTHORITATIVE) {
-            Map<String, Object> changedValues = new HashMap<>();
+        // Snapshot every changed field before the first writer or network request.
+        // A copier failure must never leave a partially committed page.
+        Map<String, Object> committedSnapshots = new HashMap<>();
+        try {
             for (KTConfigEntry<?> entry : changedEntries) {
-                changedValues.put(entry.id(), entry.snapshot(pendingValues.get(entry.id())));
+                committedSnapshots.put(entry.id(), entry.snapshot(pendingValues.get(entry.id())));
             }
-            if (!KTServerConfigClient.save(configPage, changedValues)) {
+        } catch (Throwable failure) {
+            KineticRuntime.logger().error("Failed to prepare config page {} for saving", configPage.id(), failure);
+            status = KineticText.translatable("gui.kineticcore.config.save_failed",
+                    Component.literal(failure.getClass().getSimpleName()));
+            return SaveOutcome.FAILED;
+        }
+
+        if (configPage.scope() == KTConfigScope.SERVER_AUTHORITATIVE) {
+            if (!KTServerConfigClient.save(configPage, committedSnapshots)) {
                 status = KTConfigApi.unavailableReason(configPage);
                 return SaveOutcome.FAILED;
             }
@@ -618,8 +682,10 @@ public final class KTConfigScreen extends KineticScreen {
             List<KTConfigEntry<?>> appliedEntries = new ArrayList<>();
             try {
                 for (KTConfigEntry<?> entry : changedEntries) {
-                    entry.writeSnapshot(pendingValues.get(entry.id()));
+                    // A writer can mutate its backing value before throwing. Include the
+                    // in-flight entry in rollback rather than restoring only older entries.
                     appliedEntries.add(entry);
+                    entry.writeSnapshot(pendingValues.get(entry.id()));
                 }
                 configPage.save();
             } catch (Throwable throwable) {
@@ -630,18 +696,16 @@ public final class KTConfigScreen extends KineticScreen {
             }
         }
 
-        for (KTConfigEntry<?> entry : changedEntries) {
-            originalValues.put(entry.id(), entry.snapshot(pendingValues.get(entry.id())));
-        }
+        originalValues.putAll(committedSnapshots);
         status = null;
         return SaveOutcome.SAVED;
     }
 
-    private boolean ensurePageEditable() {
-        if (KTConfigApi.canEdit(configPage)) return true;
+    private boolean rejectUneditablePage() {
+        if (KTConfigApi.canEdit(configPage)) return false;
         status = KTConfigApi.unavailableReason(configPage);
-        GuiOverlay.toast("kineticcore_config_unavailable", status);
-        return false;
+        KineticOverlays.toast("kineticcore_config_unavailable", status, KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
+        return true;
     }
 
     private boolean shouldShowImmediateSavedToast(SaveOutcome outcome) {
@@ -658,7 +722,9 @@ public final class KTConfigScreen extends KineticScreen {
     }
 
     private void rollbackOriginalValues(List<KTConfigEntry<?>> appliedEntries) {
-        for (KTConfigEntry<?> entry : appliedEntries) {
+        // Reverse write order so dependent fields are restored before their prerequisites.
+        for (int index = appliedEntries.size() - 1; index >= 0; index--) {
+            KTConfigEntry<?> entry = appliedEntries.get(index);
             try {
                 entry.writeSnapshot(originalValues.get(entry.id()));
             } catch (Throwable rollbackFailure) {
@@ -671,10 +737,67 @@ public final class KTConfigScreen extends KineticScreen {
 
     void serverSnapshotUpdated(String pageId) {
         if (!configPage.id().equals(pageId)) return;
-        ServerConfigClientRuntime.applyCached(configPage);
-        refreshFromSource();
-        commitDraft();
-        if (minecraft != null) rebuildUi();
+        KTServerConfigClient.applyCached(configPage);
+
+        // Stage every authoritative snapshot first. A faulty add-on copier must
+        // never leave half of this page with a newer baseline than the rest.
+        Map<String, Object> nextOriginal = new HashMap<>();
+        Map<String, Object> nextPending = new HashMap<>();
+        Set<String> cleanKeys = new HashSet<>();
+        try {
+            for (KTConfigEntry<?> entry : configPage.entries()) {
+                if (!entry.isValueEntry()) continue;
+                String key = entry.id();
+                boolean hasLocalDraft = !Objects.equals(pendingValues.get(key), originalValues.get(key))
+                        || invalidEntries.contains(key) || rawTextValues.containsKey(key);
+                Object value;
+                try {
+                    value = entry.read();
+                } catch (Throwable throwable) {
+                    KineticRuntime.logger().error("Failed to refresh server config value {} from page {}",
+                            key, configPage.id(), throwable);
+                    value = entry.defaultValue();
+                }
+                boolean accepted;
+                try {
+                    accepted = entry.accepts(value);
+                } catch (RuntimeException invalidValue) {
+                    KineticRuntime.logger().error("Failed to validate server config entry {} on page {}",
+                            key, configPage.id(), invalidValue);
+                    accepted = false;
+                }
+                if (!accepted) value = entry.defaultValue();
+                Object snapshot = entry.snapshot(value);
+                nextOriginal.put(key, entry.snapshot(snapshot));
+                if (!hasLocalDraft) {
+                    nextPending.put(key, snapshot);
+                    cleanKeys.add(key);
+                }
+            }
+        } catch (Throwable failure) {
+            KineticRuntime.logger().error("Failed to synchronize config page {}", configPage.id(), failure);
+            return;
+        }
+        originalValues.putAll(nextOriginal);
+        pendingValues.putAll(nextPending);
+        for (String key : cleanKeys) {
+            invalidEntries.remove(key);
+            rawTextValues.remove(key);
+        }
+
+        // Never commit a partially edited draft merely because the server responded.
+        boolean dirty = !invalidEntries.isEmpty() || !rawTextValues.isEmpty();
+        if (!dirty) {
+            for (KTConfigEntry<?> entry : configPage.entries()) {
+                if (entry.isValueEntry() && !Objects.equals(
+                        pendingValues.get(entry.id()), originalValues.get(entry.id()))) {
+                    dirty = true;
+                    break;
+                }
+            }
+        }
+        if (!dirty) commitDraft();
+        if (KineticClientRuntime.currentScreen() == this) rebuildUi();
     }
 
     private static Component booleanText(boolean value) {
@@ -729,8 +852,8 @@ public final class KTConfigScreen extends KineticScreen {
             );
         }
 
-        GuiTheme.scrollbar(
-                entryScroll, graphics, mouseX, mouseY,
+        entryScroll.render(
+                graphics, mouseX, mouseY,
                 SCROLL_X, ROW_TOP, SCROLL_WIDTH, LIST_HEIGHT, 18
         );
 
@@ -766,7 +889,7 @@ public final class KTConfigScreen extends KineticScreen {
                 ? hoveredEntry.label()
                 : hoveredEntry.tooltip();
         if (tooltip != null) {
-            showTooltip(tooltip, 400);
+            showTooltip(List.of(tooltip), 400);
         }
     }
 
@@ -799,16 +922,16 @@ public final class KTConfigScreen extends KineticScreen {
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
         if (mouseX >= 28 && mouseX <= 620
                 && mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
-                && entryScroll.scroll(delta)) {
+                && entryScroll.scroll(delta, 1.0D)) {
             return true;
         }
         return super.canvasMouseScrolled(mouseX, mouseY, delta);
     }
 
     @Override
-    public void onClose() {
+    protected boolean handleCloseRequest() {
         discardDraft();
-        navigateBack();
+        return false;
     }
 
     @Override
@@ -822,7 +945,7 @@ public final class KTConfigScreen extends KineticScreen {
                 .append(entry.label().getString());
         if (entry.tooltip() != null) data.append(' ').append(entry.tooltip().getString());
         String raw = data.toString();
-        return raw + ' ' + KineticSearch.pinyin(raw);
+        return raw;
     }
 
     private Component unsavedMessage() {

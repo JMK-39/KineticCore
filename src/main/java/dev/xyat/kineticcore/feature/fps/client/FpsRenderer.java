@@ -1,13 +1,17 @@
 package dev.xyat.kineticcore.feature.fps.client;
 
+
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
+import dev.xyat.kineticcore.api.monitoring.KineticClientPerformance;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.feature.fps.config.FpsClientConfig;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FrameTimer;
 import net.minecraft.util.Mth;
 
 import java.util.Arrays;
@@ -19,7 +23,7 @@ public final class FpsRenderer {
     private static final int AVERAGE_SAMPLE_COUNT = 24;
     private static final int[] AVERAGE_SAMPLES = new int[AVERAGE_SAMPLE_COUNT];
 
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
     private static boolean hasStats;
     private static boolean averageFilled;
     private static long lastRefreshNanos;
@@ -32,13 +36,13 @@ public final class FpsRenderer {
     }
 
     public static void register() {
-        if (registered) return;
-        KineticClientEvents.onHudRender(KineticClientEvents.HudStage.AFTER_CHAT, FpsRenderer::onRenderOverlay);
-        registered = true;
+        REGISTRATION.run(() ->
+                KineticClientEvents.onHudRender(KineticClientEvents.HudStage.AFTER_CHAT, FpsRenderer::onRenderOverlay)
+        );
     }
 
     public static List<Component> createPreviewLines() {
-        FpsStats stats = getFpsStats(Minecraft.getInstance());
+        FpsStats stats = getFpsStats();
         return List.of(createFpsText(stats.current(), stats.minimum(), stats.average()));
     }
 
@@ -57,45 +61,45 @@ public final class FpsRenderer {
     public static void renderLines(GuiGraphics graphics, Font font, List<Component> lines, int x, int y) {
         int lineY = y;
         for (Component line : lines) {
-            graphics.drawString(font, line, x, lineY, 0xFFFFFF, true);
+            graphics.drawString(font, line, x, lineY, GuiTheme.current().text(), true);
             lineY += font.lineHeight;
         }
     }
 
     private static void onRenderOverlay(GuiGraphics graphics, float partialTick) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.screen instanceof FpsHudEditorScreen) return;
+        if (KineticClientRuntime.currentScreen() instanceof FpsHudEditorScreen) return;
         if (!FpsClientConfig.isHudEnabled()
-                || minecraft.options.hideGui
-                || minecraft.level == null
-                || minecraft.options.renderDebug) return;
+                || KineticClientRuntime.guiHidden()
+                || KineticClientRuntime.currentLevel() == null
+                || KineticClientRuntime.debugScreenVisible()) return;
 
-        FpsStats stats = getFpsStats(minecraft);
+        Font font = KineticClientRuntime.font();
+        FpsStats stats = getFpsStats();
         List<Component> lines = List.of(createFpsText(stats.current(), stats.minimum(), stats.average()));
-        int contentWidth = getContentWidth(minecraft.font, lines);
-        int contentHeight = getContentHeight(minecraft.font, lines.size());
+        int contentWidth = getContentWidth(font, lines);
+        int contentHeight = getContentHeight(font, lines.size());
         double scale = FpsClientConfig.getHudScale();
         int scaledWidth = scaledSize(contentWidth, scale);
         int scaledHeight = scaledSize(contentHeight, scale);
-        int screenWidth = minecraft.getWindow().getGuiScaledWidth();
-        int screenHeight = minecraft.getWindow().getGuiScaledHeight();
+        int screenWidth = KineticClientRuntime.guiScaledWidth();
+        int screenHeight = KineticClientRuntime.guiScaledHeight();
         int x = Mth.clamp(screenWidth - scaledWidth - 2 - FpsClientConfig.getHudOffsetX(), 0, Math.max(0, screenWidth - scaledWidth));
         int y = Mth.clamp(screenHeight - scaledHeight - 2 - FpsClientConfig.getHudOffsetY(), 0, Math.max(0, screenHeight - scaledHeight));
 
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0.0F);
         graphics.pose().scale((float) scale, (float) scale, 1.0F);
-        renderLines(graphics, minecraft.font, lines, 0, 0);
+        renderLines(graphics, font, lines, 0, 0);
         graphics.pose().popPose();
     }
 
     private static Component createFpsText(int current, int minimum, int average) {
         return Component.empty()
-                .append(Component.translatable("gui.kineticcore.fps.label.fps"))
+                .append(KineticI18n.translatable("gui.kineticcore.fps.label.fps"))
                 .append(formatFpsValue(current))
-                .append(Component.translatable("gui.kineticcore.fps.label.minimum"))
+                .append(KineticI18n.translatable("gui.kineticcore.fps.label.minimum"))
                 .append(formatFpsValue(minimum))
-                .append(Component.translatable("gui.kineticcore.fps.label.average"))
+                .append(KineticI18n.translatable("gui.kineticcore.fps.label.average"))
                 .append(formatFpsValue(average));
     }
 
@@ -108,37 +112,39 @@ public final class FpsRenderer {
         return KineticText.translatable(key, Component.literal(String.valueOf(fps)));
     }
 
-    private static FpsStats getFpsStats(Minecraft minecraft) {
+    private static FpsStats getFpsStats() {
         long now = System.nanoTime();
         if (!hasStats || now - lastRefreshNanos >= REFRESH_INTERVAL_NANOS) {
-            refreshFpsStats(minecraft, now);
+            refreshFpsStats(KineticClientPerformance.snapshot(), now);
         }
         return new FpsStats(cachedCurrentFps, cachedMinimumFps, cachedAverageFps);
     }
 
-    private static void refreshFpsStats(Minecraft minecraft, long now) {
-        int current = minecraft.getFps();
+    private static void refreshFpsStats(KineticClientPerformance.FrameSnapshot snapshot, long now) {
+        int current = snapshot.currentFps();
         if (current <= 0) {
             current = hasStats ? Math.max(1, cachedCurrentFps) : 1;
         }
 
         cachedCurrentFps = current;
-        cachedMinimumFps = calculateMinimumFps(minecraft, current);
+        cachedMinimumFps = calculateMinimumFps(snapshot, current);
         pushAverageFps(current);
         cachedAverageFps = calculateAverageFps();
         lastRefreshNanos = now;
         hasStats = true;
     }
 
-    private static int calculateMinimumFps(Minecraft minecraft, int currentFps) {
-        FrameTimer timer = minecraft.getFrameTimer();
-        int start = timer.getLogStart();
-        int end = timer.getLogEnd();
+    private static int calculateMinimumFps(KineticClientPerformance.FrameSnapshot snapshot, int currentFps) {
+        int start = snapshot.logStart();
+        int end = snapshot.logEnd();
         if (end == start) {
             return hasStats ? Math.max(1, cachedMinimumFps) : currentFps;
         }
 
-        long[] frames = timer.getLog();
+        long[] frames = snapshot.frameNanos();
+        if (frames.length == 0) {
+            return hasStats ? Math.max(1, cachedMinimumFps) : currentFps;
+        }
         long maximumFrameNanos = Math.max(1L, (long) (1_000_000_000.0D / Math.max(1, currentFps)));
         long totalFrameNanos = 0L;
         int index = Math.floorMod(end - 1, frames.length);

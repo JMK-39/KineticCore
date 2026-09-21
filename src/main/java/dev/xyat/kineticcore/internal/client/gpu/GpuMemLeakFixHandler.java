@@ -12,12 +12,15 @@ import java.lang.ref.Cleaner;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GpuMemLeakFixHandler {
+    private static boolean registered;
 
     private static final Cleaner CLEANER = Cleaner.create();
     public static final ConcurrentLinkedQueue<Vec3i> PENDING_DELETIONS = new ConcurrentLinkedQueue<>();
 
-    public static void register() {
+    public static synchronized void register() {
+        if (registered) return;
         MinecraftForge.EVENT_BUS.addListener(GpuMemLeakFixHandler::onClientTick);
+        registered = true;
     }
 
     private static void onClientTick(TickEvent.ClientTickEvent event) {

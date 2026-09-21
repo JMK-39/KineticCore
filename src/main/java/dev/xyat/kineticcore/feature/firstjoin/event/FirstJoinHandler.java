@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.firstjoin.event;
 
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
@@ -23,13 +25,13 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class FirstJoinHandler {
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
 
     public static void register() {
-        if (registered) return;
-        registered = true;
-        KineticServerEvents.onPlayerLogin(FirstJoinHandler::onPlayerLogin);
-        KineticServerEvents.onTick(KineticServerEvents.TickPhase.END, FirstJoinHandler::onServerTick);
+        REGISTRATION.run(
+                () -> KineticServerEvents.onPlayerLogin(KineticEventPriority.NORMAL, FirstJoinHandler::onPlayerLogin),
+                () -> KineticServerEvents.onTick(KineticEventPriority.NORMAL, KineticServerEvents.TickPhase.END, FirstJoinHandler::onServerTick)
+        );
     }
 
 

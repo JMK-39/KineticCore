@@ -1,12 +1,13 @@
 package dev.xyat.kineticcore.feature.pvp.command;
 
+
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import dev.xyat.kineticcore.feature.pvp.event.PvpEventHandler;
 import dev.xyat.kineticcore.feature.pvp.network.PvpNetwork;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 public class PvpCommand {
@@ -42,7 +43,7 @@ public class PvpCommand {
 
     private static int togglePvp(CommandSourceStack source) {
         if (!(source.getEntity() instanceof ServerPlayer player)) {
-            source.sendFailure(Component.translatable("cmd.kineticcore.error.players_only"));
+            source.sendFailure(KineticI18n.translatable("cmd.kineticcore.error.players_only"));
             return 0;
         }
 

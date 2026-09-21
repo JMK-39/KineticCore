@@ -2,8 +2,8 @@ package dev.xyat.kineticcore.internal.client.config;
 
 import dev.xyat.kineticcore.api.config.client.*;
 
-import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
 import net.minecraft.client.gui.Font;
+import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields;
 
 final class KTConfigControlMetrics {
     static final int CONTROL_RIGHT = 612;
@@ -49,10 +49,10 @@ final class KTConfigControlMetrics {
 
         Number minimum = entry.minimum();
         Number maximum = entry.maximum();
-        if (minimum != null && !isUnboundedMinimum(entry.type(), minimum)) {
+        if (minimum != null && hasBoundedMinimum(entry.type(), minimum)) {
             contentWidth = Math.max(contentWidth, valueWidth(font, entry.type(), minimum));
         }
-        if (maximum != null && !isUnboundedMaximum(entry.type(), maximum)) {
+        if (maximum != null && hasBoundedMaximum(entry.type(), maximum)) {
             contentWidth = Math.max(contentWidth, valueWidth(font, entry.type(), maximum));
         }
 
@@ -68,7 +68,7 @@ final class KTConfigControlMetrics {
 
     private static int choiceWidth(Font font, KTConfigEntry<?> entry) {
         int contentWidth = entry.choiceOptions().stream()
-                .mapToInt(option -> font.width(option.label()))
+                .mapToInt(option -> font.width(option.value()))
                 .max()
                 .orElse(0);
         return clamp(contentWidth + TEXT_PADDING + 10, CHOICE_MIN_WIDTH, CHOICE_MAX_WIDTH);
@@ -77,26 +77,26 @@ final class KTConfigControlMetrics {
     private static int valueWidth(Font font, KTConfigEntry.Type type, Object value) {
         if (value == null) return 0;
         if (type == KTConfigEntry.Type.DOUBLE && value instanceof Number number) {
-            return font.width(NumericEditBox.format(number.doubleValue()));
+            return font.width(KineticNumericFields.formatDecimal(number.doubleValue()));
         }
         return font.width(String.valueOf(value));
     }
 
-    private static boolean isUnboundedMinimum(KTConfigEntry.Type type, Number value) {
+    private static boolean hasBoundedMinimum(KTConfigEntry.Type type, Number value) {
         return switch (type) {
-            case INTEGER -> value.intValue() == Integer.MIN_VALUE;
-            case LONG -> value.longValue() == Long.MIN_VALUE;
-            case DOUBLE -> value.doubleValue() <= -Double.MAX_VALUE;
-            default -> false;
+            case INTEGER -> value.intValue() != Integer.MIN_VALUE;
+            case LONG -> value.longValue() != Long.MIN_VALUE;
+            case DOUBLE -> !(value.doubleValue() <= -Double.MAX_VALUE);
+            default -> true;
         };
     }
 
-    private static boolean isUnboundedMaximum(KTConfigEntry.Type type, Number value) {
+    private static boolean hasBoundedMaximum(KTConfigEntry.Type type, Number value) {
         return switch (type) {
-            case INTEGER -> value.intValue() == Integer.MAX_VALUE;
-            case LONG -> value.longValue() == Long.MAX_VALUE;
-            case DOUBLE -> value.doubleValue() >= Double.MAX_VALUE;
-            default -> false;
+            case INTEGER -> value.intValue() != Integer.MAX_VALUE;
+            case LONG -> value.longValue() != Long.MAX_VALUE;
+            case DOUBLE -> !(value.doubleValue() >= Double.MAX_VALUE);
+            default -> true;
         };
     }
 

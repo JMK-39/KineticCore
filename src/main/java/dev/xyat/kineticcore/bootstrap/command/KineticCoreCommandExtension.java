@@ -1,10 +1,12 @@
 package dev.xyat.kineticcore.bootstrap.command;
 
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import dev.xyat.kineticcore.api.command.CommandExtension;
 import dev.xyat.kineticcore.api.command.CommandText;
 import dev.xyat.kineticcore.api.command.KineticCommands;
 import dev.xyat.kineticcore.feature.firstjoin.command.FirstJoinCommand;
+import dev.xyat.kineticcore.feature.flight.command.FlightCommand;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
 import dev.xyat.kineticcore.feature.logcleaner.config.LogCleanerConfig;
 import dev.xyat.kineticcore.feature.mechanics.config.GeneralMechanicsConfig;
@@ -22,12 +24,10 @@ import java.util.List;
 
 public final class KineticCoreCommandExtension implements CommandExtension {
     private static final String EXTENSION_ID = "kineticcore:core";
-    private static boolean registered;
+    private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
 
     public static void register() {
-        if (registered) return;
-        registered = true;
-        KineticCommands.registerExtension(EXTENSION_ID, new KineticCoreCommandExtension());
+        REGISTRATION.run(() -> KineticCommands.registerExtension(EXTENSION_ID, new KineticCoreCommandExtension()));
     }
 
     @Override
@@ -37,6 +37,7 @@ public final class KineticCoreCommandExtension implements CommandExtension {
         SetSpawnCommand.register(root);
         TpsCommand.register(root);
         NbtCommand.register(root);
+        FlightCommand.register(root);
     }
 
     @Override
@@ -48,6 +49,7 @@ public final class KineticCoreCommandExtension implements CommandExtension {
         items.add(CommandText.executable("/kt world", "cmd.kineticcore.world.desc"));
         items.add(CommandText.executable("/kt tps", "cmd.kineticcore.tps.desc"));
         items.add(CommandText.executable("/kt nbt", "cmd.kineticcore.nbt.desc"));
+        if (source.hasPermission(2)) items.add(CommandText.executable("/kt flight", "cmd.kineticcore.flight.desc"));
     }
 
     @Override

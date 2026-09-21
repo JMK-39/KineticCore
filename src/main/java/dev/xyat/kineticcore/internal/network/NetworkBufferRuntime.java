@@ -6,6 +6,7 @@ import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.Objects;
 
 public final class NetworkBufferRuntime {
     private NetworkBufferRuntime() {
@@ -16,6 +17,7 @@ public final class NetworkBufferRuntime {
     }
 
     public static byte[] encode(Consumer<NetworkBuffer> writer) {
+        Objects.requireNonNull(writer, "writer");
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
             writer.accept(new ForgeNetworkBuffer(buffer));
@@ -28,9 +30,15 @@ public final class NetworkBufferRuntime {
     }
 
     public static <T> T decode(byte[] bytes, Function<NetworkBuffer, T> reader) {
+        Objects.requireNonNull(reader, "reader");
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.wrappedBuffer(bytes == null ? new byte[0] : bytes));
         try {
-            return reader.apply(new ForgeNetworkBuffer(buffer));
+            T value = reader.apply(new ForgeNetworkBuffer(buffer));
+            // A complete standalone packet must not silently accept an unknown suffix.
+            if (buffer.readableBytes() != 0) {
+                throw new IllegalArgumentException("Unexpected trailing network payload bytes");
+            }
+            return value;
         } finally {
             buffer.release();
         }
