@@ -18,7 +18,6 @@ public final class SpawnEggConfigGui {
                 .serverManaged()
                 .applyTiming(KTConfigPage.ApplyTiming.IMMEDIATE)
                 .pageDescription(KineticI18n.translatable("cfg.kineticcore.spawnegg.description"))
-                .section(KineticI18n.translatable("cfg.kineticcore.spawnegg.title"))
                 .booleanValue(
                         "enable",
                         KineticI18n.translatable("cfg.kineticcore.spawnegg.enable"),

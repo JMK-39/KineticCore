@@ -41,7 +41,7 @@ final class KTModuleConfigScreen extends KineticScreen {
 
     private enum RowKind {
         SCOPE,
-        PAGE,
+        DIVIDER,
         ENTRY
     }
 
@@ -56,8 +56,8 @@ final class KTModuleConfigScreen extends KineticScreen {
             );
         }
 
-        static Row page(KTConfigPage page) {
-            return new Row(RowKind.PAGE, page.scope(), page, null, page.title());
+        static Row divider(KTConfigScope scope) {
+            return new Row(RowKind.DIVIDER, scope, null, null, Component.empty());
         }
 
         static Row entry(KTConfigPage page, KTConfigEntry<?> entry) {
@@ -786,8 +786,9 @@ final class KTModuleConfigScreen extends KineticScreen {
                 Row row = visible.getKey();
                 int y = visible.getValue() - (int) Math.round(pixelOffset);
                 if (y + ROW_HEIGHT <= ROW_TOP || y >= ROW_TOP + LIST_HEIGHT) continue;
-                int tooltipWidth = row.kind() == RowKind.PAGE ? 578 : 292;
-                if (mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
+                int tooltipWidth = row.kind() == RowKind.SCOPE ? 578 : 292;
+                if (row.kind() != RowKind.DIVIDER
+                        && mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
                         && GuiTheme.hovering(mouseX, mouseY, 30, y - 3, tooltipWidth, 23)) {
                     hoveredRow = row;
                 }
@@ -797,25 +798,13 @@ final class KTModuleConfigScreen extends KineticScreen {
                         graphics.fill(30, y - 3, 612, y + 20, 0x66303030);
                         graphics.drawString(font, row.text(), 38, y + 4, GuiTheme.current().text(), false);
                     }
-                    case PAGE -> {
-                        graphics.fill(34, y - 2, 608, y + 19, 0x44222222);
-                        KineticText.drawScrollingLeft(graphics, font, row.text(), 46, y + 4, 540, 0xFFFFAA00, false);
-                        if (!KTConfigApi.canEdit(row.page())) {
-                            Component locked = KineticText.translatable("gui.kineticcore.config.server_locked");
-                            graphics.drawString(
-                                    font,
-                                    locked,
-                                    600 - font.width(locked),
-                                    y + 4,
-                                    0xFFFF5555,
-                                    false
-                            );
-                        }
-                    }
+                    case DIVIDER -> GuiTheme.separator(graphics, 38, y + 8, 562);
                     case ENTRY -> {
                         KTConfigEntry<?> entry = row.entry();
                         String key = entryKey(row.page(), entry);
-                        if (entry.type() == KTConfigEntry.Type.SECTION) {
+                        if (entry.type() == KTConfigEntry.Type.DIVIDER) {
+                            GuiTheme.separator(graphics, 46, y + 8, 554);
+                        } else if (entry.type() == KTConfigEntry.Type.SECTION) {
                             graphics.fill(38, y - 3, 612, y + 20, 0x33222222);
                             graphics.drawString(font, entry.label(), 46, y + 4, 0xFFFFCC55, false);
                         } else if (entry.type() == KTConfigEntry.Type.DESCRIPTION) {
@@ -887,13 +876,7 @@ final class KTModuleConfigScreen extends KineticScreen {
         if (hoveredRow == null) return;
 
         Component tooltip = switch (hoveredRow.kind()) {
-            case SCOPE -> null;
-            case PAGE -> {
-                if (!KTConfigApi.canEdit(hoveredRow.page())) {
-                    yield KTConfigApi.unavailableReason(hoveredRow.page());
-                }
-                yield hoveredRow.page().description();
-            }
+            case SCOPE, DIVIDER -> null;
             case ENTRY -> hoveredRow.entry().type() == KTConfigEntry.Type.DESCRIPTION
                     ? hoveredRow.entry().label()
                     : hoveredRow.entry().tooltip();
@@ -1043,6 +1026,7 @@ final class KTModuleConfigScreen extends KineticScreen {
 
     private void appendScopeGroup(List<Row> result, boolean serverGroup, String normalized) {
         List<Row> groupRows = new ArrayList<>();
+        boolean hasPage = false;
         for (KTConfigPage page : pages) {
             boolean serverPage = page.scope() == KTConfigScope.SERVER_AUTHORITATIVE;
             if (serverPage != serverGroup) continue;
@@ -1051,7 +1035,8 @@ final class KTModuleConfigScreen extends KineticScreen {
             boolean pageMatched = normalized.isEmpty() || matchesPage(page, normalized);
             if (!pageMatched && matched.isEmpty()) continue;
 
-            groupRows.add(Row.page(page));
+            if (hasPage) groupRows.add(Row.divider(page.scope()));
+            hasPage = true;
             if (normalized.isEmpty() || pageMatched) {
                 for (KTConfigEntry<?> entry : page.entries()) groupRows.add(Row.entry(page, entry));
             } else {

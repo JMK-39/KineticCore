@@ -265,6 +265,18 @@ public final class KTConfigPage {
         }
 
         /**
+         * Adds a visual divider between configuration groups without adding a text heading.
+         */
+        public Builder divider() {
+            entries.add(KTConfigEntry.structural(
+                    "__divider_" + structuralIndex++,
+                    KTConfigEntry.Type.DIVIDER,
+                    Component.empty()
+            ));
+            return this;
+        }
+
+        /**
          * Returns the description.
          */
         public Builder description(Component text) {

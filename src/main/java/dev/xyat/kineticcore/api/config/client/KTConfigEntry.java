@@ -17,6 +17,7 @@ public final class KTConfigEntry<T> {
     /** Identifies the editor/control kind represented by a configuration entry. */
     public enum Type {
         SECTION,
+        DIVIDER,
         DESCRIPTION,
         BOOLEAN,
         INTEGER,
@@ -99,7 +100,7 @@ public final class KTConfigEntry<T> {
     }
 
     static KTConfigEntry<Void> structural(String id, Type type, Component label) {
-        if (type != Type.SECTION && type != Type.DESCRIPTION) {
+        if (type != Type.SECTION && type != Type.DIVIDER && type != Type.DESCRIPTION) {
             throw new IllegalArgumentException("Not a structural entry type: " + type);
         }
         return new KTConfigEntry<>(
@@ -229,7 +230,7 @@ public final class KTConfigEntry<T> {
                 yield color >= 0 && color <= 0xFFFFFF;
             }
             case BOOLEAN, STRING, LONG_TEXT, STRING_LIST, ITEM_LIST, ITEM_RULE_LIST, INTEGER_LIST, ENTITY_LIST -> true;
-            case SECTION, DESCRIPTION, ACTION -> false;
+            case SECTION, DIVIDER, DESCRIPTION, ACTION -> false;
         };
         return builtInValid && validator.test(decoded);
     }

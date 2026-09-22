@@ -20,7 +20,6 @@ public class WorldInitConfigGui {
                 .serverManaged()
                 .applyTiming(KTConfigPage.ApplyTiming.NEXT_WORLD_LOAD)
                 .applyNotice(KineticI18n.translatable("cfg.kineticcore.worldinit.apply_notice"))
-                .section(KineticI18n.translatable("cfg.kineticcore.worldinit.title"))
                 .booleanValue(
                         "enable_world_init",
                         KineticI18n.translatable("cfg.kineticcore.worldinit.enable"),

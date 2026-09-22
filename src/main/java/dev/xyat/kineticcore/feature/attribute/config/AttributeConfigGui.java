@@ -42,7 +42,6 @@ public final class AttributeConfigGui {
                 .pageDescription(KineticText.translatable("cfg.kineticcore.attribute.description"))
                 .applyTiming(KTConfigPage.ApplyTiming.RESTART_GAME)
                 .applyNotice(KineticText.translatable("cfg.kineticcore.attribute.restart_notice"))
-                .section(KineticText.translatable("cfg.kineticcore.attribute.section.global"))
                 .booleanValue(
                         "auto_scan",
                         KineticText.translatable("cfg.kineticcore.attribute.auto_scan"),
@@ -73,8 +72,7 @@ public final class AttributeConfigGui {
                 .serverManaged()
                 .pageDescription(KineticText.translatable("cfg.kineticcore.attribute.description"))
                 .applyTiming(KTConfigPage.ApplyTiming.RESTART_GAME)
-                .applyNotice(KineticText.translatable("cfg.kineticcore.attribute.restart_notice"))
-                .section(KineticText.translatable("cfg.kineticcore.attribute.section.attributes"));
+                .applyNotice(KineticText.translatable("cfg.kineticcore.attribute.restart_notice"));
 
         for (Map.Entry<ResourceKey<Attribute>, Attribute> entry : sortedRangedAttributes()) {
             ResourceLocation id = entry.getKey().location();

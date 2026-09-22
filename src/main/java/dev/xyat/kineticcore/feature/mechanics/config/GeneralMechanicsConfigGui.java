@@ -27,7 +27,6 @@ public class GeneralMechanicsConfigGui {
                 .serverManaged()
                 .applyTiming(KTConfigPage.ApplyTiming.MIXED)
                 .applyNotice(KineticI18n.translatable("cfg.kineticcore.mechanics.apply_notice"))
-                .section(KineticI18n.translatable("cfg.kineticcore.mechanics"))
                 .booleanValue(
                         "pvp_protection",
                         KineticI18n.translatable("cfg.kineticcore.mech.pvp_protection"),

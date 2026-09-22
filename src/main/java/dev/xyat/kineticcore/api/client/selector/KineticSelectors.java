@@ -170,21 +170,7 @@ public final class KineticSelectors {
             Collection<String> initialEntityIds,
             Consumer<List<String>> onApply
     ) {
-        openEntitySelector(parent, title, initialEntityIds, null, onApply);
-    }
-
-    /**
-     * Opens the shared 3D entity picker restricted to a caller supplied set of registered entity IDs.
-     * A null restriction preserves the original unrestricted selector behavior.
-     * The picker owns filtering and visuals; callers own the meaning of selected IDs.
-     */
-    public static void openEntitySelector(
-            Screen parent, Component title, Collection<String> initialEntityIds,
-            Collection<String> allowedEntityIds, Consumer<List<String>> onApply
-    ) {
-        Objects.requireNonNull(onApply, "onApply");
-        KineticClientRuntime.openScreen(new EntitySelectorScreen(parent, title, initialEntityIds,
-                allowedEntityIds, onApply));
+        KineticClientRuntime.openScreen(new EntitySelectorScreen(parent, title, initialEntityIds, onApply));
     }
 
     /** Opens the standard item-rule list editor using the requested rule mode. */

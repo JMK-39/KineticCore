@@ -824,11 +824,14 @@ final class KTConfigScreen extends KineticScreen {
                 int y = row.getValue() - (int) Math.round(pixelOffset);
                 if (y + ROW_HEIGHT <= ROW_TOP || y >= ROW_TOP + LIST_HEIGHT) continue;
                 int tooltipWidth = entry.type() == KTConfigEntry.Type.DESCRIPTION ? 582 : 292;
-                if (mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
+                if (entry.type() != KTConfigEntry.Type.DIVIDER
+                        && mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
                         && GuiTheme.hovering(mouseX, mouseY, 30, y - 3, tooltipWidth, 23)) {
                     hoveredEntry = entry;
                 }
-                if (entry.type() == KTConfigEntry.Type.SECTION) {
+                if (entry.type() == KTConfigEntry.Type.DIVIDER) {
+                    GuiTheme.separator(graphics, 38, y + 8, 562);
+                } else if (entry.type() == KTConfigEntry.Type.SECTION) {
                     graphics.fill(30, y - 3, 612, y + 20, 0x55222222);
                     graphics.drawString(font, entry.label(), 38, y + 4, 0xFFFFAA00, false);
                 } else if (entry.type() == KTConfigEntry.Type.DESCRIPTION) {

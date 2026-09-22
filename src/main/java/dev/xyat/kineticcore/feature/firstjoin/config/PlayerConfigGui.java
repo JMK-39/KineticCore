@@ -53,7 +53,7 @@ public final class PlayerConfigGui {
                                 )
                         )),
                         KineticI18n.translatable("cfg.kineticcore.join.commands.tooltip"))
-                .section(KineticI18n.translatable("cfg.kineticcore.join.equipment"))
+                .divider()
                 .action("equipment_editor", KineticI18n.translatable("cfg.kineticcore.join.equipment.editor"),
                         KTConfigApi.screenAction(FirstJoinEquipmentScreen::new),
                         KineticI18n.translatable("cfg.kineticcore.join.equipment.editor.tooltip"))
