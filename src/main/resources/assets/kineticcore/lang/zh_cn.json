@@ -825,5 +825,18 @@
   "tip.kineticcore.mining.mode.single": "§6挖掘已切换至：§c单次模式",
   "tooltip.kineticcore.flight.damping": "§a> 转向阻尼：0 完全跟随鼠标，1 无法转向；默认 0.3，数值越大越难转向。",
   "tooltip.kineticcore.flight.speed": "§b> 大于 0 时可使用超人飞行；双击空格开启/关闭。极速由超人飞行中的 Shift + 滚轮独立调整并记忆，最高 100 倍。",
-  "gui.kineticcore.autocomplete.suggestion_color": "§b"
+  "gui.kineticcore.autocomplete.suggestion_color": "§b",
+  "gui.kineticcore.entity_selector.category.all": "全部分类",
+  "gui.kineticcore.entity_selector.category.aquatic": "水生",
+  "gui.kineticcore.entity_selector.category.friendly": "友好",
+  "gui.kineticcore.entity_selector.category.misc": "杂项",
+  "gui.kineticcore.entity_selector.category.monster": "怪物",
+  "gui.kineticcore.entity_selector.category.neutral": "中立",
+  "gui.kineticcore.entity_selector.category.undead": "亡灵",
+  "gui.kineticcore.entity_selector.filter.back": "返回分类筛选",
+  "gui.kineticcore.entity_selector.filter.mod_all": "全部模组",
+  "gui.kineticcore.entity_selector.filter.mods": "筛选模组（已选 %s）",
+  "gui.kineticcore.entity_selector.filter.next": "下一页",
+  "gui.kineticcore.entity_selector.filter.previous": "上一页",
+  "gui.kineticcore.entity_selector.filter.reset": "重置筛选"
 }
