@@ -47,13 +47,13 @@ public final class PlayerNetwork {
         },
         () -> {
             if (!syncPacketRegistered) {
-                CHANNEL.registerClientbound(1,
+                CHANNEL.registerClientboundLazy(1,
                                 SyncCrawl.class,
                         NetworkCodec.of(
                                 (buffer, message) -> buffer.writeBoolean(message.isCrawling()),
                                 buffer -> new SyncCrawl(buffer.readBoolean())
                         ),
-                        message -> PlayerNetworkClient.handleSync(message)
+                        () -> message -> PlayerNetworkClient.handleSync(message)
                 );
 
                 syncPacketRegistered = true;

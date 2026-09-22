@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /** Public API type for packet channel. */
 public final class PacketChannel {
@@ -72,6 +73,16 @@ public final class PacketChannel {
         clientboundSenders.put(messageType, sender);
     }
 
+    /** Registers a clientbound packet without resolving client-only handler classes on a dedicated server. */
+    public synchronized <T> void registerClientboundLazy(
+            Class<T> messageType,
+            NetworkCodec<T> codec,
+            Supplier<Consumer<T>> clientHandler
+    ) {
+        ClientboundSender<T> sender = channel.registerClientboundLazy(messageType, codec, clientHandler);
+        clientboundSenders.put(messageType, sender);
+    }
+
     /**
      * 以固定协议编号注册服务端数据包。部分注册失败后重试时，客户端和服务端编号必须保持一致。
      */
@@ -93,6 +104,17 @@ public final class PacketChannel {
             Consumer<T> handler
     ) {
         ClientboundSender<T> sender = channel.registerClientbound(discriminator, messageType, codec, handler);
+        clientboundSenders.put(messageType, sender);
+    }
+
+    /** Registers a fixed-ID clientbound packet with a lazily resolved physical-client handler. */
+    public synchronized <T> void registerClientboundLazy(
+            int discriminator,
+            Class<T> messageType,
+            NetworkCodec<T> codec,
+            Supplier<Consumer<T>> clientHandler
+    ) {
+        ClientboundSender<T> sender = channel.registerClientboundLazy(discriminator, messageType, codec, clientHandler);
         clientboundSenders.put(messageType, sender);
     }
 

@@ -48,13 +48,13 @@ public final class SpawnEggNetwork {
         },
         () -> {
             if (syncModeSender == null) {
-                syncModeSender = CHANNEL.registerClientbound(1,
+                syncModeSender = CHANNEL.registerClientboundLazy(1,
                                 SyncMode.class,
                         NetworkCodec.of(
                                 (buffer, message) -> buffer.writeBoolean(message.disabled()),
                                 buffer -> new SyncMode(buffer.readBoolean())
                         ),
-                        message -> SpawnEggNetworkClient.handleModeSync(message.disabled())
+                        () -> message -> SpawnEggNetworkClient.handleModeSync(message.disabled())
                 );
 
             }

@@ -22,13 +22,13 @@ public final class PvpNetwork {
 
     public static synchronized void register() {
         if (stateSender == null) {
-            stateSender = CHANNEL.registerClientbound(0,
+            stateSender = CHANNEL.registerClientboundLazy(0,
                             S2CPvpStatePacket.class,
                     NetworkCodec.of(
                             (buffer, message) -> buffer.writeBoolean(message.enabled()),
                             buffer -> new S2CPvpStatePacket(buffer.readBoolean())
                     ),
-                    message -> PvpNetworkHandlerClient.handleState(message.enabled())
+                    () -> message -> PvpNetworkHandlerClient.handleState(message.enabled())
             );
         }
     }

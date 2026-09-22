@@ -9,7 +9,7 @@ import dev.xyat.kineticcore.feature.flight.client.FlightAttributeTooltipHandler;
 import dev.xyat.kineticcore.feature.flight.config.SuperFlightClientConfig;
 import dev.xyat.kineticcore.feature.farmland.client.FarmlandTooltipHandler;
 import dev.xyat.kineticcore.feature.copyitem.client.ItemCopyManager;
-import dev.xyat.kineticcore.feature.attribute.event.AttributeFixHandler;
+import dev.xyat.kineticcore.feature.attribute.client.AttributeFixClientHandler;
 import dev.xyat.kineticcore.KineticCore;
 import dev.xyat.kineticcore.bootstrap.config.client.StartupFeatureConfigGui;
 import dev.xyat.kineticcore.bootstrap.config.client.KineticUiConfigGui;
@@ -67,7 +67,7 @@ public final class KineticCoreClientBootstrap {
                 OptionsManager::registerHook,
                 AsyncWorldDeleter::registerHook,
                 ResourcePackReloadNotifier::registerHook,
-                AttributeFixHandler::registerClient,
+                AttributeFixClientHandler::register,
                 ItemCopyManager::register,
                 FarmlandTooltipHandler::register,
                 FlightClient::register,

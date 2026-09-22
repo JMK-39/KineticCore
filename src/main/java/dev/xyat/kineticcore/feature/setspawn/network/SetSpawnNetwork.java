@@ -41,7 +41,7 @@ public final class SetSpawnNetwork {
         PacketRegistrations.runIndependent(
         () -> {
             if (!openGuiRegistered) {
-                CHANNEL.registerClientbound(0,
+                CHANNEL.registerClientboundLazy(0,
                                 OpenSetSpawnGuiPacket.class,
                         NetworkCodec.of(
                                 (buffer, packet) -> {
@@ -75,7 +75,7 @@ public final class SetSpawnNetwork {
                                         buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH)
                                 )
                         ),
-                        packet -> SetSpawnNetworkClient.handleOpenGui(packet)
+                        () -> packet -> SetSpawnNetworkClient.handleOpenGui(packet)
                 );
 
                 openGuiRegistered = true;
@@ -113,13 +113,13 @@ public final class SetSpawnNetwork {
         },
         () -> {
             if (!saveResultRegistered) {
-                CHANNEL.registerClientbound(2,
+                CHANNEL.registerClientboundLazy(2,
                                 SaveSetSpawnResultPacket.class,
                         NetworkCodec.of(
                                 (buffer, packet) -> buffer.writeBoolean(packet.success()),
                                 buffer -> new SaveSetSpawnResultPacket(buffer.readBoolean())
                         ),
-                        packet -> SetSpawnNetworkClient.handleSaveResult(packet.success())
+                        () -> packet -> SetSpawnNetworkClient.handleSaveResult(packet.success())
                 );
 
                 saveResultRegistered = true;

@@ -49,13 +49,13 @@ public final class FlightNetwork {
         },
         () -> {
             if (noclipStateSender == null) {
-                noclipStateSender = CHANNEL.registerClientbound(1,
+                noclipStateSender = CHANNEL.registerClientboundLazy(1,
                                 PacketNoclipState.class,
                         NetworkCodec.of(
                                 (buffer, message) -> buffer.writeBoolean(message.enabled()),
                                 buffer -> new PacketNoclipState(buffer.readBoolean())
                         ),
-                        message -> KineticFlightClient.applyServerNoclip(message.enabled())
+                        () -> message -> KineticFlightClient.applyServerNoclip(message.enabled())
                 );
 
             }
@@ -74,13 +74,13 @@ public final class FlightNetwork {
         },
         () -> {
             if (superFlightStateSender == null) {
-                superFlightStateSender = CHANNEL.registerClientbound(3,
+                superFlightStateSender = CHANNEL.registerClientboundLazy(3,
                         PacketSuperFlightState.class,
                         NetworkCodec.of(
                                 (buffer, message) -> buffer.writeBoolean(message.enabled()),
                                 buffer -> new PacketSuperFlightState(buffer.readBoolean())
                         ),
-                        message -> KineticFlightClient.applySuperFlightState(message.enabled())
+                        () -> message -> KineticFlightClient.applySuperFlightState(message.enabled())
                 );
             }
         },
@@ -118,7 +118,7 @@ public final class FlightNetwork {
         },
         () -> {
             if (superFlightRollStateSender == null) {
-                superFlightRollStateSender = CHANNEL.registerClientbound(6,
+                superFlightRollStateSender = CHANNEL.registerClientboundLazy(6,
                         PacketSuperFlightRollState.class,
                         NetworkCodec.of(
                                 (buffer, message) -> {
@@ -127,16 +127,16 @@ public final class FlightNetwork {
                                 },
                                 buffer -> new PacketSuperFlightRollState(buffer.readUuid(), buffer.readFloat())
                         ),
-                        message -> KineticFlightClient.applySuperFlightRemoteRoll(message.playerId(), message.roll())
+                        () -> message -> KineticFlightClient.applySuperFlightRemoteRoll(message.playerId(), message.roll())
                 );
             }
         },
         () -> {
             if (superFlightTransientResetSender == null) {
-                superFlightTransientResetSender = CHANNEL.registerClientbound(7,
+                superFlightTransientResetSender = CHANNEL.registerClientboundLazy(7,
                         PacketSuperFlightTransientReset.class,
                         NetworkCodec.of((buffer, message) -> { }, buffer -> new PacketSuperFlightTransientReset()),
-                        message -> KineticFlightClient.resetSuperFlightTransientState()
+                        () -> message -> KineticFlightClient.resetSuperFlightTransientState()
                 );
             }
         },

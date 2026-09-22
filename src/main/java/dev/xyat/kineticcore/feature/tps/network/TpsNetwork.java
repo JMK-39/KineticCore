@@ -29,7 +29,7 @@ public final class TpsNetwork {
         PacketRegistrations.runIndependent(
         () -> {
             if (tpsDataSender == null) {
-                tpsDataSender = CHANNEL.registerClientbound(0,
+                tpsDataSender = CHANNEL.registerClientboundLazy(0,
                                 TpsData.class,
                         NetworkCodec.of(
                                 (buffer, message) -> {
@@ -38,7 +38,7 @@ public final class TpsNetwork {
                                 },
                                 buffer -> new TpsData(buffer.readDouble(), buffer.readDouble())
                         ),
-                        message -> TpsRenderer.updateData(message.tps(), message.mspt())
+                        () -> message -> TpsRenderer.updateData(message.tps(), message.mspt())
                 );
 
             }

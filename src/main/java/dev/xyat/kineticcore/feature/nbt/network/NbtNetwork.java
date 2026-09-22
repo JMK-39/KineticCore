@@ -89,26 +89,26 @@ public final class NbtNetwork {
         },
         () -> {
             if (openEditorSender == null) {
-                openEditorSender = CHANNEL.registerClientbound(1,
+                openEditorSender = CHANNEL.registerClientboundLazy(1,
                                 OpenNbtEditorPacket.class,
                         NetworkCodec.of(
                                 (buffer, packet) -> buffer.writeUtf(packet.nbt(), MAX_NBT_LENGTH),
                                 buffer -> new OpenNbtEditorPacket(buffer.readUtf(MAX_NBT_LENGTH))
                         ),
-                        packet -> NbtNetworkHandlerClient.handleOpenEditor(packet.nbt())
+                        () -> packet -> NbtNetworkHandlerClient.handleOpenEditor(packet.nbt())
                 );
 
             }
         },
         () -> {
             if (commandOpenSender == null) {
-                commandOpenSender = CHANNEL.registerClientbound(2,
+                commandOpenSender = CHANNEL.registerClientboundLazy(2,
                                 OpenNbtFromCommandPacket.class,
                         NetworkCodec.of(
                                 (buffer, packet) -> buffer.writeByte(packet.commandMode()),
                                 buffer -> new OpenNbtFromCommandPacket(buffer.readByte())
                         ),
-                        packet -> NbtNetworkHandlerClient.handleCommandOpen(packet.commandMode())
+                        () -> packet -> NbtNetworkHandlerClient.handleCommandOpen(packet.commandMode())
                 );
 
             }
@@ -128,13 +128,13 @@ public final class NbtNetwork {
         },
         () -> {
             if (notifySender == null) {
-                notifySender = CHANNEL.registerClientbound(4,
+                notifySender = CHANNEL.registerClientboundLazy(4,
                                 S2CNotifyPacket.class,
                         NetworkCodec.of(
                                 (buffer, packet) -> buffer.writeUtf(packet.translationKey()),
                                 buffer -> new S2CNotifyPacket(buffer.readUtf())
                         ),
-                        packet -> NbtNetworkHandlerClient.handleNotify(packet.translationKey())
+                        () -> packet -> NbtNetworkHandlerClient.handleNotify(packet.translationKey())
                 );
 
             }
