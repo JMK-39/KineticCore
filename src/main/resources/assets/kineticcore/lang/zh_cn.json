@@ -819,5 +819,20 @@
   "cmd.kineticcore.flight.player_only": "§c此命令只能由玩家执行。",
   "cmd.kineticcore.flight.enabled": "§a已启用命令提供的超人飞行能力。",
   "cmd.kineticcore.flight.disabled": "§e已关闭命令提供的超人飞行能力。",
-  "msg.kineticcore.superflight.speed": "§b超人飞行极速: §e%1$sx"
+  "msg.kineticcore.superflight.speed": "§b超人飞行极速: §e%1$sx",
+  "gui.kineticcore.entity_selector.category.all": "全部分类",
+  "gui.kineticcore.entity_selector.category.aquatic": "水生",
+  "gui.kineticcore.entity_selector.category.friendly": "友好",
+  "gui.kineticcore.entity_selector.category.misc": "杂项",
+  "gui.kineticcore.entity_selector.category.monster": "怪物",
+  "gui.kineticcore.entity_selector.category.neutral": "中立",
+  "gui.kineticcore.entity_selector.category.undead": "亡灵",
+  "gui.kineticcore.entity_selector.filter": "筛选 ▾",
+  "gui.kineticcore.entity_selector.filter.back": "返回分类筛选",
+  "gui.kineticcore.entity_selector.filter.mod_all": "全部模组",
+  "gui.kineticcore.entity_selector.filter.mods": "模组筛选（已选 %s） ▶",
+  "gui.kineticcore.entity_selector.filter.next": "下一页",
+  "gui.kineticcore.entity_selector.filter.previous": "上一页",
+  "gui.kineticcore.entity_selector.filter.reset": "清除全部筛选",
+  "gui.kineticcore.entity_selector.filter.tooltip": "展开分类和模组组合筛选菜单；仅筛选列表，不改变已勾选生物"
 }

@@ -819,5 +819,20 @@
   "cmd.kineticcore.flight.player_only": "§cThis command can only be used by a player.",
   "cmd.kineticcore.flight.enabled": "§aCommand-provided super flight enabled.",
   "cmd.kineticcore.flight.disabled": "§eCommand-provided super flight disabled.",
-  "msg.kineticcore.superflight.speed": "§bSuper-flight max speed: §e%1$sx"
+  "msg.kineticcore.superflight.speed": "§bSuper-flight max speed: §e%1$sx",
+  "gui.kineticcore.entity_selector.category.all": "All categories",
+  "gui.kineticcore.entity_selector.category.aquatic": "Aquatic",
+  "gui.kineticcore.entity_selector.category.friendly": "Friendly",
+  "gui.kineticcore.entity_selector.category.misc": "Miscellaneous",
+  "gui.kineticcore.entity_selector.category.monster": "Monster",
+  "gui.kineticcore.entity_selector.category.neutral": "Neutral",
+  "gui.kineticcore.entity_selector.category.undead": "Undead",
+  "gui.kineticcore.entity_selector.filter": "Filter ▾",
+  "gui.kineticcore.entity_selector.filter.back": "Back to category filters",
+  "gui.kineticcore.entity_selector.filter.mod_all": "All mods",
+  "gui.kineticcore.entity_selector.filter.mods": "Mods (%s selected) ▶",
+  "gui.kineticcore.entity_selector.filter.next": "Next page",
+  "gui.kineticcore.entity_selector.filter.previous": "Previous page",
+  "gui.kineticcore.entity_selector.filter.reset": "Reset all filters",
+  "gui.kineticcore.entity_selector.filter.tooltip": "Combine entity categories and mods; filters never change selected entities"
 }
