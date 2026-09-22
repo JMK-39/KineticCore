@@ -824,5 +824,6 @@
   "tip.kineticcore.mining.mode.normal": "§6挖掘已切换至：§a连续模式",
   "tip.kineticcore.mining.mode.single": "§6挖掘已切换至：§c单次模式",
   "tooltip.kineticcore.flight.damping": "§a> 转向阻尼：0 完全跟随鼠标，1 无法转向；默认 0.3，数值越大越难转向。",
-  "tooltip.kineticcore.flight.speed": "§b> 大于 0 时可使用超人飞行；双击空格开启/关闭。极速由超人飞行中的 Shift + 滚轮独立调整并记忆，最高 100 倍。"
+  "tooltip.kineticcore.flight.speed": "§b> 大于 0 时可使用超人飞行；双击空格开启/关闭。极速由超人飞行中的 Shift + 滚轮独立调整并记忆，最高 100 倍。",
+  "gui.kineticcore.autocomplete.suggestion_color": "§b"
 }

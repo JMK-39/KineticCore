@@ -5,7 +5,9 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import net.minecraft.ChatFormatting;
 import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +66,7 @@ public final class KineticAutoComplete {
         private int selectedIndex = -1;
         private int maxSuggestionWidth = 0;
         private int maxVisibleSuggestions = DEFAULT_MAX_VISIBLE;
+        private int maxSuggestionPopupWidth = Integer.MAX_VALUE;
 
         /** Factory-only constructor; obtain instances from {@code KineticWidgets}. */
         public AutoCompleteBox(FactoryAccess access, Font font, int x, int y, int width, int height, Component message, Supplier<List<Suggestion>> dictionarySupplier) {
@@ -109,6 +112,12 @@ public final class KineticAutoComplete {
         public void setMaxVisibleSuggestions(int maxVisibleSuggestions) {
             this.maxVisibleSuggestions = Math.max(1, maxVisibleSuggestions);
             suggestionScroll.update(suggestions.size(), this.maxVisibleSuggestions);
+        }
+
+        /** Limits popup width while keeping the API scrollbar beside the list rather than off screen. */
+        public void setSuggestionPopupMaxWidth(int maxWidth) {
+            this.maxSuggestionPopupWidth = Math.max(this.width, maxWidth);
+            this.maxSuggestionWidth = Math.min(this.maxSuggestionWidth, this.maxSuggestionPopupWidth);
         }
 
         /** Returns whether the focused field currently has an open suggestion popup. */
@@ -194,7 +203,7 @@ public final class KineticAutoComplete {
                     maxVisibleSuggestions
             );
             this.suggestions = refreshed;
-            this.maxSuggestionWidth = currentMax;
+            this.maxSuggestionWidth = Math.min(currentMax, maxSuggestionPopupWidth);
             selectedIndex = -1;
         }
 
@@ -322,7 +331,7 @@ public final class KineticAutoComplete {
 
                         Suggestion suggestion = suggestions.get(index);
                         Font font = KineticClientRuntime.font();
-                        gui.drawString(font, suggestion.value(), x + 4, top + 2, GuiTheme.indicatorColor(GuiTheme.Indicator.INFO), false);
+                        gui.drawString(font, styledSuggestion(suggestion.value()), x + 4, top + 2, theme.text(), false);
                         if (showTranslations && !suggestion.translation().getString().isBlank()) {
                             int detailX = x + 4 + font.width(suggestion.value()) + font.width("  ");
                             gui.drawString(font, suggestion.translation(), detailX, top + 2, theme.translatedText(), false);
@@ -345,6 +354,15 @@ public final class KineticAutoComplete {
             } finally {
                 gui.pose().popPose();
             }
+        }
+
+        /** Resolves the suggestion color from the current language instead of hardcoding it in Java. */
+        private static Component styledSuggestion(String value) {
+            String configured = KineticText.get("gui.kineticcore.autocomplete.suggestion_color");
+            ChatFormatting formatting = configured.isEmpty() ? null
+                    : ChatFormatting.getByCode(configured.charAt(configured.length() - 1));
+            Component base = Component.literal(value);
+            return formatting != null && formatting.isColor() ? base.copy().withStyle(formatting) : base;
         }
 
         /** Handles scrollbar interaction or suggestion selection inside the open suggestion popup. */

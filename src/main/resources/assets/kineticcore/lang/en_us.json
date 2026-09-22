@@ -824,5 +824,6 @@
   "tip.kineticcore.mining.mode.normal": "§6Mining switched to: §aContinuous Mode",
   "tip.kineticcore.mining.mode.single": "§6Mining switched to: §cSingle Mode",
   "tooltip.kineticcore.flight.damping": "§a> Turn damping: 0 follows the mouse exactly, 1 prevents turning; default 0.3. Higher values turn more slowly.",
-  "tooltip.kineticcore.flight.speed": "§b> Values above 0 grant super flight. Double-tap Jump to enable or disable it. Hold Shift and use the mouse wheel during super flight to set and remember the target speed, up to 100x."
+  "tooltip.kineticcore.flight.speed": "§b> Values above 0 grant super flight. Double-tap Jump to enable or disable it. Hold Shift and use the mouse wheel during super flight to set and remember the target speed, up to 100x.",
+  "gui.kineticcore.autocomplete.suggestion_color": "§b"
 }
