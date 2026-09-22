@@ -6,6 +6,7 @@
   "refmap": "kineticcore.mixins.refmap.json",
   "mixins": [
     "crawl.PlayerCrawlPoseMixin",
+    "attribute.AttributeMapRuntimeMixin",
     "datapack.DatapackRepositoryMixin",
     "despawn.MobDespawnMixins$MobTweaks",
     "despawn.MobDespawnMixins$EnderManTweaks",
@@ -19,6 +20,7 @@
   ],
   "client": [
     "datapack.client.ScreenReloadNoticeMixin",
+    "attribute.client.ClientAttributePacketMixin",
     "datapack.client.PackSelectionScreenMixin",
     "datapack.client.MinecraftResourceReloadMixin",
     "datapack.client.GuiReloadNoticeMixin",

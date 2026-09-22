@@ -5,6 +5,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import dev.xyat.kineticcore.internal.registry.RuntimeAttributeMapAccess;
 
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -25,6 +27,20 @@ public final class KineticEntityAttributes {
     }
 
     private KineticEntityAttributes() {
+    }
+
+    /** Makes an already registered attribute available on this entity at runtime, on either logical side. */
+    public static AttributeInstance ensureInstance(LivingEntity entity, Attribute attribute) {
+        Objects.requireNonNull(entity, "entity");
+        Objects.requireNonNull(attribute, "attribute");
+        return ((RuntimeAttributeMapAccess) entity.getAttributes()).kineticcore$ensure(attribute);
+    }
+
+    /** Removes only attributes absent from the entity's original type supplier. */
+    public static boolean removeRuntimeInstance(LivingEntity entity, Attribute attribute) {
+        Objects.requireNonNull(entity, "entity");
+        Objects.requireNonNull(attribute, "attribute");
+        return ((RuntimeAttributeMapAccess) entity.getAttributes()).kineticcore$remove(attribute);
     }
 
     /**

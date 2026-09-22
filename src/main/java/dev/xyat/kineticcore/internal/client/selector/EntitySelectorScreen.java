@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
 import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
@@ -16,16 +17,23 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.MobType;
+import net.minecraft.world.entity.NeutralMob;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Consumer;
 
 /**
@@ -44,7 +52,15 @@ public final class EntitySelectorScreen extends KineticScreen {
     private static final int GRID_H = VISIBLE_ROWS * CELL_H;
     private static final int SCROLL_X = GRID_X + GRID_W + 6;
     private static final int SCROLL_W = 4;
+    private static final int MODS_PER_PAGE = 8;
 
+    private enum CategoryFilter { ALL, FRIENDLY, AQUATIC, NEUTRAL, MONSTER, UNDEAD, MISC }
+
+    /** The two filter groups are independent; an empty group matches all. */
+    private final EnumSet<CategoryFilter> selectedCategories = EnumSet.noneOf(CategoryFilter.class);
+    private final Set<String> selectedMods = new TreeSet<>();
+    private final List<String> availableMods = new ArrayList<>();
+    private final Map<String, CategoryFilter> entityCategoryCache = new HashMap<>();
     private final Screen parent;
     private final Consumer<List<String>> onApply;
     private final List<String> allEntityIds = new ArrayList<>();
@@ -64,29 +80,45 @@ public final class EntitySelectorScreen extends KineticScreen {
     private List<Component> deferredTooltip;
 
     public EntitySelectorScreen(
-            Screen parent,
-            Component title,
-            Collection<String> initialEntityIds,
+            Screen parent, Component title, Collection<String> initialEntityIds,
             Consumer<List<String>> onApply
+    ) {
+        this(parent, title, initialEntityIds, null, onApply);
+    }
+
+    public EntitySelectorScreen(
+            Screen parent, Component title, Collection<String> initialEntityIds,
+            Collection<String> allowedEntityIds, Consumer<List<String>> onApply
     ) {
         super(title);
         this.parent = parent;
+        setParentScreen(parent);
         this.onApply = onApply;
-        if (initialEntityIds != null) {
-            for (String value : initialEntityIds) {
-                if (value != null && !value.isBlank()) selectedIds.add(value.trim());
-            }
-        }
-        originalIds.addAll(selectedIds);
-
+        Set<String> allowed = allowedEntityIds == null ? null : new LinkedHashSet<>(allowedEntityIds);
         KineticRegistries.entityTypes().ids().stream()
                 .map(ResourceLocation::toString)
+                .filter(id -> allowed == null || allowed.contains(id))
                 .sorted(String::compareToIgnoreCase)
                 .forEach(allEntityIds::add);
-        for (String selected : selectedIds) {
-            if (!allEntityIds.contains(selected)) allEntityIds.add(selected);
+        if (initialEntityIds != null) {
+            for (String value : initialEntityIds) {
+                if (value == null || value.isBlank()) continue;
+                String id = value.trim();
+                if (allowed != null && !allowed.contains(id)) continue;
+                selectedIds.add(id);
+                // Preserve a caller's saved IDs even when the corresponding mod is temporarily absent.
+                if (!allEntityIds.contains(id)) allEntityIds.add(id);
+            }
         }
         allEntityIds.sort(String::compareToIgnoreCase);
+        allEntityIds.stream()
+                .map(KineticResourceIds::tryParse)
+                .filter(java.util.Objects::nonNull)
+                .map(ResourceLocation::getNamespace)
+                .distinct()
+                .sorted(String::compareToIgnoreCase)
+                .forEach(availableMods::add);
+        originalIds.addAll(selectedIds);
         buildSearchData();
     }
 
@@ -104,6 +136,11 @@ public final class EntitySelectorScreen extends KineticScreen {
             searchQuery = query == null ? "" : query;
             updateSearch(searchQuery);
         });
+
+        addCompactButton(GRID_X + 438, 38, 96,
+                KineticText.translatable("gui.kineticcore.entity_selector.filter"),
+                KineticText.translatable("gui.kineticcore.entity_selector.filter.tooltip"),
+                this::showFilterMenu);
 
         addButton(166, 325, 92, KineticText.translatable("gui.kineticcore.entity_selector.clear"), null, selectedIds::clear);
         addButton(274, 325, 92, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
@@ -123,12 +160,129 @@ public final class EntitySelectorScreen extends KineticScreen {
         }
     }
 
+    /** The one selector filter menu supports category and mod filters together. */
+    private void showFilterMenu() {
+        List<KineticOverlays.MenuItem> entries = new ArrayList<>();
+        entries.add(KineticOverlays.MenuItem.action(
+                KineticText.translatable("gui.kineticcore.entity_selector.filter.reset"), () -> {
+                    selectedCategories.clear();
+                    selectedMods.clear();
+                    updateSearch(searchQuery);
+                    showFilterMenu();
+                }));
+        entries.add(KineticOverlays.MenuItem.separator());
+        Component allCategories = KineticText.translatable("gui.kineticcore.entity_selector.category.all");
+        entries.add(KineticOverlays.MenuItem.toggle(allCategories, allCategories,
+                selectedCategories.isEmpty(), () -> {
+                    selectedCategories.clear();
+                    updateSearch(searchQuery);
+                    showFilterMenu();
+                }));
+        for (CategoryFilter category : CategoryFilter.values()) {
+            if (category == CategoryFilter.ALL) continue;
+            Component name = KineticText.translatable("gui.kineticcore.entity_selector.category."
+                    + category.name().toLowerCase(Locale.ROOT));
+            entries.add(KineticOverlays.MenuItem.toggle(name, name, selectedCategories.contains(category), () -> {
+                if (!selectedCategories.add(category)) selectedCategories.remove(category);
+                updateSearch(searchQuery);
+                showFilterMenu();
+            }));
+        }
+        entries.add(KineticOverlays.MenuItem.separator());
+        entries.add(KineticOverlays.MenuItem.action(
+                KineticText.translatable("gui.kineticcore.entity_selector.filter.mods", selectedMods.size()),
+                () -> showModMenu(0)));
+        openContextMenu(GRID_X + 438, 60, entries);
+    }
+
+    /** Page the namespace menu so large modpacks do not overflow the screen. */
+    private void showModMenu(int requestedPage) {
+        int lastPage = Math.max(0, (availableMods.size() - 1) / MODS_PER_PAGE);
+        int page = Math.max(0, Math.min(requestedPage, lastPage));
+        List<KineticOverlays.MenuItem> entries = new ArrayList<>();
+        entries.add(KineticOverlays.MenuItem.action(
+                KineticText.translatable("gui.kineticcore.entity_selector.filter.back"), this::showFilterMenu));
+        Component allMods = KineticText.translatable("gui.kineticcore.entity_selector.filter.mod_all");
+        entries.add(KineticOverlays.MenuItem.toggle(allMods, allMods, selectedMods.isEmpty(), () -> {
+            selectedMods.clear();
+            updateSearch(searchQuery);
+            showModMenu(page);
+        }));
+        entries.add(KineticOverlays.MenuItem.separator());
+        int from = page * MODS_PER_PAGE;
+        int to = Math.min(availableMods.size(), from + MODS_PER_PAGE);
+        for (int i = from; i < to; i++) {
+            String mod = availableMods.get(i);
+            Component name = Component.literal(mod);
+            entries.add(KineticOverlays.MenuItem.toggle(name, name, selectedMods.contains(mod), () -> {
+                if (!selectedMods.add(mod)) selectedMods.remove(mod);
+                updateSearch(searchQuery);
+                showModMenu(page);
+            }));
+        }
+        entries.add(KineticOverlays.MenuItem.separator());
+        if (page > 0) {
+            entries.add(KineticOverlays.MenuItem.action(
+                    KineticText.translatable("gui.kineticcore.entity_selector.filter.previous"),
+                    () -> showModMenu(page - 1)));
+        }
+        if (page < lastPage) {
+            entries.add(KineticOverlays.MenuItem.action(
+                    KineticText.translatable("gui.kineticcore.entity_selector.filter.next"),
+                    () -> showModMenu(page + 1)));
+        }
+        openContextMenu(GRID_X + 438, 60, entries);
+    }
+
+    private CategoryFilter categoryOf(String id) {
+        CategoryFilter cached = entityCategoryCache.get(id);
+        if (cached != null) return cached;
+        ResourceLocation key = KineticResourceIds.tryParse(id);
+        EntityType<?> type = key == null ? null : KineticRegistries.entityTypes().get(key);
+        CategoryFilter category = CategoryFilter.MISC;
+        if (type != null) {
+            MobCategory mobCategory = type.getCategory();
+            boolean aquatic = mobCategory == MobCategory.WATER_CREATURE
+                    || mobCategory == MobCategory.WATER_AMBIENT
+                    || mobCategory == MobCategory.UNDERGROUND_WATER_CREATURE
+                    || mobCategory == MobCategory.AXOLOTLS;
+            boolean neutral = false;
+            boolean undead = false;
+            var level = KineticClientRuntime.currentLevel();
+            if (level != null) {
+                try {
+                    Entity preview = type.create(level);
+                    neutral = preview instanceof NeutralMob;
+                    undead = preview instanceof LivingEntity living && living.getMobType() == MobType.UNDEAD;
+                } catch (Throwable ignored) {
+                    // An incompatible mod preview cannot break the shared selector.
+                }
+            }
+            category = aquatic ? CategoryFilter.AQUATIC
+                    : undead ? CategoryFilter.UNDEAD
+                    : neutral ? CategoryFilter.NEUTRAL
+                    : mobCategory == MobCategory.MONSTER ? CategoryFilter.MONSTER
+                    : mobCategory == MobCategory.CREATURE ? CategoryFilter.FRIENDLY
+                    : CategoryFilter.MISC;
+        }
+        entityCategoryCache.put(id, category);
+        return category;
+    }
+
     private void updateSearch(String query) {
         String normalized = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        Set<String> categoryNames = new LinkedHashSet<>();
+        for (CategoryFilter category : selectedCategories) categoryNames.add(category.name());
         filteredEntityIds.clear();
         for (String id : allEntityIds) {
-            if (normalized.isEmpty() || KineticSearch.match(
-                    searchData.getOrDefault(id, id.toLowerCase(Locale.ROOT)), normalized)) {
+            ResourceLocation location = KineticResourceIds.tryParse(id);
+            String namespace = location == null ? "" : location.getNamespace();
+            boolean nameMatches = normalized.isEmpty() || KineticSearch.match(
+                    searchData.getOrDefault(id, id.toLowerCase(Locale.ROOT)), normalized);
+            // Avoid creating entity previews for category detection unless a category was selected.
+            String categoryName = selectedCategories.isEmpty() ? "" : categoryOf(id).name();
+            if (EntityFilterMatcher.matches(categoryNames, categoryName,
+                    selectedMods, namespace, nameMatches)) {
                 filteredEntityIds.add(id);
             }
         }
@@ -328,6 +482,7 @@ public final class EntitySelectorScreen extends KineticScreen {
 
     @Override
     protected void screenRemoved() {
+        entityCategoryCache.clear();
         previewRenderer.clear();
     }
 
