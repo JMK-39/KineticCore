@@ -7,6 +7,8 @@ import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Collections;
@@ -177,7 +179,19 @@ public final class GuiSessionRuntime {
     public static void back(Screen screen) {
         Screen parent = parentOf(screen);
         if (screen instanceof AbstractContainerScreen<?> && KineticClientRuntime.localPlayer() != null) {
-            KineticClientRuntime.localPlayer().closeContainer();
+            var player = KineticClientRuntime.localPlayer();
+            if (parent == null) {
+                // This is a genuine return to gameplay; vanilla can close the screen.
+                player.closeContainer();
+            } else if (player.containerMenu != player.inventoryMenu) {
+                // Closing through LocalPlayer.closeContainer() opens a null screen
+                // before the parent, temporarily capturing and centering the mouse.
+                // Close only the server menu while leaving the GUI continuously open.
+                AbstractContainerMenu menu = player.containerMenu;
+                player.connection.send(new ServerboundContainerClosePacket(menu.containerId));
+                menu.removed(player);
+                player.containerMenu = player.inventoryMenu;
+            }
         }
         KineticClientRuntime.openScreen(parent);
     }

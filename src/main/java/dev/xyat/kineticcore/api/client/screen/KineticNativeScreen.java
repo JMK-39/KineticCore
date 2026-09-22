@@ -879,6 +879,18 @@ public abstract class KineticNativeScreen extends Screen {
         controls.unregisterWidget(widget);
     }
 
+    /** Renders a registered smooth selection list in this native-coordinate screen. */
+    public final void renderSmoothSelectionList(
+            SmoothSelectionList<?> list,
+            GuiGraphics graphics,
+            int mouseX,
+            int mouseY,
+            float partialTick
+    ) {
+        if (list == null || graphics == null) return;
+        list.render(graphics, mouseX, mouseY, partialTick);
+    }
+
     /** 仅注册列表的输入事件；调用方负责通过对应 Screen 的列表渲染 API 绘制。 */
     public final <T extends SmoothSelectionList<?>> T addSmoothSelectionList(T list) {
         return controls.addSmoothSelectionList(list);
