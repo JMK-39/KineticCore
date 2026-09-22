@@ -65,6 +65,9 @@ public class FlightEvents {
     public static void onPlayerLogin(ServerPlayer player) {
         player.server.execute(() -> {
             FlightNetwork.applyServerNoclip(player, false);
+            // A new connection must never inherit an enabled super-flight toggle
+            // from persistent player NBT or from the previous client session.
+            KineticSuperFlight.setActive(player, false);
             KineticSuperFlight.resetTransientState(player);
             resyncFlightAbilities(player);
             KineticSuperFlight.sync(player);
