@@ -978,6 +978,11 @@ public abstract class KineticNativeScreen extends Screen {
         overlays.openMenu((int) Math.round(x), (int) Math.round(y), items);
     }
 
+    /** Opens the standard context menu at a fixed width; long labels scroll within the row. */
+    public final void openContextMenu(double x, double y, List<KineticOverlays.MenuItem> items, int virtualWidth) {
+        overlays.openMenu((int) Math.round(x), (int) Math.round(y), items, Math.max(1, virtualWidth));
+    }
+
     /** 打开统一模态确认框；保存或回滚动作由 onConfirm/onCancel 回调决定。 */
     public final void openDialog(
             Component title,

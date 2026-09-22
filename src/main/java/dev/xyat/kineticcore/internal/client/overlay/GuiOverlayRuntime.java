@@ -45,7 +45,7 @@ public final class GuiOverlayRuntime {
     private record MenuControl(MenuItem item, MenuButton button) {
     }
 
-    private record ContextMenu(int x, int y, List<MenuControl> controls) {
+    private record ContextMenu(int x, int y, List<MenuControl> controls, int preferredWidth) {
     }
 
     private record Dialog(
@@ -174,6 +174,11 @@ public final class GuiOverlayRuntime {
     }
 
     public void openMenu(int screenX, int screenY, List<MenuItem> items) {
+        openMenu(screenX, screenY, items, 0);
+    }
+
+    /** Uses a fixed width when positive; menu labels scroll rather than changing the menu width. */
+    public void openMenu(int screenX, int screenY, List<MenuItem> items, int preferredWidth) {
         if (items == null || items.isEmpty()) {
             contextMenu = null;
             return;
@@ -201,7 +206,7 @@ public final class GuiOverlayRuntime {
             contextMenu = null;
             return;
         }
-        contextMenu = new ContextMenu(screenX, screenY, List.copyOf(controls));
+        contextMenu = new ContextMenu(screenX, screenY, List.copyOf(controls), preferredWidth);
         dialog = null;
     }
 
@@ -502,6 +507,9 @@ public final class GuiOverlayRuntime {
             }
             width = Math.max(width, rowWidth);
             contentHeight += itemHeight;
+        }
+        if (menu.preferredWidth() > 0) {
+            width = menu.preferredWidth();
         }
         width = Math.min(width, Math.max(20, screenWidth - 8));
         int height = Math.min(contentHeight + 6, Math.max(12, screenHeight - 8));

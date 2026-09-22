@@ -998,6 +998,13 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
         overlays.openMenu(toScreenX(virtualX), toScreenY(virtualY), items);
     }
 
+    /** Opens the standard context menu at a fixed logical width; long labels scroll within the row. */
+    public final void openContextMenu(double virtualX, double virtualY,
+                                      List<KineticOverlays.MenuItem> items, int virtualWidth) {
+        overlays.openMenu(toScreenX(virtualX), toScreenY(virtualY), items,
+                Math.max(1, Math.round(virtualWidth * uiScale)));
+    }
+
     /** 打开统一模态确认框；保存或回滚动作由 onConfirm/onCancel 回调决定。 */
     public final void openDialog(
             Component title,

@@ -133,6 +133,15 @@ public final class KineticEntityPreview {
             setZoomPercent(stateKey, current + (delta > 0D ? ZOOM_STEP_PERCENT : -ZOOM_STEP_PERCENT));
         }
 
+        /** Handles Ctrl + mouse wheel over one preview without allowing the grid to scroll. */
+        public boolean handleControlWheel(String stateKey, boolean hovered, double delta) {
+            if (!hovered || stateKey == null || delta == 0D || !KineticClientRuntime.controlModifierDown()) {
+                return false;
+            }
+            adjustZoom(stateKey, delta);
+            return true;
+        }
+
         /**
          * Performs the render API operation.
          */

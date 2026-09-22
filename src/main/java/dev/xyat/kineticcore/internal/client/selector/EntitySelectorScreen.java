@@ -53,6 +53,7 @@ public final class EntitySelectorScreen extends KineticScreen {
     private static final int SCROLL_X = GRID_X + GRID_W + 6;
     private static final int SCROLL_W = 4;
     private static final int MODS_PER_PAGE = 8;
+    private static final int FILTER_MENU_WIDTH = 140;
 
     private enum CategoryFilter { ALL, FRIENDLY, AQUATIC, NEUTRAL, MONSTER, UNDEAD, MISC }
 
@@ -186,7 +187,7 @@ public final class EntitySelectorScreen extends KineticScreen {
         entries.add(KineticOverlays.MenuItem.action(
                 KineticText.translatable("gui.kineticcore.entity_selector.filter.mods", selectedMods.size()),
                 () -> showModMenu(0)));
-        openContextMenu(GRID_X + 438, 60, entries);
+        openContextMenu(GRID_X + 438, 60, entries, FILTER_MENU_WIDTH);
     }
 
     /** Page the namespace menu so large modpacks do not overflow the screen. */
@@ -225,7 +226,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                     KineticText.translatable("gui.kineticcore.entity_selector.filter.next"),
                     () -> showModMenu(page + 1)));
         }
-        openContextMenu(GRID_X + 438, 60, entries);
+        openContextMenu(GRID_X + 438, 60, entries, FILTER_MENU_WIDTH);
     }
 
     private CategoryFilter categoryOf(String id) {
@@ -343,37 +344,34 @@ public final class EntitySelectorScreen extends KineticScreen {
             int y = GRID_Y + local / COLS * CELL_H - scrollShift;
             String id = filteredEntityIds.get(index);
             boolean selected = selectedIds.contains(id);
-            boolean hovered = mouseX >= x && mouseX < x + CELL_W
+            boolean hovered = inGrid(mouseX, mouseY)
+                    && mouseX >= x && mouseX < x + CELL_W
                     && mouseY >= y && mouseY < y + CELL_H;
 
-            EntityPreviewRenderer.drawCheckerboard(graphics, x + 2, y + 2, CELL_W - 4, CELL_H - 16);
+            EntityPreviewRenderer.drawCheckerboard(graphics, x + 2, y + 2, CELL_W - 4, CELL_H - 4);
             GuiTheme.stateOutline(graphics, x, y, CELL_W, CELL_H, selected, hovered, false);
             if (selected) {
                 GuiTheme.stateOutline(graphics, x + 1, y + 1, CELL_W - 2, CELL_H - 2, true, false, false);
             }
 
-            boolean rendered = previewRenderer.render(
+            boolean rendered = previewRenderer.renderCanvas(
                     graphics, id, "selector:" + id,
-                    x + 3, y + 3, CELL_W - 6, CELL_H - 19,
-                    canvasScale(), canvasX(), canvasY(), hovered
+                    x + 3, y + 3, CELL_W - 6, CELL_H - 6, hovered
             );
             if (!rendered) {
                 graphics.drawCenteredString(font, "?", x + CELL_W / 2, y + 23, 0xFF777777);
             }
-            KineticText.drawScrollingCentered(
-                    graphics,
-                    font,
-                    Component.literal(entityName(id)),
-                    x + CELL_W / 2,
-                    y + CELL_H - 12,
-                    CELL_W - 6,
-                    selected ? 0xFF55FF55 : 0xFFE0E0E0,
-                    false
-            );
+            int previewTop = Math.max(y, GRID_Y);
+            int previewBottom = Math.min(y + CELL_H, GRID_Y + GRID_H);
+            if (previewBottom > previewTop) {
+                registerPreviewWheelTarget(previewRenderer, "selector:" + id,
+                        x, previewTop, CELL_W, previewBottom - previewTop);
+            }
             if (hovered) {
                 deferredTooltip = List.of(
                         Component.literal(entityName(id)),
-                        Component.literal(id),
+                        KineticText.translatable("gui.kineticcore.entity.tooltip.id", id),
+                        KineticText.translatable("gui.kineticcore.entity_selector.preview_zoom", previewRenderer.getZoomPercent("selector:" + id)),
                         KineticText.translatable(selected
                                 ? "gui.kineticcore.entity_selector.remove_hint"
                                 : "gui.kineticcore.entity_selector.add_hint")
@@ -433,12 +431,11 @@ public final class EntitySelectorScreen extends KineticScreen {
 
     @Override
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
-        if (KineticClientRuntime.controlModifierDown() && inGrid(mouseX, mouseY)) {
+        if (inGrid(mouseX, mouseY)) {
             int index = entityIndex(mouseX, mouseY);
             if (index >= 0 && index < filteredEntityIds.size()) {
                 String id = filteredEntityIds.get(index);
-                previewRenderer.adjustZoom("selector:" + id, delta);
-                return true;
+                if (previewRenderer.handleControlWheel("selector:" + id, true, delta)) return true;
             }
         }
         if (inGrid(mouseX, mouseY) && scroll.scroll(delta, 1.0D)) return true;

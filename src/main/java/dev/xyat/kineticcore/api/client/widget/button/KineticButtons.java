@@ -8,6 +8,8 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.Component;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets.FactoryAccess;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -384,6 +386,17 @@ public final class KineticButtons {
         public MenuButton(FactoryAccess access, int x, int y, int width, int height, Component message, Consumer<StateButton> onPress, boolean danger) {
             super(access, x, y, width, height, message, onPress);
             setError(danger);
+            setTextVisible(false);
+        }
+
+        @Override
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            var font = KineticClientRuntime.font();
+            KineticText.drawScrollingCentered(graphics, font, getMessage(),
+                    getX() + getWidth() / 2, getY() + (getHeight() - font.lineHeight) / 2,
+                    Math.max(1, getWidth() - 12),
+                    isEnabled() ? GuiTheme.current().text() : GuiTheme.current().mutedText(), false);
         }
 
         /** Repositions and resizes this menu entry; width and height are clamped to at least one pixel. */

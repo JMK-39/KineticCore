@@ -55,6 +55,7 @@ import dev.xyat.kineticcore.internal.client.overlay.GuiOverlayRuntime;
 import dev.xyat.kineticcore.api.client.widget.KineticControl;
 import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.SmoothSelectionList;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
+import dev.xyat.kineticcore.api.client.widget.render.KineticEntityPreview.EntityPreviewRenderer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
@@ -103,6 +104,15 @@ public abstract class KineticScreen extends Screen {
     private GuiLayout.SafeArea safeArea = GuiLayout.SafeArea.of(1, 1, 0);
     private GuiLayout.Metrics metrics = GuiLayout.measure(1, 1, 640, 360);
     private final GuiOverlayRuntime overlays = new GuiOverlayRuntime();
+    private final List<PreviewWheelTarget> previewWheelTargets = new ArrayList<>();
+
+    private record PreviewWheelTarget(EntityPreviewRenderer renderer, String key,
+                                      int left, int top, int right, int bottom) {
+        boolean contains(double x, double y) {
+            return x >= left && x < right && y >= top && y < bottom;
+        }
+    }
+
     private final List<ScrollViewportWidget> scrollViewportWidgets = new ArrayList<>();
     private final KineticScreenControls controls = new KineticScreenControls(
             () -> font, overlays, this::addRenderableWidget, this::addWidget,
@@ -1354,6 +1364,18 @@ public abstract class KineticScreen extends Screen {
         controls.showTooltip(List.of(component == null ? Component.empty() : component), null);
     }
 
+    /**
+     * Registers a preview's logical-canvas hit area for this render frame.
+     * Ctrl + wheel is dispatched here before autocomplete or grid scrolling.
+     * The screen owns coordinate conversion; addons never move the physical cursor.
+     */
+    public final void registerPreviewWheelTarget(EntityPreviewRenderer renderer, String key,
+                                                  int x, int y, int width, int height) {
+        if (renderer == null || key == null || width <= 0 || height <= 0) return;
+        previewWheelTargets.add(new PreviewWheelTarget(renderer, key,
+                x, y, x + width, y + height));
+    }
+
     /** Requests this frame's standard tooltip. Null maxWidth keeps text unwrapped. */
     public final void showTooltip(List<? extends Component> lines, Integer maxWidth) {
         controls.showTooltip(lines, maxWidth);
@@ -1398,6 +1420,13 @@ public abstract class KineticScreen extends Screen {
     /** 在当前 Screen 的 UI 坐标处打开统一菜单；Screen 负责坐标转换。 */
     public final void openContextMenu(double virtualX, double virtualY, List<KineticOverlays.MenuItem> items) {
         overlays.openMenu(toScreenX(virtualX), toScreenY(virtualY), items);
+    }
+
+    /** Opens the standard menu at a fixed logical width; overflowing labels scroll within their rows. */
+    public final void openContextMenu(double virtualX, double virtualY,
+                                      List<KineticOverlays.MenuItem> items, int virtualWidth) {
+        overlays.openMenu(toScreenX(virtualX), toScreenY(virtualY), items,
+                Math.max(1, Math.round(virtualWidth * canvasScale)));
     }
 
     /** 打开统一模态确认框；保存或回滚动作由 onConfirm/onCancel 回调决定。 */
@@ -1490,6 +1519,7 @@ public abstract class KineticScreen extends Screen {
         focus.synchronizeControlState();
         renderBackground(graphics);
         overlays.beginFrame();
+        previewWheelTargets.clear();
 
         int virtualMouseX = (int) Math.floor(toVirtualX(mouseX));
         int virtualMouseY = (int) Math.floor(toVirtualY(mouseY));
@@ -1710,6 +1740,15 @@ public abstract class KineticScreen extends Screen {
         if (overlays.blocksInput()) return true;
         double virtualMouseX = toVirtualX(mouseX);
         double virtualMouseY = toVirtualY(mouseY);
+        if (delta != 0D) {
+            for (int index = previewWheelTargets.size() - 1; index >= 0; index--) {
+                PreviewWheelTarget target = previewWheelTargets.get(index);
+                if (target.contains(virtualMouseX, virtualMouseY)
+                        && target.renderer().handleControlWheel(target.key(), true, delta)) {
+                    return true;
+                }
+            }
+        }
         if (controls.handleAutoCompleteScroll(virtualMouseX, virtualMouseY, delta)) return true;
         return canvasMouseScrolled(virtualMouseX, virtualMouseY, delta);
     }
