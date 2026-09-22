@@ -102,7 +102,7 @@ public final class KTClientConfigAdapterRuntime {
         for (SpecEntry entry : entries) {
             List<String> sectionPath = entry.path().subList(0, entry.path().size() - 1);
             if (!sectionPath.isEmpty() && !sectionPath.equals(lastSection)) {
-                page.section(sectionLabel(nativeSpec, sectionPath));
+                page.divider();
                 Component sectionComment = localizedComment(
                         nativeSpec.getLevelTranslationKey(sectionPath),
                         nativeSpec.getLevelComment(sectionPath)
@@ -355,13 +355,6 @@ public final class KTClientConfigAdapterRuntime {
         String translationKey = entry.valueSpec().getTranslationKey();
         return translationKey == null || translationKey.isBlank()
                 ? Component.literal(humanize(entry.path().get(entry.path().size() - 1)))
-                : Component.translatable(translationKey);
-    }
-
-    private static Component sectionLabel(ForgeConfigSpec spec, List<String> path) {
-        String translationKey = spec.getLevelTranslationKey(path);
-        return translationKey == null || translationKey.isBlank()
-                ? Component.literal(humanize(path.get(path.size() - 1)))
                 : Component.translatable(translationKey);
     }
 

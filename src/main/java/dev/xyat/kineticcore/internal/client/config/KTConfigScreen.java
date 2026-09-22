@@ -46,6 +46,9 @@ final class KTConfigScreen extends KineticScreen {
     ) {
     }
 
+    private record LayoutEntry(KTConfigEntry<?> entry, boolean separatorBefore) {
+    }
+
     private static final int VISIBLE_ROWS = 8;
     private static final int ROW_TOP = 64;
     private static final int ROW_HEIGHT = 27;
@@ -59,10 +62,11 @@ final class KTConfigScreen extends KineticScreen {
     private final Map<String, Object> originalValues = new HashMap<>();
     private final Map<String, String> rawTextValues = new HashMap<>();
     private final Set<String> invalidEntries = new HashSet<>();
-    private final Map<KTConfigEntry<?>, Integer> visibleRows = new HashMap<>();
+    private final Map<LayoutEntry, Integer> visibleRows = new java.util.LinkedHashMap<>();
     private final KineticSearch.Model<KTConfigEntry<?>> entryModel =
             new KineticSearch.Model<>(List.of(), (entry, query) -> KineticSearch.match(buildSearchData(entry), query));
     private final GridScrollController entryScroll = new GridScrollController();
+    private List<LayoutEntry> layoutEntries = List.of();
     private Component status;
     private KineticEditBox searchBox;
     private KTConfigEntry<?> hoveredEntry;
@@ -173,7 +177,8 @@ final class KTConfigScreen extends KineticScreen {
         resetScrollableWidgets();
         visibleRows.clear();
         entryModel.refresh(searchQuery);
-        entryScroll.update(entryModel.items().size(), VISIBLE_ROWS);
+        layoutEntries = compactLayout(entryModel.items());
+        entryScroll.update(layoutEntries.size(), VISIBLE_ROWS);
 
         searchBox = addTextField(
                 38, 37, 430,
@@ -189,11 +194,11 @@ final class KTConfigScreen extends KineticScreen {
             searchDirty = true;
         });
 
-        List<KTConfigEntry<?>> entries = entryModel.items();
-        for (int index = 0; index < entries.size(); index++) {
-            KTConfigEntry<?> entry = entries.get(index);
+        for (int index = 0; index < layoutEntries.size(); index++) {
+            LayoutEntry layout = layoutEntries.get(index);
+            KTConfigEntry<?> entry = layout.entry();
             int y = ROW_TOP + index * ROW_HEIGHT;
-            visibleRows.put(entry, y);
+            visibleRows.put(layout, y);
             if (entry.isValueEntry()) {
                 addValueWidgets(entry, y);
             } else if (entry.type() == KTConfigEntry.Type.ACTION) {
@@ -227,6 +232,20 @@ final class KTConfigScreen extends KineticScreen {
                 this::saveAndClose
         );
         saveButton.active = editable;
+    }
+
+    private static List<LayoutEntry> compactLayout(List<KTConfigEntry<?>> entries) {
+        List<LayoutEntry> result = new ArrayList<>();
+        boolean separatorPending = false;
+        for (KTConfigEntry<?> entry : entries) {
+            if (entry.type() == KTConfigEntry.Type.DIVIDER) {
+                if (!result.isEmpty()) separatorPending = true;
+                continue;
+            }
+            result.add(new LayoutEntry(entry, separatorPending));
+            separatorPending = false;
+        }
+        return List.copyOf(result);
     }
 
     private double entryPixelOffset() {
@@ -594,7 +613,8 @@ final class KTConfigScreen extends KineticScreen {
 
         searchDirty = false;
         entryModel.refresh(searchQuery);
-        entryScroll.update(entryModel.items().size(), VISIBLE_ROWS);
+        layoutEntries = compactLayout(entryModel.items());
+        entryScroll.update(layoutEntries.size(), VISIBLE_ROWS);
         rebuildUi();
         if (searchBox != null) {
             focusControl(searchBox);
@@ -819,19 +839,20 @@ final class KTConfigScreen extends KineticScreen {
         double pixelOffset = entryPixelOffset();
         enableUiScissor(graphics, 28, ROW_TOP, SCROLL_X - 2, ROW_TOP + LIST_HEIGHT);
         try {
-            for (Map.Entry<KTConfigEntry<?>, Integer> row : visibleRows.entrySet()) {
-                KTConfigEntry<?> entry = row.getKey();
+            for (Map.Entry<LayoutEntry, Integer> row : visibleRows.entrySet()) {
+                LayoutEntry layout = row.getKey();
+                KTConfigEntry<?> entry = layout.entry();
                 int y = row.getValue() - (int) Math.round(pixelOffset);
                 if (y + ROW_HEIGHT <= ROW_TOP || y >= ROW_TOP + LIST_HEIGHT) continue;
                 int tooltipWidth = entry.type() == KTConfigEntry.Type.DESCRIPTION ? 582 : 292;
-                if (entry.type() != KTConfigEntry.Type.DIVIDER
-                        && mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
+                if (mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
                         && GuiTheme.hovering(mouseX, mouseY, 30, y - 3, tooltipWidth, 23)) {
                     hoveredEntry = entry;
                 }
-                if (entry.type() == KTConfigEntry.Type.DIVIDER) {
-                    GuiTheme.separator(graphics, 38, y + 8, 562);
-                } else if (entry.type() == KTConfigEntry.Type.SECTION) {
+                if (layout.separatorBefore()) {
+                    GuiTheme.separator(graphics, 38, y - 5, 562);
+                }
+                if (entry.type() == KTConfigEntry.Type.SECTION) {
                     graphics.fill(30, y - 3, 612, y + 20, 0x55222222);
                     graphics.drawString(font, entry.label(), 38, y + 4, 0xFFFFAA00, false);
                 } else if (entry.type() == KTConfigEntry.Type.DESCRIPTION) {
@@ -845,7 +866,7 @@ final class KTConfigScreen extends KineticScreen {
             disableUiScissor(graphics);
         }
 
-        if (entryModel.items().isEmpty()) {
+        if (layoutEntries.isEmpty()) {
             graphics.drawCenteredString(
                     font,
                     KineticText.translatable("gui.kineticcore.config.no_fields"),

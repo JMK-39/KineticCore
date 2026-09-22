@@ -41,27 +41,30 @@ final class KTModuleConfigScreen extends KineticScreen {
 
     private enum RowKind {
         SCOPE,
-        DIVIDER,
         ENTRY
     }
 
-    private record Row(RowKind kind, KTConfigScope scope, KTConfigPage page, KTConfigEntry<?> entry, Component text) {
+    private record Row(
+            RowKind kind,
+            KTConfigScope scope,
+            KTConfigPage page,
+            KTConfigEntry<?> entry,
+            Component text,
+            boolean separatorBefore
+    ) {
         static Row scope(KTConfigScope scope) {
             return new Row(
                     RowKind.SCOPE,
                     scope,
                     null,
                     null,
-                    KineticText.translatable(scopeHeaderKey(scope))
+                    KineticText.translatable(scopeHeaderKey(scope)),
+                    false
             );
         }
 
-        static Row divider(KTConfigScope scope) {
-            return new Row(RowKind.DIVIDER, scope, null, null, Component.empty());
-        }
-
-        static Row entry(KTConfigPage page, KTConfigEntry<?> entry) {
-            return new Row(RowKind.ENTRY, page.scope(), page, entry, entry.label());
+        static Row entry(KTConfigPage page, KTConfigEntry<?> entry, boolean separatorBefore) {
+            return new Row(RowKind.ENTRY, page.scope(), page, entry, entry.label(), separatorBefore);
         }
     }
 
@@ -787,10 +790,13 @@ final class KTModuleConfigScreen extends KineticScreen {
                 int y = visible.getValue() - (int) Math.round(pixelOffset);
                 if (y + ROW_HEIGHT <= ROW_TOP || y >= ROW_TOP + LIST_HEIGHT) continue;
                 int tooltipWidth = row.kind() == RowKind.SCOPE ? 578 : 292;
-                if (row.kind() != RowKind.DIVIDER
-                        && mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
+                if (mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
                         && GuiTheme.hovering(mouseX, mouseY, 30, y - 3, tooltipWidth, 23)) {
                     hoveredRow = row;
+                }
+
+                if (row.separatorBefore()) {
+                    GuiTheme.separator(graphics, 38, y - 5, 562);
                 }
 
                 switch (row.kind()) {
@@ -798,13 +804,10 @@ final class KTModuleConfigScreen extends KineticScreen {
                         graphics.fill(30, y - 3, 612, y + 20, 0x66303030);
                         graphics.drawString(font, row.text(), 38, y + 4, GuiTheme.current().text(), false);
                     }
-                    case DIVIDER -> GuiTheme.separator(graphics, 38, y + 8, 562);
                     case ENTRY -> {
                         KTConfigEntry<?> entry = row.entry();
                         String key = entryKey(row.page(), entry);
-                        if (entry.type() == KTConfigEntry.Type.DIVIDER) {
-                            GuiTheme.separator(graphics, 46, y + 8, 554);
-                        } else if (entry.type() == KTConfigEntry.Type.SECTION) {
+                        if (entry.type() == KTConfigEntry.Type.SECTION) {
                             graphics.fill(38, y - 3, 612, y + 20, 0x33222222);
                             graphics.drawString(font, entry.label(), 46, y + 4, 0xFFFFCC55, false);
                         } else if (entry.type() == KTConfigEntry.Type.DESCRIPTION) {
@@ -876,7 +879,7 @@ final class KTModuleConfigScreen extends KineticScreen {
         if (hoveredRow == null) return;
 
         Component tooltip = switch (hoveredRow.kind()) {
-            case SCOPE, DIVIDER -> null;
+            case SCOPE -> null;
             case ENTRY -> hoveredRow.entry().type() == KTConfigEntry.Type.DESCRIPTION
                     ? hoveredRow.entry().label()
                     : hoveredRow.entry().tooltip();
@@ -1035,13 +1038,20 @@ final class KTModuleConfigScreen extends KineticScreen {
             boolean pageMatched = normalized.isEmpty() || matchesPage(page, normalized);
             if (!pageMatched && matched.isEmpty()) continue;
 
-            if (hasPage) groupRows.add(Row.divider(page.scope()));
-            hasPage = true;
-            if (normalized.isEmpty() || pageMatched) {
-                for (KTConfigEntry<?> entry : page.entries()) groupRows.add(Row.entry(page, entry));
-            } else {
-                for (KTConfigEntry<?> entry : matched) groupRows.add(Row.entry(page, entry));
+            List<KTConfigEntry<?>> sourceEntries = normalized.isEmpty() || pageMatched
+                    ? page.entries()
+                    : matched;
+            boolean separatorPending = hasPage;
+            int beforePage = groupRows.size();
+            for (KTConfigEntry<?> entry : sourceEntries) {
+                if (entry.type() == KTConfigEntry.Type.DIVIDER) {
+                    if (!groupRows.isEmpty()) separatorPending = true;
+                    continue;
+                }
+                groupRows.add(Row.entry(page, entry, separatorPending));
+                separatorPending = false;
             }
+            if (groupRows.size() > beforePage) hasPage = true;
         }
 
         if (!groupRows.isEmpty()) {

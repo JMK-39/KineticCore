@@ -266,6 +266,8 @@ public final class KTConfigPage {
 
         /**
          * Adds a visual divider between configuration groups without adding a text heading.
+         * Dividers are rendered in the gap before the next visible row and do not consume
+         * a full configuration row. Leading and repeated dividers are collapsed.
          */
         public Builder divider() {
             entries.add(KTConfigEntry.structural(
