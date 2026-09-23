@@ -16,6 +16,7 @@ public final class KineticCameraInput {
         return new MouseDelta(delta.horizontal(), delta.vertical());
     }
 
+    /** Represents horizontal and vertical mouse movement deltas. */
     public record MouseDelta(double horizontal, double vertical) {
     }
 }

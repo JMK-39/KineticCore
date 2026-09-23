@@ -145,7 +145,7 @@ public abstract class KineticScreen extends Screen {
 
     private void configureCanvas() {
         safeArea = GuiLayout.SafeArea.of(width, height, requestedSafeMargin);
-        metrics = GuiLayout.measureCanvas(safeArea.width(), safeArea.height(), requestedCanvasWidth, requestedCanvasHeight);
+        metrics = GuiLayout.measure(safeArea.width(), safeArea.height(), requestedCanvasWidth, requestedCanvasHeight);
         canvasScale = Math.max(0.0001f, metrics.fitScale());
         canvasWidth = requestedCanvasWidth;
         canvasHeight = requestedCanvasHeight;
@@ -158,8 +158,10 @@ public abstract class KineticScreen extends Screen {
      * coordinate conversion, clipping, and high-DPI behavior owned by KineticCore.
      */
     protected final void useCanvas(float designWidth, float designHeight, int safeMargin) {
-        requestedCanvasWidth = Math.max(1, Math.round(Float.isFinite(designWidth) ? designWidth : STANDARD_CANVAS_WIDTH));
-        requestedCanvasHeight = Math.max(1, Math.round(Float.isFinite(designHeight) ? designHeight : STANDARD_CANVAS_HEIGHT));
+        requestedCanvasWidth = Math.max(1, Math.min(GuiLayout.MAX_CANVAS_WIDTH,
+                Math.round(Float.isFinite(designWidth) ? designWidth : STANDARD_CANVAS_WIDTH)));
+        requestedCanvasHeight = Math.max(1, Math.min(GuiLayout.MAX_CANVAS_HEIGHT,
+                Math.round(Float.isFinite(designHeight) ? designHeight : STANDARD_CANVAS_HEIGHT)));
         requestedSafeMargin = Math.max(0, safeMargin);
     }
 

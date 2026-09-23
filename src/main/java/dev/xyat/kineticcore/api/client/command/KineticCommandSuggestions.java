@@ -15,6 +15,7 @@ public final class KineticCommandSuggestions {
         FIELD_ABOVE
     }
 
+    /** Defines command suggestion behavior and visible suggestion limits. */
     public record Options(
             boolean commandsOnly,
             boolean onlyShowIfCursorPastError,
@@ -32,6 +33,7 @@ public final class KineticCommandSuggestions {
             placement = placement == null ? Placement.VANILLA : placement;
         }
 
+        /** Creates command suggestion options with the supplied behavior settings. */
         public Options(
                 boolean commandsOnly,
                 boolean onlyShowIfCursorPastError,

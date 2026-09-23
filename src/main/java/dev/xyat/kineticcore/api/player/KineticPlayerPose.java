@@ -9,6 +9,7 @@ public final class KineticPlayerPose {
     private KineticPlayerPose() {
     }
 
+    /** Applies the requested player pose through the shared pose API. */
     public static void apply(LivingEntity entity, Pose pose) {
         KineticPlayerPoseRuntime.apply(entity, pose);
     }

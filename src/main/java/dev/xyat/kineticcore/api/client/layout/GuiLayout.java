@@ -160,16 +160,14 @@ public final class GuiLayout {
         return measureResolved(availableWidth, availableHeight, safeDesignWidth, safeDesignHeight);
     }
 
-    /** Measures an arbitrary logical canvas without applying the standard 640x360 design cap. */
+    /** Measures a logical canvas within the hard 640x360 maximum. */
     public static Metrics measureCanvas(
             int availableWidth,
             int availableHeight,
             float designWidth,
             float designHeight
     ) {
-        float safeDesignWidth = Float.isFinite(designWidth) ? Math.max(1f, designWidth) : 1f;
-        float safeDesignHeight = Float.isFinite(designHeight) ? Math.max(1f, designHeight) : 1f;
-        return measureResolved(availableWidth, availableHeight, safeDesignWidth, safeDesignHeight);
+        return measure(availableWidth, availableHeight, designWidth, designHeight);
     }
 
     private static Metrics measureResolved(

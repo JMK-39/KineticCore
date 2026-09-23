@@ -264,12 +264,20 @@ public final class KineticButtons {
                     );
                     return;
                 }
-                if (!textVisible) {
-                    storedText = getMessage();
-                    setMessage(Component.empty());
-                }
+                storedText = getMessage();
+                setMessage(Component.empty());
                 super.renderWidget(graphics, mouseX, mouseY, partialTick);
-                if (storedText != null) setMessage(storedText);
+                setMessage(storedText);
+                if (textVisible && !storedText.getString().isEmpty()) {
+                    int textColor = active ? 0xFFFFFF : 0xA0A0A0;
+                    graphics.drawCenteredString(
+                            KineticClientRuntime.font(),
+                            storedText,
+                            getX() + getWidth() / 2,
+                            getY() + (getHeight() - 8) / 2,
+                            textColor
+                    );
+                }
                 if (selected || error) {
                     GuiTheme.stateOutline(
                             graphics,
