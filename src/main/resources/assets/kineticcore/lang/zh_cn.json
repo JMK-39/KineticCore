@@ -591,7 +591,7 @@
   "gui.kineticcore.entity_selector.empty": "没有匹配的生物",
   "gui.kineticcore.entity_selector.filter": "筛选",
   "gui.kineticcore.entity_selector.filter.tooltip": "筛选当前生物列表。",
-  "gui.kineticcore.entity_selector.preview_zoom": "Ctrl + 滚轮缩放模型",
+  "gui.kineticcore.entity_selector.preview_zoom": "Ctrl + 滚轮缩放模型（当前：%s%%）",
   "gui.kineticcore.entity_selector.remove_hint": "点击移出名单",
   "gui.kineticcore.entity_selector.search_hint": "点击此处搜索生物（支持中文、拼音与 ID）……",
   "gui.kineticcore.entity_selector.selected": "§b已选择 §a%s§b 个生物",

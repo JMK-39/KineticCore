@@ -591,7 +591,7 @@
   "gui.kineticcore.entity_selector.empty": "No matching entities",
   "gui.kineticcore.entity_selector.filter": "Filter",
   "gui.kineticcore.entity_selector.filter.tooltip": "Filter the current entity list.",
-  "gui.kineticcore.entity_selector.preview_zoom": "Ctrl + mouse wheel to zoom the model",
+  "gui.kineticcore.entity_selector.preview_zoom": "Ctrl + mouse wheel to zoom model (Current: %s%%)",
   "gui.kineticcore.entity_selector.remove_hint": "Click to remove",
   "gui.kineticcore.entity_selector.search_hint": "Click to search entities by name, Pinyin, or ID...",
   "gui.kineticcore.entity_selector.selected": "§b§a%s§b entities selected",
