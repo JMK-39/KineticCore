@@ -199,7 +199,6 @@ public class SetSpawnScreen extends KineticScreen {
     public void handleSaveResult(boolean success) {
         if (success) {
             KineticOverlays.toast(null, KineticI18n.translatable("gui.kineticcore.setspawn.saved_toast"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
-            this.onClose();
         } else {
             KineticOverlays.toast(null, KineticI18n.translatable("gui.kineticcore.setspawn.save_invalid_toast"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
         }

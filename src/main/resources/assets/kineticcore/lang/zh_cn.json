@@ -545,7 +545,7 @@
   "gui.kineticcore.config.reset_all": "全部重置",
   "gui.kineticcore.config.reset_done": "已载入默认值，保存后生效。",
   "gui.kineticcore.config.reset_failed": "§c重置默认值失败：%s",
-  "gui.kineticcore.config.save": "保存并关闭",
+  "gui.kineticcore.config.save": "保存",
   "gui.kineticcore.config.save_failed": "§c保存失败：%s",
   "gui.kineticcore.config.saved": "§a已保存 %s",
   "gui.kineticcore.config.saved.immediate": "§a已保存 %s，修改已立即生效。",

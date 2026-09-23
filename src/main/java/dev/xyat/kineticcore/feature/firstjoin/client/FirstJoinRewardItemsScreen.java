@@ -156,7 +156,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
         addButton(
                 472, 314, 110,
                 KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.save"),
-                null, this::saveAndClose
+                null, this::save
         );
         updateRowButtons();
     }
@@ -301,7 +301,7 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
         });
     }
 
-    private void saveAndClose() {
+    private boolean save() {
         clearCountFieldFocus();
         List<String> saved = new ArrayList<>();
         for (RewardEntry entry : entries) {
@@ -311,9 +311,19 @@ public final class FirstJoinRewardItemsScreen extends KineticScreen {
         }
         if (!KTServerConfigClient.savePartial(PlayerConfigGui.PAGE_ID, Map.of("items", saved))) {
             KineticOverlays.toast(null, KineticI18n.translatable("gui.kineticcore.config.server.save_failed"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
-            return;
+            return false;
         }
-        if (minecraft != null) navigateBack();
+        savedEntries.clear();
+        for (RewardEntry entry : entries) {
+            savedEntries.add(copyEntry(entry));
+        }
+        return true;
+    }
+
+    private void saveAndClose() {
+        if (save() && minecraft != null) {
+            navigateBack();
+        }
     }
 
     private void requestClose() {

@@ -86,7 +86,7 @@ public final class ItemListEditorScreen extends KineticScreen {
 
         addButton(158, 316, 96, KineticText.translatable("gui.kineticcore.items.list_editor.add"), null, this::openSelector);
         addButton(272, 316, 96, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
-        addButton(386, 316, 96, KineticText.translatable("gui.kineticcore.hud_editor.save"), null, this::saveAndClose);
+        addButton(386, 316, 96, KineticText.translatable("gui.kineticcore.hud_editor.save"), null, this::save);
     }
 
     private void openSelector() {
@@ -130,9 +130,8 @@ public final class ItemListEditorScreen extends KineticScreen {
         KineticOverlays.toast("kineticcore_item_list_item_only", KineticText.translatable("gui.kineticcore.items.list_editor.item_only"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
     }
 
-    private void saveAndClose() {
+    private void save() {
         onSave.accept(List.copyOf(rules));
-        navigateBack();
     }
 
     private void updateScrollRange() {

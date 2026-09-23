@@ -212,7 +212,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                 null, this::onClose);
         addButton(382, footerY, 92,
                 KineticText.translatable("gui.kineticcore.config.save"),
-                null, this::saveAndClose);
+                null, this::save);
     }
 
     private double rowPixelOffset() {
@@ -620,11 +620,10 @@ final class KTModuleConfigScreen extends KineticScreen {
         rebuildUi();
     }
 
-    private void saveAndClose() {
+    private void save() {
         SaveOutcome outcome = persistPendingValues();
         if (outcome == SaveOutcome.FAILED) return;
         if (shouldShowImmediateSavedToast(outcome)) showSavedToast();
-        navigateBack();
     }
 
     private SaveOutcome persistPendingValues() {

@@ -229,7 +229,7 @@ final class KTConfigScreen extends KineticScreen {
                 382, footerY, 92,
                 KineticText.translatable("gui.kineticcore.config.save"),
                 unavailable,
-                this::saveAndClose
+                this::save
         );
         saveButton.active = editable;
     }
@@ -642,12 +642,11 @@ final class KTConfigScreen extends KineticScreen {
         rebuildUi();
     }
 
-    private void saveAndClose() {
+    private void save() {
         SaveOutcome outcome = persistPendingValues();
         if (outcome == SaveOutcome.FAILED) return;
         if (shouldShowImmediateSavedToast(outcome)) showSavedToast();
         commitDraft();
-        navigateBack();
     }
 
     private SaveOutcome persistPendingValues() {

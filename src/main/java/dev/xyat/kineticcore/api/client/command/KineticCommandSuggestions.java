@@ -10,19 +10,38 @@ public final class KineticCommandSuggestions {
     }
 
     /** Immutable options data exposed by this API. */
+    public enum Placement {
+        VANILLA,
+        FIELD_ABOVE
+    }
+
     public record Options(
             boolean commandsOnly,
             boolean onlyShowIfCursorPastError,
             int lineStartOffset,
             int suggestionLineLimit,
             boolean anchorToBottom,
-            int fillColor
+            int fillColor,
+            Placement placement
     ) {
         /**
          * Validates and normalizes this options value.
          */
         public Options {
             suggestionLineLimit = Math.max(1, suggestionLineLimit);
+            placement = placement == null ? Placement.VANILLA : placement;
+        }
+
+        public Options(
+                boolean commandsOnly,
+                boolean onlyShowIfCursorPastError,
+                int lineStartOffset,
+                int suggestionLineLimit,
+                boolean anchorToBottom,
+                int fillColor
+        ) {
+            this(commandsOnly, onlyShowIfCursorPastError, lineStartOffset, suggestionLineLimit,
+                    anchorToBottom, fillColor, Placement.VANILLA);
         }
 
         /**
@@ -35,7 +54,8 @@ public final class KineticCommandSuggestions {
                 int suggestionLineLimit,
                 int fillColor
         ) {
-            return new Options(commandsOnly, onlyShowIfCursorPastError, 4, suggestionLineLimit, false, fillColor);
+            return new Options(commandsOnly, onlyShowIfCursorPastError, 4, suggestionLineLimit,
+                    false, fillColor, Placement.FIELD_ABOVE);
         }
     }
 

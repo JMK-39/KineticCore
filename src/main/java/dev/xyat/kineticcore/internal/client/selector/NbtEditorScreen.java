@@ -67,7 +67,6 @@ public class NbtEditorScreen extends KineticScreen {
                     return;
                 }
             }
-            navigateBack();
         });
 
         addButton(clearX, 10, btnW, KineticText.translatable("gui.kineticcore.nbt.clear"), null, () -> nbtEditor.setValue(""));

@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 @OnlyIn(Dist.CLIENT)
 final class CommandEditorScreen extends KineticScreen {
     private final CommandListEditorScreen parent;
-    private final int editingIndex;
+    private int editingIndex;
     private KineticEditBox input;
     private KineticCommandSuggestions.Session commandSuggestions;
 
@@ -119,7 +119,9 @@ final class CommandEditorScreen extends KineticScreen {
 
         try {
             parent.saveEditedCommand(editingIndex, command);
-            closeToParent();
+            if (editingIndex < 0) {
+                editingIndex = parent.currentCommands().size() - 1;
+            }
         } catch (Throwable throwable) {
             KineticOverlays.toast(null, parent.saveFailedMessage(), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
         }

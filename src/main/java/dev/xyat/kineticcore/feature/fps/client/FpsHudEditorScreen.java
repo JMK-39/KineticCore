@@ -56,7 +56,7 @@ public final class FpsHudEditorScreen extends KineticNativeScreen {
                 KineticText.translatable("gui.kineticcore.hud_editor.save"),
                 KineticText.translatable("gui.kineticcore.hud_editor.reset"),
                 KineticText.translatable("gui.kineticcore.hud_editor.cancel"),
-                this::saveAndClose,
+                this::save,
                 this::closeWithoutSaving
         );
     }
@@ -110,11 +110,10 @@ public final class FpsHudEditorScreen extends KineticNativeScreen {
         return false;
     }
 
-    private void saveAndClose() {
+    private void save() {
         FpsClientConfig.setHudLayout(currentOffsetX(), currentOffsetY(), editor.getScale());
         KTConfigApi.find(FpsConfigGui.PAGE_ID).ifPresent(KTConfigApi::notifySaved);
         KTConfigApi.refreshScreenFromSource(parent);
-        closeScreen();
     }
 
     private void closeWithoutSaving() {

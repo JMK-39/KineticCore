@@ -545,7 +545,7 @@
   "gui.kineticcore.config.reset_all": "Reset All",
   "gui.kineticcore.config.reset_done": "Defaults loaded. Save to apply them.",
   "gui.kineticcore.config.reset_failed": "§cFailed to reset defaults: %s",
-  "gui.kineticcore.config.save": "Save & Close",
+  "gui.kineticcore.config.save": "Save",
   "gui.kineticcore.config.save_failed": "§cSave failed: %s",
   "gui.kineticcore.config.saved": "§aSaved %s",
   "gui.kineticcore.config.saved.immediate": "§aSaved %s. Changes are active immediately.",

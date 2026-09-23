@@ -22,6 +22,10 @@ public final class KineticCommandSuggestionRuntime {
         Screen host = new Screen(Component.empty()) {
         };
         host.init(minecraft, Math.max(1, hostWidth), Math.max(1, hostHeight));
+        boolean fieldAbove = options.placement() == KineticCommandSuggestions.Placement.FIELD_ABOVE;
+        if (fieldAbove) {
+            alignHostAboveField(host, input);
+        }
         CommandSuggestions delegate = new CommandSuggestions(
                 minecraft,
                 host,
@@ -31,7 +35,7 @@ public final class KineticCommandSuggestionRuntime {
                 options.onlyShowIfCursorPastError(),
                 options.lineStartOffset(),
                 options.suggestionLineLimit(),
-                options.anchorToBottom(),
+                fieldAbove || options.anchorToBottom(),
                 options.fillColor()
         );
         return new KineticCommandSuggestions.Session() {
@@ -42,12 +46,14 @@ public final class KineticCommandSuggestionRuntime {
 
             @Override
             public void update() {
+                if (fieldAbove) alignHostAboveField(host, input);
                 delegate.updateCommandInfo();
             }
 
             @Override
             public void render(GuiGraphics graphics, int mouseX, int mouseY) {
                 if (!inputInteractive()) return;
+                if (fieldAbove) alignHostAboveField(host, input);
                 delegate.render(graphics, mouseX, mouseY);
             }
 
@@ -70,5 +76,10 @@ public final class KineticCommandSuggestionRuntime {
                 return input.visible && input.active && input.isFocused();
             }
         };
+    }
+
+    private static void alignHostAboveField(Screen host, EditBox input) {
+        host.width = Math.max(1, host.width);
+        host.height = Math.max(1, input.getY() + 15);
     }
 }

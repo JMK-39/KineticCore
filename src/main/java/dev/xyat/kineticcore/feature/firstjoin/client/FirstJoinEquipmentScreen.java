@@ -113,10 +113,16 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
     @Override
     protected void buildUi() {
         addButton(
-                270, 292, 100,
+                215, 292, 100,
+                KineticI18n.translatable("gui.kineticcore.config.save"),
+                null,
+                this::save
+        );
+        addButton(
+                325, 292, 100,
                 KineticI18n.translatable("gui.kineticcore.config.back"),
                 null,
-                this::saveAndClose
+                this::navigateBack
         );
     }
 
@@ -155,7 +161,7 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
         stacks.put(slotKey, ItemStack.EMPTY);
     }
 
-    private void saveAndClose() {
+    private void save() {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("helmet", PlayerConfig.serializeItemStack(stacks.get("helmet")));
         values.put("chestplate", PlayerConfig.serializeItemStack(stacks.get("chestplate")));
@@ -165,9 +171,6 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
         if (!KTServerConfigClient.savePartial(PlayerConfigGui.PAGE_ID, values)) {
             KineticOverlays.toast(null, KineticI18n.translatable("gui.kineticcore.config.server.save_failed"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
             return;
-        }
-        if (minecraft != null) {
-            navigateBack();
         }
     }
 
@@ -264,12 +267,6 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
             }
         }
         return super.canvasMouseClicked(mouseX, mouseY, button);
-    }
-
-    @Override
-    protected boolean handleCloseRequest() {
-        saveAndClose();
-        return true;
     }
 
     @Override
