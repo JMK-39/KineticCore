@@ -56,7 +56,7 @@ public final class KineticCommandSuggestions {
                 int suggestionLineLimit,
                 int fillColor
         ) {
-            return new Options(commandsOnly, onlyShowIfCursorPastError, 4, suggestionLineLimit,
+            return new Options(commandsOnly, onlyShowIfCursorPastError, 1, suggestionLineLimit,
                     false, fillColor, Placement.FIELD_ABOVE);
         }
     }

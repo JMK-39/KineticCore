@@ -98,6 +98,11 @@ public final class KineticTextFields {
         }
 
         @Override
+        public int getScreenX(int charNum) {
+            return super.getScreenX(charNum) + 4;
+        }
+
+        @Override
         public final void setBordered(boolean bordered) {
             super.setBordered(true);
         }
