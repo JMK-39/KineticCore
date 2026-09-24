@@ -11,10 +11,12 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * Single entry facade for item, entity, NBT, color, and palette selectors.
@@ -140,9 +142,87 @@ public final class KineticSelectors {
         }
     }
 
+
+    /**
+     * Immutable options for the standard item selector.
+     * <p>
+     * The selector owns display/search behavior; callers may contribute additional concrete stacks and a
+     * business-neutral predicate describing which item stacks are selectable. Additional stacks are copied
+     * defensively so later caller mutations cannot change an already-open selector.
+     */
+    public static final class ItemSelectorOptions {
+        private final ItemSelectorPreset preset;
+        private final List<ItemStack> additionalItems;
+        private final Predicate<ItemStack> itemPredicate;
+        private final boolean itemResultsOnly;
+
+        private ItemSelectorOptions(
+                ItemSelectorPreset preset,
+                Collection<ItemStack> additionalItems,
+                Predicate<ItemStack> itemPredicate,
+                boolean itemResultsOnly
+        ) {
+            this.preset = preset == null ? ItemSelectorPreset.defaults() : preset;
+            List<ItemStack> copies = new ArrayList<>();
+            if (additionalItems != null) {
+                for (ItemStack stack : additionalItems) {
+                    if (stack != null && !stack.isEmpty()) {
+                        copies.add(stack.copy());
+                    }
+                }
+            }
+            this.additionalItems = List.copyOf(copies);
+            this.itemPredicate = itemPredicate == null ? stack -> true : itemPredicate;
+            this.itemResultsOnly = itemResultsOnly;
+        }
+
+        /** Returns unrestricted default selector options. */
+        public static ItemSelectorOptions defaults() {
+            return new ItemSelectorOptions(ItemSelectorPreset.defaults(), List.of(), stack -> true, false);
+        }
+
+        /** Returns unrestricted selector options using the supplied initial preset. */
+        public static ItemSelectorOptions preset(ItemSelectorPreset preset) {
+            return new ItemSelectorOptions(preset, List.of(), stack -> true, false);
+        }
+
+        /**
+         * Creates an item-only selector request with a caller-defined predicate and optional additional stacks.
+         * Items rejected by the predicate are not displayed and cannot be selected.
+         */
+        public static ItemSelectorOptions itemsOnly(
+                ItemSelectorPreset preset,
+                Collection<ItemStack> additionalItems,
+                Predicate<ItemStack> itemPredicate
+        ) {
+            return new ItemSelectorOptions(preset, additionalItems, itemPredicate, true);
+        }
+
+        /** Returns the normalized initial selector preset. */
+        public ItemSelectorPreset preset() {
+            return preset;
+        }
+
+        /** Returns defensive copies of caller-supplied additional item candidates. */
+        public List<ItemStack> additionalItems() {
+            return additionalItems.stream().map(ItemStack::copy).toList();
+        }
+
+        /** Returns whether the supplied stack is allowed by this selector request. */
+        public boolean accepts(ItemStack stack) {
+            if (stack == null || stack.isEmpty()) return false;
+            return itemPredicate.test(stack.copy());
+        }
+
+        /** Returns whether tag/mod rule results are disabled for this selector request. */
+        public boolean itemResultsOnly() {
+            return itemResultsOnly;
+        }
+    }
+
     /** Opens the standard item selector with the neutral default preset. */
     public static void openItemSelector(Screen parent, Consumer<ItemSelection> onSelect) {
-        openItemSelector(parent, ItemSelectorPreset.defaults(), onSelect);
+        openItemSelectorWithOptions(parent, ItemSelectorOptions.defaults(), onSelect);
     }
 
     /** Opens the item selector with an explicit optional preset. */
@@ -151,8 +231,20 @@ public final class KineticSelectors {
             ItemSelectorPreset preset,
             Consumer<ItemSelection> onSelect
     ) {
+        openItemSelectorWithOptions(parent, ItemSelectorOptions.preset(preset), onSelect);
+    }
+
+    /**
+     * Opens the item selector with explicit filtering, additional item candidates, and result-mode options.
+     * This method intentionally uses a distinct name so legacy calls that pass a null preset remain source-compatible.
+     */
+    public static void openItemSelectorWithOptions(
+            Screen parent,
+            ItemSelectorOptions options,
+            Consumer<ItemSelection> onSelect
+    ) {
         Objects.requireNonNull(onSelect, "onSelect");
-        // Capture this call's preset in its callback; an overlapping cache preparation must not replace it.
+        ItemSelectorOptions safeOptions = options == null ? ItemSelectorOptions.defaults() : options;
         KineticItemSearch.prepare(() -> KineticClientRuntime.openScreen(new ItemSelectorScreen(parent, selection -> {
             ItemSelectionType type = switch (selection.type()) {
                 case ITEM -> ItemSelectionType.ITEM;
@@ -160,7 +252,7 @@ public final class KineticSelectors {
                 case MOD -> ItemSelectionType.MOD;
             };
             onSelect.accept(new ItemSelection(type, selection.stack(), selection.value()));
-        }, preset)));
+        }, safeOptions)));
     }
 
     /** Opens the standard entity selector and returns the applied entity ids through {@code onApply}. */

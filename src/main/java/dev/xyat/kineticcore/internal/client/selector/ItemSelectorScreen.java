@@ -3,11 +3,11 @@ package dev.xyat.kineticcore.internal.client.selector;
 import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.search.KineticItemSearch;
+import dev.xyat.kineticcore.api.client.selector.KineticSelectors.ItemSelectorOptions;
 import dev.xyat.kineticcore.api.client.selector.KineticSelectors.ItemSelectorPreset;
 import dev.xyat.kineticcore.api.client.selector.KineticSelectors.ItemSource;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.widget.input.KineticAutoComplete;
-import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 import dev.xyat.kineticcore.internal.compat.curios.KineticCuriosInventoryBridge;
@@ -95,6 +95,8 @@ public class ItemSelectorScreen extends KineticScreen {
     }
 
     private final Consumer<Selection> onSelect;
+    private final ItemSelectorOptions options;
+    private final List<KineticItemSearch.CachedItem> additionalItems = new ArrayList<>();
     private final List<KineticItemSearch.CachedItem> invItems = new ArrayList<>();
     private List<KineticItemSearch.CachedItem> displayList = new ArrayList<>();
 
@@ -166,14 +168,16 @@ public class ItemSelectorScreen extends KineticScreen {
     private int btnAreaStartX;
 
     public ItemSelectorScreen(Screen parent, Consumer<Selection> onSelect) {
-        this(parent, onSelect, null);
+        this(parent, onSelect, ItemSelectorOptions.defaults());
     }
 
-    /** Applies one request's selection preset without sharing mutable initial state with other pending opens. */
-    public ItemSelectorScreen(Screen parent, Consumer<Selection> onSelect, ItemSelectorPreset preset) {
+    /** Applies one request's selector options without sharing mutable initial state with other pending opens. */
+    public ItemSelectorScreen(Screen parent, Consumer<Selection> onSelect, ItemSelectorOptions options) {
         super(KineticText.translatable("gui.kineticcore.items.item_selector.title"));
         setParentScreen(parent);
         this.onSelect = onSelect;
+        this.options = options == null ? ItemSelectorOptions.defaults() : options;
+        ItemSelectorPreset preset = this.options.preset();
         if (preset != null) {
             mode = preset.source() == ItemSource.INVENTORY ? 1 : 0;
             activeFilterType = switch (preset.filter()) {
@@ -191,6 +195,7 @@ public class ItemSelectorScreen extends KineticScreen {
             rememberedCategoryKey = categoryKey;
             rememberedSearch = searchText;
         }
+        loadAdditionalStacks();
         loadPlayerStacks();
         loadFilters();
         rebuildCategoryEntries();
@@ -199,6 +204,15 @@ public class ItemSelectorScreen extends KineticScreen {
         }
         if (mode != 0) {
             categoryKey = null;
+        }
+    }
+
+
+    private void loadAdditionalStacks() {
+        for (ItemStack stack : options.additionalItems()) {
+            if (stack != null && !stack.isEmpty() && options.accepts(stack)) {
+                additionalItems.add(KineticItemSearch.snapshot(stack));
+            }
         }
     }
 
@@ -216,18 +230,25 @@ public class ItemSelectorScreen extends KineticScreen {
     }
 
     private void addInventoryStack(ItemStack stack) {
-        if (stack != null && !stack.isEmpty()) {
+        if (stack != null && !stack.isEmpty() && options.accepts(stack)) {
             invItems.add(KineticItemSearch.snapshot(stack));
         }
     }
 
     private void loadFilters() {
         Set<String> modSet = new TreeSet<>();
-        KineticRegistries.items().ids().forEach(id -> modSet.add(id.getNamespace()));
-        allMods.addAll(modSet);
-
         Set<String> tagSet = new TreeSet<>();
-        KineticRegistries.items().tagIds().forEach(id -> tagSet.add(id.toString()));
+        List<KineticItemSearch.CachedItem> allowed = new ArrayList<>(buildSelectableSource(KineticItemSearch.items()));
+        allowed.addAll(buildSelectableSource(additionalItems));
+        for (KineticItemSearch.CachedItem item : allowed) {
+            if (item == null) continue;
+            String namespace = item.namespace();
+            if (namespace != null && !namespace.isBlank()) {
+                modSet.add(namespace);
+            }
+            tagSet.addAll(item.tagIds());
+        }
+        allMods.addAll(modSet);
         allTags.addAll(tagSet);
     }
 
@@ -428,7 +449,9 @@ public class ItemSelectorScreen extends KineticScreen {
         }
 
         cachedItemSearchIndexIdentity = currentItems;
-        cachedAllSource = buildSelectableSource(currentItems);
+        List<KineticItemSearch.CachedItem> allItems = new ArrayList<>(buildSelectableSource(currentItems));
+        allItems.addAll(buildSelectableSource(additionalItems));
+        cachedAllSource = List.copyOf(allItems);
         cachedInventorySource = buildSelectableSource(invItems);
 
         Map<String, List<KineticItemSearch.CachedItem>> groupedMods = new LinkedHashMap<>();
@@ -469,7 +492,9 @@ public class ItemSelectorScreen extends KineticScreen {
     }
 
     private boolean isSelectable(KineticItemSearch.CachedItem item) {
-        return item != null && item.stack() != null && !item.stack().isEmpty();
+        if (item == null) return false;
+        ItemStack stack = item.stack();
+        return !stack.isEmpty() && options.accepts(stack);
     }
 
     private Map<String, List<KineticItemSearch.CachedItem>> freezeGroupedSources(Map<String, List<KineticItemSearch.CachedItem>> grouped) {
@@ -643,7 +668,8 @@ public class ItemSelectorScreen extends KineticScreen {
 
     private void updateApplyButton() {
         if (applyFilterBtn == null) return;
-        boolean canApply = activeFilterType != 0 && activeFilterValue != null && !activeFilterValue.isBlank();
+        boolean canApply = !options.itemResultsOnly()
+                && activeFilterType != 0 && activeFilterValue != null && !activeFilterValue.isBlank();
         applyFilterBtn.setVisible(canApply);
         applyFilterBtn.setEnabled(canApply);
     }
@@ -1082,8 +1108,12 @@ public class ItemSelectorScreen extends KineticScreen {
             return false;
         }
 
+        ItemStack selected = displayList.get(slot.displayIndex()).stack();
+        if (!options.accepts(selected)) {
+            return true;
+        }
         if (onSelect != null) {
-            onSelect.accept(Selection.item(displayList.get(slot.displayIndex()).stack()));
+            onSelect.accept(Selection.item(selected));
         }
         this.navigateBack();
         return true;

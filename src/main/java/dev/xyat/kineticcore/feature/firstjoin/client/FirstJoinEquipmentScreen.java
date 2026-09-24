@@ -44,13 +44,10 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
             new SlotDefinition("offhand", "gui.kineticcore.firstjoin.equipment.offhand")
     );
 
-    private final Screen parent;
     private final Map<String, ItemStack> stacks = new LinkedHashMap<>();
-    private String hoveredSlot;
 
     public FirstJoinEquipmentScreen(Screen parent) {
         super(KineticI18n.translatable("gui.kineticcore.firstjoin.equipment.title"));
-        this.parent = parent;
         loadStacks();
     }
 
@@ -170,7 +167,6 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
         values.put("offhand", PlayerConfig.serializeItemStack(stacks.get("offhand")));
         if (!KTServerConfigClient.savePartial(PlayerConfigGui.PAGE_ID, values)) {
             KineticOverlays.toast(null, KineticI18n.translatable("gui.kineticcore.config.server.save_failed"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
-            return;
         }
     }
 
@@ -192,7 +188,7 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         GuiTheme.panel(graphics, 70, 42, 500, 226);
         graphics.drawCenteredString(font, title, canvasWidth() / 2, 58, GuiTheme.current().text());
-        hoveredSlot = slotAt(mouseX, mouseY);
+        String hoveredSlot = slotAt(mouseX, mouseY);
 
         for (int index = 0; index < SLOT_DEFINITIONS.size(); index++) {
             SlotDefinition definition = SLOT_DEFINITIONS.get(index);
