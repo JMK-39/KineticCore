@@ -44,10 +44,12 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
             new SlotDefinition("offhand", "gui.kineticcore.firstjoin.equipment.offhand")
     );
 
+    private final Screen parent;
     private final Map<String, ItemStack> stacks = new LinkedHashMap<>();
 
     public FirstJoinEquipmentScreen(Screen parent) {
         super(KineticI18n.translatable("gui.kineticcore.firstjoin.equipment.title"));
+        this.parent = parent;
         loadStacks();
     }
 
@@ -268,6 +270,10 @@ public final class FirstJoinEquipmentScreen extends KineticScreen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    public Screen getParent() {
+        return parent;
     }
 
     private record SlotDefinition(String key, String labelKey) {
