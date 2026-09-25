@@ -1,0 +1,10 @@
+KineticCore's built-in Han-to-Mandarin reading table is derived from Unicode 18.0.0 Unihan,
+Unihan_Readings.txt, kMandarin. KineticCore's transliteration and search-matching code is
+implemented independently and has no runtime or build dependency on a third-party pinyin library.
+
+Source: https://www.unicode.org/Public/18.0.0/ucd/Unihan.zip
+Documentation: https://www.unicode.org/reports/tr38/
+License: https://www.unicode.org/license.txt
+
+When kMandarin provides multiple values, the first reading is selected for zh-Hans as specified
+by UAX #38. Tone marks are omitted for search, and ü is represented as v.

@@ -1,10 +1,8 @@
 buildscript {
     repositories {
-        maven { url = 'https://litesy.bmclapi2.bangbang93.com/maven/' }
-        maven { url = 'https://maven.aliyun.com/repository/public/' }
+        mavenCentral()
         maven { url = 'https://maven.minecraftforge.net/' }
         maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
-        mavenCentral()
     }
     dependencies {
         classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '6.0.24'
@@ -15,7 +13,6 @@ buildscript {
 plugins {
     id 'eclipse'
     id 'idea'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 def requiredGradleVersion = org.gradle.util.GradleVersion.version('8.8')
@@ -25,11 +22,6 @@ if (org.gradle.util.GradleVersion.current() != requiredGradleVersion) {
 
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.spongepowered.mixin'
-
-configurations {
-    embed
-    implementation.extendsFrom(embed)
-}
 
 configurations.configureEach {
     resolutionStrategy.cacheDynamicVersionsFor 99999, 'days'
@@ -116,73 +108,18 @@ sourceSets.main.resources {
 }
 
 repositories {
-    maven { url = 'https://litesy.bmclapi2.bangbang93.com/maven/' }
-    maven { url = 'https://maven.aliyun.com/repository/public/' }
+    mavenCentral()
     maven { url = 'https://maven.minecraftforge.net/' }
     maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
     maven { url = 'https://maven.blamejared.com' }
-    mavenCentral()
 
-    flatDir {
-        dir project.findProperty('local_libs_dir') ?: 'libs'
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
     }
 }
 
-def localMod = { String artifactName ->
-    File libsDir = file(project.findProperty('local_libs_dir') ?: 'libs')
-
-    if (!libsDir.exists() || !libsDir.isDirectory()) {
-        throw new GradleException("Local libs directory does not exist: ${libsDir.absolutePath}")
-    }
-
-    File[] jars = libsDir.listFiles()
-    if (jars == null) {
-        throw new GradleException("Cannot read local libs directory: ${libsDir.absolutePath}")
-    }
-
-    String exactName = "${artifactName}.jar"
-    String versionPrefix = "${artifactName}-"
-
-    File exactMatch = jars.find { File candidate ->
-        candidate.isFile() && candidate.name.equalsIgnoreCase(exactName)
-    }
-
-    if (exactMatch != null) {
-        return "blank:${artifactName}:local"
-    }
-
-    def matches = jars.findAll { File candidate ->
-        candidate.isFile()
-                && candidate.name.toLowerCase().endsWith('.jar')
-                && candidate.name.regionMatches(true, 0, versionPrefix, 0, versionPrefix.length())
-    }.sort { File a, File b ->
-        a.name <=> b.name
-    }
-
-    if (matches.isEmpty()) {
-        throw new GradleException(
-                "Cannot find local mod '${artifactName}' in ${libsDir.absolutePath}"
-        )
-    }
-
-    if (matches.size() > 1) {
-        throw new GradleException(
-                "Multiple local mod files found for '${artifactName}': ${matches.collect { it.name }.join(', ')}"
-        )
-    }
-
-    File selected = matches[0]
-    String detectedVersion = selected.name.substring(
-            versionPrefix.length(),
-            selected.name.length() - 4
-    )
-
-    if (detectedVersion.isBlank()) {
-        throw new GradleException("Cannot determine local mod version from ${selected.name}")
-    }
-
-    return "blank:${artifactName}:${detectedVersion}"
-}
 
 dependencies {
     minecraft "net.minecraftforge:forge:${project.findProperty('minecraft_version')?.toString()}-${project.findProperty('forge_version')?.toString()}"
@@ -192,10 +129,8 @@ dependencies {
     compileOnly annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.5")
     implementation fg.deobf("io.github.llamalad7:mixinextras-forge:0.3.5")
 
-    embed 'com.github.promeg:tinypinyin:2.0.3'
-
-    compileOnly fg.deobf(localMod('curios'))
-    compileOnly fg.deobf(localMod('jei'))
+    compileOnly fg.deobf("maven.modrinth:curios:IPQlZkz1")
+    compileOnly fg.deobf("maven.modrinth:jei:RTFeXsvE")
 }
 
 tasks.named('processResources', ProcessResources).configure {
@@ -224,8 +159,12 @@ tasks.named('processResources', ProcessResources).configure {
 }
 
 tasks.named('jar', Jar).configure {
-    destinationDirectory.set(layout.buildDirectory.dir('tmp/kineticcore-internal'))
-    archiveFileName.set("${pModId}-${project.version}-internal.jar")
+    def customOutputDir = project.findProperty('output_mods_dir')
+    if (customOutputDir) {
+        destinationDirectory.set(file(customOutputDir))
+    }
+
+    archiveFileName.set("${pModId}-${project.version}.jar")
 
     manifest {
         attributes([
@@ -239,38 +178,12 @@ tasks.named('jar', Jar).configure {
                 'MixinConfigs'              : mixinConfigList.join(',')
         ])
     }
-}
 
-shadowJar {
-    def customOutputDir = project.findProperty('output_mods_dir')
-    if (customOutputDir) {
-        destinationDirectory = file(customOutputDir)
-    }
-
-    archiveFileName.set("${pModId}-${project.version}.jar")
-
-    configurations = [project.configurations.embed]
-
-    relocate 'com.github.promeg.pinyinhelper', "${pGroup}.shadow.pinyinhelper"
-
-    exclude 'META-INF/MANIFEST.MF'
-    exclude 'META-INF/*.SF'
-    exclude 'META-INF/*.DSA'
-    exclude 'META-INF/*.RSA'
-
-    finalizedBy 'reobfShadowJar'
+    finalizedBy 'reobfJar'
 }
 
 reobf {
-    shadowJar {}
-}
-
-assemble.dependsOn shadowJar
-
-tasks.named('assemble').configure {
-    doLast {
-        delete(tasks.named('jar').get().archiveFile.get().asFile)
-    }
+    jar {}
 }
 
 tasks.register('runClientIDE') {

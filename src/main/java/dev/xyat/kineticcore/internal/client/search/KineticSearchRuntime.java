@@ -1,7 +1,5 @@
 package dev.xyat.kineticcore.internal.client.search;
 
-import com.github.promeg.pinyinhelper.Pinyin;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -142,11 +140,12 @@ public final class KineticSearchRuntime {
         StringBuilder spaced = new StringBuilder();
         List<String> syllables = new ArrayList<>(Math.min(text.length(), 32));
 
-        for (char c : text.toCharArray()) {
-            if (!Pinyin.isChinese(c)) continue;
-            String pinyin = Pinyin.toPinyin(c);
-            if (pinyin == null || pinyin.isEmpty()) continue;
-            String lower = pinyin.toLowerCase(Locale.ROOT);
+        for (int index = 0; index < text.length();) {
+            int codePoint = text.codePointAt(index);
+            index += Character.charCount(codePoint);
+            String syllable = KineticPinyin.reading(codePoint);
+            if (syllable == null) continue;
+            String lower = syllable.toLowerCase(Locale.ROOT);
             full.append(lower);
             initials.append(lower.charAt(0));
             if (!spaced.isEmpty()) spaced.append(' ');

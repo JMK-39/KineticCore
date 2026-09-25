@@ -340,7 +340,17 @@ tasks.register('checkKineticWidgetState', JavaExec) {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
 }
 
+tasks.register('checkKineticPinyin', JavaExec) {
+    group = 'verification'
+    description = 'Checks KineticCore built-in pinyin indexing and search behavior without starting Minecraft.'
+    dependsOn tasks.named('testClasses')
+    classpath = files(sourceSets.test.output, sourceSets.main.output)
+    mainClass.set('dev.xyat.kineticcore.internal.client.search.PinyinTransliterationRegression')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+}
+
 tasks.named('check').configure {
     dependsOn tasks.named('checkKineticApiSurface')
     dependsOn tasks.named('checkKineticWidgetState')
+    dependsOn tasks.named('checkKineticPinyin')
 }
