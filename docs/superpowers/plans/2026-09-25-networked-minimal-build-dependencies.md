@@ -19,7 +19,7 @@
 - Use the complete KineticCore mod JAR as the consumer dependency; do not create or publish a separate API-only artifact.
 - FTB Library, FTB Quests, and FTB Teams must use the public `https://maven.ftb.dev/releases` repository with the verified Forge coordinates and versions `2001.2.12`, `2001.4.22`, and `2001.3.2` respectively.
 - Release workflows are manually triggered, ask for an explicit `YY.M.D` version, build and upload GitHub Release assets, and never publish to CurseForge. Do not execute a release workflow during implementation.
-- Do not push repositories or publish releases as part of this implementation.
+- Push the validated source changes to all thirteen existing repository origins as previously requested. Do not dispatch the manual release workflows or publish release assets during implementation.
 
 ## Review Focus
 
@@ -123,7 +123,7 @@
 - [ ] Check all ten workflow version/file patterns against the actual built artifact names and verify KineticCore release consumers resolve its complete mod JAR.
 - [ ] Record any blocked checks explicitly if an upstream artifact or prerequisite GitHub Release is not yet available; do not fake a passing fresh-cache build.
 
-**Verification:** all builds that have their documented prerequisites pass with a clean Gradle user home; remaining blockers name the missing public release/artifact and exact dependent project. No release workflow is dispatched and no repository is pushed.
+**Verification:** all builds that have their documented prerequisites pass with a clean Gradle user home; remaining blockers name the missing public release/artifact and exact dependent project. No release workflow is dispatched; source changes are pushed to their existing origins.
 
 ## Task 7: Own KineticCore pinyin search and remove fat-JAR packaging
 
