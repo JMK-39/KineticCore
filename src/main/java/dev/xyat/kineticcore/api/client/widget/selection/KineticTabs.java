@@ -203,22 +203,25 @@ public final class KineticTabs {
         }
     }
 
-    /** Standard API-owned marker tone for item-grid business state. */
-    public enum ItemGridMarker {
+    /** Standard API-owned outline tone for item-grid business state. */
+    public enum ItemGridOutline {
         NONE,
         SUCCESS,
         WARNING
     }
 
-    /** One item description for a {@link ScrollableItemGrid}. */
+    /**
+     * One item description for a {@link ScrollableItemGrid}. The outline selects a themed business
+     * state. Error outlines override hover and selection; hover overrides selection and status;
+     * selection overrides status. Items with no outline state use a white outline.
+     */
     public record ItemGridItem(
             ItemStack stack,
             Component tooltip,
             boolean active,
             boolean selected,
             boolean error,
-            boolean marked,
-            ItemGridMarker marker
+            ItemGridOutline outline
     ) {
     }
 

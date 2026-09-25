@@ -1,8 +1,23 @@
 package dev.xyat.kineticcore.api.client.search;
 
 import dev.xyat.kineticcore.internal.client.search.ItemSearchIndex;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.DiggerItem;
+import net.minecraft.world.item.FishingRodItem;
+import net.minecraft.world.item.FlintAndSteelItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.world.item.ShearsItem;
+import net.minecraft.world.item.ShieldItem;
+import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.TieredItem;
+import net.minecraft.world.item.TridentItem;
 
+import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -12,6 +27,15 @@ import java.util.List;
  * returns a copy so add-ons cannot corrupt another consumer's cached search data.
  */
 public final class KineticItemSearch {
+    /** Common item categories for combining a text query with type filtering. General includes every nonempty item. */
+    public enum ItemCategory {
+        COMBAT,
+        TOOL,
+        FOOD,
+        GENERAL,
+        BLOCK
+    }
+
     // Publish source identity and its immutable view together: a concurrent caller must never
     // observe a newly indexed source paired with the previous source's view.
     private record CacheSnapshot(List<ItemSearchIndex.CachedItem> source, List<CachedItem> view) {
@@ -30,6 +54,7 @@ public final class KineticItemSearch {
         private final String namespace;
         private final List<String> tagIds;
         private final String searchText;
+        private volatile EnumSet<ItemCategory> categories;
 
         private CachedItem(ItemSearchIndex.CachedItem item) {
             this.stack = item.stack == null ? ItemStack.EMPTY : item.stack.copy();
@@ -75,6 +100,28 @@ public final class KineticItemSearch {
             return KineticSearch.match(searchText, query);
         }
 
+        /** Matches both the normal search query and one common item category. */
+        public boolean matches(String query, ItemCategory category) {
+            return matches(query) && matchesCategory(category);
+        }
+
+        /** Checks the item's category without exposing or copying its cached stack. */
+        public boolean matchesCategory(ItemCategory category) {
+            if (category == null || stack.isEmpty()) return false;
+            if (category == ItemCategory.GENERAL) return true;
+            EnumSet<ItemCategory> matches = categories;
+            if (matches == null) {
+                synchronized (this) {
+                    matches = categories;
+                    if (matches == null) {
+                        matches = classify(stack);
+                        categories = matches;
+                    }
+                }
+            }
+            return matches.contains(category);
+        }
+
         private static String buildSearchText(String displayName, String id, String namespace, List<String> tagIds) {
             StringBuilder builder = new StringBuilder();
             if (displayName != null && !displayName.isBlank()) builder.append(displayName);
@@ -97,6 +144,46 @@ public final class KineticItemSearch {
     /** Creates an immutable searchable snapshot whose identifier is supplied by the caller. */
     public static CachedItem customSnapshot(ItemStack stack, String identifier) {
         return new CachedItem(ItemSearchIndex.customItem(stack, identifier));
+    }
+
+    /** Checks the same common categories for an item stack outside the shared search index. */
+    public static boolean matchesCategory(ItemStack stack, ItemCategory category) {
+        if (stack == null || stack.isEmpty() || category == null) return false;
+        return category == ItemCategory.GENERAL || classify(stack).contains(category);
+    }
+
+    private static EnumSet<ItemCategory> classify(ItemStack stack) {
+        Item item = stack.getItem();
+        EnumSet<ItemCategory> result = EnumSet.of(ItemCategory.GENERAL);
+        boolean tool = isTool(item);
+        boolean block = item instanceof BlockItem;
+        boolean food = stack.getFoodProperties(null) != null;
+        if (tool) result.add(ItemCategory.TOOL);
+        if (block) result.add(ItemCategory.BLOCK);
+        if (food) result.add(ItemCategory.FOOD);
+        if (item instanceof ArmorItem
+                || item instanceof SwordItem
+                || item instanceof ProjectileWeaponItem
+                || item instanceof TridentItem
+                || item instanceof ShieldItem
+                || !tool && !block && !food && hasAttackModifiers(stack)) {
+            result.add(ItemCategory.COMBAT);
+        }
+        return result;
+    }
+
+    private static boolean hasAttackModifiers(ItemStack stack) {
+        var modifiers = stack.getAttributeModifiers(EquipmentSlot.MAINHAND);
+        return !modifiers.get(Attributes.ATTACK_DAMAGE).isEmpty()
+                || !modifiers.get(Attributes.ATTACK_SPEED).isEmpty();
+    }
+
+    private static boolean isTool(Item item) {
+        return item instanceof DiggerItem
+                || item instanceof TieredItem && !(item instanceof SwordItem)
+                || item instanceof ShearsItem
+                || item instanceof FishingRodItem
+                || item instanceof FlintAndSteelItem;
     }
 
     /** Returns the current immutable cached item-search view. */

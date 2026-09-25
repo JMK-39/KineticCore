@@ -32,7 +32,7 @@ import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.SelectionIte
 import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.ItemSelectionItem;
 import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.ItemGridDensity;
 import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.ItemGridItem;
-import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.ItemGridMarker;
+import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.ItemGridOutline;
 import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.ScrollableItemGrid;
 import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.ScrollableItemSelectionList;
 import dev.xyat.kineticcore.api.client.widget.selection.KineticTabs.ActionItem;
@@ -2410,26 +2410,33 @@ public final class KineticWidgets {
                         boolean hover = GuiTheme.hovering(mouseX, mouseY, x, y, density.slotSize(), density.slotSize());
                         GuiTheme.itemSlot(
                                 graphics, x, y, density.slotSize(), density.slotSize(), 4,
-                                item.selected(), hover, item.error()
+                                false, false, false
                         );
                         ItemStack stack = safeStack(item);
                         if (!stack.isEmpty()) {
                             GuiTheme.item(graphics, font, stack, x, y, density.slotSize(), density.renderScale(), density.decorations());
                         }
-                        ItemGridMarker marker = item.marker() == null
-                                ? (item.marked() ? ItemGridMarker.SUCCESS : ItemGridMarker.NONE)
-                                : item.marker();
-                        if (marker != ItemGridMarker.NONE) {
-                            int markerSize = Math.max(4, Math.min(8, density.slotSize() / 8));
-                            int markerX = x + density.slotSize() - markerSize - 3;
-                            int markerY = y + 3;
-                            int markerColor = marker == ItemGridMarker.SUCCESS ? 0xFF00C853 : 0xFFFFAA00;
-                            graphics.fill(
-                                    markerX,
-                                    markerY,
-                                    markerX + markerSize,
-                                    markerY + markerSize,
-                                    markerColor
+                        ItemGridOutline outline = item.outline() == null ? ItemGridOutline.NONE : item.outline();
+                        if (item.error()) {
+                            GuiTheme.indicatorOutline(
+                                    graphics, x, y, density.slotSize(), density.slotSize(), GuiTheme.Indicator.DANGER
+                            );
+                        } else if (hover) {
+                            GuiTheme.stateOutline(
+                                    graphics, x, y, density.slotSize(), density.slotSize(), false, true, false
+                            );
+                        } else if (item.selected()) {
+                            GuiTheme.stateOutline(
+                                    graphics, x, y, density.slotSize(), density.slotSize(), true, false, false
+                            );
+                        } else if (outline != ItemGridOutline.NONE) {
+                            GuiTheme.Indicator indicator = switch (outline) {
+                                case WARNING -> GuiTheme.Indicator.WARNING;
+                                case SUCCESS -> GuiTheme.Indicator.SUCCESS;
+                                case NONE -> GuiTheme.Indicator.MUTED;
+                            };
+                            GuiTheme.indicatorOutline(
+                                    graphics, x, y, density.slotSize(), density.slotSize(), indicator
                             );
                         }
                     }

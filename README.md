@@ -74,6 +74,10 @@ Kinetic GUI 的虚拟画布固定为 **640×360**。API 负责实际分辨率适
 - 坐标转换、UI Scissor。
 - UI 重建与返回导航。
 
+`KineticTabs.ScrollableItemGrid` 的 `ItemGridItem.outline` 使用 `ItemGridOutline.SUCCESS` 或
+`ItemGridOutline.WARNING` 表示通用业务状态描边，并由当前主题提供颜色。网格状态统一用完整边框，
+错误红框优先于悬停蓝框，悬停蓝框优先于选中框和业务状态框，没有状态时显示白框。
+
 非 Screen 的 Panel、Helper、Editor 使用 `KineticWidgets.create...` detached factory。标准 Widget 的构造细节由 API 统一，不需要附属自己决定控件高度或样式。
 
 ## F6 配置 API
@@ -271,7 +275,7 @@ KineticPlayerPose
 KineticCrawling
 ```
 
-`KineticChunkLoading` 统一强加载/释放区块；`KineticInventorySlots` 提供玩家背包 Slot/Handler 判定；`KineticItemSearch` 提供共享物品搜索索引快照；选择器统一通过 `KineticSelectors` 打开。
+`KineticChunkLoading` 统一强加载/释放区块；`KineticInventorySlots` 提供玩家背包 Slot/Handler 判定；`KineticItemSearch` 提供共享物品搜索索引快照，并可通过 `CachedItem.matches(query, ItemCategory)` 结合名称搜索与战斗、工具、食物、通用、方块分类筛选。未进入共享索引的物品可用 `KineticItemSearch.matchesCategory(stack, category)` 判断；选择器统一通过 `KineticSelectors` 打开。
 
 `KineticPlayerPose` 提供统一的玩家 Pose 应用与真实尺寸刷新能力。需要临时改变玩家真实碰撞姿态的功能应复用该 API，不要各自直接改写 `getDimensions()`。核心爬行与超人横向飞行共用这条姿态链，以避免多个功能同时争夺玩家 Pose/碰撞尺寸。
 
@@ -341,9 +345,3 @@ ServerTickTracker
 ## API 源码包
 
 工程提供 `apiSourceZip`，包含公开 `api/` 源码、`README.md` 与构建时自动生成的 Javadoc HTML。
-
-## 许可证
-
-Copyright (C) 2024-2026 XYAT.
-
-本项目基于 **GNU Lesser General Public License v3.0 (LGPLv3)** 开源。
