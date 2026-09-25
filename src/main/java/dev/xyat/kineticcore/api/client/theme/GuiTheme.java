@@ -60,7 +60,7 @@ public final class GuiTheme {
             0xFF666666,
             0xFF777777,
             0xFFAAAAAA,
-            0xE0101010,
+            0xFFC6C6C6,
             0xFFFFFFFF,
             0xFFB0B0B0,
             0xFF55FF55,
@@ -77,6 +77,8 @@ public final class GuiTheme {
     private static final int BORDER_HOVER = 0xFF4DA6FF;
     private static final int BORDER_ERROR = 0xFFFF5555;
     private static final int BORDER_SELECTED = 0xFFFFAA00;
+    private static final int FIELD_TEXT = 0xFF404040;
+    private static final int FIELD_MUTED_TEXT = 0xFF606060;
 
     private static final ResourceLocation ITEM_GRID_TEXTURE = KineticResourceIds.of("kineticcore", "textures/gui/item_selector_checkerboard.png");
     private static final int ITEM_GRID_TEXTURE_WIDTH = 475;
@@ -88,6 +90,16 @@ public final class GuiTheme {
     /** Returns the active immutable Kinetic palette for theme-consistent custom rendering. */
     public static Palette current() {
         return current;
+    }
+
+    /** Returns the standard dark text color used on the vanilla-style light input surface. */
+    public static int fieldText() {
+        return FIELD_TEXT;
+    }
+
+    /** Returns the standard placeholder/read-only text color used on the light input surface. */
+    public static int fieldMutedText() {
+        return FIELD_MUTED_TEXT;
     }
 
 

@@ -287,7 +287,7 @@ final class KTConfigListScreen extends KineticScreen {
                 EDIT_X + dx + 4,
                 y + 10,
                 EDIT_WIDTH - 8,
-                GuiTheme.current().text(),
+                GuiTheme.fieldText(),
                 false
         );
         renderSnapshotButton(

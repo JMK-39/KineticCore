@@ -316,7 +316,7 @@ public final class KineticAutoComplete {
 
                         int rowBackground = (index & 1) == 0
                                 ? theme.panelAlt()
-                                : theme.field();
+                                : theme.panel();
                         gui.fill(x + 1, top, x + w - 1, top + itemH, rowBackground);
 
                         boolean hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY < y + totalH

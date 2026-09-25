@@ -82,8 +82,8 @@ public final class KineticTextFields {
             super(font, x, y, width, height, message);
             Objects.requireNonNull(access, "factory access");
             this.font = font;
-            setTextColor(GuiTheme.current().text());
-            setTextColorUneditable(GuiTheme.current().mutedText());
+            setTextColor(GuiTheme.fieldText());
+            setTextColorUneditable(GuiTheme.fieldMutedText());
             setTextEditable(true);
         }
 
@@ -249,7 +249,7 @@ public final class KineticTextFields {
                         contentX,
                         contentY,
                         contentWidth,
-                        GuiTheme.current().mutedText(),
+                        GuiTheme.fieldMutedText(),
                         false
                 );
             }
