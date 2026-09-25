@@ -1,5 +1,361 @@
 # KineticCore
 
+[English](#english) | [简体中文](#chinese) | [CurseForge](https://www.curseforge.com/minecraft/mc-mods/kineticcore)
+
+<a id="english"></a>
+
+## English
+
+KineticCore is the shared base mod and public development API for **Minecraft 1.20.1 / Forge 47.4.x / Java 17**. It gives the Kinetic mod family and other addons common GUI, configuration, networking, compression, input, lifecycle, hook, command-extension, selector, registry-access, Minecraft-helper, and runtime infrastructure.
+
+Core rule: **feature code calls only the public `dev.xyat.kineticcore.api.*` API.** `internal/` contains implementation details and is not an addon-facing API.
+
+## API Documentation
+
+Public API documentation is maintained as Javadoc in the `dev.xyat.kineticcore.api.*` source tree; a separate hand-maintained API Markdown is not used. Regular builds do not generate Javadoc, keeping compilation faster.
+
+To generate method documentation for an AI or another reader, select `Tasks → build → buildJavaDOC` in IDEA's Gradle panel, or run `gradlew buildJavaDOC` from the project root on Windows. Only this task generates the documentation and its shareable archive:
+
+- Browser documentation: `javadoc/index.html` (the `javadoc/` directory is under the project root).
+- Shareable AI package: `KineticCore-javadoc-<build-version>.zip` under the project root; `javadoc/index.html` is its entry page.
+
+To package only the API source and documentation, run `apiSourceZip`. It also generates Javadoc when needed, but a regular `build` does not invoke it.
+
+## Runtime Environment
+
+- Minecraft 1.20.1
+- Forge 47.4.x
+- Java 17
+- Gradle 8.8 (the pinned source-build version)
+- GitHub Releases are published manually; local builds do not create, upload, or publish a release.
+- Curios: optional compatibility
+- JEI: optional compatibility
+
+## Source Layout
+
+```text
+src/main/java/dev/xyat/kineticcore/
+├─ api/         Stable capabilities exposed to addons
+├─ internal/    Private API implementations, Mixins, concrete screens, and runtime
+├─ feature/     KineticCore's own product features
+└─ bootstrap/   Core startup and feature wiring
+```
+
+Dependency direction:
+
+```text
+feature ─┐
+         ├──> api ──> internal ──> Minecraft / Forge
+addon ───┘
+```
+
+KineticCore's own features follow the same rule as external addons. When a reusable capability is missing, add it to the public API first and call it from feature code. Data rules, gameplay rules, and meanings that belong to one mod stay in that mod.
+
+## Shared GUI
+
+The Kinetic GUI uses a fixed **640×360** virtual canvas. The API handles resolution adaptation, 4K scaling, mouse-coordinate conversion, scissoring, standard control heights, tooltips, context menus, confirmation dialogs, focus, z-order, and themes.
+
+Three screen bases are available:
+
+- `KineticScreen`: standard screen on the 640×360 virtual canvas.
+- `KineticContainerScreen`: container-menu screen on the 640×360 virtual canvas.
+- `KineticNativeScreen`: native physical screen coordinates, for vanilla-screen integration or cases that require physical coordinates.
+
+Standard controls include:
+
+- Regular and compact buttons.
+- High-z and compact high-z buttons.
+- Toggle buttons.
+- Single-line and multiline text fields.
+- Integer, Long, and Double numeric fields.
+- Text autocomplete and integer/Long/decimal autocomplete.
+- Dropdowns and tab bars.
+- RGB/HEX color previews and color buttons.
+- Placeholders, tooltips, and item tooltips.
+- Context menus and confirmation dialogs.
+- Smooth scrolling and grid-scroll controllers.
+- Control registration/removal and focus management.
+- Coordinate conversion and UI scissoring.
+- UI rebuilding and return navigation.
+
+`KineticTabs.ScrollableItemGrid` uses `ItemGridItem.outline` with `ItemGridOutline.SUCCESS` or `ItemGridOutline.WARNING` for common state outlines; the active theme supplies their colors. Grid states use full borders. An error red border takes priority over a hovered blue border, which takes priority over selection and business-state borders. Items with no state use a white border.
+
+Non-screen panels, helpers, and editors should use the detached `KineticWidgets.create...` factories. The API owns standard widget construction details, so addons do not need to choose control heights or styles themselves.
+
+## F6 Configuration API
+
+The configuration system supports:
+
+- Client-local configuration.
+- Installation-wide local configuration.
+- Server-authoritative configuration.
+- Boolean values.
+- Integer, Long, and Double values.
+- Strings and long text.
+- Fixed choices and translated choices.
+- String lists and integer lists.
+- Entity lists.
+- Item lists and item-rule lists.
+- Tick-to-seconds numeric entries.
+- RGB/HEX colors.
+- Actions, sections, and descriptions.
+- Custom validators.
+- Save notices and application timing.
+
+Client pages use `KTConfigPage` to describe **how a value is edited**. Server-authoritative data uses `KTServerConfigSpec` to describe **what the server ultimately permits**. Addons may provide business validators for numbers, strings, lists, choices, and colors; the API does not impose business-specific rules for negative values, minimums, maximums, or formats.
+
+Main entry points:
+
+```text
+KTConfigApi
+KTConfigPage
+KTConfigEntry
+KTConfigScope
+KTClientConfigSpec
+KTClientConfigAdapter
+KTServerConfigApi
+KTServerConfigSpec
+KTServerConfigClient
+```
+
+## Networking and Compression
+
+The public networking layer hides Forge `SimpleChannel`, `FriendlyByteBuf`, `PacketDistributor`, and thread-switching details.
+
+Main types:
+
+```text
+KineticNetwork
+PacketChannel
+NetworkChannel
+NetworkCodec<T>
+NetworkBuffer
+NetworkBuffers
+ServerboundSender<T>
+ClientboundSender<T>
+ServerPacketContext
+ServerboundPacketHandler<T>
+NetworkProtocolLimits
+NetworkTransportLimits
+```
+
+Features:
+
+- Each Channel ID has one unified protocol owner.
+- Protocol versions must match exactly.
+- UTF, `byte[]`, and string lists have safe default limits and overloads for explicit limits.
+- Server configuration JSON integers are preserved exactly as `Long` values instead of losing large-integer precision through `Double`.
+
+Use `KineticCompression` for shared compression:
+
+```text
+compressUtf8
+compressBytes
+decompressUtf8
+decompressBytes
+```
+
+Decompression requires a maximum output size to prevent unbounded expansion.
+
+## Input and Lifecycle
+
+`KineticKeyBindings` unifies key registration, default keys, mouse buttons, modifiers, contexts, enable conditions, press callbacks, and held-state tracking.
+
+`KineticInputGestures` provides reusable input-gesture recognition. It currently includes `DoubleTap`, which detects two presses within a specified tick window so each feature or addon does not need its own edge detection and timing state. Superman Flight's double-tap Space toggle uses this shared capability.
+
+`KineticClientEvents` provides:
+
+- Client Tick START / END.
+- Login and logout.
+- Screen Init Before / After, including inspection, addition, and removal of controls on external screens.
+- Screen Render After.
+- Mouse Button Before.
+- Level Render Stage.
+- HUD AFTER_CHAT / HOTBAR / END.
+
+`KineticServerEvents` provides:
+
+- Server Tick START / END.
+- Player Tick START / END.
+- Server AboutToStart / Started / Stopping / Stopped.
+- Player login, logout, clone, respawn, and dimension changes.
+- Datapack Sync.
+- Cancellable server chat events.
+- Stable priorities from `HIGHEST` to `LOWEST`.
+
+`KineticWorldEvents` provides world load/unload, entity join/leave, chunk load/unload, block break/place, item pickup, Mob Finalize Spawn, and baby-entity spawn events.
+
+`KineticLivingEvents` provides Living Tick, equipment changes, death, Hurt, Damage, Attack, and potion-applicability events. Dedicated contexts are available when a handler needs to modify values or cancel an event.
+
+Addons do not need to listen directly to the corresponding generic Forge lifecycle and world events. Event contracts specific to third-party mods remain in the addon.
+
+## Tooltips, Overlays, and Status Effects
+
+- `KineticItemTooltips`: shared item-tooltip construction, GatherComponents, client factories and render observation for custom `TooltipComponent` implementations.
+- `GuiOverlay`: tooltips, context menus, confirmation dialogs, toasts, and high-z overlays.
+- `KineticEffectDisplay`: status-effect areas, compact layouts, expanded tabs, and icon policies.
+
+An open overlay blocks input and tooltips from the underlying screen, preventing menus or confirmation dialogs from leaking interaction to controls below them.
+
+## Selectors and Editors
+
+`KineticSelectors` provides shared entry points for:
+
+- Item selection.
+- Entity selection.
+- Item-list and item-rule editors.
+- NBT editing.
+- RGB/HEX color picking.
+- Palette editing.
+
+`KineticCommandListEditor` provides reusable command-list editing. `HudPositionEditor` provides HUD dragging, scaling, and position editing.
+
+## Hooks and Mixins
+
+Mixins are allowed extension tools. Follow these rules:
+
+- A mod should not create multiple Mixin implementations for the same capability.
+- If an injection capability can be reused unchanged by unrelated addons, put it in KineticCore's public API/Hook layer.
+- A Mixin that clearly belongs to one addon's own feature may stay in that addon.
+- Do not reimplement common GUI, input, configuration, networking, or other capabilities already provided by the public API.
+
+Public hooks:
+
+```text
+ClientHooks
+CommonHooks
+ServerHooks
+HookRegistration
+```
+
+## Command Extensions
+
+`KineticCommands` owns the shared `/kt` root command. Addons register subcommands, help entries, and reload callbacks through `CommandExtension`. Use `registerTopLevel(...)` when a command needs to keep an independent root path. Neither approach requires an addon to take over Forge command-registration events.
+
+## Registration and Runtime
+
+Shared registration and runtime entry points include:
+
+```text
+KineticItems
+KineticMenuTypes
+KineticEntityTypes
+KineticRegistryHandle
+KineticRegistries
+KineticRegistryView
+KineticClientMenus
+KineticItemProperties
+KineticClientRenderers
+KineticPackSources
+KineticCreativeTabs
+KineticModLifecycle
+KineticClientRuntime
+KineticServerRuntime
+KineticEnvironment
+KineticPlatform
+KineticPaths
+KineticFeatureSwitches
+KineticRuntime
+```
+
+`KineticRegistries` supports ID-to-object lookup, enumeration, and tag queries for items, entity types, blocks, potion effects, attributes, and enchantments. Use `custom(...)` to access third-party registries.
+
+`KineticItems` and `KineticMenuTypes` provide shared registration. Client menu bindings and item properties use `KineticClientMenus` and `KineticItemProperties`, respectively.
+
+`KineticCreativeTabs` provides creative-tab enumeration and lookup, BuildContents callbacks, and client search-tree refresh.
+
+`KineticEnvironment`, `KineticPlatform`, and `KineticPaths` unify physical-side checks, mod detection, and configuration-directory access.
+
+`KineticClientRuntime` provides shared client-thread execution, screen opening, and screen refresh. Addons do not need to manage KineticCore's internal initialization order.
+
+`KineticFeatureSwitches` manages feature toggles through stable feature IDs, names, and descriptions. Mixin class names are implementation mappings only; they must not become player-facing configuration keys or GUI labels. Every toggle must have its own name and description in both `zh_cn` and `en_us`; hovering shows the description and the restart-after-save notice.
+
+## World, Player Pose, and Inventory Foundations
+
+```text
+KineticChunkLoading
+KineticInventorySlots
+KineticItemSearch
+KineticSelectors
+KineticPlayerPose
+KineticCrawling
+```
+
+`KineticChunkLoading` unifies forced chunk loading and release. `KineticInventorySlots` checks player-inventory slots and handlers. `KineticItemSearch` provides snapshots of the shared item-search index and lets `CachedItem.matches(query, ItemCategory)` combine name searches with Combat, Tool, Food, General, and Block category filters. For items outside the shared index, use `KineticItemSearch.matchesCategory(stack, category)`; selectors should be opened through `KineticSelectors`.
+
+`KineticPlayerPose` provides shared player-pose application and real-dimension refresh. Features that temporarily change a player's real collision pose should use this API instead of overriding `getDimensions()` independently. Core crawling and Superman Flight's horizontal pose share this path so multiple features do not compete over the player's pose or collision size.
+
+`KineticCrawling` provides crawling-state queries and APIs to take over or release crawling. Horizontal Superman Flight has higher priority than crawling: starting horizontal flight releases crawling, crawling cannot take over while horizontal flight is active, and crawling may take over again after horizontal flight ends.
+
+## Minecraft Helpers
+
+Public helper entry points:
+
+```text
+MinecraftAttributes
+MinecraftContainers
+MinecraftKeys
+MinecraftScreens
+```
+
+These APIs hide Accessor/Mixin and vanilla private-implementation details.
+
+## Flight and Performance Monitoring
+
+Flight APIs:
+
+```text
+KineticFlight
+KineticFlightClient
+KineticSuperFlight
+```
+
+Superman Flight uses shared server/client flight state and network synchronization, working together with the player-pose, crawling, and input-gesture APIs.
+
+Controls:
+
+- **Double-tap Space**: toggle Superman Flight.
+- When Superman Flight is available, Kinetic handles double-tap Space before vanilla Creative Flight. If the ability is unavailable, vanilla behavior is not intercepted.
+- **Tap Space**: exit the current horizontal pose during horizontal high-speed flight without disabling the overall Superman Flight toggle.
+- **W / S**: move forward / backward.
+- **A / D**: control roll; they do not strafe.
+- **Shift**: accelerate smoothly without triggering sneak.
+- **Ctrl + W**: immediately reach the currently saved target top speed.
+- **Shift + Mouse Wheel**: adjust the target top speed, up to 100x.
+- **Alt**: free-look camera.
+- Horizontal mouse movement controls the camera only; it does not directly control flight direction or roll.
+
+Superman Flight FOV is calculated from the player's **actual current movement speed**, not only from the target speed. Smooth interpolation expands and restores the view, making the effect more noticeable at 100x speed. Horizontal flight uses the crawling-compatible `KineticPlayerPose` path to maintain a genuinely low collision profile and cooperates with temporary-state cleanup on respawn, dimension changes, and re-login.
+
+Performance APIs:
+
+```text
+KineticServerPerformance
+ServerTickTracker
+```
+
+## Architecture Checks
+
+The project provides the static `checkKineticArchitecture` task to prevent:
+
+- Feature/business code from depending directly on `internal`.
+- `internal` from depending on Feature.
+- API from depending on Feature.
+- Direct cross-Feature imports.
+- Public API signatures from exposing `internal` types.
+- API from exposing Forge Event implementation types.
+- Business code from bypassing existing shared GUI, input, lifecycle, networking, tooltip, or command capabilities.
+
+Architecture rules run automatically during the build through `gradle/kinetic-architecture.gradle` and `gradle/kinetic-api-verification.gradle`.
+
+## API Source Archive
+
+The project provides `apiSourceZip`, containing the public `api/` source, this `README.md`, and Javadoc HTML generated during the task.
+
+<a id="chinese"></a>
+
+## 简体中文
+
 KineticCore 是面向 **Minecraft 1.20.1 / Forge 47.4.x / Java 17** 的核心基础模组与公共开发 API。它为 Kinetic 系列及其他附属提供统一的 GUI、配置、网络、压缩、输入、生命周期、Hook、命令扩展、选择器、注册表访问、Minecraft 辅助能力与运行时基础设施。
 
 核心约束：**业务代码只调用公开 `dev.xyat.kineticcore.api.*`。** `internal/` 只负责实现，不属于附属调用面。
