@@ -9,7 +9,6 @@ import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.api.minecraft.MinecraftKeys;
 
 import net.minecraft.client.KeyMapping;
-
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -24,7 +23,6 @@ public class OptionsManager {
     public static synchronized void registerHook() {
         if (!KineticFeatureSwitches.isEnabled("client.default_options")) return;
         HOOK_REGISTRATION.run(() -> ClientHooks.onOptionsLoading(options -> {
-            enforceDefaultOptions();
             applyCustomKeyDefaults(MinecraftKeys.snapshotMappings(options.keyMappings));
         }));
     }
@@ -32,28 +30,6 @@ public class OptionsManager {
     public static class KeyData {
         public String serializedKey = null;
         public KineticKeyBindings.Modifier modifier = KineticKeyBindings.Modifier.NONE;
-    }
-
-    public static void enforceDefaultOptions() {
-        if (!CUSTOM_DEFAULTS_FILE.exists()) return;
-
-        File gameOptionsFile = KineticPlatform.gameDirectory().resolve("options.txt").toFile();
-        boolean shouldReplace = false;
-
-        if (!gameOptionsFile.exists()) {
-            shouldReplace = true;
-        } else if (gameOptionsFile.length() < 2048) {
-            try {
-                Files.delete(gameOptionsFile.toPath());
-                shouldReplace = true;
-            } catch (IOException ignored) {}
-        }
-
-        if (shouldReplace) {
-            try {
-                Files.copy(CUSTOM_DEFAULTS_FILE.toPath(), gameOptionsFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException ignored) {}
-        }
     }
 
     public static void applyCustomKeyDefaults(Iterable<KeyMapping> mappings) {

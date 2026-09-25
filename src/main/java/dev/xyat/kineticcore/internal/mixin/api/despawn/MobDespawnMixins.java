@@ -8,8 +8,8 @@ import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -20,7 +20,8 @@ public class MobDespawnMixins {
 
     @Mixin(Mob.class)
     public static abstract class MobTweaks {
-        @Shadow private boolean persistenceRequired;
+        @Accessor("persistenceRequired")
+        public abstract void kineticcore$setPersistenceRequired(boolean required);
 
         @Unique
         private byte kineticcore$despawnCache = 0;
@@ -45,7 +46,7 @@ public class MobDespawnMixins {
                 this.kineticcore$despawnCache = (byte) (KineticCommonHookRuntime.shouldForceDespawn(entity) ? 1 : 2);
             }
             if (this.kineticcore$despawnCache == 1) {
-                this.persistenceRequired = false;
+                this.kineticcore$setPersistenceRequired(false);
             }
         }
 

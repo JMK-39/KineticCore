@@ -30,10 +30,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -156,8 +155,10 @@ public class FlightClientMixins {
     // 3. 滚轮调速、穿墙渲染等其他功能
     // ==========================================
     @Mixin(MouseHandler.class)
-    public static class MouseTweaks {
-        @Shadow @Final private Minecraft minecraft;
+    public static abstract class MouseTweaks {
+        @Accessor("minecraft")
+        public abstract Minecraft kineticcore$getMinecraft();
+
         @Unique private float kineticcore$freeLookBeforeYaw;
         @Unique private float kineticcore$freeLookBeforePitch;
         @Unique private boolean kineticcore$captureFreeLook;
@@ -185,7 +186,7 @@ public class FlightClientMixins {
 
         @Inject(method = "turnPlayer", at = @At("HEAD"))
         private void kineticcore$beforeTurnPlayer(CallbackInfo ci) {
-            LocalPlayer player = this.minecraft.player;
+            LocalPlayer player = this.kineticcore$getMinecraft().player;
             this.kineticcore$captureFreeLook = player != null
                     && KineticFlightClient.appliesSuperFlightTo(player)
                     && KineticFlightClient.superFlightFreeLookDown();
@@ -198,7 +199,7 @@ public class FlightClientMixins {
         @Inject(method = "turnPlayer", at = @At("TAIL"))
         private void kineticcore$afterTurnPlayer(CallbackInfo ci) {
             if (!this.kineticcore$captureFreeLook) return;
-            LocalPlayer player = this.minecraft.player;
+            LocalPlayer player = this.kineticcore$getMinecraft().player;
             if (player == null) return;
             float yawDelta = Mth.wrapDegrees(player.getYRot() - this.kineticcore$freeLookBeforeYaw);
             float pitchDelta = player.getXRot() - this.kineticcore$freeLookBeforePitch;
@@ -209,7 +210,7 @@ public class FlightClientMixins {
 
         @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
         private void kineticcore$creativeScrollSpeed(long pWindowPointer, double pXOffset, double pYOffset, CallbackInfo ci) {
-            LocalPlayer player = this.minecraft.player;
+            LocalPlayer player = this.kineticcore$getMinecraft().player;
 
             if (player != null && KineticFlightClient.superFlightActive() && KineticClientRuntime.shiftKeyDown()) {
                 double currentMult = KineticFlightClient.superFlightSelectedSpeedMultiplier();
@@ -249,20 +250,22 @@ public class FlightClientMixins {
     }
 
     @Mixin(MultiPlayerGameMode.class)
-    public static class GameModeTweaks {
-        @Shadow @Final private Minecraft minecraft;
+    public static abstract class GameModeTweaks {
+        @Accessor("minecraft")
+        public abstract Minecraft kineticcore$getMinecraft();
+
         @Unique private boolean kineticcore$wasFlying;
 
         @Inject(method = "setLocalMode(Lnet/minecraft/world/level/GameType;Lnet/minecraft/world/level/GameType;)V", at = @At("HEAD"))
         private void kineticcore$beforeSetMode(GameType type, @Nullable GameType previousType, CallbackInfo ci) {
-            if (this.minecraft.player != null) {
-                this.kineticcore$wasFlying = this.minecraft.player.getAbilities().flying;
+            if (this.kineticcore$getMinecraft().player != null) {
+                this.kineticcore$wasFlying = this.kineticcore$getMinecraft().player.getAbilities().flying;
             }
         }
 
         @Inject(method = "setLocalMode(Lnet/minecraft/world/level/GameType;Lnet/minecraft/world/level/GameType;)V", at = @At("TAIL"))
         private void kineticcore$afterSetMode(GameType type, @Nullable GameType previousType, CallbackInfo ci) {
-            LocalPlayer player = this.minecraft.player;
+            LocalPlayer player = this.kineticcore$getMinecraft().player;
             if (player == null) return;
             if (type == GameType.CREATIVE) {
                 player.getAbilities().setFlyingSpeed(KineticFlightClient.flightSpeedMultiplier() * 0.05F);
@@ -286,11 +289,12 @@ public class FlightClientMixins {
 
     @Mixin(Camera.class)
     public static abstract class CameraTweaks {
-        @Shadow private Entity entity;
+        @Accessor("entity")
+        public abstract Entity kineticcore$getEntity();
 
         @Inject(method = "getMaxZoom", at = @At("HEAD"), cancellable = true)
         private void kineticcore$allowCameraThroughBlocks(double startingDistance, CallbackInfoReturnable<Double> cir) {
-            if (this.entity instanceof LocalPlayer && KineticFlightClient.noclipEnabled()) {
+            if (this.kineticcore$getEntity() instanceof LocalPlayer && KineticFlightClient.noclipEnabled()) {
                 cir.setReturnValue(startingDistance);
             }
         }

@@ -29,6 +29,9 @@ public final class KineticClientHookRuntime {
     }
 
     public static void fireOptionsLoading(Options options) {
+        // This mixin can run before client feature hooks are registered by Forge.
+        // Recover the file here so Options reads the configured defaults either way.
+        DefaultOptionsRecoveryRuntime.restoreConfiguredDefaults();
         KineticCallbackBatch.runAll(OPTIONS_LOADING, handler -> handler.beforeLoad(options));
     }
 

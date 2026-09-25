@@ -103,6 +103,12 @@ mixin {
     }
 }
 
+// Mixin's annotation processor writes this side output outside JavaCompile's
+// class directory. Declare it so Gradle restores the runtime refmap from cache.
+tasks.named('compileJava', JavaCompile).configure {
+    outputs.file(layout.buildDirectory.file("tmp/compileJava/${pModId}.mixins.refmap.json"))
+}
+
 sourceSets.main.resources {
     srcDir 'src/generated/resources'
 }

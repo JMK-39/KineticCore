@@ -15,8 +15,8 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.phys.AABB;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -86,16 +86,21 @@ public class FlightServerMixins {
     }
 
     @Mixin(ServerGamePacketListenerImpl.class)
-    public static class NetworkTweaks {
-        @Shadow public ServerPlayer player;
-        @Shadow private boolean clientIsFloating;
-        @Shadow private int aboveGroundTickCount;
+    public static abstract class NetworkTweaks {
+        @Accessor("player")
+        public abstract ServerPlayer kineticcore$getPlayer();
+
+        @Accessor("clientIsFloating")
+        public abstract void kineticcore$setClientIsFloating(boolean floating);
+
+        @Accessor("aboveGroundTickCount")
+        public abstract void kineticcore$setAboveGroundTickCount(int tickCount);
 
         @Inject(method = "tick", at = @At("HEAD"))
         private void kineticcore$allowAuthoritativeSuperFlight(CallbackInfo ci) {
-            if (KineticSuperFlight.active(this.player)) {
-                this.clientIsFloating = false;
-                this.aboveGroundTickCount = 0;
+            if (KineticSuperFlight.active(this.kineticcore$getPlayer())) {
+                this.kineticcore$setClientIsFloating(false);
+                this.kineticcore$setAboveGroundTickCount(0);
             }
         }
 
@@ -104,23 +109,24 @@ public class FlightServerMixins {
             if (!(packet instanceof ClientboundPlayerAbilitiesPacket)) return;
             if (FlightState.isInternalUpdate || KineticFlightSources.abilityRefreshInProgress() || FlightState.isProcessingExplicitCancel) return;
 
-            boolean outgoingMayfly = this.player.getAbilities().mayfly;
-            boolean wasFlying = FlightState.lastKnownFlying(this.player);
+            ServerPlayer player = this.kineticcore$getPlayer();
+            boolean outgoingMayfly = player.getAbilities().mayfly;
+            boolean wasFlying = FlightState.lastKnownFlying(player);
 
-            if (outgoingMayfly && !this.player.getAbilities().flying && wasFlying) {
+            if (outgoingMayfly && !player.getAbilities().flying && wasFlying) {
                 ci.cancel();
-                this.player.getAbilities().flying = true;
+                player.getAbilities().flying = true;
                 FlightState.isInternalUpdate = true;
-                this.player.onUpdateAbilities();
+                player.onUpdateAbilities();
                 FlightState.isInternalUpdate = false;
                 return;
             }
-            if (!outgoingMayfly && KineticFlightSources.allowsFlight(this.player)) {
+            if (!outgoingMayfly && KineticFlightSources.allowsFlight(player)) {
                 ci.cancel();
-                this.player.getAbilities().mayfly = true;
-                if (wasFlying) this.player.getAbilities().flying = true;
+                player.getAbilities().mayfly = true;
+                if (wasFlying) player.getAbilities().flying = true;
                 FlightState.isInternalUpdate = true;
-                this.player.onUpdateAbilities();
+                player.onUpdateAbilities();
                 FlightState.isInternalUpdate = false;
             }
         }
@@ -128,7 +134,7 @@ public class FlightServerMixins {
         @Inject(method = "handlePlayerAbilities", at = @At("HEAD"))
         private void kineticcore$onHandleAbilitiesStart(ServerboundPlayerAbilitiesPacket packet, CallbackInfo ci) {
             if (!packet.isFlying()) FlightState.isProcessingExplicitCancel = true;
-            FlightState.setLastKnownFlying(this.player, packet.isFlying());
+            FlightState.setLastKnownFlying(this.kineticcore$getPlayer(), packet.isFlying());
         }
 
         @Inject(method = "handlePlayerAbilities", at = @At("TAIL"))
@@ -138,7 +144,8 @@ public class FlightServerMixins {
 
         @Inject(method = "isPlayerCollidingWithAnythingNew", at = @At("HEAD"), cancellable = true)
         private void kineticcore$bypassBlockCollisionCheck(LevelReader level, AABB aabb, double x, double y, double z, CallbackInfoReturnable<Boolean> cir) {
-            if (this.player.isCreative() && FlightState.noclipEnabled(this.player)) cir.setReturnValue(false);
+            ServerPlayer player = this.kineticcore$getPlayer();
+            if (player.isCreative() && FlightState.noclipEnabled(player)) cir.setReturnValue(false);
         }
 
         @ModifyConstant(method = "handleMovePlayer", constant = @Constant(floatValue = 100.0F), require = 0)

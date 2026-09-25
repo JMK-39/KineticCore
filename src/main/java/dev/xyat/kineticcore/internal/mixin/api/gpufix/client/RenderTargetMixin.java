@@ -2,8 +2,8 @@ package dev.xyat.kineticcore.internal.mixin.api.gpufix.client;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import dev.xyat.kineticcore.internal.client.gpu.GpuMemLeakFixHandler;
+import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -12,9 +12,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(RenderTarget.class)
 public abstract class RenderTargetMixin {
 
-    @Shadow protected int colorTextureId;
-    @Shadow protected int depthBufferId;
-    @Shadow public int frameBufferId;
+    @Accessor("colorTextureId")
+    public abstract int kineticcore$getColorTextureId();
+
+    @Accessor("depthBufferId")
+    public abstract int kineticcore$getDepthBufferId();
+
+    @Accessor("frameBufferId")
+    public abstract int kineticcore$getFrameBufferId();
 
     @Unique
     private GpuMemLeakFixHandler.RenderTargetState kineticcore$cleanerState;
@@ -28,7 +33,10 @@ public abstract class RenderTargetMixin {
     @Inject(method = "createBuffers", at = @At("TAIL"))
     private void kineticcore$syncStateOnCreate(int width, int height, boolean clearError, CallbackInfo ci) {
         if (this.kineticcore$cleanerState != null) {
-            this.kineticcore$cleanerState.update(this.colorTextureId, this.depthBufferId, this.frameBufferId);
+            this.kineticcore$cleanerState.update(
+                    this.kineticcore$getColorTextureId(),
+                    this.kineticcore$getDepthBufferId(),
+                    this.kineticcore$getFrameBufferId());
         }
     }
 

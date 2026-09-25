@@ -11,9 +11,8 @@ import net.minecraft.server.level.progress.ChunkProgressListener;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.level.Level;
 import org.objectweb.asm.Opcodes;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -36,7 +35,8 @@ public class SetSpawnMixins {
     @Mixin(PlayerList.class)
     public static abstract class PlayerListMixin {
 
-        @Shadow @Final private MinecraftServer server;
+        @Accessor("server")
+        public abstract MinecraftServer kineticcore$getServer();
 
         @Redirect(
                 method = "placeNewPlayer",
@@ -49,14 +49,14 @@ public class SetSpawnMixins {
                 )
         )
         private ResourceKey<Level> kineticcore$redirectPlaceNewPlayerOverworldKey() {
-            return KineticServerHookRuntime.globalSpawn(this.server)
+            return KineticServerHookRuntime.globalSpawn(this.kineticcore$getServer())
                     .map(spawn -> spawn.getFirst().dimension())
                     .orElse(Level.OVERWORLD);
         }
 
         @Inject(method = "getPlayerForLogin", at = @At("TAIL"), cancellable = true)
         private void kineticcore$createNewPlayerInCustomSpawnLevel(GameProfile profile, CallbackInfoReturnable<ServerPlayer> cir) {
-            KineticServerHookRuntime.createFreshLoginPlayer(this.server, profile)
+            KineticServerHookRuntime.createFreshLoginPlayer(this.kineticcore$getServer(), profile)
                     .ifPresent(cir::setReturnValue);
         }
 
@@ -69,7 +69,7 @@ public class SetSpawnMixins {
         )
         private void kineticcore$addNewPlayerAtExactSafeSpawn(ServerLevel level, ServerPlayer player) {
             Optional<KineticServerHookRuntime.FreshLoginPlacement> selected =
-                    KineticServerHookRuntime.selectFreshLoginPlacement(this.server, level, player);
+                    KineticServerHookRuntime.selectFreshLoginPlacement(this.kineticcore$getServer(), level, player);
             if (selected.isPresent()) {
                 KineticServerHookRuntime.FreshLoginPlacement placement = selected.get();
                 placement.level().addNewPlayer(player);
