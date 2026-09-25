@@ -30,3 +30,5 @@ run
 .授权加密工具/
 # Files from Forge MDK
 forge*changelog.txt
+
+/CF_UPDATE_LOG.md
