@@ -60,7 +60,7 @@ public final class GuiTheme {
             0xFF666666,
             0xFF777777,
             0xFFAAAAAA,
-            0xFFC6C6C6,
+            0xFF9E9E9E,
             0xFFFFFFFF,
             0xFFB0B0B0,
             0xFF55FF55,
