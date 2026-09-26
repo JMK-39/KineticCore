@@ -121,6 +121,7 @@ public final class KineticButtons {
     public static class StateButton extends Button implements KineticControl {
         private boolean selected;
         private boolean error;
+        private boolean invertedFlash;
         private boolean textVisible = true;
         private boolean contentCardSurface;
         private boolean clipEnabled;
@@ -195,6 +196,11 @@ public final class KineticButtons {
             return error;
         }
 
+        /** Sets whether this button temporarily uses a high-contrast inverse-color flash. */
+        public void setInvertedFlash(boolean invertedFlash) {
+            this.invertedFlash = invertedFlash;
+        }
+
         /** Controls whether the visual button label is rendered while keeping the text available for narration. */
         public void setTextVisible(boolean visible) {
             this.textVisible = visible;
@@ -250,6 +256,20 @@ public final class KineticButtons {
             if (clipEnabled) graphics.enableScissor(clipLeft, clipTop, clipRight, clipBottom);
             Component storedText = null;
             try {
+                if (invertedFlash) {
+                    graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFFFFFFFF);
+                    graphics.renderOutline(getX(), getY(), getWidth(), getHeight(), 0xFF000000);
+                    if (textVisible && !getMessage().getString().isEmpty()) {
+                        graphics.drawCenteredString(
+                                KineticClientRuntime.font(),
+                                getMessage().getString(),
+                                getX() + getWidth() / 2,
+                                getY() + (getHeight() - 9) / 2,
+                                0xFF000000
+                        );
+                    }
+                    return;
+                }
                 if (contentCardSurface) {
                     GuiTheme.stateSurface(
                             graphics,

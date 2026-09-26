@@ -2,10 +2,13 @@ package dev.xyat.kineticcore.api.client.widget.scroll;
 
 import javax.annotation.Nonnull;
 
+import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
 import dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 
@@ -802,6 +805,12 @@ public final class KineticScroll {
 
     /** Controls logical offset, dragging, animation, and themed rendering for grid-style scrolling. */
     public static class GridScrollController {
+        private static final long HOVER_HINT_DELAY_NANOS = 500_000_000L;
+        private static final long SELECTION_FLASH_DELAY_NANOS = 200_000_000L;
+        private static final long SELECTION_FLASH_ON_NANOS = 250_000_000L;
+        private static final long SELECTION_FLASH_OFF_NANOS = 250_000_000L;
+        private static final int SELECTION_FLASH_COUNT = 2;
+
         private int offset;
         private double currentOffset;
         private double targetOffset;
@@ -811,6 +820,9 @@ public final class KineticScroll {
         private int visibleItems;
         private boolean dragging;
         private int dragGrabOffset;
+        private long thumbHoverStartedAtNanos;
+        private int flashingSelectionIndex = -1;
+        private long selectionFlashStartedAtNanos;
 
         /** Updates the logical item count and visible-row count used by this grid controller. */
         public void update(int totalItems, int visibleItems) {
@@ -886,6 +898,49 @@ public final class KineticScroll {
         /** Returns whether the current content range can scroll beyond its initial position. */
         public boolean canScroll() {
             return maxOffset > 0;
+        }
+
+        /** Returns the built-in middle-click hint after the scrollbar thumb has been hovered for half a second. */
+        public Component hoveredScrollbarTooltip() {
+            if (thumbHoverStartedAtNanos == 0L
+                    || System.nanoTime() - thumbHoverStartedAtNanos < HOVER_HINT_DELAY_NANOS) return null;
+            return KineticI18n.translatable("gui.kineticcore.scrollbar.middle_click_hint");
+        }
+
+        /** Returns whether the supplied row or tab is currently in one of the two inverse-color flashes. */
+        public boolean isSelectionFlashInverted(int selectionIndex) {
+            if (selectionIndex != flashingSelectionIndex || selectionFlashStartedAtNanos == 0L) return false;
+            long elapsed = System.nanoTime() - selectionFlashStartedAtNanos - SELECTION_FLASH_DELAY_NANOS;
+            long cycleDuration = SELECTION_FLASH_ON_NANOS + SELECTION_FLASH_OFF_NANOS;
+            if (elapsed < 0L || elapsed >= cycleDuration * SELECTION_FLASH_COUNT) return false;
+            return elapsed % cycleDuration < SELECTION_FLASH_ON_NANOS;
+        }
+
+        /**
+         * Handles a middle-click on this controller's thumb, jumps to a selected row/tab offset,
+         * and schedules two inverse-color flashes for the selected entry.
+         */
+        public boolean middleClickThumb(
+                double mouseX,
+                double mouseY,
+                int button,
+                boolean horizontal,
+                int x,
+                int y,
+                int width,
+                int height,
+                int minThumbSize,
+                int selectedIndex,
+                int targetOffset
+        ) {
+            if (!KineticMouseButtons.isMiddle(button) || !canScroll()
+                    || !isOverThumb(mouseX, mouseY, horizontal, x, y, width, height, minThumbSize)) return false;
+            if (selectedIndex >= 0) {
+                setOffset(targetOffset);
+                flashingSelectionIndex = selectedIndex;
+                selectionFlashStartedAtNanos = System.nanoTime();
+            }
+            return true;
         }
 
         /** Immediately sets current and target offsets to the supplied clamped logical position. */
@@ -1072,7 +1127,11 @@ public final class KineticScroll {
                 int height,
                 int minThumbHeight
         ) {
-            if (!canScroll()) return;
+            if (!canScroll()) {
+                updateThumbHover(false);
+                return;
+            }
+            updateThumbHover(isOverThumb(mouseX, mouseY, false, x, y, width, height, minThumbHeight));
             KineticScroll.renderScrollbarState(
                     graphics,
                     mouseX,
@@ -1099,7 +1158,10 @@ public final class KineticScroll {
                 int height,
                 int minThumbWidth
         ) {
-            if (!canScroll()) return;
+            if (!canScroll()) {
+                updateThumbHover(false);
+                return;
+            }
 
             int currentThumbWidth = thumbWidth(width, minThumbWidth);
             int currentThumbLeft = thumbLeft(x, width, minThumbWidth);
@@ -1107,6 +1169,7 @@ public final class KineticScroll {
                     && mouseX <= currentThumbLeft + currentThumbWidth
                     && mouseY >= y
                     && mouseY <= y + height;
+            updateThumbHover(hovered);
             GuiTheme.Palette theme = GuiTheme.current();
             graphics.fill(x, y, x + width, y + height, theme.scrollTrack());
             graphics.fill(
@@ -1116,6 +1179,37 @@ public final class KineticScroll {
                     y + height,
                     dragging || hovered ? theme.scrollThumbHover() : theme.scrollThumb()
             );
+        }
+
+        private boolean isOverThumb(
+                double mouseX,
+                double mouseY,
+                boolean horizontal,
+                int x,
+                int y,
+                int width,
+                int height,
+                int minThumbSize
+        ) {
+            if (!Double.isFinite(mouseX) || !Double.isFinite(mouseY)) return false;
+            if (horizontal) {
+                int thumbWidth = thumbWidth(width, minThumbSize);
+                int thumbLeft = thumbLeft(x, width, minThumbSize);
+                return mouseX >= thumbLeft && mouseX <= thumbLeft + thumbWidth
+                        && mouseY >= y && mouseY <= y + height;
+            }
+            int thumbHeight = thumbHeight(height, minThumbSize);
+            int thumbTop = thumbTop(y, height, minThumbSize);
+            return mouseX >= x && mouseX <= x + width
+                    && mouseY >= thumbTop && mouseY <= thumbTop + thumbHeight;
+        }
+
+        private void updateThumbHover(boolean hovered) {
+            if (!hovered || dragging) {
+                thumbHoverStartedAtNanos = 0L;
+            } else if (thumbHoverStartedAtNanos == 0L) {
+                thumbHoverStartedAtNanos = System.nanoTime();
+            }
         }
 
         private int thumbTop(

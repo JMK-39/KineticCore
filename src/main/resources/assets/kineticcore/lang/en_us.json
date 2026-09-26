@@ -299,6 +299,7 @@
   "fmt.kineticcore.red_bold": "§c§l%s§r",
   "fmt.kineticcore.white": "§f%s§r",
   "fmt.kineticcore.yellow": "§e%s§r",
+  "gui.kineticcore.scrollbar.middle_click_hint": "Hover for 0.5 seconds, then middle-click to jump to the selected option.",
   "gui.kineticcore.back": "Back to Hub",
   "gui.kineticcore.color.critical": "§c%s",
   "gui.kineticcore.color.good": "§a%s",

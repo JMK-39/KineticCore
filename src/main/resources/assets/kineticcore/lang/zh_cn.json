@@ -299,6 +299,7 @@
   "fmt.kineticcore.red_bold": "§c§l%s§r",
   "fmt.kineticcore.white": "§f%s§r",
   "fmt.kineticcore.yellow": "§e%s§r",
+  "gui.kineticcore.scrollbar.middle_click_hint": "停留在滑块上 0.5 秒后，中键点击可跳转到当前选中项。",
   "gui.kineticcore.back": "返回",
   "gui.kineticcore.color.critical": "§c%s",
   "gui.kineticcore.color.good": "§a%s",

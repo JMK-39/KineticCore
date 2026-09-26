@@ -245,7 +245,9 @@ public final class KineticWorldEvents {
     }
 
     /**
-     * Registers a listener for entity join.
+     * Registers a listener for entity join. The Forge bridge for each priority is installed lazily
+     * when that priority receives its first subscription, preserving same-priority registration
+     * ordering with external Forge listeners as closely as possible.
      */
     public static KineticEventSubscription onEntityJoin(KineticEventPriority priority, EntityJoinHandler handler) {
         return KineticWorldEventRuntime.registerEntityJoin(require(priority), Objects.requireNonNull(handler, "handler"));

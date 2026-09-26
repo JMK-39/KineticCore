@@ -1391,6 +1391,9 @@ public final class KineticWidgets {
         protected void renderWidget(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             refreshLayout();
             int pinned = pinnedCount();
+            for (int index = 0; index < tabButtons.size(); index++) {
+                tabButtons.get(index).setInvertedFlash(scroll.isSelectionFlashInverted(index));
+            }
             for (int index = 0; index < pinned; index++) {
                 tabButtons.get(index).render(graphics, mouseX, mouseY, partialTick);
             }
@@ -1423,12 +1426,22 @@ public final class KineticWidgets {
 
             hoveredTabIndex = tabAt(mouseX, mouseY);
             Component tooltip = hoveredTooltip();
+            if (tooltip == null) tooltip = scroll.hoveredScrollbarTooltip();
             KineticControlBridge.setTooltip(this, tooltip);
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !visible || button != 0) return false;
+            if (!active || !visible) return false;
+            if (scroll.middleClickThumb(
+                    mouseX, mouseY, button, true,
+                    getX(), scrollbarY(), getWidth(), SCROLLBAR_HEIGHT, MIN_THUMB_WIDTH,
+                    selectedIndex, selectedTabScrollOffset()
+            )) {
+                refreshLayout();
+                return true;
+            }
+            if (button != 0) return false;
             if (scroll.beginHorizontalDrag(
                     mouseX, mouseY, getX(), scrollbarY(), getWidth(), SCROLLBAR_HEIGHT, MIN_THUMB_WIDTH, 2
             )) return true;
@@ -1575,6 +1588,13 @@ public final class KineticWidgets {
 
         private int scrollStep() {
             return Math.max(24, scrollViewportWidth() / 3);
+        }
+
+        private int selectedTabScrollOffset() {
+            int pinned = pinnedCount();
+            if (selectedIndex < pinned || selectedIndex < 0) return scroll.offset();
+            int localIndex = selectedIndex - pinned;
+            return localIndex < scrollStarts.size() ? scrollStarts.get(localIndex) : scroll.offset();
         }
 
         private int tabWidth(ScrollableTab tab) {
@@ -1760,6 +1780,7 @@ public final class KineticWidgets {
                         int clippedMouseX = mouseX >= getX() && mouseX < getX() + contentWidth()
                                 ? mouseX
                                 : Integer.MIN_VALUE;
+                        button.setInvertedFlash(scroll.isSelectionFlashInverted(index));
                         button.render(graphics, clippedMouseX, mouseY, partialTick);
                         SelectionItem item = items.get(index);
                         if (item != null && item.marked()) {
@@ -1788,12 +1809,22 @@ public final class KineticWidgets {
             }
             hoveredIndex = itemAt(mouseX, mouseY);
             Component tooltip = hoveredTooltip();
+            if (tooltip == null) tooltip = scroll.hoveredScrollbarTooltip();
             KineticControlBridge.setTooltip(this, tooltip);
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !visible || button != 0) return false;
+            if (!active || !visible) return false;
+            if (scroll.middleClickThumb(
+                    mouseX, mouseY, button, false,
+                    scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT,
+                    selectedIndex, Math.max(0, selectedIndex - visibleRows() / 2)
+            )) {
+                refreshLayout();
+                return true;
+            }
+            if (button != 0) return false;
             if (scroll.beginDrag(
                     mouseX, mouseY, scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT, 2
             )) return true;
@@ -2094,8 +2125,10 @@ public final class KineticWidgets {
                         int clippedMouseX = mouseX >= getX() && mouseX < getX() + contentWidth()
                                 ? mouseX
                                 : Integer.MIN_VALUE;
+                        button.setInvertedFlash(scroll.isSelectionFlashInverted(index));
                         button.render(graphics, clippedMouseX, mouseY, partialTick);
-                        renderRowContent(graphics, button, items.get(index), mouseX, mouseY);
+                        renderRowContent(graphics, button, items.get(index), mouseX, mouseY,
+                                scroll.isSelectionFlashInverted(index));
                     }
                 } finally {
                     KineticRenderRuntime.disableScissor(graphics);
@@ -2118,6 +2151,7 @@ public final class KineticWidgets {
             hoveredIndex = itemAt(mouseX, mouseY);
             hoveredStack = stackAt(mouseX, mouseY);
             Component tooltip = hoveredTooltip();
+            if (tooltip == null) tooltip = scroll.hoveredScrollbarTooltip();
             KineticControlBridge.setTooltip(this, tooltip);
         }
 
@@ -2126,7 +2160,8 @@ public final class KineticWidgets {
                 StateButton button,
                 ItemSelectionItem item,
                 int mouseX,
-                int mouseY
+                int mouseY,
+                boolean invertedFlash
         ) {
             if (item == null) return;
             int slotX = button.getX() + ITEM_LEFT_PADDING;
@@ -2141,7 +2176,7 @@ public final class KineticWidgets {
             KineticText.drawScrollingLeft(
                     graphics, font, itemLabel(item), textX,
                     button.getY() + Math.max(1, (ROW_HEIGHT - font.lineHeight) / 2),
-                    textWidth, GuiTheme.current().text(), true
+                    textWidth, invertedFlash ? 0xFF000000 : GuiTheme.current().text(), true
             );
             if (item.marked()) {
                 int markerX = button.getX() + button.getWidth() - 8;
@@ -2152,7 +2187,16 @@ public final class KineticWidgets {
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !visible || button != 0) return false;
+            if (!active || !visible) return false;
+            if (scroll.middleClickThumb(
+                    mouseX, mouseY, button, false,
+                    scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT,
+                    selectedIndex, Math.max(0, selectedIndex - visibleRows() / 2)
+            )) {
+                refreshLayout();
+                return true;
+            }
+            if (button != 0) return false;
             if (scroll.beginDrag(
                     mouseX, mouseY, scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT, 2
             )) return true;
@@ -2455,6 +2499,7 @@ public final class KineticWidgets {
             hoveredIndex = itemAt(mouseX, mouseY);
             hoveredStack = stackAt(mouseX, mouseY);
             Component tooltip = hoveredTooltip();
+            if (tooltip == null) tooltip = scroll.hoveredScrollbarTooltip();
             KineticControlBridge.setTooltip(this, tooltip);
         }
 
@@ -2723,6 +2768,7 @@ public final class KineticWidgets {
                         int clippedMouseX = mouseX >= getX() && mouseX < getX() + contentWidth()
                                 ? mouseX
                                 : Integer.MIN_VALUE;
+                        rowButton.setInvertedFlash(scroll.isSelectionFlashInverted(index));
                         rowButton.render(graphics, clippedMouseX, mouseY, partialTick);
                         actionButton.render(graphics, clippedMouseX, mouseY, partialTick);
                         ActionItem item = items.get(index);
@@ -2759,12 +2805,22 @@ public final class KineticWidgets {
                 hoveredAction = false;
             }
             Component tooltip = hoveredTooltip();
+            if (tooltip == null) tooltip = scroll.hoveredScrollbarTooltip();
             KineticControlBridge.setTooltip(this, tooltip);
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !visible || button != 0) return false;
+            if (!active || !visible) return false;
+            if (scroll.middleClickThumb(
+                    mouseX, mouseY, button, false,
+                    scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT,
+                    selectedIndex, Math.max(0, selectedIndex - visibleRows() / 2)
+            )) {
+                refreshLayout();
+                return true;
+            }
+            if (button != 0) return false;
             if (scroll.beginDrag(
                     mouseX, mouseY, scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT, 2
             )) return true;
@@ -3119,6 +3175,7 @@ public final class KineticWidgets {
                         if (!rowButton.visible) continue;
                         int clippedMouseX = mouseX >= getX() && mouseX < getX() + contentWidth()
                                 ? mouseX : Integer.MIN_VALUE;
+                        rowButton.setInvertedFlash(scroll.isSelectionFlashInverted(index));
                         rowButton.render(graphics, clippedMouseX, mouseY, partialTick);
                         toggleButtons.get(index).render(graphics, clippedMouseX, mouseY, partialTick);
                         actionButtons.get(index).render(graphics, clippedMouseX, mouseY, partialTick);
@@ -3151,12 +3208,22 @@ public final class KineticWidgets {
                 hoveredControl = 0;
             }
             Component tooltip = hoveredTooltip();
+            if (tooltip == null) tooltip = scroll.hoveredScrollbarTooltip();
             KineticControlBridge.setTooltip(this, tooltip);
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !visible || button != 0) return false;
+            if (!active || !visible) return false;
+            if (scroll.middleClickThumb(
+                    mouseX, mouseY, button, false,
+                    scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT,
+                    selectedIndex, Math.max(0, selectedIndex - visibleRows() / 2)
+            )) {
+                refreshLayout();
+                return true;
+            }
+            if (button != 0) return false;
             if (scroll.beginDrag(mouseX, mouseY, scrollbarX(), getY(), SCROLLBAR_WIDTH,
                     getHeight(), MIN_THUMB_HEIGHT, 2)) return true;
             int index = toggleAt(mouseX, mouseY);
@@ -3562,6 +3629,7 @@ public final class KineticWidgets {
                         int clippedMouseX = mouseX >= getX() && mouseX < getX() + contentWidth()
                                 ? mouseX
                                 : Integer.MIN_VALUE;
+                        rowButton.setInvertedFlash(scroll.isSelectionFlashInverted(index));
                         rowButton.render(graphics, clippedMouseX, mouseY, partialTick);
                         for (StateButton actionButton : actionButtons.get(index)) {
                             if (actionButton.visible) actionButton.render(graphics, clippedMouseX, mouseY, partialTick);
@@ -3600,12 +3668,22 @@ public final class KineticWidgets {
                 hoveredActionIndex = -1;
             }
             Component tooltip = hoveredTooltip();
+            if (tooltip == null) tooltip = scroll.hoveredScrollbarTooltip();
             KineticControlBridge.setTooltip(this, tooltip);
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !visible || button != 0) return false;
+            if (!active || !visible) return false;
+            if (scroll.middleClickThumb(
+                    mouseX, mouseY, button, false,
+                    scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT,
+                    selectedIndex, Math.max(0, selectedIndex - visibleRows() / 2)
+            )) {
+                refreshLayout();
+                return true;
+            }
+            if (button != 0) return false;
             if (scroll.beginDrag(
                     mouseX, mouseY, scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT, 2
             )) return true;
@@ -3973,8 +4051,10 @@ public final class KineticWidgets {
                         int clippedMouseX = mouseX >= getX() && mouseX < getX() + contentWidth()
                                 ? mouseX
                                 : Integer.MIN_VALUE;
+                        rowButton.setInvertedFlash(scroll.isSelectionFlashInverted(index));
                         rowButton.render(graphics, clippedMouseX, mouseY, partialTick);
-                        renderRowContent(graphics, rowButton, items.get(index), mouseX, mouseY);
+                        renderRowContent(graphics, rowButton, items.get(index), mouseX, mouseY,
+                                scroll.isSelectionFlashInverted(index));
                         if (actionButton.visible) actionButton.render(graphics, clippedMouseX, mouseY, partialTick);
                     }
                 } finally {
@@ -4006,6 +4086,7 @@ public final class KineticWidgets {
                 hoveredStack = stackAt(mouseX, mouseY);
             }
             Component tooltip = hoveredTooltip();
+            if (tooltip == null) tooltip = scroll.hoveredScrollbarTooltip();
             KineticControlBridge.setTooltip(this, tooltip);
         }
 
@@ -4014,7 +4095,8 @@ public final class KineticWidgets {
                 StateButton button,
                 ItemActionItem item,
                 int mouseX,
-                int mouseY
+                int mouseY,
+                boolean invertedFlash
         ) {
             if (item == null) return;
             int slotX = button.getX() + ITEM_LEFT_PADDING;
@@ -4033,7 +4115,7 @@ public final class KineticWidgets {
                     textX,
                     button.getY() + Math.max(1, (ROW_HEIGHT - font.lineHeight) / 2),
                     textWidth,
-                    GuiTheme.current().text(),
+                    invertedFlash ? 0xFF000000 : GuiTheme.current().text(),
                     true
             );
             if (item.marked()) {
@@ -4045,7 +4127,16 @@ public final class KineticWidgets {
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !visible || button != 0) return false;
+            if (!active || !visible) return false;
+            if (scroll.middleClickThumb(
+                    mouseX, mouseY, button, false,
+                    scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT,
+                    selectedIndex, Math.max(0, selectedIndex - visibleRows() / 2)
+            )) {
+                refreshLayout();
+                return true;
+            }
+            if (button != 0) return false;
             if (scroll.beginDrag(
                     mouseX, mouseY, scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT, 2
             )) return true;
@@ -4418,6 +4509,7 @@ public final class KineticWidgets {
                         if (!rowButton.visible) continue;
                         int clippedMouseX = mouseX >= getX() && mouseX < getX() + contentWidth()
                                 ? mouseX : Integer.MIN_VALUE;
+                        rowButton.setInvertedFlash(scroll.isSelectionFlashInverted(index));
                         rowButton.render(graphics, clippedMouseX, mouseY, partialTick);
                         for (ToggleButton toggleButton : toggleButtons.get(index)) {
                             if (toggleButton.visible) toggleButton.render(graphics, clippedMouseX, mouseY, partialTick);
@@ -4448,12 +4540,22 @@ public final class KineticWidgets {
                 hoveredToggleIndex = -1;
             }
             Component tooltip = hoveredTooltip();
+            if (tooltip == null) tooltip = scroll.hoveredScrollbarTooltip();
             KineticControlBridge.setTooltip(this, tooltip);
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !visible || button != 0) return false;
+            if (!active || !visible) return false;
+            if (scroll.middleClickThumb(
+                    mouseX, mouseY, button, false,
+                    scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT,
+                    selectedIndex, Math.max(0, selectedIndex - visibleRows() / 2)
+            )) {
+                refreshLayout();
+                return true;
+            }
+            if (button != 0) return false;
             if (scroll.beginDrag(mouseX, mouseY, scrollbarX(), getY(), SCROLLBAR_WIDTH,
                     getHeight(), MIN_THUMB_HEIGHT, 2)) return true;
             ToggleHit hit = toggleAt(mouseX, mouseY);
@@ -4815,6 +4917,7 @@ public final class KineticWidgets {
             }
             hoveredIndex = itemAt(mouseX, mouseY);
             Component tooltip = hoveredTooltip();
+            if (tooltip == null) tooltip = scroll.hoveredScrollbarTooltip();
             KineticControlBridge.setTooltip(this, tooltip);
         }
 

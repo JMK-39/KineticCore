@@ -49,6 +49,7 @@ public final class KineticWorldEventRuntime {
     private static final EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticWorldEvents.BabySpawnHandler>> BABY_SPAWN = babySpawnHandlers();
 
     private static final KineticForgeListenerRegistrations LISTENER_REGISTRATIONS = new KineticForgeListenerRegistrations();
+    private static final KineticForgeListenerRegistrations ENTITY_JOIN_LISTENER_REGISTRATIONS = new KineticForgeListenerRegistrations();
     private static boolean initialized;
 
     private KineticWorldEventRuntime() {
@@ -63,7 +64,6 @@ public final class KineticWorldEventRuntime {
             EventPriority forgePriority = toForge(priority);
             attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LevelEvent.Load event) -> onLevelLoad(priority, event)));
             attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LevelEvent.Unload event) -> onLevelUnload(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityJoinLevelEvent event) -> onEntityJoin(priority, event)));
             attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityLeaveLevelEvent event) -> onEntityLeave(priority, event)));
             attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ChunkEvent.Load event) -> onChunkLoad(priority, event)));
             attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ChunkEvent.Unload event) -> onChunkUnload(priority, event)));
@@ -91,6 +91,7 @@ public final class KineticWorldEventRuntime {
 
     public static KineticEventSubscription registerEntityJoin(KineticEventPriority priority, KineticWorldEvents.EntityJoinHandler handler) {
         initialize();
+        ensureEntityJoinListener(priority);
         return add(ENTITY_JOIN, priority, handler);
     }
 
@@ -150,6 +151,19 @@ public final class KineticWorldEventRuntime {
 
     private static void onLevelUnload(KineticEventPriority priority, LevelEvent.Unload event) {
         KineticCallbackBatch.runAll(LEVEL_UNLOAD.get(priority), handler -> handler.handle(event.getLevel()));
+    }
+
+    private static synchronized void ensureEntityJoinListener(KineticEventPriority priority) {
+        var attempt = ENTITY_JOIN_LISTENER_REGISTRATIONS.begin();
+        EventPriority forgePriority = toForge(priority);
+        attempt.install(
+                priority.ordinal(),
+                () -> MinecraftForge.EVENT_BUS.addListener(
+                        forgePriority,
+                        (EntityJoinLevelEvent event) -> onEntityJoin(priority, event)
+                )
+        );
+        attempt.finish();
     }
 
     private static void onEntityJoin(KineticEventPriority priority, EntityJoinLevelEvent event) {
