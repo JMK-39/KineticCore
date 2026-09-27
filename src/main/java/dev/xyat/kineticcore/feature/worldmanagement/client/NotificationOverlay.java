@@ -2,12 +2,12 @@ package dev.xyat.kineticcore.feature.worldmanagement.client;
 
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
 public class NotificationOverlay {
@@ -38,9 +38,8 @@ public class NotificationOverlay {
         }
     }
 
-    private static void render(GuiGraphics graphics) {
+    private static void render(KineticGraphics graphics) {
         if (!NOTIFICATIONS.isEmpty()) {
-            var font = KineticClientRuntime.font();
             long now = System.currentTimeMillis();
             int screenWidth = KineticClientRuntime.guiScaledWidth();
             int currentY = 10;
@@ -52,8 +51,8 @@ public class NotificationOverlay {
                     if (!entry.permanent && now - entry.startTime > 3000L) {
                         it.remove();
                     } else {
-                        int textWidth = font.width(entry.text);
-                        graphics.drawString(font, entry.text, screenWidth - textWidth - 10, currentY, GuiTheme.current().text(), true);
+                        int textWidth = graphics.textWidth(entry.text);
+                        graphics.text(entry.text, screenWidth - textWidth - 10, currentY, KineticTheme.current().text(), true);
                         currentY += 9 + 2;
                     }
                 }

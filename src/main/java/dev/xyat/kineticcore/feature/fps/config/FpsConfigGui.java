@@ -4,7 +4,7 @@ package dev.xyat.kineticcore.feature.fps.config;
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
-import dev.xyat.kineticcore.feature.fps.client.FpsHudEditorScreen;
+import dev.xyat.kineticcore.feature.fps.client.FpsHudEditorPage;
 
 public final class FpsConfigGui {
     public static final String PAGE_ID = "kineticcore:fps";
@@ -25,7 +25,7 @@ public final class FpsConfigGui {
                 .action(
                         "open_editor",
                         KineticI18n.translatable("cfg.kineticcore.hud.open_editor"),
-                        KTConfigApi.screenAction(FpsHudEditorScreen::new),
+                        KTConfigApi.pageAction(FpsHudEditorPage::new),
                         KineticI18n.translatable("cfg.kineticcore.hud.open_editor.tooltip")
                 )
                 .build());

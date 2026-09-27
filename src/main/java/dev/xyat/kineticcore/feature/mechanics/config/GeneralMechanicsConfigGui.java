@@ -5,7 +5,6 @@ import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import dev.xyat.kineticcore.api.config.client.KTConfigScope;
-import net.minecraft.client.gui.screens.Screen;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,9 +16,6 @@ public class GeneralMechanicsConfigGui {
         KTConfigApi.register(buildPage());
     }
 
-    public static Screen create(Screen parent) {
-        return KTConfigApi.createRegisteredPageScreen(parent, PAGE_ID);
-    }
 
     private static KTConfigPage buildPage() {
         return KTConfigPage.builder(PAGE_ID, KineticI18n.translatable("cfg.kineticcore.mechanics"))

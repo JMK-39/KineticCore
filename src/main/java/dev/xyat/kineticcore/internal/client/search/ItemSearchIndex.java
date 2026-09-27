@@ -1,7 +1,7 @@
 package dev.xyat.kineticcore.internal.client.search;
 
-import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;

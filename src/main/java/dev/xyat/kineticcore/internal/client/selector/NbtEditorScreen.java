@@ -1,11 +1,13 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
-import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
+
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.api.minecraft.MinecraftKeys;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
+import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
+import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.gui.Font;
@@ -25,7 +27,7 @@ public class NbtEditorScreen extends KineticScreen {
     private final Consumer<String> onSave;
 
     private NbtEditorWidget nbtEditor;
-    private dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox searchBox;
+    private dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox searchBox;
 
     public NbtEditorScreen(String initialNbt, Consumer<String> onSave, Screen parentScreen) {
         super(KineticText.translatable("screen.kineticcore.nbt_editor"));
@@ -514,9 +516,9 @@ public class NbtEditorScreen extends KineticScreen {
             boolean hasValue = !value.isEmpty() && !value.equals("{}");
             boolean hasError = errorMsg != null && !errorMsg.isEmpty();
             if (hasValue) {
-                GuiTheme.Indicator indicator = hasError
-                        ? GuiTheme.Indicator.DANGER
-                        : GuiTheme.Indicator.SUCCESS;
+                KineticTheme.Indicator indicator = hasError
+                        ? KineticTheme.Indicator.DANGER
+                        : KineticTheme.Indicator.SUCCESS;
                 GuiTheme.indicatorOutline(g, x, y, width, height, indicator);
                 GuiTheme.indicatorOutline(g, x - 1, y - 1, width + 2, height + 2, indicator);
             } else {

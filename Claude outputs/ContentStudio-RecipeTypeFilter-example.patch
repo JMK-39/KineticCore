@@ -1,0 +1,41 @@
+--- a/src/main/java/dev/xyat/contentstudio/recipe/client/gui/RecipeTypeFilterScreen.java	2026-09-27 09:31:05.064812939 +0800
++++ b/src/main/java/dev/xyat/contentstudio/recipe/client/gui/RecipeTypeFilterScreen.java	2026-09-27 09:30:41.240069266 +0800
+@@ -34,6 +34,17 @@
+         this.parent = parent;
+         this.selected = selected;
+         counts.forEach((type, count) -> all.add(new Row(type, count)));
++        // 绑定选中项：悬停提示 + 中键跳转由 KineticScreen 自动处理
++        // Bind the selection: hover hint + middle-click jump are handled by KineticScreen.
++        scroll.bindSelection(this::selectedRowIndex);
++    }
++
++    private int selectedRowIndex() {
++        for (int i = 0; i < visible.size(); i++) {
++            ResourceLocation type = visible.get(i).type();
++            if (type == null ? selected == null : type.equals(selected)) return i;
++        }
++        return -1;
+     }
+ 
+     @Override protected void buildUi() {
+@@ -68,6 +79,7 @@
+             boolean hovered = mouseX >= 16 && mouseX < 624 && mouseY >= y && mouseY < y + 24;
+             GuiTheme.stateSurface(graphics, 16, y + 1, 608, 22, GuiTheme.Surface.PANEL_ALT,
+                     row.type() == null ? selected == null : row.type().equals(selected), hovered, false);
++            boolean flashing = scroll.renderSelectionFlash(graphics, i, 16, y + 1, 608, 22);
+             if (row.type() != null) {
+                 ItemStack icon = RecipeRemovalScreen.typeIcon(row.type());
+                 if (!icon.isEmpty()) graphics.renderItem(icon, 21, y + 4);
+@@ -75,10 +87,10 @@
+             String name = row.type() == null ? RecipeRemovalScreen.tr("all_types").getString()
+                     : RecipeRemovalScreen.typeName(row.type()).getString();
+             graphics.drawString(font, font.plainSubstrByWidth(name + " · " + row.count(), 320),
+-                    44, y + 8, GuiTheme.current().text(), false);
++                    44, y + 8, flashing ? GuiTheme.selectionFlashText() : GuiTheme.current().text(), false);
+             if (row.type() != null) graphics.drawString(font,
+                     font.plainSubstrByWidth(row.type().toString(), 240), 370, y + 8,
+-                    GuiTheme.current().mutedText(), false);
++                    flashing ? GuiTheme.selectionFlashText() : GuiTheme.current().mutedText(), false);
+         }
+         disableUiScissor(graphics);
+         scroll.render(graphics, mouseX, mouseY, 628, 68, 4, 240, 16);

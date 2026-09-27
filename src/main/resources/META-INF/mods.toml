@@ -25,16 +25,3 @@ versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.${mod_id}]]
-modId="curios"
-mandatory=false
-versionRange="[0,)"
-ordering="AFTER"
-side="BOTH"
-
-[[dependencies.${mod_id}]]
-modId="jei"
-mandatory=false
-versionRange="[0,)"
-ordering="AFTER"
-side="CLIENT"

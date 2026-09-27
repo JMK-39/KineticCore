@@ -2,7 +2,7 @@ package dev.xyat.kineticcore.api.hook;
 
 import dev.xyat.kineticcore.internal.client.KineticClientHookRuntime;
 import net.minecraft.client.Options;
-import net.minecraft.client.gui.GuiGraphics;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 
 import java.util.Objects;
 
@@ -43,6 +43,6 @@ public final class ClientHooks {
 
         boolean interceptReloadStart();
 
-        void render(GuiGraphics graphics, int width, int height);
+        void render(KineticGraphics graphics, int width, int height);
     }
 }

@@ -1,6 +1,6 @@
 package dev.xyat.kineticcore.internal.client.screen;
 
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
 import net.minecraft.client.gui.screens.Screen;
 import java.lang.reflect.Field;
 import java.util.Map;

@@ -13,7 +13,7 @@ import dev.xyat.kineticcore.feature.attribute.client.AttributeFixClientHandler;
 import dev.xyat.kineticcore.KineticCore;
 import dev.xyat.kineticcore.bootstrap.config.client.StartupFeatureConfigGui;
 import dev.xyat.kineticcore.bootstrap.config.client.KineticUiConfigGui;
-import dev.xyat.kineticcore.api.client.widget.scroll.KineticScrollSettings;
+import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollSettings;
 import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;

@@ -1,14 +1,14 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
-import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
-import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
-import dev.xyat.kineticcore.api.client.widget.render.KineticEntityPreview.EntityPreviewRenderer;
+import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
+import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
+import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
+import dev.xyat.kineticcore.internal.client.gui.widget.KineticWidgets;
+import dev.xyat.kineticcore.internal.client.gui.widget.render.KineticEntityPreview.EntityPreviewRenderer;
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
@@ -55,6 +55,10 @@ public final class EntitySelectorScreen extends KineticScreen {
     private static final int MODS_PER_PAGE = 8;
     private static final int FILTER_MENU_WIDTH = 140;
 
+    public Screen getParent() {
+        return parent;
+    }
+
     private enum CategoryFilter { ALL, FRIENDLY, AQUATIC, NEUTRAL, MONSTER, UNDEAD, MISC }
 
     /** The two filter groups are independent; an empty group matches all. */
@@ -76,7 +80,6 @@ public final class EntitySelectorScreen extends KineticScreen {
             EntityPreviewRenderer.DEFAULT_MAX_AUTO_SCALE_FACTOR
     );
 
-    private KineticEditBox searchBox;
     private String searchQuery = "";
     private List<Component> deferredTooltip;
 
@@ -102,7 +105,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                 .sorted(String::compareToIgnoreCase)
                 .forEach(allEntityIds::add);
         allEntityIds.stream()
-                .map(id -> KineticResourceIds.tryParse(id))
+                .map(KineticResourceIds::tryParse)
                 .filter(java.util.Objects::nonNull)
                 .map(ResourceLocation::getNamespace)
                 .distinct()
@@ -119,7 +122,7 @@ public final class EntitySelectorScreen extends KineticScreen {
 
     @Override
     protected void buildUi() {
-        searchBox = addTextField(
+        KineticEditBox searchBox = addTextField(
                 GRID_X, 38, Math.min(GRID_W, 430),
                 KineticText.translatable("gui.kineticcore.entity_selector.search_hint"),
                 KineticText.translatable("gui.kineticcore.entity_selector.search_hint"),

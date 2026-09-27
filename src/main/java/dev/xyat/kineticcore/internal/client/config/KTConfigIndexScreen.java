@@ -1,14 +1,16 @@
 package dev.xyat.kineticcore.internal.client.config;
 
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
+
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.config.client.*;
 
-import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
+import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
-import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
+import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
+import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -35,6 +37,10 @@ final class KTConfigIndexScreen extends KineticScreen {
     private static final int MODULE_NAME_COLOR = 0xFFFFAA00;
     private static final int MODULE_FUNCTION_COLOR = 0xFF55FFFF;
 
+    public Screen getParent() {
+        return parent;
+    }
+
     private record ModuleGroup(
             String namespace,
             Component title,
@@ -57,7 +63,6 @@ final class KTConfigIndexScreen extends KineticScreen {
     private final GridScrollController listScroll = new GridScrollController();
 
     private List<ModuleGroup> registeredModules = List.of();
-    private KineticEditBox searchBox;
     private String searchQuery = "";
     private ModuleGroup hoveredModule;
 
@@ -84,7 +89,7 @@ final class KTConfigIndexScreen extends KineticScreen {
         moduleModel.refresh(searchQuery);
         updateScrollRange();
 
-        searchBox = addTextField(
+        KineticEditBox searchBox = addTextField(
                 LIST_X,
                 48,
                 430,
@@ -196,7 +201,7 @@ final class KTConfigIndexScreen extends KineticScreen {
 
                 GuiTheme.stateSurface(
                         graphics, LIST_X, y, LIST_WIDTH, ROW_HEIGHT,
-                        hovered ? GuiTheme.Surface.PANEL_ALT : GuiTheme.Surface.PANEL,
+                        hovered ? KineticTheme.Surface.PANEL_ALT : KineticTheme.Surface.PANEL,
                         false, hovered, false
                 );
 
@@ -383,8 +388,7 @@ final class KTConfigIndexScreen extends KineticScreen {
                 if (entry.tooltip() != null) data.append(' ').append(entry.tooltip().getString());
             }
         }
-        String raw = data.toString();
-        return raw;
+        return data.toString();
     }
 
     @Override

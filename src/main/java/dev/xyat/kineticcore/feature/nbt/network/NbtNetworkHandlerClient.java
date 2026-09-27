@@ -2,11 +2,10 @@ package dev.xyat.kineticcore.feature.nbt.network;
 
 
 import dev.xyat.kineticcore.api.text.KineticI18n;
-import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
+import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors;
 
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
@@ -14,7 +13,6 @@ import net.minecraft.world.phys.HitResult;
 
 public final class NbtNetworkHandlerClient {
     private static final String TOAST_ID = "kineticcore_nbt_editor";
-    private static Screen pendingEditorParent;
 
     private NbtNetworkHandlerClient() {
     }
@@ -25,19 +23,15 @@ public final class NbtNetworkHandlerClient {
             handleNotify("gui.kineticcore.config.requires_world");
             return;
         }
-
-        pendingEditorParent = KineticClientRuntime.currentScreen();
         try {
             if (!NbtNetwork.sendToServer(new NbtNetwork.OpenNbtEditorRequestPacket(
                     targetType,
                     targetId,
                     level.dimension().location()
             ))) {
-                pendingEditorParent = null;
                 handleNotify("gui.kineticcore.nbt.error.target_unavailable");
             }
         } catch (RuntimeException failure) {
-            pendingEditorParent = null;
             handleNotify("gui.kineticcore.nbt.error.target_unavailable");
         }
     }
@@ -86,17 +80,13 @@ public final class NbtNetworkHandlerClient {
     }
 
     public static void handleOpenEditor(String nbt) {
-        Screen parent = pendingEditorParent != null ? pendingEditorParent : KineticClientRuntime.currentScreen();
-        pendingEditorParent = null;
         KineticSelectors.openNbtEditor(
-                parent,
                 nbt,
                 value -> NbtNetwork.sendToServer(new NbtNetwork.SaveNbtPacket(value))
         );
     }
 
     public static void handleNotify(String translationKey) {
-        pendingEditorParent = null;
         KineticOverlays.toast(TOAST_ID, KineticI18n.translatable(translationKey), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
     }
 }

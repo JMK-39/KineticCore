@@ -6,7 +6,6 @@ import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import dev.xyat.kineticcore.api.config.client.KTConfigScope;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
@@ -57,7 +56,4 @@ public final class StartupFeatureConfigGui {
         KTConfigApi.register(page.onSave(KineticFeatureSwitches::saveConfigured).build());
     }
 
-    public static Screen create(Screen parent) {
-        return KTConfigApi.createRegisteredPageScreen(parent, PAGE_ID);
-    }
 }

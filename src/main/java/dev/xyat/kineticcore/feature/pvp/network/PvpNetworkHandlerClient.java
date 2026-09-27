@@ -1,7 +1,7 @@
 package dev.xyat.kineticcore.feature.pvp.network;
 
 import dev.xyat.kineticcore.api.text.KineticI18n;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 
 public class PvpNetworkHandlerClient {
 

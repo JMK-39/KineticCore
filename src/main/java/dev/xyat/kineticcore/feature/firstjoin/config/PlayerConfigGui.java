@@ -5,10 +5,9 @@ import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import dev.xyat.kineticcore.api.config.client.KTConfigScope;
-import dev.xyat.kineticcore.api.client.editor.KineticCommandListEditor;
-import dev.xyat.kineticcore.feature.firstjoin.client.FirstJoinEquipmentScreen;
-import dev.xyat.kineticcore.feature.firstjoin.client.FirstJoinRewardItemsScreen;
-import net.minecraft.client.gui.screens.Screen;
+import dev.xyat.kineticcore.api.client.gui.editor.KineticCommandListEditor;
+import dev.xyat.kineticcore.feature.firstjoin.client.FirstJoinEquipmentPage;
+import dev.xyat.kineticcore.feature.firstjoin.client.FirstJoinRewardItemsPage;
 
 
 public final class PlayerConfigGui {
@@ -32,11 +31,10 @@ public final class PlayerConfigGui {
                         () -> PlayerConfig.firstJoinDelay, value -> PlayerConfig.firstJoinDelay = value,
                         20, 0, Integer.MAX_VALUE, KineticI18n.translatable("cfg.kineticcore.join.delay.tooltip"))
                 .action("items", KineticI18n.translatable("cfg.kineticcore.join.items"),
-                        KTConfigApi.screenAction(FirstJoinRewardItemsScreen::new),
+                        KTConfigApi.pageAction(FirstJoinRewardItemsPage::new),
                         KineticI18n.translatable("cfg.kineticcore.join.items.tooltip"))
                 .action("commands", KineticI18n.translatable("cfg.kineticcore.join.commands"),
-                        KTConfigApi.screenAction(parent -> KineticCommandListEditor.create(
-                                parent,
+                        KineticCommandListEditor.action(
                                 () -> PlayerConfig.firstJoinCommands,
                                 value -> PlayerConfig.firstJoinCommands = value,
                                 PAGE_ID,
@@ -51,16 +49,13 @@ public final class PlayerConfigGui {
                                         KineticI18n.translatable("msg.kineticcore.firstjoin.command_list.save_failed"),
                                         KineticI18n.translatable("gui.kineticcore.firstjoin.command_edit.variables")
                                 )
-                        )),
+                        ),
                         KineticI18n.translatable("cfg.kineticcore.join.commands.tooltip"))
                 .divider()
                 .action("equipment_editor", KineticI18n.translatable("cfg.kineticcore.join.equipment.editor"),
-                        KTConfigApi.screenAction(FirstJoinEquipmentScreen::new),
+                        KTConfigApi.pageAction(FirstJoinEquipmentPage::new),
                         KineticI18n.translatable("cfg.kineticcore.join.equipment.editor.tooltip"))
                 .build());
     }
 
-    public static Screen create(Screen parent) {
-        return KTConfigApi.createRegisteredPageScreen(parent, PAGE_ID);
-    }
 }

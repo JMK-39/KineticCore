@@ -1,8 +1,7 @@
 package dev.xyat.kineticcore.api.client.search;
 
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
-import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.widget.input.KineticAutoComplete.Suggestion;
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.internal.client.search.KineticSearchRuntime;
 import net.minecraft.core.registries.Registries;
@@ -28,12 +27,12 @@ import java.util.function.Function;
  */
 public final class KineticSearch {
     private static final Pattern UNRESOLVED_FORMAT_ARGUMENT = Pattern.compile("%(?:\\d+\\$)?[a-zA-Z]");
-    private static List<Suggestion> itemDictionary;
-    private static List<Suggestion> enchantmentDictionary;
-    private static List<Suggestion> attributeDictionary;
-    private static List<Suggestion> potionDictionary;
-    private static List<Suggestion> damageDictionary;
-    private static List<Suggestion> specificDamageDictionary;
+    private static List<KineticSuggestion> itemDictionary;
+    private static List<KineticSuggestion> enchantmentDictionary;
+    private static List<KineticSuggestion> attributeDictionary;
+    private static List<KineticSuggestion> potionDictionary;
+    private static List<KineticSuggestion> damageDictionary;
+    private static List<KineticSuggestion> specificDamageDictionary;
     private static String dictionaryLanguage;
     private static long damageDictionaryConnectionRevision = Long.MIN_VALUE;
     private static Object damageDictionaryLevelToken;
@@ -136,17 +135,17 @@ public final class KineticSearch {
     }
 
     /** Returns the display translation for a suggestion value, or the raw value when no translation is available. */
-    public static String dictionaryName(String value, List<Suggestion> dictionary) {
+    public static String dictionaryName(String value, List<KineticSuggestion> dictionary) {
         return suggestionDisplayName(value, dictionary);
     }
 
     /** Returns the display translation for a suggestion value, or the raw value when no translation is available. */
-    public static String suggestionDisplayName(String value, List<Suggestion> dictionary) {
+    public static String suggestionDisplayName(String value, List<KineticSuggestion> dictionary) {
         if (value == null) return null;
         // A cached dictionary may have been built under the previous language.
         // English-facing controls always display the persistent raw identifier.
         if (KineticClientRuntime.isEnglishLanguage() || dictionary == null || dictionary.isEmpty()) return value;
-        for (Suggestion suggestion : dictionary) {
+        for (KineticSuggestion suggestion : dictionary) {
             if (suggestion == null || !value.equals(suggestion.value())) continue;
             String translated = suggestion.translation().getString();
             return translated.isBlank() ? value : translated;
@@ -156,63 +155,63 @@ public final class KineticSearch {
 
 
     /** Returns the cached item-ID suggestion dictionary for the current game language. */
-    public static List<Suggestion> itemDictionary() {
+    public static List<KineticSuggestion> itemDictionary() {
         ensureDictionaryLanguage();
         if (itemDictionary == null) {
             itemDictionary = KineticRegistries.items().values().stream().map(value -> {
                 ResourceLocation registryId = KineticRegistries.items().id(value);
                 String id = registryId == null ? "" : registryId.toString();
                 String translated = resolveTranslation(value.getDescriptionId());
-                return new Suggestion(id, translated == null ? Component.empty() : Component.literal(translated));
+                return new KineticSuggestion(id, translated == null ? Component.empty() : Component.literal(translated));
             }).toList();
         }
         return itemDictionary;
     }
 
     /** Returns the cached enchantment-ID suggestion dictionary for the current game language. */
-    public static List<Suggestion> enchantmentDictionary() {
+    public static List<KineticSuggestion> enchantmentDictionary() {
         ensureDictionaryLanguage();
         if (enchantmentDictionary == null) {
             enchantmentDictionary = KineticRegistries.enchantments().values().stream().map(value -> {
                 ResourceLocation registryId = KineticRegistries.enchantments().id(value);
                 String id = registryId == null ? "" : registryId.toString();
                 String translated = resolveTranslation(value.getDescriptionId());
-                return new Suggestion(id, translated == null ? Component.empty() : Component.literal(translated));
+                return new KineticSuggestion(id, translated == null ? Component.empty() : Component.literal(translated));
             }).toList();
         }
         return enchantmentDictionary;
     }
 
     /** Returns the cached attribute-ID suggestion dictionary for the current game language. */
-    public static List<Suggestion> attributeDictionary() {
+    public static List<KineticSuggestion> attributeDictionary() {
         ensureDictionaryLanguage();
         if (attributeDictionary == null) {
             attributeDictionary = KineticRegistries.attributes().values().stream().map(value -> {
                 ResourceLocation registryId = KineticRegistries.attributes().id(value);
                 String id = registryId == null ? "" : registryId.toString();
                 String translated = resolveTranslation(value.getDescriptionId());
-                return new Suggestion(id, translated == null ? Component.empty() : Component.literal(translated));
+                return new KineticSuggestion(id, translated == null ? Component.empty() : Component.literal(translated));
             }).toList();
         }
         return attributeDictionary;
     }
 
     /** Returns the cached mob-effect-ID suggestion dictionary for the current game language. */
-    public static List<Suggestion> potionDictionary() {
+    public static List<KineticSuggestion> potionDictionary() {
         ensureDictionaryLanguage();
         if (potionDictionary == null) {
             potionDictionary = KineticRegistries.mobEffects().values().stream().map(value -> {
                 ResourceLocation registryId = KineticRegistries.mobEffects().id(value);
                 String id = registryId == null ? "" : registryId.toString();
                 String translated = resolveTranslation(value.getDescriptionId());
-                return new Suggestion(id, translated == null ? Component.empty() : Component.literal(translated));
+                return new KineticSuggestion(id, translated == null ? Component.empty() : Component.literal(translated));
             }).toList();
         }
         return potionDictionary;
     }
 
     /** Returns damage suggestions containing {@code all}, damage-type tags, and concrete damage message ids. */
-    public static List<Suggestion> damageDictionary() {
+    public static List<KineticSuggestion> damageDictionary() {
         ensureDictionaryLanguage();
         ensureDamageDictionaryContext();
         if (damageDictionary == null) damageDictionary = buildDamageDictionary(true);
@@ -220,7 +219,7 @@ public final class KineticSearch {
     }
 
     /** Returns damage suggestions containing only concrete damage message ids. */
-    public static List<Suggestion> specificDamageDictionary() {
+    public static List<KineticSuggestion> specificDamageDictionary() {
         ensureDictionaryLanguage();
         ensureDamageDictionaryContext();
         if (specificDamageDictionary == null) specificDamageDictionary = buildDamageDictionary(false);
@@ -251,11 +250,11 @@ public final class KineticSearch {
         damageDictionaryLevelToken = currentLevel;
     }
 
-    private static List<Suggestion> buildDamageDictionary(boolean includeAllAndTags) {
-        List<Suggestion> result = new ArrayList<>();
+    private static List<KineticSuggestion> buildDamageDictionary(boolean includeAllAndTags) {
+        List<KineticSuggestion> result = new ArrayList<>();
         if (includeAllAndTags) {
             String translated = resolveTranslation("gui.kineticcore.damage.all");
-            result.add(new Suggestion("all", translated == null ? Component.empty() : Component.literal(translated)));
+            result.add(new KineticSuggestion("all", translated == null ? Component.empty() : Component.literal(translated)));
         }
 
         var level = KineticClientRuntime.currentLevel();
@@ -271,7 +270,7 @@ public final class KineticSearch {
                     "dmg." + messageId,
                     "damage_type." + location.getNamespace() + "." + location.getPath()
             );
-            result.add(new Suggestion(messageId, translated == null ? Component.empty() : Component.literal(translated)));
+            result.add(new KineticSuggestion(messageId, translated == null ? Component.empty() : Component.literal(translated)));
         });
 
         if (includeAllAndTags) {
@@ -282,7 +281,7 @@ public final class KineticSearch {
                         "tag." + location.getNamespace() + "." + location.getPath(),
                         "tag." + location.getPath()
                 );
-                result.add(new Suggestion("#" + location, translated == null ? Component.empty() : Component.literal(translated)));
+                result.add(new KineticSuggestion("#" + location, translated == null ? Component.empty() : Component.literal(translated)));
             });
         }
         return List.copyOf(result);

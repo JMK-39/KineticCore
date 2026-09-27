@@ -1,16 +1,18 @@
 package dev.xyat.kineticcore.internal.client.overlay;
 
-import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.MenuButton;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays.MenuItem;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays.MenuItemStyle;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays.Position;
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
+
+import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.MenuButton;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays.MenuItem;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays.MenuItemStyle;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays.Position;
 import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
 import com.mojang.blaze3d.systems.RenderSystem;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.screen.KineticContainerScreen;
-import dev.xyat.kineticcore.api.client.screen.KineticNativeScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
+import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticContainerScreen;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticNativeScreen;
+import dev.xyat.kineticcore.internal.client.gui.widget.KineticWidgets;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -676,7 +678,7 @@ public final class GuiOverlayRuntime {
 
             int alphaHex = (int) (alpha * 255f) << 24;
             int background = alphaHex | (GuiTheme.current().panel() & 0x00FFFFFF);
-            int border = alphaHex | (GuiTheme.indicatorColor(GuiTheme.Indicator.WARNING) & 0x00FFFFFF);
+            int border = alphaHex | (GuiTheme.indicatorColor(KineticTheme.Indicator.WARNING) & 0x00FFFFFF);
             int text = alphaHex | 0x00FFFFFF;
             int renderY = Math.round(toast.currentY);
 

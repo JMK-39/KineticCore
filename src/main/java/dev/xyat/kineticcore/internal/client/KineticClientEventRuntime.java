@@ -78,6 +78,8 @@ public final class KineticClientEventRuntime {
         attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenRenderAfter));
         attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMousePressedBefore));
         attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMouseReleasedBefore));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMouseDraggedBefore));
+        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMouseScrolledBefore));
         attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onHudOverlayRender));
         attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onHudRenderEnd));
         attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onMouseButtonBefore));
@@ -88,7 +90,7 @@ public final class KineticClientEventRuntime {
         attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onCameraAngles));
         attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onBlockScreenEffect));
         attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onInventoryEffectLayout));
-        attempt.install(slot++, () -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticClientEventRuntime::onRegisterClientReloadListeners));
+        attempt.install(slot, () -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticClientEventRuntime::onRegisterClientReloadListeners));
         attempt.finish();
         initialized = true;
     }
@@ -237,6 +239,7 @@ public final class KineticClientEventRuntime {
     }
 
     private static void onScreenInitBefore(ScreenEvent.Init.Pre event) {
+        ScreenOverlayControls.clear(event.getScreen());
         KineticCallbackBatch.runAll(SCREEN_INIT_BEFORE, listener -> listener.handle(event.getScreen()));
     }
 
@@ -252,27 +255,49 @@ public final class KineticClientEventRuntime {
     }
 
     private static void onScreenRenderBefore(ScreenEvent.Render.Pre event) {
-        KineticCallbackBatch.runAll(SCREEN_RENDER_BEFORE, listener -> listener.render(event.getScreen(), event.getGuiGraphics(), event.getMouseX(), event.getMouseY(), event.getPartialTick()));
+        KineticCallbackBatch.runAll(SCREEN_RENDER_BEFORE, listener -> listener.render(event.getScreen(), dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), event.getMouseX(), event.getMouseY(), event.getPartialTick()));
     }
 
     private static void onScreenRenderAfter(ScreenEvent.Render.Post event) {
-        KineticCallbackBatch.runAll(SCREEN_RENDER_AFTER, listener -> listener.render(event.getScreen(), event.getGuiGraphics(), event.getMouseX(), event.getMouseY(), event.getPartialTick()));
+        ScreenOverlayControls.render(event.getScreen(), event.getGuiGraphics(), event.getMouseX(), event.getMouseY(), event.getPartialTick());
+        KineticCallbackBatch.runAll(SCREEN_RENDER_AFTER, listener -> listener.render(event.getScreen(), dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), event.getMouseX(), event.getMouseY(), event.getPartialTick()));
     }
 
     private static void onScreenMousePressedBefore(ScreenEvent.MouseButtonPressed.Pre event) {
+        if (!event.isCanceled() && ScreenOverlayControls.mousePressed(event.getScreen(), event.getMouseX(), event.getMouseY(), event.getButton())) {
+            event.setCanceled(true);
+            return;
+        }
         fireScreenMouse(SCREEN_MOUSE_PRESSED_BEFORE, event.getScreen(), event.getMouseX(), event.getMouseY(), event.getButton(), event.isCanceled(), event::setCanceled);
     }
 
     private static void onScreenMouseReleasedBefore(ScreenEvent.MouseButtonReleased.Pre event) {
+        if (ScreenOverlayControls.mouseReleased(event.getScreen(), event.getMouseX(), event.getMouseY(), event.getButton())) {
+            event.setCanceled(true);
+            return;
+        }
         fireScreenMouse(SCREEN_MOUSE_RELEASED_BEFORE, event.getScreen(), event.getMouseX(), event.getMouseY(), event.getButton(), event.isCanceled(), event::setCanceled);
+    }
+
+    private static void onScreenMouseDraggedBefore(ScreenEvent.MouseDragged.Pre event) {
+        if (ScreenOverlayControls.mouseDragged(event.getScreen(), event.getMouseX(), event.getMouseY(),
+                event.getMouseButton(), event.getDragX(), event.getDragY())) {
+            event.setCanceled(true);
+        }
+    }
+
+    private static void onScreenMouseScrolledBefore(ScreenEvent.MouseScrolled.Pre event) {
+        if (ScreenOverlayControls.mouseScrolled(event.getScreen(), event.getMouseX(), event.getMouseY(), event.getScrollDelta())) {
+            event.setCanceled(true);
+        }
     }
 
     private static void onHudOverlayRender(RenderGuiOverlayEvent.Post event) {
         if (event.getOverlay() == VanillaGuiOverlay.HOTBAR.type()) {
-            KineticCallbackBatch.runAll(HUD_HOTBAR, listener -> listener.render(event.getGuiGraphics(), event.getPartialTick()));
+            KineticCallbackBatch.runAll(HUD_HOTBAR, listener -> listener.render(dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), event.getPartialTick()));
         }
         if (event.getOverlay() == VanillaGuiOverlay.CHAT_PANEL.type()) {
-            KineticCallbackBatch.runAll(HUD_AFTER_CHAT, listener -> listener.render(event.getGuiGraphics(), event.getPartialTick()));
+            KineticCallbackBatch.runAll(HUD_AFTER_CHAT, listener -> listener.render(dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), event.getPartialTick()));
         }
     }
 
@@ -345,7 +370,7 @@ public final class KineticClientEventRuntime {
     }
 
     private static void onHudRenderEnd(RenderGuiEvent.Post event) {
-        KineticCallbackBatch.runAll(HUD_END, listener -> listener.render(event.getGuiGraphics(), event.getPartialTick()));
+        KineticCallbackBatch.runAll(HUD_END, listener -> listener.render(dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), event.getPartialTick()));
     }
 
     private static void onBlockScreenEffect(RenderBlockScreenEffectEvent event) {

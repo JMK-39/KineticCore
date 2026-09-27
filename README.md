@@ -28,8 +28,7 @@ To package only the API source and documentation, run `apiSourceZip`. It also ge
 - Java 17
 - Gradle 8.8 (the pinned source-build version)
 - GitHub Releases are published manually; local builds do not create, upload, or publish a release.
-- Curios: optional compatibility
-- JEI: optional compatibility
+- No third-party mod integrations in the core. Curios, JEI and similar integrations belong in optional compat addons, which plug in through `KineticSelectors.registerInventorySource` and `KineticHoveredItems.register`.
 
 ## Source Layout
 
@@ -53,34 +52,23 @@ KineticCore's own features follow the same rule as external addons. When a reusa
 
 ## Shared GUI
 
-The Kinetic GUI uses a fixed **640×360** virtual canvas. The API handles resolution adaptation, 4K scaling, mouse-coordinate conversion, scissoring, standard control heights, tooltips, context menus, confirmation dialogs, focus, z-order, and themes.
+GUI v2 is page-based. Addons extend `KineticPage` (a plain object, not a vanilla `Screen`); internal host screens handle canvas scaling, 4K, coordinate conversion, scissoring, tooltips, context menus, dialogs, focus, layers, drafts, themes and scrollbar hover/middle-click dispatch. Page code never touches `GuiGraphics`, `Font`, raw input callbacks or texture `ResourceLocation`s, so the upcoming MC 26.1 rendering and input changes stay inside KineticCore.
 
-Three screen bases are available:
+- `KineticPage`: `PageLayout.CANVAS` (640×360 virtual canvas, default) or `PageLayout.NATIVE` (GUI-scaled screen coordinates).
+- `KineticContainerPage<M>`: container-menu page, registered with `KineticClientMenus.register(type, XPage::new)`.
+- `KineticHudEditorPage`: HUD drag/scale/position editor.
+- `KineticGui`: `open`, `openChild`, `closeScreen`, `currentPage`.
 
-- `KineticScreen`: standard screen on the 640×360 virtual canvas.
-- `KineticContainerScreen`: container-menu screen on the 640×360 virtual canvas.
-- `KineticNativeScreen`: native physical screen coordinates, for vanilla-screen integration or cases that require physical coordinates.
+Controls are created with builders in `build(KineticUi ui)`: buttons (compact, card, item), toggles, cycle buttons, colour buttons/swatches, sliders, text fields, text areas, number fields (`NumberType.INT/LONG/DECIMAL`), text and numeric autocomplete, dropdowns, tab bars, tab strips, selection/item/action/toggle lists and item grids. `.layer(n)` replaces the old high-z variants, and `ui.scrollViewport(...)` scrolls real controls with a custom list. Controls are exposed as interfaces (`KineticButton`, `KineticTextField`, `KineticSelectionList`, …).
 
-Standard controls include:
+- Drawing: `KineticGraphics` (shapes, text, scrolling text, items, textures via `KineticTexture`, effect icons, transforms, layers, clipping) and `KineticTheme` (surfaces, panels, slots, outlines, flash, palette).
+- Input: `MouseInput`, `MouseDragInput`, `ScrollInput`, `KeyInput`, `CharInput`; capture (`onMouseClickCapture`) runs before controls, bubble hooks after.
+- Custom UI: `KineticCustomControl` for self-drawn controls, `KineticRowList<T>` for self-drawn lists with the core scrollbar, middle-click jump and selection flash, `KineticScrollController` for hand-written scroll areas, `KineticCommandAssist` for command input with suggestions.
+- Text measuring: `KineticText`; translations: `KineticI18n`.
 
-- Regular and compact buttons.
-- High-z and compact high-z buttons.
-- Toggle buttons.
-- Single-line and multiline text fields.
-- Integer, Long, and Double numeric fields.
-- Text autocomplete and integer/Long/decimal autocomplete.
-- Dropdowns and tab bars.
-- RGB/HEX color previews and color buttons.
-- Placeholders, tooltips, and item tooltips.
-- Context menus and confirmation dialogs.
-- Smooth scrolling and grid-scroll controllers.
-- Control registration/removal and focus management.
-- Coordinate conversion and UI scissoring.
-- UI rebuilding and return navigation.
+`KineticItemGrid` uses `ItemGridItem.outline` with `ItemGridOutline.SUCCESS` or `ItemGridOutline.WARNING` for common state outlines; the active theme supplies their colors. Grid states use full borders. An error red border takes priority over a hovered blue border, which takes priority over selection and business-state borders. Items with no state use a white border.
 
-`KineticTabs.ScrollableItemGrid` uses `ItemGridItem.outline` with `ItemGridOutline.SUCCESS` or `ItemGridOutline.WARNING` for common state outlines; the active theme supplies their colors. Grid states use full borders. An error red border takes priority over a hovered blue border, which takes priority over selection and business-state borders. Items with no state use a white border.
-
-Non-screen panels, helpers, and editors should use the detached `KineticWidgets.create...` factories. The API owns standard widget construction details, so addons do not need to choose control heights or styles themselves.
+The full old→new mapping is in `docs/KineticCore-GUI-API-v2-Migration.md`.
 
 ## F6 Configuration API
 
@@ -192,7 +180,7 @@ Addons do not need to listen directly to the corresponding generic Forge lifecyc
 ## Tooltips, Overlays, and Status Effects
 
 - `KineticItemTooltips`: shared item-tooltip construction, GatherComponents, client factories and render observation for custom `TooltipComponent` implementations.
-- `GuiOverlay`: tooltips, context menus, confirmation dialogs, toasts, and high-z overlays.
+- `KineticOverlays`: tooltips, context menus, confirmation dialogs, toasts, and high-z overlays.
 - `KineticEffectDisplay`: status-effect areas, compact layouts, expanded tabs, and icon policies.
 
 An open overlay blocks input and tooltips from the underlying screen, preventing menus or confirmation dialogs from leaking interaction to controls below them.
@@ -208,7 +196,7 @@ An open overlay blocks input and tooltips from the underlying screen, preventing
 - RGB/HEX color picking.
 - Palette editing.
 
-`KineticCommandListEditor` provides reusable command-list editing. `HudPositionEditor` provides HUD dragging, scaling, and position editing.
+All selectors use the current page or screen as their parent. `KineticCommandListEditor` provides reusable command-list editing (`open`, `action`). `KineticHudEditorPage` provides HUD dragging, scaling, and position editing.
 
 ## Hooks and Mixins
 
@@ -378,8 +366,7 @@ KineticCore 是面向 **Minecraft 1.20.1 / Forge 47.4.x / Java 17** 的核心基
 - Java 17
 - Gradle 8.8（源码构建固定版本）
 - GitHub Release 仅手动发布；本地构建不会自动创建、上传或发布 GitHub Release
-- Curios：可选兼容
-- JEI：可选兼容
+- 核心不内置任何第三方模组联动。Curios、JEI 等联动放在可选兼容附属中，通过 `KineticSelectors.registerInventorySource` 与 `KineticHoveredItems.register` 接入。
 
 ## 源码结构
 
@@ -403,38 +390,24 @@ KineticCore 自身的 Feature 与外部附属遵守相同原则。通用能力�
 
 ## 统一 GUI
 
-Kinetic GUI 的虚拟画布固定为 **640×360**。API 负责实际分辨率适配、4K 缩放、鼠标坐标转换、Scissor、标准控件高度、Tooltip、右键菜单、确认框、焦点、层级和主题。
+GUI v2 采用页面模型。附属继承 `KineticPage`（普通对象，不是原版 `Screen`），由内部宿主界面负责画布缩放、4K、坐标转换、Scissor、Tooltip、右键菜单、确认框、焦点、层级、草稿、主题以及滚动条悬停提示/中键跳转。页面代码不接触 `GuiGraphics`、`Font`、原始输入回调与贴图 `ResourceLocation`，为 MC 26.1 的渲染与输入改动预留隔离层。
 
-三类 Screen：
+- `KineticPage`：`PageLayout.CANVAS`（640×360 虚拟画布，默认）或 `PageLayout.NATIVE`（GUI 缩放后的屏幕坐标）。
+- `KineticContainerPage<M>`：容器菜单页面，通过 `KineticClientMenus.register(type, XPage::new)` 注册。
+- `KineticHudEditorPage`：HUD 拖拽、缩放与位置编辑页面。
+- `KineticGui`：`open`、`openChild`、`closeScreen`、`currentPage`。
 
-- `KineticScreen`：标准 640×360 虚拟画布界面。
-- `KineticContainerScreen`：带容器菜单的 640×360 虚拟画布界面。
-- `KineticNativeScreen`：原生屏幕坐标界面，用于原版界面注入或必须使用物理坐标的场景。
+控件在 `build(KineticUi ui)` 中以构建器创建：按钮（紧凑、卡片、物品）、开关、循环按钮、颜色按钮/色块、滑块、文本框、多行文本、数字框（`NumberType.INT/LONG/DECIMAL`）、文本与数字自动补全、下拉框、标签栏、可滚动标签条、选择/物品/操作/开关列表与物品网格。`.layer(n)` 取代旧的高层（HighZ）变体，`ui.scrollViewport(...)` 让真实控件随自绘列表滚动。控件以接口形式公开（`KineticButton`、`KineticTextField`、`KineticSelectionList` 等）。
 
-标准控件包括：
+- 绘制：`KineticGraphics`（图形、文字、滚动文字、物品、`KineticTexture` 贴图、效果图标、变换、层级、裁剪）与 `KineticTheme`（表面、面板、槽位、描边、闪烁、调色板）。
+- 输入：`MouseInput`、`MouseDragInput`、`ScrollInput`、`KeyInput`、`CharInput`；`onMouseClickCapture` 在控件之前执行，其余鼠标钩子在控件之后执行。
+- 自定义界面：`KineticCustomControl` 自绘控件；`KineticRowList<T>` 自绘行列表（自带核心滚动条、中键跳转与选中闪烁）；`KineticScrollController` 手写滚动区域；`KineticCommandAssist` 命令输入补全。
+- 文本测量用 `KineticText`，翻译用 `KineticI18n`。
 
-- 普通按钮、紧凑按钮。
-- 高层按钮、紧凑高层按钮。
-- Toggle。
-- 单行文本、多行文本。
-- Integer / Long / Double 数字输入框。
-- 文本自动补全、整数/Long/小数自动补全。
-- Dropdown。
-- TabBar。
-- RGB/HEX 颜色预览与颜色按钮。
-- Placeholder。
-- Tooltip、物品 Tooltip。
-- 右键菜单、确认框。
-- 平滑滚动、网格滚动控制器。
-- 控件添加、移除、焦点管理。
-- 坐标转换、UI Scissor。
-- UI 重建与返回导航。
-
-`KineticTabs.ScrollableItemGrid` 的 `ItemGridItem.outline` 使用 `ItemGridOutline.SUCCESS` 或
-`ItemGridOutline.WARNING` 表示通用业务状态描边，并由当前主题提供颜色。网格状态统一用完整边框，
+`KineticItemGrid` 的 `ItemGridItem.outline` 使用 `ItemGridOutline.SUCCESS` 或 `ItemGridOutline.WARNING` 表示通用业务状态描边，并由当前主题提供颜色。网格状态统一用完整边框，
 错误红框优先于悬停蓝框，悬停蓝框优先于选中框和业务状态框，没有状态时显示白框。
 
-非 Screen 的 Panel、Helper、Editor 使用 `KineticWidgets.create...` detached factory。标准 Widget 的构造细节由 API 统一，不需要附属自己决定控件高度或样式。
+完整的新旧 API 对照见 `docs/KineticCore-GUI-API-v2-Migration.md`。
 
 ## F6 配置 API
 
@@ -546,7 +519,7 @@ decompressBytes
 ## Tooltip、Overlay 与状态效果
 
 - `KineticItemTooltips`：统一物品 Tooltip 构建、GatherComponents、自定义 `TooltipComponent` 客户端工厂与渲染观察入口。
-- `GuiOverlay`：Tooltip、右键菜单、确认框、Toast 和高层覆盖。
+- `KineticOverlays`：Tooltip、右键菜单、确认框、Toast 和高层覆盖。
 - `KineticEffectDisplay`：状态效果区域、紧凑布局、Tab 展开和图标策略。
 
 Overlay 打开时会阻断底层输入和底层 Tooltip，避免菜单/确认框与下层控件互相穿透。
@@ -562,7 +535,7 @@ Overlay 打开时会阻断底层输入和底层 Tooltip，避免菜单/确认框
 - RGB/HEX 调色器。
 - 调色板编辑器。
 
-`KineticCommandListEditor` 提供可复用的命令列表编辑能力；`HudPositionEditor` 提供 HUD 拖拽、缩放和位置编辑能力。
+所有选择器都以当前页面或界面作为父界面。`KineticCommandListEditor` 提供可复用的命令列表编辑能力（`open`、`action`）；`KineticHudEditorPage` 提供 HUD 拖拽、缩放和位置编辑能力。
 
 ## Hook 与 Mixin
 

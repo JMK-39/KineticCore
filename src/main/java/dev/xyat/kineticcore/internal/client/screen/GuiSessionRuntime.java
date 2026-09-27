@@ -1,8 +1,8 @@
 package dev.xyat.kineticcore.internal.client.screen;
 
-import dev.xyat.kineticcore.api.client.screen.KineticContainerScreen;
-import dev.xyat.kineticcore.api.client.screen.KineticNativeScreen;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticContainerScreen;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticNativeScreen;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
@@ -62,7 +62,7 @@ public final class GuiSessionRuntime {
 
         // Opening directly from a null screen starts a new navigation root unless
         // the child explicitly declared its parent before being opened.
-        if (current == null && next != null && explicitBinding == null) {
+        if (current == null && explicitBinding == null) {
             synchronized (PARENTS) {
                 PARENTS.remove(next);
             }
@@ -245,6 +245,11 @@ public final class GuiSessionRuntime {
             }
         }
         return true;
+    }
+
+    /** Returns the back-navigation parent of a screen, or null. */
+    public static Screen navigationParent(Screen screen) {
+        return parentOf(screen);
     }
 
     private static Screen parentOf(Screen screen) {

@@ -5,7 +5,6 @@ import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import dev.xyat.kineticcore.api.config.client.KTConfigScope;
-import net.minecraft.client.gui.screens.Screen;
 
 public final class NetworkConfigGui {
     public static final String PAGE_ID = "kineticcore:network";
@@ -54,7 +53,4 @@ public final class NetworkConfigGui {
                 .build());
     }
 
-    public static Screen create(Screen parent) {
-        return KTConfigApi.createRegisteredPageScreen(parent, PAGE_ID);
-    }
 }

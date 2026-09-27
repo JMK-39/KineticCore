@@ -6,7 +6,6 @@ import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import dev.xyat.kineticcore.api.config.client.KTConfigScope;
 import dev.xyat.kineticcore.feature.setspawn.network.SetSpawnNetwork;
-import net.minecraft.client.gui.screens.Screen;
 
 public final class SetSpawnConfigGui {
     public static final String PAGE_ID = "kineticcore:setspawn";
@@ -20,9 +19,6 @@ public final class SetSpawnConfigGui {
         KTConfigApi.register(buildRulesPage());
     }
 
-    public static Screen create(Screen parent) {
-        return KTConfigApi.createScreenForOwner(parent, "kineticcore");
-    }
 
     private static KTConfigPage buildSettingsPage() {
         return KTConfigPage.builder(PAGE_ID, KineticI18n.translatable("cfg.kineticcore.setspawn"))

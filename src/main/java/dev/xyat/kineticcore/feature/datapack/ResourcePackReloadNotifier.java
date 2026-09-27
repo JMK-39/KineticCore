@@ -1,13 +1,12 @@
 package dev.xyat.kineticcore.feature.datapack;
 
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
+
 import dev.xyat.kineticcore.api.hook.ClientHooks;
 
 import dev.xyat.kineticcore.api.text.KineticI18n;
-import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import net.minecraft.network.chat.Component;
 
 public class ResourcePackReloadNotifier {
@@ -26,7 +25,7 @@ public class ResourcePackReloadNotifier {
             }
 
             @Override
-            public void render(GuiGraphics graphics, int width, int height) {
+            public void render(KineticGraphics graphics, int width, int height) {
                 ResourcePackReloadNotifier.render(graphics, width, height);
             }
         }));
@@ -54,21 +53,20 @@ public class ResourcePackReloadNotifier {
      * 渲染提示文本
      * 在屏幕底部中心位置，间距30，无淡出，纯色背景避免看不清
      */
-    public static void render(GuiGraphics guiGraphics, int screenWidth, int screenHeight) {
+    public static void render(KineticGraphics guiGraphics, int screenWidth, int screenHeight) {
         if (System.currentTimeMillis() > showTextUntil) return;
 
-        Font font = KineticClientRuntime.font();
         // 使用您自己的 I18N 键，请在 lang 文件中添加相应内容，如："资源包已保存，请按 F3+T 或重启游戏生效"
         Component text = KineticI18n.translatable("datapack.kineticcore.reload_prompt");
-        int textWidth = font.width(text);
+        int textWidth = guiGraphics.textWidth(text);
 
         // 居中，靠底部间距30
         int x = (screenWidth - textWidth) / 2;
         int y = screenHeight - 30;
 
         // 绘制一层半透明黑色背景以便阅读文本 (ARGB)
-        GuiTheme.surface(guiGraphics, x - 4, y - 4, textWidth + 8, font.lineHeight + 8, GuiTheme.Surface.PANEL);
+        KineticTheme.surface(guiGraphics, x - 4, y - 4, textWidth + 8, guiGraphics.lineHeight() + 8, KineticTheme.Surface.PANEL);
         // 绘制文字 (false 代表不添加阴影)
-        guiGraphics.drawString(font, text, x, y, GuiTheme.current().text(), false);
+        guiGraphics.text(text, x, y, KineticTheme.current().text(), false);
     }
 }

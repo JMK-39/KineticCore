@@ -1,10 +1,13 @@
 package dev.xyat.kineticcore.api.config.client;
 
-import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.internal.client.config.ConfigScreens;
 import dev.xyat.kineticcore.internal.client.config.ForgeConfigScreenIntegration;
+import dev.xyat.kineticcore.api.client.gui.KineticGui;
+import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
+import dev.xyat.kineticcore.internal.client.gui.page.PageScreens;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -14,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Registers client configuration pages and opens their Kinetic configuration screens.
@@ -124,28 +128,61 @@ public final class KTConfigApi {
         return Component.empty();
     }
 
-    /** Creates the default registered Kinetic configuration screen for the supplied parent. */
-    public static Screen createScreen(Screen parent) {
-        return createIndexScreen(parent);
+    /** 以当前界面为父打开配置索引 / Opens the config index as a child of the current screen. */
+    public static void openIndex() {
+        KineticClientRuntime.openScreen(ConfigScreens.createIndex(KineticClientRuntime.currentScreen()));
     }
 
-    /** Creates a registered Kinetic configuration screen opened to the requested page id. */
-    public static Screen createScreen(Screen parent, String pageId) {
-        return createRegisteredPageScreen(parent, pageId);
+    /** 打开已注册的配置页 / Opens a registered config page. */
+    public static void openPage(String pageId) {
+        KineticClientRuntime.openScreen(createRegisteredPageScreen(KineticClientRuntime.currentScreen(), pageId));
     }
 
-    /** Creates a Kinetic configuration screen for the supplied page definition. */
-    public static Screen createScreen(Screen parent, KTConfigPage page) {
-        return createPageScreen(parent, page);
+    /** 打开配置页定义（可为未注册的临时页）/ Opens a config page definition, including transient unregistered pages. */
+    public static void openPage(KTConfigPage page) {
+        KineticClientRuntime.openScreen(ConfigScreens.createPage(KineticClientRuntime.currentScreen(),
+                Objects.requireNonNull(page, "page")));
     }
 
-    /** Creates the registered-page index screen. */
-    public static Screen createIndexScreen(Screen parent) {
-        return ConfigScreens.createIndex(parent);
+    /** 打开某模组的配置中心 / Opens the owner-scoped config hub of a mod. */
+    public static void openOwner(String ownerModId) {
+        KineticClientRuntime.openScreen(createOwnerScreen(KineticClientRuntime.currentScreen(), ownerModId));
     }
 
-    /** Creates a screen for one registered page id. */
-    public static Screen createRegisteredPageScreen(Screen parent, String pageId) {
+    /**
+     * 从配置源重新读取当前导航链上所有已打开的配置界面（例如子编辑器保存后刷新父配置页）。
+     * Reloads every open config screen in the current navigation chain from its source (e.g. after a child editor
+     * saved).
+     */
+    public static void refreshOpenScreens() {
+        ConfigScreens.refreshNavigationChain(KineticClientRuntime.currentScreen());
+    }
+
+    /** 以本模组的配置中心作为 Forge 模组列表的配置按钮 / Installs the owner config hub as the Forge mod-list config button. */
+    public static void installConfigHub(String ownerModId) {
+        ForgeConfigScreenIntegration.installHub(ownerModId);
+    }
+
+    /** 以指定页面作为 Forge 模组列表的配置按钮 / Installs a page as the Forge mod-list config button. */
+    public static void installConfigPage(String ownerModId, Supplier<? extends KineticPage> pageFactory) {
+        Objects.requireNonNull(pageFactory, "pageFactory");
+        ForgeConfigScreenIntegration.installScreen(ownerModId,
+                parent -> PageScreens.createWithParent(Objects.requireNonNull(pageFactory.get(), "pageFactory returned null"), parent));
+    }
+
+    /** 返回一个“以当前界面为父打开页面”的动作，供配置条目按钮使用 / Returns an action opening a child page, for config entry buttons. */
+    public static Runnable pageAction(Supplier<? extends KineticPage> pageFactory) {
+        Objects.requireNonNull(pageFactory, "pageFactory");
+        return () -> KineticGui.openChild(Objects.requireNonNull(pageFactory.get(), "pageFactory returned null"));
+    }
+
+    /** 返回一个“打开配置页定义”的动作 / Returns an action opening a config page definition. */
+    public static Runnable configPageAction(Supplier<KTConfigPage> pageFactory) {
+        Objects.requireNonNull(pageFactory, "pageFactory");
+        return () -> openPage(Objects.requireNonNull(pageFactory.get(), "pageFactory returned null"));
+    }
+
+    private static Screen createRegisteredPageScreen(Screen parent, String pageId) {
         KTConfigPage page = find(pageId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown config page: " + pageId));
         if (page.scope() == KTConfigScope.SERVER_AUTHORITATIVE && !page.serverManaged()) {
@@ -155,43 +192,8 @@ public final class KTConfigApi {
         return ConfigScreens.createPage(parent, page);
     }
 
-    /** Creates a screen for a supplied page, including transient pages that are not registered. */
-    public static Screen createPageScreen(Screen parent, KTConfigPage page) {
-        return ConfigScreens.createPage(parent, Objects.requireNonNull(page, "page"));
-    }
-
-    /** Reloads pending editor values for a Kinetic config screen from its backing config source. */
-    public static void refreshScreenFromSource(Screen screen) {
-        ConfigScreens.refreshFromSource(screen);
-    }
-
-    /** Creates an owner-scoped config hub containing pages whose ids use the supplied mod-id namespace. */
-    public static Screen createScreenForOwner(Screen parent, String ownerModId) {
-        String ownerId = Objects.requireNonNull(ownerModId, "ownerModId");
-        String ownerPrefix = ownerId + ":";
-        List<KTConfigPage> ownedPages = pages().stream()
-                .filter(page -> page.id().startsWith(ownerPrefix))
-                .toList();
-        return ConfigScreens.createOwner(parent, ownerId, ownedPages);
-    }
-
-    /** Installs Kinetic's owner-scoped config hub as the Forge config screen for the supplied mod id. */
-    public static void installConfigHub(String ownerModId) {
-        ForgeConfigScreenIntegration.installHub(ownerModId);
-    }
-
-    /** Installs one explicit Forge config-screen factory for an owner mod. */
-    public static void installConfigScreen(String ownerModId, Function<Screen, ? extends Screen> screenFactory) {
-        ForgeConfigScreenIntegration.installScreen(ownerModId, Objects.requireNonNull(screenFactory, "screenFactory"));
-    }
-
-    /** Builds an action that opens a specialized editor with the current page as its parent. */
-    public static Runnable screenAction(Function<Screen, ? extends Screen> screenFactory) {
-        Objects.requireNonNull(screenFactory, "screenFactory");
-        return () -> KineticClientRuntime.openScreen(Objects.requireNonNull(
-                screenFactory.apply(KineticClientRuntime.currentScreen()),
-                "screenFactory returned null"
-        ));
+    private static Screen createOwnerScreen(Screen parent, String ownerModId) {
+        return ConfigScreens.createOwnerFor(parent, ownerModId);
     }
 
     private static void showUnavailable(KTConfigPage page) {

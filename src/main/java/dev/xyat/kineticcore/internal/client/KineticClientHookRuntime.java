@@ -44,6 +44,6 @@ public final class KineticClientHookRuntime {
     }
 
     public static void renderResourceReloadUi(GuiGraphics graphics, int width, int height) {
-        KineticCallbackBatch.runAll(RESOURCE_RELOAD_UI, handler -> handler.render(graphics, width, height));
+        KineticCallbackBatch.runAll(RESOURCE_RELOAD_UI, handler -> handler.render(dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics), width, height));
     }
 }

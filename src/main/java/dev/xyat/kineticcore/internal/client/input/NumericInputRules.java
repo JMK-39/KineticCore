@@ -1,6 +1,6 @@
 package dev.xyat.kineticcore.internal.client.input;
 
-import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields;
+import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticNumericFields;
 
 import java.math.BigDecimal;
 import java.util.function.Predicate;

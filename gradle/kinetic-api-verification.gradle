@@ -333,10 +333,10 @@ tasks.matching { it.name == 'compileJava' }.configureEach {
 
 tasks.register('checkKineticWidgetState', JavaExec) {
     group = 'verification'
-    description = 'Checks the current public widget state implementations without starting Minecraft.'
+    description = 'Checks the widget state implementations without starting Minecraft.'
     dependsOn tasks.named('testClasses')
     classpath = files(sourceSets.test.output, sourceSets.main.output)
-    mainClass.set('dev.xyat.kineticcore.api.client.widget.WidgetStateRegression')
+    mainClass.set('dev.xyat.kineticcore.internal.client.gui.widget.WidgetStateRegression')
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
 }
 
@@ -349,8 +349,29 @@ tasks.register('checkKineticPinyin', JavaExec) {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
 }
 
+tasks.register('checkKineticScreenParity', JavaExec) {
+    group = 'verification'
+    description = 'Checks that KineticScreen, KineticContainerScreen and KineticNativeScreen expose the same shared API.'
+    dependsOn tasks.named('testClasses')
+    classpath = files(sourceSets.test.output, sourceSets.main.output)
+    mainClass.set('dev.xyat.kineticcore.internal.client.gui.screen.ScreenApiParityRegression')
+    workingDir = projectDir
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+}
+
+tasks.register('checkKineticScrollFrame', JavaExec) {
+    group = 'verification'
+    description = 'Checks scrollbar frame dispatch (hover hint / middle-click) without starting Minecraft.'
+    dependsOn tasks.named('testClasses')
+    classpath = files(sourceSets.test.output, sourceSets.main.output) + sourceSets.test.compileClasspath
+    mainClass.set('dev.xyat.kineticcore.internal.client.widget.ScrollFrameDispatchRegression')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+}
+
 tasks.named('check').configure {
     dependsOn tasks.named('checkKineticApiSurface')
+    dependsOn tasks.named('checkKineticScreenParity')
+    dependsOn tasks.named('checkKineticScrollFrame')
     dependsOn tasks.named('checkKineticWidgetState')
     dependsOn tasks.named('checkKineticPinyin')
 }

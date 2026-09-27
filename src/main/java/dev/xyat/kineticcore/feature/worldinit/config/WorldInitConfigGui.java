@@ -5,8 +5,7 @@ import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import dev.xyat.kineticcore.api.config.client.KTConfigScope;
-import dev.xyat.kineticcore.api.client.editor.KineticCommandListEditor;
-import net.minecraft.client.gui.screens.Screen;
+import dev.xyat.kineticcore.api.client.gui.editor.KineticCommandListEditor;
 
 public class WorldInitConfigGui {
     public static final String PAGE_ID = "kineticcore:worldinit";
@@ -31,8 +30,7 @@ public class WorldInitConfigGui {
                 .action(
                         "commands",
                         KineticI18n.translatable("cfg.kineticcore.worldinit.commands"),
-                        KTConfigApi.screenAction(parent -> KineticCommandListEditor.create(
-                                parent,
+                        KineticCommandListEditor.action(
                                 () -> WorldInitConfig.worldInitCommands,
                                 value -> WorldInitConfig.worldInitCommands = value,
                                 PAGE_ID,
@@ -47,13 +45,10 @@ public class WorldInitConfigGui {
                                         KineticI18n.translatable("msg.kineticcore.worldinit.command_list.save_failed"),
                                         null
                                 )
-                        )),
+                        ),
                         KineticI18n.translatable("cfg.kineticcore.worldinit.commands.tooltip")
                 )
                 .build());
     }
 
-    public static Screen create(Screen parent) {
-        return KTConfigApi.createRegisteredPageScreen(parent, PAGE_ID);
-    }
 }

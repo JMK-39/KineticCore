@@ -1,0 +1,515 @@
+diff -ruN kc2.orig/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticContainerScreen.java kc2/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticContainerScreen.java
+--- a/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticContainerScreen.java	2026-09-27 09:28:15.996566867 +0800
++++ b/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticContainerScreen.java	2026-09-27 09:29:28.025572636 +0800
+@@ -52,6 +52,7 @@
+ import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+ import dev.xyat.kineticcore.api.client.widget.KineticControl;
+ import dev.xyat.kineticcore.internal.client.overlay.GuiOverlayRuntime;
++import dev.xyat.kineticcore.internal.client.widget.KineticScrollFrameRuntime;
+ import net.minecraft.client.gui.GuiGraphics;
+ import net.minecraft.client.gui.components.AbstractWidget;
+ import net.minecraft.client.gui.screens.Screen;
+@@ -80,6 +81,7 @@
+     private int uiWidth = 1;
+     private int uiHeight = 1;
+     private final GuiOverlayRuntime overlays = new GuiOverlayRuntime();
++    private final KineticScrollFrameRuntime.Frame scrollFrame = new KineticScrollFrameRuntime.Frame();
+     private final KineticScreenControls controls = new KineticScreenControls(
+             () -> font, overlays, this::addRenderableWidget, this::addWidget,
+             this::removeWidget, this::openContextMenu
+@@ -1138,6 +1140,23 @@
+     /** {@inheritDoc} */
+     @Override
+     public final void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
++        KineticScrollFrameRuntime.enter(scrollFrame);
++        try {
++            renderKineticFrame(graphics, mouseX, mouseY, partialTick);
++        } finally {
++            KineticScrollFrameRuntime.exit(scrollFrame);
++        }
++    }
++
++    /** 显示已绑定选中项的滚动条悬停提示 / Shows the hover hint of a bound scrollbar. */
++    private boolean requestScrollbarHint() {
++        Component hint = scrollFrame.hint();
++        if (hint == null || hint.getString().isBlank()) return false;
++        overlays.tooltip(hint, 320);
++        return true;
++    }
++
++    private void renderKineticFrame(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+         focus.synchronizeControlState();
+         renderBackground(graphics);
+         overlays.beginFrame();
+@@ -1153,7 +1172,8 @@
+             super.render(uiGraphics, virtualMouseX, virtualMouseY, partialTick);
+             renderUiForeground(uiGraphics, virtualMouseX, virtualMouseY, partialTick);
+             controls.renderAutoCompleteSuggestions(uiGraphics, virtualMouseX, virtualMouseY);
+-            if (isInsideUi(mouseX, mouseY) && !overlays.blocksInput() && !controls.hasOpenAutoCompletePopup()) {
++            if (isInsideUi(mouseX, mouseY) && !overlays.blocksInput() && !controls.hasOpenAutoCompletePopup()
++                    && !requestScrollbarHint()) {
+                 requestContainerTooltips(uiGraphics, virtualMouseX, virtualMouseY, mouseX, mouseY);
+             }
+         } finally {
+@@ -1276,6 +1296,7 @@
+         }
+         controls.clearAutoCompleteFocusOutside(virtualMouseX, virtualMouseY);
+         if (controls.handleAutoCompleteClick(virtualMouseX, virtualMouseY, button)) return true;
++        if (scrollFrame.middleClick(button)) return true;
+         if (containerMouseClicked(virtualMouseX, virtualMouseY, button)) return true;
+         boolean handled = super.mouseClicked(virtualMouseX, virtualMouseY, button);
+         if (!handled) clearControlFocus();
+diff -ruN kc2.orig/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticNativeScreen.java kc2/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticNativeScreen.java
+--- a/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticNativeScreen.java	2026-09-27 09:28:15.996600373 +0800
++++ b/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticNativeScreen.java	2026-09-27 09:29:28.026247054 +0800
+@@ -51,6 +51,7 @@
+ import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+ import dev.xyat.kineticcore.api.client.widget.KineticControl;
+ import dev.xyat.kineticcore.internal.client.overlay.GuiOverlayRuntime;
++import dev.xyat.kineticcore.internal.client.widget.KineticScrollFrameRuntime;
+ import net.minecraft.client.gui.GuiGraphics;
+ import net.minecraft.client.gui.components.AbstractWidget;
+ import net.minecraft.client.gui.screens.Screen;
+@@ -72,6 +73,7 @@
+  */
+ public abstract class KineticNativeScreen extends Screen {
+     private final GuiOverlayRuntime overlays = new GuiOverlayRuntime();
++    private final KineticScrollFrameRuntime.Frame scrollFrame = new KineticScrollFrameRuntime.Frame();
+     private final KineticScreenControls controls = new KineticScreenControls(
+             () -> font, overlays, this::addRenderableWidget, this::addWidget,
+             this::removeWidget, this::openContextMenu
+@@ -910,8 +912,8 @@
+         return control;
+     }
+ 
+-    private void requestWidgetTooltip(double mouseX, double mouseY) {
+-        controls.requestWidgetTooltip(mouseX, mouseY, widget -> true);
++    private boolean requestWidgetTooltip(double mouseX, double mouseY) {
++        return controls.requestWidgetTooltip(mouseX, mouseY, widget -> true);
+     }
+ 
+     /**
+@@ -1076,6 +1078,23 @@
+     /** {@inheritDoc} */
+     @Override
+     public final void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
++        KineticScrollFrameRuntime.enter(scrollFrame);
++        try {
++            renderKineticFrame(graphics, mouseX, mouseY, partialTick);
++        } finally {
++            KineticScrollFrameRuntime.exit(scrollFrame);
++        }
++    }
++
++    /** 显示已绑定选中项的滚动条悬停提示 / Shows the hover hint of a bound scrollbar. */
++    private boolean requestScrollbarHint() {
++        Component hint = scrollFrame.hint();
++        if (hint == null || hint.getString().isBlank()) return false;
++        overlays.tooltip(hint, 320);
++        return true;
++    }
++
++    private void renderKineticFrame(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+         focus.synchronizeControlState();
+         renderBackground(graphics);
+         overlays.beginFrame();
+@@ -1083,8 +1102,9 @@
+         super.render(graphics, mouseX, mouseY, partialTick);
+         renderNativeOverlayRequests(graphics, mouseX, mouseY, partialTick);
+         controls.renderAutoCompleteSuggestions(graphics, mouseX, mouseY);
+-        if (!overlays.blocksInput() && !controls.hasOpenAutoCompletePopup()) {
+-            requestWidgetTooltip(mouseX, mouseY);
++        if (!overlays.blocksInput() && !controls.hasOpenAutoCompletePopup()
++                && !requestWidgetTooltip(mouseX, mouseY)) {
++            requestScrollbarHint();
+         }
+         overlays.render(graphics, font, width, height, mouseX, mouseY);
+     }
+@@ -1160,6 +1180,7 @@
+         }
+         controls.clearAutoCompleteFocusOutside(mouseX, mouseY);
+         if (controls.handleAutoCompleteClick(mouseX, mouseY, button)) return true;
++        if (scrollFrame.middleClick(button)) return true;
+         if (nativeMouseClicked(mouseX, mouseY, button)) return true;
+         boolean handled = super.mouseClicked(mouseX, mouseY, button);
+         if (!handled) clearControlFocus();
+diff -ruN kc2.orig/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticScreen.java kc2/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticScreen.java
+--- a/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticScreen.java	2026-09-27 09:28:15.996629545 +0800
++++ b/src/main/java/dev/xyat/kineticcore/api/client/screen/KineticScreen.java	2026-09-27 09:29:28.024774698 +0800
+@@ -52,6 +52,7 @@
+ import dev.xyat.kineticcore.api.client.layout.GuiLayout;
+ import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+ import dev.xyat.kineticcore.internal.client.overlay.GuiOverlayRuntime;
++import dev.xyat.kineticcore.internal.client.widget.KineticScrollFrameRuntime;
+ import dev.xyat.kineticcore.api.client.widget.KineticControl;
+ import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.SmoothSelectionList;
+ import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
+@@ -104,6 +105,7 @@
+     private GuiLayout.SafeArea safeArea = GuiLayout.SafeArea.of(1, 1, 0);
+     private GuiLayout.Metrics metrics = GuiLayout.measure(1, 1, 640, 360);
+     private final GuiOverlayRuntime overlays = new GuiOverlayRuntime();
++    private final KineticScrollFrameRuntime.Frame scrollFrame = new KineticScrollFrameRuntime.Frame();
+     private final List<PreviewWheelTarget> previewWheelTargets = new ArrayList<>();
+ 
+     private record PreviewWheelTarget(EntityPreviewRenderer renderer, String key,
+@@ -1518,6 +1520,23 @@
+     /** {@inheritDoc} */
+     @Override
+     public final void render(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
++        KineticScrollFrameRuntime.enter(scrollFrame);
++        try {
++            renderKineticFrame(graphics, mouseX, mouseY, partialTick);
++        } finally {
++            KineticScrollFrameRuntime.exit(scrollFrame);
++        }
++    }
++
++    /** 显示已绑定选中项的滚动条悬停提示 / Shows the hover hint of a bound scrollbar. */
++    private boolean requestScrollbarHint() {
++        Component hint = scrollFrame.hint();
++        if (hint == null || hint.getString().isBlank()) return false;
++        overlays.tooltip(hint, 320);
++        return true;
++    }
++
++    private void renderKineticFrame(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+         focus.synchronizeControlState();
+         renderBackground(graphics);
+         overlays.beginFrame();
+@@ -1548,7 +1567,8 @@
+             if (isInsideCanvas(mouseX, mouseY)
+                     && !overlays.blocksInput()
+                     && !controls.hasOpenAutoCompletePopup()
+-                    && !requestWidgetTooltip(virtualMouseX, virtualMouseY)) {
++                    && !requestWidgetTooltip(virtualMouseX, virtualMouseY)
++                    && !requestScrollbarHint()) {
+                 renderTooltips(canvasGraphics, virtualMouseX, virtualMouseY, mouseX, mouseY);
+             }
+         } finally {
+@@ -1682,6 +1702,9 @@
+         if (controls.handleAutoCompleteClick(virtualMouseX, virtualMouseY, button)) {
+             return true;
+         }
++        if (scrollFrame.middleClick(button)) {
++            return true;
++        }
+         boolean handled = canvasMouseClicked(virtualMouseX, virtualMouseY, button);
+         if (!handled) {
+             clearControlFocus();
+diff -ruN kc2.orig/src/main/java/dev/xyat/kineticcore/api/client/theme/GuiTheme.java kc2/src/main/java/dev/xyat/kineticcore/api/client/theme/GuiTheme.java
+--- a/src/main/java/dev/xyat/kineticcore/api/client/theme/GuiTheme.java	2026-09-27 09:28:15.996872495 +0800
++++ b/src/main/java/dev/xyat/kineticcore/api/client/theme/GuiTheme.java	2026-09-27 09:30:41.238762102 +0800
+@@ -163,6 +163,21 @@
+         graphics.renderOutline(x, y, width, height, stateBorder(selected, hovered, error));
+     }
+ 
++    /**
++     * 中键跳转后选中项的反色闪烁（白底黑框），所有列表/网格/Tab 统一走这里。
++     * Inverse flash drawn over the selected row/cell/tab after a middle-click jump.
++     */
++    public static void selectionFlash(GuiGraphics graphics, int x, int y, int width, int height) {
++        if (graphics == null || width <= 0 || height <= 0) return;
++        graphics.fill(x, y, x + width, y + height, 0xFFFFFFFF);
++        graphics.renderOutline(x, y, width, height, 0xFF000000);
++    }
++
++    /** 反色闪烁期间文字颜色 / Text color to use on top of {@link #selectionFlash}. */
++    public static int selectionFlashText() {
++        return 0xFF000000;
++    }
++
+     /** Draws a standard theme checkerboard using the active panel and alternate-panel colors. */
+     public static void checkerboard(
+             GuiGraphics graphics,
+diff -ruN kc2.orig/src/main/java/dev/xyat/kineticcore/api/client/widget/KineticWidgets.java kc2/src/main/java/dev/xyat/kineticcore/api/client/widget/KineticWidgets.java
+--- a/src/main/java/dev/xyat/kineticcore/api/client/widget/KineticWidgets.java	2026-09-27 09:28:15.997068041 +0800
++++ b/src/main/java/dev/xyat/kineticcore/api/client/widget/KineticWidgets.java	2026-09-27 09:30:41.239788932 +0800
+@@ -2176,7 +2176,7 @@
+             KineticText.drawScrollingLeft(
+                     graphics, font, itemLabel(item), textX,
+                     button.getY() + Math.max(1, (ROW_HEIGHT - font.lineHeight) / 2),
+-                    textWidth, invertedFlash ? 0xFF000000 : GuiTheme.current().text(), true
++                    textWidth, invertedFlash ? GuiTheme.selectionFlashText() : GuiTheme.current().text(), true
+             );
+             if (item.marked()) {
+                 int markerX = button.getX() + button.getWidth() - 8;
+@@ -2490,10 +2490,7 @@
+                                     graphics, x, y, density.slotSize(), density.slotSize(), indicator
+                             );
+                         }
+-                        if (scroll.isSelectionFlashInverted(index)) {
+-                            graphics.fill(x, y, x + density.slotSize(), y + density.slotSize(), 0xFFFFFFFF);
+-                            graphics.renderOutline(x, y, density.slotSize(), density.slotSize(), 0xFF000000);
+-                        }
++                        scroll.renderSelectionFlash(graphics, index, x, y, density.slotSize(), density.slotSize());
+                     }
+                 } finally {
+                     KineticRenderRuntime.disableScissor(graphics);
+@@ -4141,7 +4138,7 @@
+                     textX,
+                     button.getY() + Math.max(1, (ROW_HEIGHT - font.lineHeight) / 2),
+                     textWidth,
+-                    invertedFlash ? 0xFF000000 : GuiTheme.current().text(),
++                    invertedFlash ? GuiTheme.selectionFlashText() : GuiTheme.current().text(),
+                     true
+             );
+             if (item.marked()) {
+diff -ruN kc2.orig/src/main/java/dev/xyat/kineticcore/api/client/widget/button/KineticButtons.java kc2/src/main/java/dev/xyat/kineticcore/api/client/widget/button/KineticButtons.java
+--- a/src/main/java/dev/xyat/kineticcore/api/client/widget/button/KineticButtons.java	2026-09-27 09:28:15.996965768 +0800
++++ b/src/main/java/dev/xyat/kineticcore/api/client/widget/button/KineticButtons.java	2026-09-27 09:30:45.479581897 +0800
+@@ -257,15 +257,14 @@
+             Component storedText = null;
+             try {
+                 if (invertedFlash) {
+-                    graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFFFFFFFF);
+-                    graphics.renderOutline(getX(), getY(), getWidth(), getHeight(), 0xFF000000);
++                    GuiTheme.selectionFlash(graphics, getX(), getY(), getWidth(), getHeight());
+                     if (textVisible && !getMessage().getString().isEmpty()) {
+                         graphics.drawCenteredString(
+                                 KineticClientRuntime.font(),
+                                 getMessage().getString(),
+                                 getX() + getWidth() / 2,
+                                 getY() + (getHeight() - 9) / 2,
+-                                0xFF000000
++                                GuiTheme.selectionFlashText()
+                         );
+                     }
+                     return;
+diff -ruN kc2.orig/src/main/java/dev/xyat/kineticcore/api/client/widget/scroll/KineticScroll.java kc2/src/main/java/dev/xyat/kineticcore/api/client/widget/scroll/KineticScroll.java
+--- a/src/main/java/dev/xyat/kineticcore/api/client/widget/scroll/KineticScroll.java	2026-09-27 09:28:15.997189446 +0800
++++ b/src/main/java/dev/xyat/kineticcore/api/client/widget/scroll/KineticScroll.java	2026-09-27 09:29:58.125148934 +0800
+@@ -6,12 +6,16 @@
+ import dev.xyat.kineticcore.api.text.KineticI18n;
+ import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
+ import dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime;
++import dev.xyat.kineticcore.internal.client.widget.KineticScrollFrameRuntime;
+ import net.minecraft.client.gui.GuiGraphics;
+ import net.minecraft.client.gui.components.ObjectSelectionList;
+ import net.minecraft.network.chat.Component;
+ import net.minecraft.util.Mth;
+ import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+ 
++import java.util.function.IntSupplier;
++import java.util.function.IntUnaryOperator;
++
+ /**
+  * Shared smooth-scroll state and grid-scroll controller API.
+  */
+@@ -823,6 +827,48 @@
+         private long thumbHoverStartedAtNanos;
+         private int flashingSelectionIndex = -1;
+         private long selectionFlashStartedAtNanos;
++        private IntSupplier boundSelection;
++        private IntUnaryOperator boundTargetOffset;
++        private boolean ownerHandlesHint;
++        private final FrameHook frameHook = new FrameHook();
++
++        /**
++         * 绑定“当前选中项”，之后只要在 Kinetic Screen 中调用 {@link #render}/{@link #renderHorizontal}，
++         * 悬停 0.5 秒提示与中键跳转回选中项均由 Screen 自动处理；行绘制时调用
++         * {@link #renderSelectionFlash} 即可获得两次反色闪烁。目标偏移默认让选中项居中。
++         * Binds the selected index so the owning Kinetic screen auto-handles the hover hint
++         * and middle-click jump; the default target offset centres the selection.
++         */
++        public GridScrollController bindSelection(IntSupplier selectedIndex) {
++            return bindSelection(selectedIndex, null);
++        }
++
++        /**
++         * 同上，但由调用方把选中索引换算为滚动偏移（网格用 {@code i -> i / columns - visibleRows / 2}）。
++         * Same as above with a caller-supplied index-to-offset mapping (e.g. grids).
++         */
++        public GridScrollController bindSelection(IntSupplier selectedIndex, IntUnaryOperator targetOffset) {
++            this.boundSelection = selectedIndex;
++            this.boundTargetOffset = targetOffset;
++            return this;
++        }
++
++        /** 解除选中项绑定 / Clears the selection binding. */
++        public GridScrollController unbindSelection() {
++            this.boundSelection = null;
++            this.boundTargetOffset = null;
++            return this;
++        }
++
++        /**
++         * 若该索引正处于闪烁的反色阶段，则以主题反色覆盖该行/格。
++         * Draws the inverse flash over one row/cell while it is in an inverted phase.
++         */
++        public boolean renderSelectionFlash(GuiGraphics graphics, int selectionIndex, int x, int y, int width, int height) {
++            if (graphics == null || !isSelectionFlashInverted(selectionIndex)) return false;
++            GuiTheme.selectionFlash(graphics, x, y, width, height);
++            return true;
++        }
+ 
+         /** Updates the logical item count and visible-row count used by this grid controller. */
+         public void update(int totalItems, int visibleItems) {
+@@ -902,6 +948,13 @@
+ 
+         /** Returns the built-in middle-click hint after the scrollbar thumb has been hovered for half a second. */
+         public Component hoveredScrollbarTooltip() {
++            // 自绘控件查询过提示 => 由控件自己显示，Screen 不再重复显示。
++            // A widget that queries the hint displays it itself; the screen must not duplicate it.
++            ownerHandlesHint = true;
++            return currentHint();
++        }
++
++        private Component currentHint() {
+             if (thumbHoverStartedAtNanos == 0L
+                     || System.nanoTime() - thumbHoverStartedAtNanos < HOVER_HINT_DELAY_NANOS) return null;
+             return KineticI18n.translatable("gui.kineticcore.scrollbar.middle_click_hint");
+@@ -935,14 +988,39 @@
+         ) {
+             if (!KineticMouseButtons.isMiddle(button) || !canScroll()
+                     || !isOverThumb(mouseX, mouseY, horizontal, x, y, width, height, minThumbSize)) return false;
+-            if (selectedIndex >= 0) {
+-                setOffset(targetOffset);
+-                flashingSelectionIndex = selectedIndex;
+-                selectionFlashStartedAtNanos = System.nanoTime();
+-            }
++            jumpToSelection(selectedIndex, targetOffset);
+             return true;
+         }
+ 
++        private void jumpToSelection(int selectedIndex, int targetOffset) {
++            if (selectedIndex < 0) return;
++            setOffset(targetOffset);
++            flashingSelectionIndex = selectedIndex;
++            selectionFlashStartedAtNanos = System.nanoTime();
++        }
++
++        private final class FrameHook implements KineticScrollFrameRuntime.Participant {
++            @Override
++            public Component pendingHint() {
++                return boundSelection == null || ownerHandlesHint || !canScroll() ? null : currentHint();
++            }
++
++            @Override
++            public boolean handleMiddleClick() {
++                if (boundSelection == null || !canScroll() || thumbHoverStartedAtNanos == 0L) return false;
++                int selected = boundSelection.getAsInt();
++                int target = boundTargetOffset != null
++                        ? boundTargetOffset.applyAsInt(selected)
++                        : selected - visibleItems / 2;
++                jumpToSelection(selected, target);
++                return true;
++            }
++        }
++
++        private void registerFrameHook() {
++            if (boundSelection != null) KineticScrollFrameRuntime.register(frameHook);
++        }
++
+         /** Immediately sets current and target offsets to the supplied clamped logical position. */
+         public void setOffset(int offset) {
+             int clamped = clamp(offset);
+@@ -1132,6 +1210,7 @@
+                 return;
+             }
+             updateThumbHover(isOverThumb(mouseX, mouseY, false, x, y, width, height, minThumbHeight));
++            registerFrameHook();
+             KineticScroll.renderScrollbarState(
+                     graphics,
+                     mouseX,
+@@ -1170,6 +1249,7 @@
+                     && mouseY >= y
+                     && mouseY <= y + height;
+             updateThumbHover(hovered);
++            registerFrameHook();
+             GuiTheme.Palette theme = GuiTheme.current();
+             graphics.fill(x, y, x + width, y + height, theme.scrollTrack());
+             graphics.fill(
+diff -ruN kc2.orig/src/main/java/dev/xyat/kineticcore/internal/client/widget/KineticScrollFrameRuntime.java kc2/src/main/java/dev/xyat/kineticcore/internal/client/widget/KineticScrollFrameRuntime.java
+--- a/src/main/java/dev/xyat/kineticcore/internal/client/widget/KineticScrollFrameRuntime.java	1970-01-01 08:00:00.000000000 +0800
++++ b/src/main/java/dev/xyat/kineticcore/internal/client/widget/KineticScrollFrameRuntime.java	2026-09-27 09:28:30.631762515 +0800
+@@ -0,0 +1,90 @@
++package dev.xyat.kineticcore.internal.client.widget;
++
++import dev.xyat.kineticcore.internal.client.input.KineticMouseButtonRuntime;
++import net.minecraft.network.chat.Component;
++
++import java.util.ArrayDeque;
++import java.util.ArrayList;
++import java.util.Deque;
++import java.util.List;
++
++/**
++ * 每个 Kinetic Screen 持有一个 Frame，收集本帧渲染过、且已绑定选中项的滚动条，
++ * 由 Screen 统一派发“悬停提示”和“中键跳转”，业务代码无需手写这两段逻辑。
++ * Per-screen frame collector for bound scrollbars; the owning screen dispatches the
++ * hover hint and middle-click jump so addons never hand-wire them.
++ */
++public final class KineticScrollFrameRuntime {
++    /** 由 GridScrollController 私有实现 / Implemented privately by GridScrollController. */
++    public interface Participant {
++        /** 当前应显示的提示，未到 0.5 秒或不可用时返回 null / Hint to show now, or null. */
++        Component pendingHint();
++
++        /** 若鼠标在上一帧悬停于滑块，则执行跳转并返回 true / Jumps when the thumb was hovered last frame. */
++        boolean handleMiddleClick();
++    }
++
++    /** 单个 Screen 的帧收集器 / One screen's frame collector. */
++    public static final class Frame {
++        private final List<Participant> building = new ArrayList<>();
++        private List<Participant> rendered = List.of();
++
++        public void begin() {
++            building.clear();
++        }
++
++        public void end() {
++            rendered = List.copyOf(building);
++            building.clear();
++        }
++
++        /** 本帧后渲染者优先（更靠上层）/ Later-rendered participants win (top-most). */
++        public Component hint() {
++            for (int index = building.size() - 1; index >= 0; index--) {
++                Component hint = building.get(index).pendingHint();
++                if (hint != null) return hint;
++            }
++            return null;
++        }
++
++        /** 使用上一完整帧的悬停状态派发中键 / Dispatches using the last completed frame. */
++        public boolean middleClick(int button) {
++            if (!KineticMouseButtonRuntime.isMiddle(button)) return false;
++            for (int index = rendered.size() - 1; index >= 0; index--) {
++                if (rendered.get(index).handleMiddleClick()) return true;
++            }
++            return false;
++        }
++
++        private void add(Participant participant) {
++            if (!building.contains(participant)) building.add(participant);
++        }
++    }
++
++    private static final Deque<Frame> ACTIVE = new ArrayDeque<>();
++
++    private KineticScrollFrameRuntime() {
++    }
++
++    /** Screen.render 开始时调用 / Called when a screen render starts. */
++    public static void enter(Frame frame) {
++        frame.begin();
++        ACTIVE.push(frame);
++    }
++
++    /** Screen.render 结束时（finally）调用 / Called from the render finally block. */
++    public static void exit(Frame frame) {
++        if (!ACTIVE.isEmpty() && ACTIVE.peek() == frame) {
++            ACTIVE.pop();
++        } else {
++            ACTIVE.remove(frame);
++        }
++        frame.end();
++    }
++
++    /** 滚动条渲染时登记；不在 Kinetic Screen 渲染期间则忽略 / No-op outside a Kinetic screen render. */
++    public static void register(Participant participant) {
++        Frame frame = ACTIVE.peek();
++        if (frame != null && participant != null) frame.add(participant);
++    }
++}

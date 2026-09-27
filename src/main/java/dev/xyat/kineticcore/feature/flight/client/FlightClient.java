@@ -3,8 +3,8 @@ package dev.xyat.kineticcore.feature.flight.client;
 import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
 import dev.xyat.kineticcore.api.client.input.KineticInputGestures;
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
-import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import dev.xyat.kineticcore.api.flight.KineticFlightClient;
 import dev.xyat.kineticcore.api.flight.KineticSuperFlight;
 import dev.xyat.kineticcore.api.hook.CommonHooks;
@@ -14,9 +14,6 @@ import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.feature.flight.config.SuperFlightClientConfig;
 import dev.xyat.kineticcore.feature.flight.network.FlightNetwork;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Pose;
@@ -95,7 +92,7 @@ public final class FlightClient {
         Component status = KineticI18n.translatable(
                 state ? "msg.kineticcore.flying.on" : "msg.kineticcore.flying.off"
         );
-        player.displayClientMessage(KineticText.translatable("msg.kineticcore.flying.noclip_status", status), true);
+        player.displayClientMessage(KineticI18n.translatable("msg.kineticcore.flying.noclip_status", status), true);
     }
 
     public static void toggleNoclip() {
@@ -108,7 +105,7 @@ public final class FlightClient {
         Component status = KineticI18n.translatable(
                 enabled ? "msg.kineticcore.flying.on" : "msg.kineticcore.flying.off"
         );
-        KineticOverlays.toast("flight_inertia_toggle", KineticText.translatable("msg.kineticcore.flying.inertia_status", status), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
+        KineticOverlays.toast("flight_inertia_toggle", KineticI18n.translatable("msg.kineticcore.flying.inertia_status", status), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
     }
 
     private static boolean handleNoclipKey() {
@@ -143,36 +140,34 @@ public final class FlightClient {
         FlightNetwork.requestSuperFlight(!KineticFlightClient.superFlightActive());
     }
 
-    private static void renderSuperFlightHorizon(GuiGraphics graphics, float partialTick) {
+    private static void renderSuperFlightHorizon(KineticGraphics graphics, float partialTick) {
         if (!KineticFlightClient.superFlightActive() || KineticClientRuntime.guiHidden()) return;
         if (KineticClientRuntime.localPlayer() == null || KineticClientRuntime.currentScreen() != null) return;
 
-        int centerX = graphics.guiWidth() / 2;
-        int centerY = graphics.guiHeight() / 2;
+        int centerX = KineticClientRuntime.guiScaledWidth() / 2;
+        int centerY = KineticClientRuntime.guiScaledHeight() / 2;
         float roll = KineticFlightClient.superFlightRoll(partialTick);
         boolean level = Math.abs(Mth.wrapDegrees(roll)) <= 1.0F;
 
         int fixedColor = level ? 0xFF55FF55 : 0xFFFFFFFF;
         int movingColor = level ? 0xFF55FF55 : 0xFFFFFF55;
 
-        PoseStack pose = graphics.pose();
-
-        pose.pushPose();
-        pose.translate(centerX, centerY, 0.0F);
+        graphics.push();
+        graphics.translate(centerX, centerY);
 
         graphics.fill(-20, 0, -6, 1, fixedColor);
         graphics.fill(6, 0, 20, 1, fixedColor);
 
-        pose.popPose();
+        graphics.pop();
 
-        pose.pushPose();
-        pose.translate(centerX, centerY, 0.0F);
-        pose.mulPose(Axis.ZP.rotationDegrees(-roll));
+        graphics.push();
+        graphics.translate(centerX, centerY);
+        graphics.rotate(-roll);
 
         graphics.fill(-13, 0, -4, 1, movingColor);
         graphics.fill(4, 0, 13, 1, movingColor);
 
-        pose.popPose();
+        graphics.pop();
     }
 
     private static void onCameraAngles(KineticClientEvents.CameraAnglesContext context) {

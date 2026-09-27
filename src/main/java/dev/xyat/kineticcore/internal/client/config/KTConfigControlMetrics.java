@@ -3,7 +3,7 @@ package dev.xyat.kineticcore.internal.client.config;
 import dev.xyat.kineticcore.api.config.client.*;
 
 import net.minecraft.client.gui.Font;
-import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields;
+import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticNumericFields;
 
 final class KTConfigControlMetrics {
     static final int CONTROL_RIGHT = 612;

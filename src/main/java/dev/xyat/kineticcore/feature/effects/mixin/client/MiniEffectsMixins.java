@@ -7,7 +7,7 @@ import dev.xyat.kineticcore.feature.effects.client.MiniEffectsFeature;
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.api.minecraft.MinecraftKeys;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.EffectRenderingInventoryScreen;
@@ -120,12 +120,12 @@ public class MiniEffectsMixins {
                         yOffset = -10;
                         String s = Integer.toString(effects - bad);
                         var font = KineticClientRuntime.font();
-                        guiGraphics.drawString(font, s, x + 22 - font.width(s), y + 14, GuiTheme.current().text());
+                        guiGraphics.drawString(font, s, x + 22 - font.width(s), y + 14, KineticTheme.current().text());
                     }
                     if (bad > 0) {
                         String s = Integer.toString(bad);
                         var font = KineticClientRuntime.font();
-                        guiGraphics.drawString(font, s, x + 22 - font.width(s), y + 14 + yOffset, GuiTheme.current().danger());
+                        guiGraphics.drawString(font, s, x + 22 - font.width(s), y + 14 + yOffset, KineticTheme.current().danger());
                     }
                     poseStack.popPose();
                     ci.cancel();
@@ -185,9 +185,9 @@ public class MiniEffectsMixins {
 
             if (fullWidth) {
                 Component name = minieffects$getEffectName(effect);
-                guiGraphics.drawString(KineticClientRuntime.font(), name, x + 28, y + 6, GuiTheme.current().text());
+                guiGraphics.drawString(KineticClientRuntime.font(), name, x + 28, y + 6, KineticTheme.current().text());
                 String duration = minieffects$getDurationText(effect);
-                guiGraphics.drawString(KineticClientRuntime.font(), duration, x + 28, y + 6 + 10, GuiTheme.current().mutedText());
+                guiGraphics.drawString(KineticClientRuntime.font(), duration, x + 28, y + 6 + 10, KineticTheme.current().mutedText());
             }
         }
 
@@ -316,16 +316,6 @@ public class MiniEffectsMixins {
             }
             int duration = instance.getDuration();
             cir.setReturnValue(duration > 20 ? 1.0F : duration * 0.05F);
-        }
-    }
-
-    @Mixin(targets = "mezz.jei.library.plugins.vanilla.gui.InventoryEffectRendererGuiHandler", remap = false)
-    public static class InventoryEffectRendererGuiHandlerMixin {
-        @Inject(method = "getGuiExtraAreas(Lnet/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen;)Ljava/util/List;", at = @At("HEAD"), cancellable = true, require = 0)
-        private void getGuiExtraAreas(EffectRenderingInventoryScreen<?> containerScreen, CallbackInfoReturnable<List<Rect2i>> ci) {
-            if (containerScreen instanceof EffectAreaProvider getter) {
-                ci.setReturnValue(getter.kineticcore$effectAreas());
-            }
         }
     }
 }

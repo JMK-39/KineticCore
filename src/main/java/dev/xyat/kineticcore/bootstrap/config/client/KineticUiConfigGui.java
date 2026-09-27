@@ -1,6 +1,6 @@
 package dev.xyat.kineticcore.bootstrap.config.client;
 
-import dev.xyat.kineticcore.api.client.widget.scroll.KineticScrollSettings;
+import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollSettings;
 import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.text.KineticI18n;

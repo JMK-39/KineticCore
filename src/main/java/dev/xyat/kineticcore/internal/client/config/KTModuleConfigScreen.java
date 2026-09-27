@@ -1,19 +1,17 @@
 package dev.xyat.kineticcore.internal.client.config;
 
-import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
+import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.config.client.*;
-
-import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
-
-import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors;
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
-import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
+import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
+import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticNumericFields.NumericEditBox;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -220,7 +218,7 @@ final class KTModuleConfigScreen extends KineticScreen {
     }
 
     private <T extends AbstractWidget> T addRowScrollableWidget(T widget) {
-        if (!(widget instanceof dev.xyat.kineticcore.api.client.widget.KineticControl control)) {
+        if (!(widget instanceof dev.xyat.kineticcore.internal.client.gui.widget.InternalControl control)) {
             throw new IllegalArgumentException("Scrollable widget must be an API-created control");
         }
         addScrollableWidget(control,
@@ -250,7 +248,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                 editor = addToggleButton(
                         editorX, y, editorWidth, value,
                         booleanText(true), booleanText(false), null,
-                        next -> entry.accepts(next),
+                        entry::accepts,
                         next -> updateValidation(key, entry, next)
                 );
             }
@@ -298,7 +296,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                 );
                 box.setMaxLength(350);
                 box.setValue(rawTextValues.getOrDefault(
-                        key, dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.formatDecimal(((Number) pendingValues.get(key)).doubleValue())
+                        key, dev.xyat.kineticcore.internal.client.gui.widget.input.KineticNumericFields.formatDecimal(((Number) pendingValues.get(key)).doubleValue())
                 ));
                 box.setResponder(raw -> setParsedValue(key, entry, box.getDoubleValue(), box));
                 setParsedValue(key, entry, box.getDoubleValue(), box);
@@ -307,7 +305,7 @@ final class KTModuleConfigScreen extends KineticScreen {
             case STRING -> {
                 KineticEditBox box = addTextField(
                         editorX, y, editorWidth, entry.label(), null,
-                        value -> entry.accepts(value), null
+                        entry::accepts, null
                 );
                 box.setMaxLength(32767);
                 box.setValue(String.valueOf(pendingValues.get(key)));
@@ -326,7 +324,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                 String current = String.valueOf(pendingValues.get(key));
                 editor = addDropdown(
                         editorX, y, editorWidth,
-                        choiceOptions.stream().map(option -> new dev.xyat.kineticcore.api.client.widget.selection.KineticDropdowns.Option(
+                        choiceOptions.stream().map(option -> new dev.xyat.kineticcore.api.client.gui.widget.KineticDropdown.Option(
                                 option.value(), option.translation(), option.tooltip()
                         )).toList(),
                         current, null,
@@ -352,7 +350,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                         editorX, y, editorWidth, currentColor,
                         Component.literal(formatColor(currentColor)), null,
                         () -> KineticSelectors.openColorPicker(
-                                this, entry.label(), currentColor,
+                                entry.label(), currentColor,
                                 selected -> {
                                     updateValidation(key, entry, selected & 0xFFFFFF);
                                     rawTextValues.remove(key);
@@ -378,10 +376,10 @@ final class KTModuleConfigScreen extends KineticScreen {
             editorTooltip = entry.tooltip();
         }
         editor.active = editable;
-        if (editor instanceof dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton stateButton) {
+        if (editor instanceof dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.StateButton stateButton) {
             stateButton.setError(invalidEntries.contains(key));
         }
-        if (editor instanceof dev.xyat.kineticcore.api.client.widget.KineticControl control) {
+        if (editor instanceof dev.xyat.kineticcore.internal.client.gui.widget.InternalControl control) {
             registerWidgetTooltip(control, editorTooltip);
         }
         addRowScrollableWidget(editor);
@@ -493,7 +491,6 @@ final class KTModuleConfigScreen extends KineticScreen {
         if (entry.type() == KTConfigEntry.Type.ENTITY_LIST) {
             List<String> entityIds = values.stream().map(String::valueOf).toList();
             KineticSelectors.openEntitySelector(
-                    this,
                     entry.label(),
                     entityIds,
                     result -> updateValidationAndRebuild(
@@ -510,7 +507,6 @@ final class KTModuleConfigScreen extends KineticScreen {
                     ? KineticSelectors.ItemListMode.ITEMS_ONLY
                     : KineticSelectors.ItemListMode.ITEMS_TAGS_MODS;
             KineticSelectors.openItemListEditor(
-                    this,
                     entry.label(),
                     itemRules,
                     mode,
@@ -952,7 +948,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                     if (shouldShowImmediateSavedToast(outcome)) showSavedToast();
                     navigateBack();
                 },
-                () -> navigateBack()
+                this::navigateBack
         );
         return true;
     }

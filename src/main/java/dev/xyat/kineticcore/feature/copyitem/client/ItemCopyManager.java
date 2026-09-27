@@ -1,16 +1,15 @@
 package dev.xyat.kineticcore.feature.copyitem.client;
 
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
-import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.tooltip.KineticItemTooltips;
 import dev.xyat.kineticcore.api.minecraft.MinecraftContainers;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.runtime.KineticFeatures;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
-import dev.xyat.kineticcore.feature.copyitem.compat.jei.ItemCopyJeiPlugin;
+import dev.xyat.kineticcore.api.client.item.KineticHoveredItems;
 import net.minecraft.Util;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -72,13 +71,13 @@ public final class ItemCopyManager {
         if (stack.isEmpty()) return false;
 
         ItemDetailPrinter.showItemInfo(player, stack);
-        KineticOverlays.toast(null, KineticText.translatable("msg.kineticcore.copyitem.copy.chat_output.success"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
+        KineticOverlays.toast(null, KineticI18n.translatable("msg.kineticcore.copyitem.copy.chat_output.success"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
         return true;
     }
 
     private static ItemStack resolveHoveredStack(Screen screen) {
-        ItemStack jeiStack = getJeiHoveredStack();
-        if (!jeiStack.isEmpty()) return jeiStack;
+        ItemStack providedStack = KineticHoveredItems.resolve();
+        if (!providedStack.isEmpty()) return providedStack;
 
         ItemStack containerStack = getContainerHoveredStack(screen);
         if (!containerStack.isEmpty()) return containerStack;
@@ -88,14 +87,6 @@ public final class ItemCopyManager {
         }
 
         return ItemStack.EMPTY;
-    }
-
-    private static ItemStack getJeiHoveredStack() {
-        if (!KineticPlatform.isModLoaded("jei")) {
-            return ItemStack.EMPTY;
-        }
-
-        return ItemCopyJeiPlugin.getHoveredItemStack();
     }
 
     private static ItemStack getContainerHoveredStack(Screen screen) {
@@ -165,6 +156,6 @@ public final class ItemCopyManager {
         }
 
         KineticClientRuntime.setClipboard(result);
-        KineticOverlays.toast(null, KineticText.translatable("msg.kineticcore.copyitem.copy.item_id.success", Component.literal(result)), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
+        KineticOverlays.toast(null, KineticI18n.translatable("msg.kineticcore.copyitem.copy.item_id.success", Component.literal(result)), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
     }
 }

@@ -1,13 +1,15 @@
 package dev.xyat.kineticcore.internal.client.config;
 
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
+
 import dev.xyat.kineticcore.api.config.client.*;
 
-import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
-import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
+import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
+import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
+import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
@@ -120,7 +122,7 @@ final class KTConfigListScreen extends KineticScreen {
 
     private <T extends AbstractWidget> T addListScrollableWidget(T widget) {
         listWidgets.add(widget);
-        if (!(widget instanceof dev.xyat.kineticcore.api.client.widget.KineticControl control)) {
+        if (!(widget instanceof dev.xyat.kineticcore.internal.client.gui.widget.InternalControl control)) {
             throw new IllegalArgumentException("Scrollable widget must be an API-created control");
         }
         addScrollableWidget(control,
@@ -254,7 +256,7 @@ final class KTConfigListScreen extends KineticScreen {
 
     private void renderSnapshotButton(GuiGraphics graphics, int x, int y, int width, Component label, boolean lifted) {
         GuiTheme.stateSurface(graphics, x, y, width, 20,
-                GuiTheme.Surface.PANEL_ALT, false, lifted, false);
+                KineticTheme.Surface.PANEL_ALT, false, lifted, false);
         graphics.drawCenteredString(font, label, x + width / 2, y + 6, GuiTheme.current().text());
     }
 
@@ -269,7 +271,7 @@ final class KTConfigListScreen extends KineticScreen {
         int dx = rowX - LIST_X;
         int rowWidth = ROW_RIGHT - LIST_X - 4;
         GuiTheme.stateSurface(graphics, rowX + 2, y + 1, rowWidth, ROW_HEIGHT - 2,
-                lifted ? GuiTheme.Surface.PANEL_ALT : GuiTheme.Surface.PANEL, false, lifted, false);
+                lifted ? KineticTheme.Surface.PANEL_ALT : KineticTheme.Surface.PANEL, false, lifted, false);
         graphics.drawString(
                 font,
                 Integer.toString(rank + 1),
@@ -279,7 +281,7 @@ final class KTConfigListScreen extends KineticScreen {
                 false
         );
         GuiTheme.stateSurface(graphics, EDIT_X + dx, y + 4, EDIT_WIDTH, 20,
-                GuiTheme.Surface.FIELD, false, lifted, false);
+                KineticTheme.Surface.FIELD, false, lifted, false);
         KineticText.drawScrollingLeft(
                 graphics,
                 font,
@@ -323,7 +325,7 @@ final class KTConfigListScreen extends KineticScreen {
             if (gapY + ROW_HEIGHT > LIST_Y && gapY < LIST_Y + LIST_HEIGHT) {
                 GuiTheme.stateSurface(graphics, LIST_X + 2, gapY + 1,
                         ROW_RIGHT - LIST_X - 4, ROW_HEIGHT - 2,
-                        GuiTheme.Surface.FIELD, true, false, false);
+                        KineticTheme.Surface.FIELD, true, false, false);
             }
         } finally {
             disableUiScissor(graphics);

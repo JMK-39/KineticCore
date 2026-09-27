@@ -1,6 +1,6 @@
 package dev.xyat.kineticcore.internal.client.config;
 
-import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 import net.minecraft.network.chat.Component;
 

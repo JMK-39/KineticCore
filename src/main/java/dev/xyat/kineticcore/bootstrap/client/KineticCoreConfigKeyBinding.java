@@ -27,7 +27,7 @@ public final class KineticCoreConfigKeyBinding {
                 || KineticClientRuntime.currentScreen() != null) {
             return false;
         }
-        KineticClientRuntime.openScreen(KTConfigApi.createIndexScreen(null));
+        KTConfigApi.openIndex();
         return true;
     }
 }

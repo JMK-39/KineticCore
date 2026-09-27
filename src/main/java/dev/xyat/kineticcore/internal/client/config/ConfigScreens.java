@@ -37,4 +37,24 @@ public final class ConfigScreens {
             moduleScreen.serverSnapshotUpdated(pageId);
         }
     }
+
+    /** Refreshes the given screen and every navigation ancestor that is a Kinetic config screen. */
+    public static void refreshNavigationChain(Screen screen) {
+        java.util.Set<Screen> seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        Screen current = screen;
+        while (current != null && seen.add(current)) {
+            refreshFromSource(current);
+            current = dev.xyat.kineticcore.internal.client.screen.GuiSessionRuntime.navigationParent(current);
+        }
+    }
+
+    /** Creates the owner-scoped hub containing registered pages whose ids use the owner namespace. */
+    public static Screen createOwnerFor(Screen parent, String ownerModId) {
+        String prefix = java.util.Objects.requireNonNull(ownerModId, "ownerModId") + ":";
+        java.util.List<dev.xyat.kineticcore.api.config.client.KTConfigPage> owned =
+                dev.xyat.kineticcore.api.config.client.KTConfigApi.pages().stream()
+                        .filter(page -> page.id().startsWith(prefix))
+                        .toList();
+        return createOwner(parent, ownerModId, owned);
+    }
 }

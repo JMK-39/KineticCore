@@ -1,7 +1,7 @@
 package dev.xyat.kineticcore.feature.attribute.config;
 
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
-import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import dev.xyat.kineticcore.api.config.client.KTConfigScope;
@@ -35,27 +35,27 @@ public final class AttributeConfigGui {
 
         KTConfigPage page = KTConfigPage.builder(
                         PAGE_ID,
-                        KineticText.translatable("cfg.kineticcore.attribute.title")
+                        KineticI18n.translatable("cfg.kineticcore.attribute.title")
                 )
                 .scope(KTConfigScope.SERVER_AUTHORITATIVE)
                 .serverManaged()
-                .pageDescription(KineticText.translatable("cfg.kineticcore.attribute.description"))
+                .pageDescription(KineticI18n.translatable("cfg.kineticcore.attribute.description"))
                 .applyTiming(KTConfigPage.ApplyTiming.RESTART_GAME)
-                .applyNotice(KineticText.translatable("cfg.kineticcore.attribute.restart_notice"))
+                .applyNotice(KineticI18n.translatable("cfg.kineticcore.attribute.restart_notice"))
                 .booleanValue(
                         "auto_scan",
-                        KineticText.translatable("cfg.kineticcore.attribute.auto_scan"),
+                        KineticI18n.translatable("cfg.kineticcore.attribute.auto_scan"),
                         AttributeConfig::isAutoScanEnabled,
                         AttributeConfig::setAutoScanEnabled,
                         true,
-                        KineticText.translatable("cfg.kineticcore.attribute.auto_scan.tooltip")
+                        KineticI18n.translatable("cfg.kineticcore.attribute.auto_scan.tooltip")
                 )
-                .description(KineticText.translatable("cfg.kineticcore.attribute.restart_notice"))
+                .description(KineticI18n.translatable("cfg.kineticcore.attribute.restart_notice"))
                 .action(
                         "edit_attributes",
-                        KineticText.translatable("cfg.kineticcore.attribute.edit"),
-                        KTConfigApi.screenAction(parent -> KTConfigApi.createPageScreen(parent, buildAttributeEditorPage())),
-                        KineticText.translatable("cfg.kineticcore.attribute.edit.tooltip")
+                        KineticI18n.translatable("cfg.kineticcore.attribute.edit"),
+                        KTConfigApi.configPageAction(AttributeConfigGui::buildAttributeEditorPage),
+                        KineticI18n.translatable("cfg.kineticcore.attribute.edit.tooltip")
                 )
                 .build();
 
@@ -66,13 +66,13 @@ public final class AttributeConfigGui {
     private static KTConfigPage buildAttributeEditorPage() {
         KTConfigPage.Builder page = KTConfigPage.builder(
                         PAGE_ID + "/editor",
-                        KineticText.translatable("cfg.kineticcore.attribute.section.attributes")
+                        KineticI18n.translatable("cfg.kineticcore.attribute.section.attributes")
                 )
                 .scope(KTConfigScope.SERVER_AUTHORITATIVE)
                 .serverManaged()
-                .pageDescription(KineticText.translatable("cfg.kineticcore.attribute.description"))
+                .pageDescription(KineticI18n.translatable("cfg.kineticcore.attribute.description"))
                 .applyTiming(KTConfigPage.ApplyTiming.RESTART_GAME)
-                .applyNotice(KineticText.translatable("cfg.kineticcore.attribute.restart_notice"));
+                .applyNotice(KineticI18n.translatable("cfg.kineticcore.attribute.restart_notice"));
 
         for (Map.Entry<ResourceKey<Attribute>, Attribute> entry : sortedRangedAttributes()) {
             ResourceLocation id = entry.getKey().location();
@@ -80,18 +80,18 @@ public final class AttributeConfigGui {
             AttributeConfig.AttributeSettings defaults = AttributeConfig.getDefaultSettings(id);
             AttributeConfig.AttributeSettings current = AttributeConfig.getAttributeSettings(id);
             String entryPrefix = AttributeConfig.stableEntryPrefix(id);
-            Component displayName = KineticText.translatable(attribute.getDescriptionId());
+            Component displayName = KineticI18n.translatable(attribute.getDescriptionId());
 
             page.booleanValue(
                     entryPrefix + "_enabled",
-                    KineticText.translatable(
+                    KineticI18n.translatable(
                             "cfg.kineticcore.attribute.enabled",
                             displayName
                     ),
                     () -> AttributeConfig.getAttributeSettings(id).enabled(),
                     value -> AttributeConfig.setAttributeEnabled(id, value),
                     defaults.enabled(),
-                    KineticText.translatable(
+                    KineticI18n.translatable(
                             "cfg.kineticcore.attribute.enabled.tooltip",
                             Component.literal(id.toString())
                     )
@@ -119,11 +119,11 @@ public final class AttributeConfigGui {
     ) {
         String suffix = minimum ? "minimum" : "maximum";
         double defaultValue = minimum ? defaults.minimum() : defaults.maximum();
-        Component label = KineticText.translatable(
+        Component label = KineticI18n.translatable(
                 minimum ? "cfg.kineticcore.attribute.minimum" : "cfg.kineticcore.attribute.maximum",
                 displayName
         );
-        Component tooltip = KineticText.translatable(
+        Component tooltip = KineticI18n.translatable(
                 minimum ? "cfg.kineticcore.attribute.minimum.tooltip" : "cfg.kineticcore.attribute.maximum.tooltip",
                 Component.literal(id.toString())
         );
@@ -139,7 +139,7 @@ public final class AttributeConfigGui {
                     else AttributeConfig.setAttributeMaximumText(id, value);
                 },
                 AttributeConfig.formatEditableBoundary(defaultValue),
-                tooltip.copy().append("\n").append(KineticText.translatable(
+                tooltip.copy().append("\n").append(KineticI18n.translatable(
                         "cfg.kineticcore.attribute.infinity.tooltip"))
         );
     }

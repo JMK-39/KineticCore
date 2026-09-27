@@ -1,7 +1,7 @@
 package dev.xyat.kineticcore.feature.flight.mixin.client;
 
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.client.input.KineticCameraInput;
-import dev.xyat.kineticcore.api.client.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -221,7 +221,7 @@ public class FlightClientMixins {
                 if (Double.compare(newMult, currentMult) != 0) {
                     KineticFlightClient.setSuperFlightSelectedSpeedMultiplier(newMult);
                     SuperFlightClientConfig.setSelectedSpeed(newMult);
-                    player.displayClientMessage(KineticText.translatable(
+                    player.displayClientMessage(KineticI18n.translatable(
                             "msg.kineticcore.superflight.speed",
                             Component.literal(String.valueOf((int) newMult))
                     ), true);
@@ -242,7 +242,7 @@ public class FlightClientMixins {
                     player.onUpdateAbilities();
 
                     String displayVal = (newMult == (int)newMult) ? String.valueOf((int)newMult) : String.format("%.1f", newMult);
-                    player.displayClientMessage(KineticText.translatable("gui.kineticcore.flying.speed", Component.literal(displayVal)), true);
+                    player.displayClientMessage(KineticI18n.translatable("gui.kineticcore.flying.speed", Component.literal(displayVal)), true);
                 }
                 ci.cancel();
             }

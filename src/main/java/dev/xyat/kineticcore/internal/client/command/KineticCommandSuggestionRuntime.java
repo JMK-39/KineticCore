@@ -1,6 +1,6 @@
 package dev.xyat.kineticcore.internal.client.command;
 
-import dev.xyat.kineticcore.api.client.command.KineticCommandSuggestions;
+import dev.xyat.kineticcore.internal.client.gui.command.KineticCommandSuggestions;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.CommandSuggestions;

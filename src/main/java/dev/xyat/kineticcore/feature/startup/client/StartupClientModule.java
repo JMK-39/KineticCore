@@ -1,12 +1,12 @@
 package dev.xyat.kineticcore.feature.startup.client;
 
-import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.feature.startup.config.StartupConfig;
 import net.minecraft.Util;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
@@ -33,21 +33,20 @@ public final class StartupClientModule {
         totalStartupTime = System.currentTimeMillis() - jvmStartTime;
     }
 
-    private static void onScreenRender(Screen screen, GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    private static void onScreenRender(Screen screen, KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (!(screen instanceof TitleScreen)) return;
-        var font = KineticClientRuntime.font();
         int currentY = StartupConfig.anchorY();
         int spacing = 2;
 
         if (StartupConfig.showLoginInfo()) {
-            graphics.drawString(
-                    font,
-                    KineticText.translatable("msg.kineticcore.startup.account_id", Component.literal(KineticClientRuntime.username())),
+            graphics.text(
+                    KineticI18n.translatable("msg.kineticcore.startup.account_id", Component.literal(KineticClientRuntime.username())),
                     StartupConfig.anchorX(),
                     currentY,
-                    GuiTheme.current().text()
+                    KineticTheme.current().text(),
+                    true
             );
-            currentY += font.lineHeight + spacing;
+            currentY += graphics.lineHeight() + spacing;
         }
 
         if (!StartupConfig.showStartupTime() || totalStartupTime < 0L) return;
@@ -62,10 +61,9 @@ public final class StartupClientModule {
         if (alpha * 255.0F <= 4.0F) return;
 
         String seconds = String.format(java.util.Locale.ROOT, "%.2f", totalStartupTime / 1000.0D);
-        GuiTheme.alphaText(
+        KineticTheme.alphaText(
                 graphics,
-                font,
-                KineticText.translatable("msg.kineticcore.startup.startup_time", Component.literal(seconds)),
+                KineticI18n.translatable("msg.kineticcore.startup.startup_time", Component.literal(seconds)),
                 StartupConfig.anchorX(),
                 currentY,
                 alpha

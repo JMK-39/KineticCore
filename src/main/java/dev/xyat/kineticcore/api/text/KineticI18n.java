@@ -36,6 +36,14 @@ public final class KineticI18n {
     }
 
     /**
+     * 当前客户端语言是否提供该翻译键（仅客户端可用）。
+     * Whether the current client language provides the translation key (client side only).
+     */
+    public static boolean hasTranslation(String key) {
+        return dev.xyat.kineticcore.internal.client.text.KineticTextRuntime.hasTranslation(key);
+    }
+
+    /**
      * Performs the styled API operation.
      */
     public static MutableComponent styled(String styleKey, Object value) {

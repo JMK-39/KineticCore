@@ -1,15 +1,18 @@
 package dev.xyat.kineticcore.api.client.event;
 
+import dev.xyat.kineticcore.api.client.gui.widget.KineticCustomControl;
+import dev.xyat.kineticcore.api.client.gui.widget.KineticControl;
+import dev.xyat.kineticcore.api.client.gui.widget.KineticButton;
 import dev.xyat.kineticcore.api.event.KineticEventSubscription;
-import dev.xyat.kineticcore.api.client.widget.KineticControl;
 import dev.xyat.kineticcore.internal.client.widget.KineticControlBridge;
 import dev.xyat.kineticcore.internal.client.KineticClientEventRuntime;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.gui.GuiGraphics;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -267,15 +270,35 @@ public final class KineticClientEvents {
             return true;
         }
 
-        /** Adds one standard Kinetic control to this vanilla or third-party screen. */
-        default <T extends KineticControl> T addControl(T control) {
-            if (control != null) addListener(KineticControlBridge.widget(control));
+        /**
+         * 向原版/第三方界面添加一个 Kinetic 按钮。注入的控件绘制在界面之上、先于界面接收鼠标，且不会抢走界面的键盘焦点。
+         * Adds a Kinetic button to a vanilla or third-party screen. Injected controls draw above the screen, get mouse
+         * input before it, and never take the screen's keyboard focus.
+         */
+        default KineticButton addButton(int x, int y, int width, Component text, Runnable onClick) {
+            var button = dev.xyat.kineticcore.internal.client.gui.widget.KineticWidgets.createButton(
+                    x, y, width, text, null, onClick);
+            dev.xyat.kineticcore.internal.client.ScreenOverlayControls.add(screen(), button);
+            return button;
+        }
+
+        /**
+         * 向原版/第三方界面添加一个自绘控件（该界面不会调用其 onTick、键盘钩子）。
+         * Adds a custom control to a vanilla or third-party screen (its onTick and key hooks are not called here).
+         */
+        default <T extends KineticCustomControl> T addControl(T control) {
+            if (control != null) {
+                dev.xyat.kineticcore.internal.client.ScreenOverlayControls.add(screen(),
+                        dev.xyat.kineticcore.internal.client.gui.page.CustomControlSupport.adapt(control));
+            }
             return control;
         }
 
-        /** Removes one standard Kinetic control from this vanilla or third-party screen. */
+        /** 移除此前添加的控件 / Removes a control previously added through this context. */
         default void removeControl(KineticControl control) {
-            if (control != null) removeListener(KineticControlBridge.widget(control));
+            if (control == null) return;
+            dev.xyat.kineticcore.internal.client.ScreenOverlayControls.remove(screen(), KineticControlBridge.widget(
+                    dev.xyat.kineticcore.internal.client.gui.page.CustomControlSupport.widget(control)));
         }
 
         /** Adds one raw listener only for vanilla or third-party listener types without a Kinetic control equivalent. */
@@ -294,7 +317,7 @@ public final class KineticClientEvents {
     @FunctionalInterface
     public interface ScreenRenderHandler {
         /** Renders custom content before or after the supplied Screen using current mouse coordinates. */
-        void render(Screen screen, GuiGraphics graphics, int mouseX, int mouseY, float partialTick);
+        void render(Screen screen, KineticGraphics graphics, int mouseX, int mouseY, float partialTick);
     }
 
     /** Context supplied to screen mouse button handlers dispatched by Kinetic Client Events. */
@@ -327,7 +350,7 @@ public final class KineticClientEvents {
     @FunctionalInterface
     public interface HudRenderHandler {
         /** Renders custom HUD content at the selected Kinetic HUD stage. */
-        void render(GuiGraphics graphics, float partialTick);
+        void render(KineticGraphics graphics, float partialTick);
     }
 
     /** Mutable context fired while the client is about to render the in-block screen effect. */

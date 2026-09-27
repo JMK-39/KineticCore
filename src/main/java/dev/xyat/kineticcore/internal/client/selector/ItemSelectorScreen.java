@@ -1,20 +1,20 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
-import dev.xyat.kineticcore.api.client.text.KineticText;
-import dev.xyat.kineticcore.api.client.screen.KineticScreen;
+import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
+
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
+import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
 import dev.xyat.kineticcore.api.client.search.KineticItemSearch;
-import dev.xyat.kineticcore.api.client.selector.KineticSelectors.ItemSelectorOptions;
-import dev.xyat.kineticcore.api.client.selector.KineticSelectors.ItemSelectorPreset;
-import dev.xyat.kineticcore.api.client.selector.KineticSelectors.ItemSource;
-import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.widget.input.KineticAutoComplete;
+import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors.ItemSelectorOptions;
+import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors.ItemSelectorPreset;
+import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors.ItemSource;
+import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
+import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticAutoComplete;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
-import dev.xyat.kineticcore.internal.compat.curios.KineticCuriosInventoryBridge;
-import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll.GridScrollController;
+import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
 
 import net.minecraft.client.gui.GuiGraphics;
-import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
+import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.StateButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
@@ -159,7 +159,8 @@ public class ItemSelectorScreen extends KineticScreen {
     private final List<String> allTags = new ArrayList<>();
     private final List<CategoryEntry> categoryEntries = new ArrayList<>();
     private final List<StateButton> categoryButtons = new ArrayList<>();
-    private final GridScrollController categoryScroll = new GridScrollController();
+    private final GridScrollController categoryScroll = new GridScrollController()
+            .bindSelection(this::activeCategoryIndex);
     private String categoryKey = rememberedCategoryKey;
 
     private String activeFilterValue = rememberedFilterValue;
@@ -224,9 +225,7 @@ public class ItemSelectorScreen extends KineticScreen {
         player.getArmorSlots().forEach(this::addInventoryStack);
         addInventoryStack(player.getOffhandItem());
 
-        if (KineticPlatform.isModLoaded("curios")) {
-            KineticCuriosInventoryBridge.appendPlayerStacks(player, this::addInventoryStack);
-        }
+        ItemSelectorInventorySources.collect(player, this::addInventoryStack);
     }
 
     private void addInventoryStack(ItemStack stack) {
@@ -355,17 +354,17 @@ public class ItemSelectorScreen extends KineticScreen {
         refreshDisplay();
     }
 
-    private List<KineticAutoComplete.Suggestion> autoCompleteSuggestions() {
+    private List<KineticSuggestion> autoCompleteSuggestions() {
         String current = searchBox == null ? searchText : searchBox.getValue();
         String trimmed = current == null ? "" : current.trim();
         if (trimmed.startsWith("@")) {
             return allMods.stream()
-                    .map(mod -> new KineticAutoComplete.Suggestion("@" + mod, Component.empty()))
+                    .map(mod -> new KineticSuggestion("@" + mod, Component.empty()))
                     .toList();
         }
         if (trimmed.startsWith("#")) {
             return allTags.stream()
-                    .map(tag -> new KineticAutoComplete.Suggestion("#" + tag, Component.empty()))
+                    .map(tag -> new KineticSuggestion("#" + tag, Component.empty()))
                     .toList();
         }
         return List.of();
@@ -824,7 +823,16 @@ public class ItemSelectorScreen extends KineticScreen {
             button.setText(entry.label());
             button.setEnabled(entry.selectable());
             button.setSelected(entry.selectable() && isCategoryActive(entry));
+            button.setInvertedFlash(categoryScroll.isSelectionFlashInverted(index));
         }
+    }
+
+    private int activeCategoryIndex() {
+        for (int index = 0; index < categoryEntries.size(); index++) {
+            CategoryEntry entry = categoryEntries.get(index);
+            if (entry.selectable() && isCategoryActive(entry)) return index;
+        }
+        return -1;
     }
 
     private void selectCategoryIndex(int index) {

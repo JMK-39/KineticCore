@@ -9,7 +9,7 @@ import dev.xyat.kineticcore.internal.config.ServerConfigNetwork;
 import dev.xyat.kineticcore.internal.client.KineticClientEventRuntime;
 
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
-import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
