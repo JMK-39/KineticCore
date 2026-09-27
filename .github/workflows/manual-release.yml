@@ -29,10 +29,9 @@ jobs:
         with:
           gradle-version: '8.8'
 
-      - name: Validate version and reject duplicate release
+      - name: Validate version format
         env:
           VERSION: ${{ inputs.mod_version }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
           from datetime import datetime
@@ -43,15 +42,6 @@ jobs:
               raise SystemExit("Version must use YY.M.D without leading zeroes, such as 26.9.25")
           datetime.strptime(version, "%y.%m.%d")
           PY
-          tag="v$VERSION"
-          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release $tag already exists" >&2
-            exit 1
-          fi
-          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
-            echo "Tag $tag already exists" >&2
-            exit 1
-          fi
 
       - name: Build mod JAR
         env:
@@ -71,9 +61,15 @@ jobs:
         env:
           VERSION: ${{ inputs.mod_version }}
           GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create "v$VERSION"
-          "build/release/kineticcore-$VERSION.jar"
-          --repo "$GITHUB_REPOSITORY"
-          --title "KineticCore $VERSION"
-          --generate-notes
+        run: |
+          tag="v$VERSION"
+          artifact="build/release/kineticcore-$VERSION.jar"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" "$artifact" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" "$artifact" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "KineticCore $VERSION" \
+              --generate-notes
+          fi
