@@ -2326,6 +2326,7 @@ public final class KineticWidgets {
         private final GridScrollController scroll = new GridScrollController();
         private List<ItemGridItem> items = List.of();
         private int hoveredIndex = -1;
+        private int selectedIndex = -1;
         private ItemStack hoveredStack = ItemStack.EMPTY;
         private int pendingInitialScrollOffset;
 
@@ -2353,6 +2354,12 @@ public final class KineticWidgets {
         @Override
         public void setItems(List<? extends ItemGridItem> nextItems) {
             items = nextItems == null ? List.of() : List.copyOf(nextItems);
+            if (selectedIndex < 0 || selectedIndex >= items.size()
+                    || !items.get(selectedIndex).selected()) {
+                int modelSelectedIndex = findSelectedItem();
+                if (modelSelectedIndex >= 0) selectedIndex = modelSelectedIndex;
+                else if (selectedIndex >= items.size()) selectedIndex = -1;
+            }
             refreshRange();
         }
 
@@ -2483,6 +2490,10 @@ public final class KineticWidgets {
                                     graphics, x, y, density.slotSize(), density.slotSize(), indicator
                             );
                         }
+                        if (scroll.isSelectionFlashInverted(index)) {
+                            graphics.fill(x, y, x + density.slotSize(), y + density.slotSize(), 0xFFFFFFFF);
+                            graphics.renderOutline(x, y, density.slotSize(), density.slotSize(), 0xFF000000);
+                        }
                     }
                 } finally {
                     KineticRenderRuntime.disableScissor(graphics);
@@ -2505,7 +2516,13 @@ public final class KineticWidgets {
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !visible || button != 0) return false;
+            if (!active || !visible) return false;
+            if (scroll.middleClickThumb(
+                    mouseX, mouseY, button, false,
+                    scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT,
+                    selectedIndex, Math.max(0, selectedIndex / columns() - visibleRows() / 2)
+            )) return true;
+            if (button != 0) return false;
             if (scroll.beginDrag(
                     mouseX, mouseY, scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT, 2
             )) return true;
@@ -2513,6 +2530,7 @@ public final class KineticWidgets {
             if (index < 0 || index >= items.size()) return false;
             ItemGridItem item = items.get(index);
             if (item == null || !item.active()) return false;
+            selectedIndex = index;
             if (responder != null) responder.accept(index);
             return true;
         }
@@ -2573,6 +2591,14 @@ public final class KineticWidgets {
 
         private int scrollbarX() {
             return getX() + getWidth() - SCROLLBAR_WIDTH;
+        }
+
+        private int findSelectedItem() {
+            for (int index = items.size() - 1; index >= 0; index--) {
+                ItemGridItem item = items.get(index);
+                if (item != null && item.selected()) return index;
+            }
+            return -1;
         }
 
         private static ItemStack safeStack(ItemGridItem item) {
@@ -4754,6 +4780,7 @@ public final class KineticWidgets {
         private final GridScrollController scroll = new GridScrollController();
         private final List<StateButton> rowButtons = new ArrayList<>();
         private List<ToggleItem> items = List.of();
+        private int selectedIndex = -1;
         private int hoveredIndex = -1;
         private int pendingInitialScrollOffset;
 
@@ -4777,6 +4804,12 @@ public final class KineticWidgets {
         @Override
         public void setItems(List<? extends ToggleItem> nextItems) {
             items = nextItems == null ? List.of() : List.copyOf(nextItems);
+            if (selectedIndex < 0 || selectedIndex >= items.size()
+                    || !items.get(selectedIndex).value()) {
+                int modelSelectedIndex = findSelectedItem();
+                if (modelSelectedIndex >= 0) selectedIndex = modelSelectedIndex;
+                else if (selectedIndex >= items.size()) selectedIndex = -1;
+            }
             rowButtons.clear();
             for (int index = 0; index < items.size(); index++) {
                 ToggleItem item = items.get(index);
@@ -4895,6 +4928,7 @@ public final class KineticWidgets {
                         int clippedMouseX = mouseX >= getX() && mouseX < getX() + contentWidth()
                                 ? mouseX
                                 : Integer.MIN_VALUE;
+                        button.setInvertedFlash(scroll.isSelectionFlashInverted(index));
                         button.render(graphics, clippedMouseX, mouseY, partialTick);
                     }
                 } finally {
@@ -4923,7 +4957,16 @@ public final class KineticWidgets {
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !visible || button != 0) return false;
+            if (!active || !visible) return false;
+            if (scroll.middleClickThumb(
+                    mouseX, mouseY, button, false,
+                    scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT,
+                    selectedIndex, Math.max(0, selectedIndex - visibleRows() / 2)
+            )) {
+                refreshLayout();
+                return true;
+            }
+            if (button != 0) return false;
             if (scroll.beginDrag(
                     mouseX, mouseY, scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB_HEIGHT, 2
             )) return true;
@@ -4973,7 +5016,16 @@ public final class KineticWidgets {
             requireIndex(index);
             ToggleItem item = items.get(index);
             if (item == null || !item.active()) return;
+            selectedIndex = index;
             setValueInternal(index, !item.value(), true);
+        }
+
+        private int findSelectedItem() {
+            for (int index = items.size() - 1; index >= 0; index--) {
+                ToggleItem item = items.get(index);
+                if (item != null && item.value()) return index;
+            }
+            return -1;
         }
 
         private void setValueInternal(int index, boolean value, boolean notify) {
