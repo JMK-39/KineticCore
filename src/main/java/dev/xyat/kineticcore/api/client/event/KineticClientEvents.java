@@ -4,6 +4,7 @@ import dev.xyat.kineticcore.api.client.gui.widget.KineticCustomControl;
 import dev.xyat.kineticcore.api.client.gui.widget.KineticControl;
 import dev.xyat.kineticcore.api.client.gui.widget.KineticButton;
 import dev.xyat.kineticcore.api.event.KineticEventSubscription;
+import dev.xyat.kineticcore.api.client.gui.widget.KineticTextField;
 import dev.xyat.kineticcore.internal.client.widget.KineticControlBridge;
 import dev.xyat.kineticcore.internal.client.KineticClientEventRuntime;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -294,11 +295,26 @@ public final class KineticClientEvents {
             return control;
         }
 
+        /**
+         * 向原版/第三方界面添加单行文本框。与按钮不同，文本框作为界面的普通子控件加入，以便获得键盘焦点与输入。
+         * Adds a single-line text field to a vanilla or third-party screen. Unlike buttons it joins the screen as a
+         * regular child so it can take keyboard focus and receive typing.
+         */
+        default KineticTextField addTextField(int x, int y, int width) {
+            var field = dev.xyat.kineticcore.internal.client.gui.widget.KineticWidgets.createTextField(
+                    dev.xyat.kineticcore.api.runtime.KineticClientRuntime.font(), x, y, width,
+                    Component.empty(), null, null, null);
+            addListener(field);
+            return field;
+        }
+
         /** 移除此前添加的控件 / Removes a control previously added through this context. */
         default void removeControl(KineticControl control) {
             if (control == null) return;
-            dev.xyat.kineticcore.internal.client.ScreenOverlayControls.remove(screen(), KineticControlBridge.widget(
-                    dev.xyat.kineticcore.internal.client.gui.page.CustomControlSupport.widget(control)));
+            var widget = KineticControlBridge.widget(
+                    dev.xyat.kineticcore.internal.client.gui.page.CustomControlSupport.widget(control));
+            dev.xyat.kineticcore.internal.client.ScreenOverlayControls.remove(screen(), widget);
+            if (control instanceof KineticTextField) removeListener(widget);
         }
 
         /** Adds one raw listener only for vanilla or third-party listener types without a Kinetic control equivalent. */

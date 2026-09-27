@@ -60,14 +60,17 @@ final class PageCanvasScreen extends KineticScreen implements PageHost {
 
     @Override
     protected boolean canvasMouseReleased(double mouseX, double mouseY, int button) {
-        if (super.canvasMouseReleased(mouseX, mouseY, button)) return true;
-        return access.onMouseRelease(page, InputRecords.mouse(mouseX, mouseY, button));
+        // 松开总是通知页面与控件，避免拖动在控件上松开时丢失 / Releases always reach both the page and the controls.
+        boolean pageHandled = access.onMouseRelease(page, InputRecords.mouse(mouseX, mouseY, button));
+        boolean controlHandled = super.canvasMouseReleased(mouseX, mouseY, button);
+        ui.releasePressedCustomControls(mouseX, mouseY, button);
+        return pageHandled || controlHandled;
     }
 
     @Override
     protected boolean canvasMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (super.canvasMouseDragged(mouseX, mouseY, button, dragX, dragY)) return true;
-        return access.onMouseDrag(page, InputRecords.drag(mouseX, mouseY, button, dragX, dragY));
+        if (access.onMouseDrag(page, InputRecords.drag(mouseX, mouseY, button, dragX, dragY))) return true;
+        return super.canvasMouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override

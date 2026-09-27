@@ -87,12 +87,17 @@ public final class PageContainerScreen<M extends AbstractContainerMenu> extends 
     }
 
     @Override
-    protected boolean afterMouseReleased(double mouseX, double mouseY, int button) {
-        return access.onMouseRelease(page, InputRecords.mouse(mouseX, mouseY, button));
+    protected boolean containerMouseReleased(double mouseX, double mouseY, int button) {
+        // 原版容器界面总会消费松开/拖动，页面钩子必须先于原版执行；松开同时继续交给原版。
+        // Vanilla container screens always consume release/drag, so the page hooks run first; releases still
+        // continue to vanilla afterwards.
+        access.onMouseRelease(page, InputRecords.mouse(mouseX, mouseY, button));
+        ui.releasePressedCustomControls(mouseX, mouseY, button);
+        return false;
     }
 
     @Override
-    protected boolean afterMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    protected boolean containerMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         return access.onMouseDrag(page, InputRecords.drag(mouseX, mouseY, button, dragX, dragY));
     }
 

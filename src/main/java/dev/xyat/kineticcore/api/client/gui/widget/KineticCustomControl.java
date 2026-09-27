@@ -122,6 +122,14 @@ public abstract class KineticCustomControl implements KineticControl {
     /** 绘制控件（仅在可见时调用）/ Draws the control; only called while visible. */
     protected abstract void render(KineticGraphics graphics, int mouseX, int mouseY, float partialTick);
 
+    /**
+     * 播放原版按钮点击音效，供自绘按钮在点击时调用。
+     * Plays the vanilla button click sound; call it from a self-drawn button's click handler.
+     */
+    protected static void playClickSound() {
+        dev.xyat.kineticcore.internal.client.gui.UiSounds.buttonClick();
+    }
+
     /** 控件范围内的按下 / Press inside the control. */
     protected boolean onMouseClick(MouseInput input) {
         return false;

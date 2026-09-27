@@ -48,6 +48,17 @@ public final class PageUi implements KineticUi {
     }
 
     /** Ticks registered custom controls. */
+    /**
+     * 把松开事件补发给按下后被拖出范围的自绘控件 / Delivers a release to custom controls that were pressed and then
+     * dragged outside their bounds (vanilla only notifies the child under the pointer).
+     */
+    public void releasePressedCustomControls(double mouseX, double mouseY, int button) {
+        for (CustomControlSupport.Widget widget : List.copyOf(customs)) {
+            // 鼠标下的控件由原版分发 / The control under the pointer gets the release from vanilla.
+            if (widget.isPressed(button) && !widget.isMouseOver(mouseX, mouseY)) widget.mouseReleased(mouseX, mouseY, button);
+        }
+    }
+
     public void tickCustomControls() {
         for (CustomControlSupport.Widget widget : List.copyOf(customs)) {
             CustomControlSupport.tick(widget);

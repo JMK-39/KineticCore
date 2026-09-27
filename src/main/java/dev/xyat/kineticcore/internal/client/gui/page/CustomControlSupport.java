@@ -102,6 +102,7 @@ public final class CustomControlSupport {
 
     /** Vanilla widget adapter hosting one custom control. */
     public static final class Widget extends AbstractWidget implements InternalControl {
+        private int pressedButton = -1;
         private final KineticCustomControl control;
 
         private Widget(KineticCustomControl control) {
@@ -190,14 +191,26 @@ public final class CustomControlSupport {
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             sync();
             if (!active || !visible || !isMouseOver(mouseX, mouseY)) return false;
-            return access().onMouseClick(control, InputRecords.mouse(mouseX, mouseY, button));
+            boolean handled = access().onMouseClick(control, InputRecords.mouse(mouseX, mouseY, button));
+            if (handled) pressedButton = button;
+            return handled;
         }
 
         @Override
         public boolean mouseReleased(double mouseX, double mouseY, int button) {
             sync();
+            if (button == pressedButton) pressedButton = -1;
             if (!active || !visible) return false;
             return access().onMouseRelease(control, InputRecords.mouse(mouseX, mouseY, button));
+        }
+
+        /**
+         * 按下后尚未收到松开的按键（原版只把松开发给鼠标下的子控件，拖出控件外松开会丢失）。
+         * The button pressed on this control and not yet released (vanilla only sends releases to the child under
+         * the pointer, so a release outside the control would otherwise be lost).
+         */
+        boolean isPressed(int button) {
+            return pressedButton == button;
         }
 
         @Override

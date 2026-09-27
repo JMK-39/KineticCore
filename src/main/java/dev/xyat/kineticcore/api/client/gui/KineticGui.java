@@ -11,19 +11,6 @@ import dev.xyat.kineticcore.internal.client.gui.page.PageScreens;
  * and {@link KineticPage#close()}.
  */
 public final class KineticGui {
-    /**
-     * 延迟打开页面时使用的不透明返回目标。附属只能捕获并交还给 {@link KineticGui}，不接触底层 Screen。
-     * Opaque back-navigation target for pages opened after an asynchronous round-trip. Addons only capture and
-     * return it to {@link KineticGui}; the underlying screen stays private to the core.
-     */
-    public static final class NavigationParent {
-        private final Object handle;
-
-        private NavigationParent(Object handle) {
-            this.handle = handle;
-        }
-    }
-
     private KineticGui() {
     }
 
@@ -41,28 +28,6 @@ public final class KineticGui {
      */
     public static void openChild(KineticPage page) {
         PageScreens.openChild(page);
-    }
-
-    /**
-     * 使用先前捕获的返回目标打开子页。适用于“请求服务端 → 稍后收到回包 → 再打开页面”的流程。
-     * Opens a child page with a previously captured navigation parent. Intended for request/response flows where
-     * the page is opened after an asynchronous server round-trip.
-     */
-    public static void openChild(KineticPage page, NavigationParent parent) {
-        if (parent == null) {
-            open(page);
-            return;
-        }
-        PageScreens.openChild(page, parent.handle);
-    }
-
-    /**
-     * 捕获当前界面作为稍后子页的返回目标；当前没有界面时返回 null。
-     * Captures the current screen as a future child's back-navigation target, or null when no screen is open.
-     */
-    public static NavigationParent captureNavigationParent() {
-        Object handle = PageScreens.captureNavigationParent();
-        return handle == null ? null : new NavigationParent(handle);
     }
 
     /** 关闭当前界面回到游戏 / Closes the current screen and returns to the game. */

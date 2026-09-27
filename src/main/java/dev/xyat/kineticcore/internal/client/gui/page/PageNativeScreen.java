@@ -62,12 +62,15 @@ final class PageNativeScreen extends KineticNativeScreen implements PageHost {
     }
 
     @Override
-    protected boolean afterMouseReleased(double mouseX, double mouseY, int button) {
-        return access.onMouseRelease(page, InputRecords.mouse(mouseX, mouseY, button));
+    protected boolean nativeMouseReleased(double mouseX, double mouseY, int button) {
+        // 松开总是通知页面，再继续交给控件 / Releases always reach the page, then continue to the controls.
+        access.onMouseRelease(page, InputRecords.mouse(mouseX, mouseY, button));
+        ui.releasePressedCustomControls(mouseX, mouseY, button);
+        return false;
     }
 
     @Override
-    protected boolean afterMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    protected boolean nativeMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         return access.onMouseDrag(page, InputRecords.drag(mouseX, mouseY, button, dragX, dragY));
     }
 

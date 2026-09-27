@@ -64,9 +64,6 @@ public interface KineticGraphics {
     /** 绘制物品图标 / Draws an item icon. */
     void item(ItemStack stack, int x, int y);
 
-    /** 以指定透明度绘制物品图标 / Draws an item icon with the requested opacity. */
-    void item(ItemStack stack, int x, int y, float alpha);
-
     /** 绘制无实体光照的物品图标 / Draws an item icon without entity-dependent effects. */
     void fakeItem(ItemStack stack, int x, int y);
 

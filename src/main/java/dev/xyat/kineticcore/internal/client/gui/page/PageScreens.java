@@ -42,19 +42,6 @@ public final class PageScreens {
         KineticClientRuntimeImpl.openScreen(createWithParent(page, KineticClientRuntimeImpl.currentScreen()));
     }
 
-    /** Captures the current navigation parent without exposing Screen through the public API. */
-    public static Object captureNavigationParent() {
-        return KineticClientRuntimeImpl.currentScreen();
-    }
-
-    /** Opens a child page with a previously captured navigation parent token. */
-    public static void openChild(KineticPage page, Object parentHandle) {
-        if (parentHandle != null && !(parentHandle instanceof Screen)) {
-            throw new IllegalArgumentException("Unsupported navigation parent token");
-        }
-        KineticClientRuntimeImpl.openScreen(createWithParent(page, (Screen) parentHandle));
-    }
-
     /** Returns the page hosted by a screen, or null. */
     public static KineticPage pageOf(Screen screen) {
         return screen instanceof PageHost host ? host.page() : null;

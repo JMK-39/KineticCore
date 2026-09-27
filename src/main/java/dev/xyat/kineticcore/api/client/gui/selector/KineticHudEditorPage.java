@@ -57,6 +57,23 @@ public abstract class KineticHudEditorPage extends KineticPage {
     /** 保存当前布局 / Saves the current layout. */
     protected abstract void save(HudLayout layout);
 
+    /**
+     * 绘制原版背包参考图（含随鼠标转向的玩家模型），供自定义的背包内元素位置编辑页使用。
+     * Draws the vanilla inventory reference (including the player model that follows the mouse), for custom pages
+     * that position elements inside the inventory.
+     *
+     * @param pageWidth  页面宽度 / page width ({@code width()})
+     * @param pageHeight 页面高度 / page height ({@code height()})
+     */
+    public static void renderInventoryReference(KineticGraphics graphics, int pageWidth, int pageHeight,
+                                                int mouseX, int mouseY) {
+        var player = dev.xyat.kineticcore.api.runtime.KineticClientRuntime.localPlayer();
+        if (player == null) return;
+        HudPositionEditor.renderInventoryReference(GuiGraphicsAdapter.unwrap(graphics),
+                dev.xyat.kineticcore.api.runtime.KineticClientRuntime.font(), player, pageWidth, pageHeight,
+                mouseX, mouseY);
+    }
+
     /** 最小缩放 / Minimum scale. */
     protected double minimumScale() {
         return DEFAULT_MINIMUM_SCALE;
