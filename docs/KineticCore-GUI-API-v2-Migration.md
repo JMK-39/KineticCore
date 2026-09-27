@@ -429,7 +429,7 @@ Other members:
 
 If every row is "label + toggle + action", use the built-in `ui.toggleActionList(...)` / `actionList(...)` / `multiActionList(...)` instead.
 
-A hand-written list that drew rows in `renderBackground` with a `GridScrollController` field can alternatively keep that structure: replace the field with `KineticScrollController`. The signatures are identical except that `beginDrag(mx, my, input.button(), x, y, w, h, minThumb)` now takes the `MouseButton` and no hit padding, `release(input.button())`, and `render(g, …)` takes `KineticGraphics`. Call `scroll.bindSelection(() -> selectedIndex)` once to get the middle-click jump and flash, and draw `scroll.renderSelectionFlash(g, index, x, y, w, h)` on the selected row. Prefer `KineticRowList` for new code.
+A hand-written list that drew rows in `renderBackground` with a `GridScrollController` field can alternatively keep that structure: replace the field with `KineticScrollController`. The signatures are identical except that `beginDrag(mx, my, input.button(), x, y, w, h, minThumb)` now takes the `MouseButton` (old hit padding: `beginDrag(mx, my, input.button(), x, y, w, h, minThumb, hitPadding)`), `release(input.button())`, and `render(g, …)` takes `KineticGraphics`. Call `scroll.bindSelection(() -> selectedIndex)` once to get the middle-click jump and flash, and draw `scroll.renderSelectionFlash(g, index, x, y, w, h)` on the selected row. Prefer `KineticRowList` for new code.
 
 ### 8.2 Custom controls (old external widgets, texture buttons, panels that drew and handled input)
 
