@@ -122,6 +122,19 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
     }
 
     @Override
+    public void item(ItemStack stack, int x, int y, float alpha) {
+        if (stack == null || stack.isEmpty()) return;
+        float safeAlpha = Float.isFinite(alpha) ? Math.max(0.0F, Math.min(1.0F, alpha)) : 1.0F;
+        if (safeAlpha <= 0.0F) return;
+        graphics.setColor(1.0F, 1.0F, 1.0F, safeAlpha);
+        try {
+            graphics.renderItem(stack, x, y);
+        } finally {
+            graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+        }
+    }
+
+    @Override
     public void fakeItem(ItemStack stack, int x, int y) {
         if (stack != null && !stack.isEmpty()) graphics.renderFakeItem(stack, x, y);
     }
