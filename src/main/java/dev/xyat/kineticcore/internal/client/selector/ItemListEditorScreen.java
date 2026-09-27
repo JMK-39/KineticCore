@@ -30,10 +30,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 public final class ItemListEditorScreen extends KineticScreen {
-    public Screen getParent() {
-        return parent;
-    }
-
     public enum SelectionMode {
         ITEMS_ONLY,
         ITEMS_TAGS_MODS

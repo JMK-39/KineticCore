@@ -37,10 +37,6 @@ final class KTConfigIndexScreen extends KineticScreen {
     private static final int MODULE_NAME_COLOR = 0xFFFFAA00;
     private static final int MODULE_FUNCTION_COLOR = 0xFF55FFFF;
 
-    public Screen getParent() {
-        return parent;
-    }
-
     private record ModuleGroup(
             String namespace,
             Component title,
@@ -63,6 +59,7 @@ final class KTConfigIndexScreen extends KineticScreen {
     private final GridScrollController listScroll = new GridScrollController();
 
     private List<ModuleGroup> registeredModules = List.of();
+    private KineticEditBox searchBox;
     private String searchQuery = "";
     private ModuleGroup hoveredModule;
 
@@ -89,7 +86,7 @@ final class KTConfigIndexScreen extends KineticScreen {
         moduleModel.refresh(searchQuery);
         updateScrollRange();
 
-        KineticEditBox searchBox = addTextField(
+        searchBox = addTextField(
                 LIST_X,
                 48,
                 430,
@@ -388,7 +385,8 @@ final class KTConfigIndexScreen extends KineticScreen {
                 if (entry.tooltip() != null) data.append(' ').append(entry.tooltip().getString());
             }
         }
-        return data.toString();
+        String raw = data.toString();
+        return raw;
     }
 
     @Override

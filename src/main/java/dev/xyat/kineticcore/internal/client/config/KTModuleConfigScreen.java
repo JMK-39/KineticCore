@@ -1,9 +1,13 @@
 package dev.xyat.kineticcore.internal.client.config;
 
+import dev.xyat.kineticcore.api.client.gui.widget.KineticDropdown;
+
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.config.client.*;
+
 import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors;
+
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
@@ -248,7 +252,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                 editor = addToggleButton(
                         editorX, y, editorWidth, value,
                         booleanText(true), booleanText(false), null,
-                        entry::accepts,
+                        next -> entry.accepts(next),
                         next -> updateValidation(key, entry, next)
                 );
             }
@@ -305,7 +309,7 @@ final class KTModuleConfigScreen extends KineticScreen {
             case STRING -> {
                 KineticEditBox box = addTextField(
                         editorX, y, editorWidth, entry.label(), null,
-                        entry::accepts, null
+                        value -> entry.accepts(value), null
                 );
                 box.setMaxLength(32767);
                 box.setValue(String.valueOf(pendingValues.get(key)));
@@ -948,7 +952,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                     if (shouldShowImmediateSavedToast(outcome)) showSavedToast();
                     navigateBack();
                 },
-                this::navigateBack
+                () -> navigateBack()
         );
         return true;
     }

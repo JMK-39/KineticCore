@@ -1,9 +1,13 @@
 package dev.xyat.kineticcore.internal.client.config;
 
+import dev.xyat.kineticcore.api.client.gui.widget.KineticDropdown;
+
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.config.client.*;
+
 import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors;
+
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
@@ -962,7 +966,8 @@ final class KTConfigScreen extends KineticScreen {
                 .append(' ')
                 .append(entry.label().getString());
         if (entry.tooltip() != null) data.append(' ').append(entry.tooltip().getString());
-        return data.toString();
+        String raw = data.toString();
+        return raw;
     }
 
     private Component unsavedMessage() {

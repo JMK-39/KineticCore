@@ -123,6 +123,16 @@ public final class KineticScrollController {
         return button == MouseButton.LEFT && delegate.beginDrag(mouseX, mouseY, x, y, width, height, minThumbHeight, 1);
     }
 
+    /**
+     * 同上，但可放宽轨道两侧的命中范围（细滚动条常用 4~5 像素）。
+     * Same as above with a wider hit area on both sides of the track (thin scrollbars often use 4-5 px).
+     */
+    public boolean beginDrag(double mouseX, double mouseY, MouseButton button, int x, int y, int width, int height,
+                             int minThumbHeight, int hitPadding) {
+        return button == MouseButton.LEFT
+                && delegate.beginDrag(mouseX, mouseY, x, y, width, height, minThumbHeight, Math.max(0, hitPadding));
+    }
+
     /** 纵向拖拽中更新 / Updates an active vertical drag. */
     public boolean drag(double mouseY, int y, int height, int minThumbHeight) {
         return delegate.drag(mouseY, y, height, minThumbHeight);

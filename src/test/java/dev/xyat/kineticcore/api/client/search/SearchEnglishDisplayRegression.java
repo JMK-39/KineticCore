@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.api.client.search;
 
+import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
 import net.minecraft.network.chat.Component;
 import java.util.List;
 
@@ -11,8 +12,7 @@ public final class SearchEnglishDisplayRegression {
                 "an English client displayed a cached foreign-language name");
         check("minecraft:dirt".equals(KineticSearch.suggestionDisplayName("minecraft:dirt", localized)),
                 "unknown raw identifier was changed");
-        KineticSearch.suggestionDisplayName(null, localized);
-        check(true,
+        check(KineticSearch.suggestionDisplayName(null, localized) == null,
                 "null input must remain null");
         System.out.println("PASS: 3 search language-display checks");
     }

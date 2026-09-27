@@ -55,10 +55,6 @@ public final class EntitySelectorScreen extends KineticScreen {
     private static final int MODS_PER_PAGE = 8;
     private static final int FILTER_MENU_WIDTH = 140;
 
-    public Screen getParent() {
-        return parent;
-    }
-
     private enum CategoryFilter { ALL, FRIENDLY, AQUATIC, NEUTRAL, MONSTER, UNDEAD, MISC }
 
     /** The two filter groups are independent; an empty group matches all. */
@@ -80,6 +76,7 @@ public final class EntitySelectorScreen extends KineticScreen {
             EntityPreviewRenderer.DEFAULT_MAX_AUTO_SCALE_FACTOR
     );
 
+    private KineticEditBox searchBox;
     private String searchQuery = "";
     private List<Component> deferredTooltip;
 
@@ -105,7 +102,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                 .sorted(String::compareToIgnoreCase)
                 .forEach(allEntityIds::add);
         allEntityIds.stream()
-                .map(KineticResourceIds::tryParse)
+                .map(id -> KineticResourceIds.tryParse(id))
                 .filter(java.util.Objects::nonNull)
                 .map(ResourceLocation::getNamespace)
                 .distinct()
@@ -122,7 +119,7 @@ public final class EntitySelectorScreen extends KineticScreen {
 
     @Override
     protected void buildUi() {
-        KineticEditBox searchBox = addTextField(
+        searchBox = addTextField(
                 GRID_X, 38, Math.min(GRID_W, 430),
                 KineticText.translatable("gui.kineticcore.entity_selector.search_hint"),
                 KineticText.translatable("gui.kineticcore.entity_selector.search_hint"),

@@ -2,6 +2,7 @@ package dev.xyat.kineticcore.api.client.search;
 
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
+import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.internal.client.search.KineticSearchRuntime;
 import net.minecraft.core.registries.Registries;

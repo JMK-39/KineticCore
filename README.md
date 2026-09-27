@@ -57,11 +57,11 @@ GUI v2 is page-based. Addons extend `KineticPage` (a plain object, not a vanilla
 - `KineticPage`: `PageLayout.CANVAS` (640×360 virtual canvas, default) or `PageLayout.NATIVE` (GUI-scaled screen coordinates).
 - `KineticContainerPage<M>`: container-menu page, registered with `KineticClientMenus.register(type, XPage::new)`.
 - `KineticHudEditorPage`: HUD drag/scale/position editor.
-- `KineticGui`: `open`, `openChild`, `closeScreen`, `currentPage`.
+- `KineticGui`: `open`, `openChild`, `closeScreen`, `currentPage`, plus `captureNavigationParent` for pages opened after an asynchronous server response.
 
 Controls are created with builders in `build(KineticUi ui)`: buttons (compact, card, item), toggles, cycle buttons, colour buttons/swatches, sliders, text fields, text areas, number fields (`NumberType.INT/LONG/DECIMAL`), text and numeric autocomplete, dropdowns, tab bars, tab strips, selection/item/action/toggle lists and item grids. `.layer(n)` replaces the old high-z variants, and `ui.scrollViewport(...)` scrolls real controls with a custom list. Controls are exposed as interfaces (`KineticButton`, `KineticTextField`, `KineticSelectionList`, …).
 
-- Drawing: `KineticGraphics` (shapes, text, scrolling text, items, textures via `KineticTexture`, effect icons, transforms, layers, clipping) and `KineticTheme` (surfaces, panels, slots, outlines, flash, palette).
+- Drawing: `KineticGraphics` (shapes, text, scrolling text, items including translucent item icons, textures via `KineticTexture`, effect icons, transforms, layers, clipping) and `KineticTheme` (surfaces, panels, slots, outlines, flash, palette).
 - Input: `MouseInput`, `MouseDragInput`, `ScrollInput`, `KeyInput`, `CharInput`; capture (`onMouseClickCapture`) runs before controls, bubble hooks after.
 - Custom UI: `KineticCustomControl` for self-drawn controls, `KineticRowList<T>` for self-drawn lists with the core scrollbar, middle-click jump and selection flash, `KineticScrollController` for hand-written scroll areas, `KineticCommandAssist` for command input with suggestions.
 - Text measuring: `KineticText`; translations: `KineticI18n`.
@@ -395,11 +395,11 @@ GUI v2 采用页面模型。附属继承 `KineticPage`（普通对象，不是�
 - `KineticPage`：`PageLayout.CANVAS`（640×360 虚拟画布，默认）或 `PageLayout.NATIVE`（GUI 缩放后的屏幕坐标）。
 - `KineticContainerPage<M>`：容器菜单页面，通过 `KineticClientMenus.register(type, XPage::new)` 注册。
 - `KineticHudEditorPage`：HUD 拖拽、缩放与位置编辑页面。
-- `KineticGui`：`open`、`openChild`、`closeScreen`、`currentPage`。
+- `KineticGui`：`open`、`openChild`、`closeScreen`、`currentPage`，以及用于异步服务端回包后打开子页的 `captureNavigationParent`。
 
 控件在 `build(KineticUi ui)` 中以构建器创建：按钮（紧凑、卡片、物品）、开关、循环按钮、颜色按钮/色块、滑块、文本框、多行文本、数字框（`NumberType.INT/LONG/DECIMAL`）、文本与数字自动补全、下拉框、标签栏、可滚动标签条、选择/物品/操作/开关列表与物品网格。`.layer(n)` 取代旧的高层（HighZ）变体，`ui.scrollViewport(...)` 让真实控件随自绘列表滚动。控件以接口形式公开（`KineticButton`、`KineticTextField`、`KineticSelectionList` 等）。
 
-- 绘制：`KineticGraphics`（图形、文字、滚动文字、物品、`KineticTexture` 贴图、效果图标、变换、层级、裁剪）与 `KineticTheme`（表面、面板、槽位、描边、闪烁、调色板）。
+- 绘制：`KineticGraphics`（图形、文字、滚动文字、物品（含透明物品图标）、`KineticTexture` 贴图、效果图标、变换、层级、裁剪）与 `KineticTheme`（表面、面板、槽位、描边、闪烁、调色板）。
 - 输入：`MouseInput`、`MouseDragInput`、`ScrollInput`、`KeyInput`、`CharInput`；`onMouseClickCapture` 在控件之前执行，其余鼠标钩子在控件之后执行。
 - 自定义界面：`KineticCustomControl` 自绘控件；`KineticRowList<T>` 自绘行列表（自带核心滚动条、中键跳转与选中闪烁）；`KineticScrollController` 手写滚动区域；`KineticCommandAssist` 命令输入补全。
 - 文本测量用 `KineticText`，翻译用 `KineticI18n`。
