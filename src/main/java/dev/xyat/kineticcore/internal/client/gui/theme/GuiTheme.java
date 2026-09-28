@@ -31,14 +31,15 @@ public final class GuiTheme {
     private static final int BORDER_HOVER = 0xFF4DA6FF;
     private static final int BORDER_ERROR = 0xFFFF5555;
     private static final int BORDER_SELECTED = 0xFFFFAA00;
-    private static final int FIELD_TEXT = 0xFF404040;
-    private static final int FIELD_MUTED_TEXT = 0xFF606060;
+    private static final int FIELD_TEXT = 0xFF55FFFF;
+    private static final int FIELD_MUTED_TEXT = 0xFF55FFFF;
     /** 输入框占位提示：纯白，仅在空且无焦点时显示 / Input placeholder: pure white, only while empty and unfocused. */
     private static final int FIELD_PLACEHOLDER_TEXT = 0xFFFFFFFF;
-    /** 输入框内容等于默认值：黑色 / Input value equal to its default: black. */
-    private static final int FIELD_DEFAULT_TEXT = 0xFF000000;
+    /** 输入框内容等于默认值：青色 / Input value equal to its default: cyan. */
+    private static final int FIELD_DEFAULT_TEXT = 0xFF55FFFF;
     /** 输入框内容已修改（输入了内容）：绿色 / Input value modified (content entered): green. */
     private static final int FIELD_MODIFIED_TEXT = 0xFF55FF55;
+    private static final int FIELD_ERROR_TEXT = 0xFFFF5555;
 
     private static final ResourceLocation ITEM_GRID_TEXTURE = KineticResourceIds.of("kineticcore", "textures/gui/item_selector_checkerboard.png");
     private static final int ITEM_GRID_TEXTURE_WIDTH = 475;
@@ -52,12 +53,12 @@ public final class GuiTheme {
         return current;
     }
 
-    /** Returns the standard dark text color used on the vanilla-style light input surface. */
+    /** Returns the standard cyan text color used on the light input surface. */
     public static int fieldText() {
         return FIELD_TEXT;
     }
 
-    /** Returns the standard placeholder/read-only text color used on the light input surface. */
+    /** Returns the standard cyan read-only text color used on the light input surface. */
     public static int fieldMutedText() {
         return FIELD_MUTED_TEXT;
     }
@@ -67,7 +68,7 @@ public final class GuiTheme {
         return FIELD_PLACEHOLDER_TEXT;
     }
 
-    /** 输入框内容等于默认值时的颜色（黑）/ Input text color when the value equals its default (black). */
+    /** 输入框内容等于默认值时的颜色（青色）/ Input text color when the value equals its default (cyan). */
     public static int fieldDefaultText() {
         return FIELD_DEFAULT_TEXT;
     }
@@ -75,6 +76,11 @@ public final class GuiTheme {
     /** 输入框内容已修改时的颜色（绿）/ Input text color when the value was modified (green). */
     public static int fieldModifiedText() {
         return FIELD_MODIFIED_TEXT;
+    }
+
+    /** Input text color while validation reports an error (red). */
+    public static int fieldErrorText() {
+        return FIELD_ERROR_TEXT;
     }
 
 

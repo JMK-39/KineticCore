@@ -73,7 +73,7 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
         if (rows != null) items.addAll(rows);
         if (selectedIndex >= items.size()) selectedIndex = -1;
         if (lastClickedIndex >= items.size()) lastClickedIndex = -1;
-        scroll.update(items.size(), visibleRows());
+        scroll.update(items.size(), scrollRangeRows());
     }
 
     /** 当前选中下标，无则 -1 / Selected index, or -1. */
@@ -117,7 +117,7 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
 
     /** 立即滚动到行偏移 / Jumps to a row offset. */
     public final void setScrollOffset(int rows) {
-        scroll.update(items.size(), visibleRows());
+        scroll.update(items.size(), scrollRangeRows());
         scroll.setOffset(rows);
     }
 
@@ -133,6 +133,11 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
     /** 完整显示的行数 / Number of fully visible rows. */
     public final int visibleRows() {
         return Math.max(1, controlHeight() / rowHeight);
+    }
+
+    /** Include a partially visible row when limiting the final scroll position. */
+    private int scrollRangeRows() {
+        return Math.max(1, (controlHeight() + rowHeight - 1) / rowHeight);
     }
 
     /** 鼠标下的行，无则 -1 / Row under the pointer, or -1. */
@@ -201,7 +206,7 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
 
     @Override
     protected final void render(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        scroll.update(items.size(), visibleRows());
+        scroll.update(items.size(), scrollRangeRows());
         int x = controlX();
         int y = controlY();
         int width = rowsWidth();

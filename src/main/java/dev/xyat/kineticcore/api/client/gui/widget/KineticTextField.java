@@ -32,8 +32,8 @@ public interface KineticTextField extends KineticControl {
     void formatText(BiFunction<String, Integer, FormattedCharSequence> formatter);
 
     /**
-     * 默认值：内容等于默认值时显示黑色，其它非空内容（已修改）显示绿色；null 表示没有默认值（任何输入都算修改）。
-     * Default value: text equal to it is drawn black, any other non-empty text (modified) green; null means no
+     * 默认值：内容等于默认值时显示青色，其它非空内容（已修改）显示绿色；null 表示没有默认值（任何输入都算修改）。
+     * Default value: text equal to it is drawn cyan, any other non-empty text (modified) green; null means no
      * default (any entered text counts as modified).
      */
     void setDefaultText(String defaultText);
@@ -42,9 +42,9 @@ public interface KineticTextField extends KineticControl {
     String defaultText();
 
     /**
-     * 按内容自定义文字颜色（例如货币不足显示红色），返回 null 时使用标准规则（默认值黑、修改过绿）。
+     * 按内容自定义文字颜色（例如货币不足显示红色），返回 null 时使用标准规则（默认值青色、修改过绿色、错误红色）。
      * Custom text color per value (for example red when a price is unaffordable); return null to use the
-     * standard rule (default value black, modified green).
+     * standard rule (default value cyan, modified green; invalid red).
      */
     void setValueColor(Function<String, Integer> valueColor);
 

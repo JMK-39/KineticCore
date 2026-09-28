@@ -76,12 +76,12 @@ public final class KineticTheme {
         return GuiTheme.current();
     }
 
-    /** Returns the standard dark text color used on the vanilla-style light input surface. */
+    /** Returns the standard cyan text color used on the light input surface. */
     public static int fieldText() {
         return GuiTheme.fieldText();
     }
 
-    /** Returns the standard placeholder/read-only text color used on the light input surface. */
+    /** Returns the standard cyan read-only text color used on the light input surface. */
     public static int fieldMutedText() {
         return GuiTheme.fieldMutedText();
     }
@@ -91,7 +91,7 @@ public final class KineticTheme {
         return GuiTheme.fieldPlaceholderText();
     }
 
-    /** 输入框内容等于默认值时的颜色（黑）/ Input text color when the value equals its default (black). */
+    /** 输入框内容等于默认值时的颜色（青色）/ Input text color when the value equals its default (cyan). */
     public static int fieldDefaultText() {
         return GuiTheme.fieldDefaultText();
     }
@@ -99,6 +99,11 @@ public final class KineticTheme {
     /** 输入框内容已修改时的颜色（绿）/ Input text color when the value was modified (green). */
     public static int fieldModifiedText() {
         return GuiTheme.fieldModifiedText();
+    }
+
+    /** Input text color for invalid values or insufficient quantities (red). */
+    public static int fieldErrorText() {
+        return GuiTheme.fieldErrorText();
     }
 
     /** Draws the standard full-canvas background using the active theme. */

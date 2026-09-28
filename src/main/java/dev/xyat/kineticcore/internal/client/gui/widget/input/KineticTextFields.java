@@ -10,9 +10,12 @@ import dev.xyat.kineticcore.internal.client.widget.KineticValidation;
 import net.minecraft.Util;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.internal.client.gui.widget.KineticWidgets.FactoryAccess;
@@ -27,6 +30,51 @@ import java.util.function.Predicate;
  */
 public final class KineticTextFields {
     private KineticTextFields() {}
+
+    /** Keeps vanilla editing, cursor and selection behavior while removing its forced text shadow. */
+    private static final class ShadowlessGraphics extends GuiGraphics {
+        private final GuiGraphics target;
+        private final Integer valueColor;
+
+        private ShadowlessGraphics(GuiGraphics target) {
+            this(target, null);
+        }
+
+        private ShadowlessGraphics(GuiGraphics target, Integer valueColor) {
+            super(Minecraft.getInstance(), target.bufferSource());
+            this.target = target;
+            this.valueColor = valueColor;
+        }
+
+        private int textColor(int original) {
+            return valueColor != null && original == -2039584 ? valueColor : original;
+        }
+
+        @Override
+        public int drawString(Font font, String text, int x, int y, int color) {
+            return target.drawString(font, text, x, y, textColor(color), false);
+        }
+
+        @Override
+        public int drawString(Font font, FormattedCharSequence text, int x, int y, int color) {
+            return target.drawString(font, text, x, y, textColor(color), false);
+        }
+
+        @Override
+        public int drawString(Font font, Component text, int x, int y, int color) {
+            return target.drawString(font, text, x, y, textColor(color), false);
+        }
+
+        @Override
+        public void fill(RenderType type, int x1, int y1, int x2, int y2, int color) {
+            target.fill(type, x1, y1, x2, y2, color);
+        }
+
+        @Override
+        public void fill(int x1, int y1, int x2, int y2, int color) {
+            target.fill(x1, y1, x2, y2, color);
+        }
+    }
 
     /** Standard multi-line Kinetic text field used by the public widget factories. */
     public static class KineticMultiLineEditBox extends MultiLineEditBox implements InternalControl, KineticTextArea {
@@ -45,6 +93,7 @@ public final class KineticTextFields {
 
         private final Font font;
         private final Component placeholder;
+        private String initialText;
 
         @Override
         public String textValue() {
@@ -92,7 +141,10 @@ public final class KineticTextFields {
 
         @Override
         public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            if (initialText == null) initialText = getValue();
+            int color = Objects.equals(getValue(), initialText)
+                    ? GuiTheme.fieldDefaultText() : GuiTheme.fieldModifiedText();
+            super.renderWidget(new ShadowlessGraphics(graphics, color), mouseX, mouseY, partialTick);
             if (!isFocused() && getValue().isEmpty() && !placeholder.getString().isBlank()) {
                 String plain = net.minecraft.ChatFormatting.stripFormatting(placeholder.getString());
                 graphics.drawWordWrap(font, Component.literal(plain == null ? "" : plain),
@@ -142,10 +194,11 @@ public final class KineticTextFields {
         }
 
         /**
-         * 内容颜色：自定义规则优先；否则等于默认值为黑色，其它（已修改）为绿色。
-         * Value color: a custom rule wins; otherwise black when equal to the default, green when modified.
+         * 内容颜色：自定义规则优先；否则等于默认值为青色，其它（已修改）为绿色。
+         * Value color: invalid values are red; otherwise a custom rule wins, then cyan or green.
          */
         private int resolveValueColor(String value) {
+            if (hasBorderError()) return GuiTheme.fieldErrorText();
             if (valueColor != null) {
                 try {
                     Integer custom = valueColor.apply(value);
@@ -345,7 +398,7 @@ public final class KineticTextFields {
             setY(contentY);
             setWidth(contentWidth);
             try {
-                super.renderWidget(graphics, mouseX, mouseY, partialTick);
+                super.renderWidget(new ShadowlessGraphics(graphics), mouseX, mouseY, partialTick);
             } finally {
                 setWidth(fieldWidth);
                 setX(fieldX);
@@ -364,7 +417,7 @@ public final class KineticTextFields {
                         contentY,
                         contentWidth,
                         GuiTheme.fieldPlaceholderText(),
-                        true
+                        false
                 );
             }
         }
