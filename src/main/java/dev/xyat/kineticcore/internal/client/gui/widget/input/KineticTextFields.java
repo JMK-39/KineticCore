@@ -35,8 +35,35 @@ public final class KineticTextFields {
                 FactoryAccess access, Font font, int x, int y, int width, int height,
                 Component message, Component placeholder
         ) {
-            super(font, x, y, width, height, message, placeholder);
+            // 占位提示由本类以纯白绘制，原版占位（浅灰）不再使用 / The placeholder is drawn here in pure white instead of
+            // vanilla's light-gray placeholder.
+            super(font, x, y, width, height, message, Component.empty());
             Objects.requireNonNull(access, "factory access");
+            this.font = font;
+            this.placeholder = placeholder == null ? Component.empty() : placeholder;
+        }
+
+        private final Font font;
+        private final Component placeholder;
+
+        @Override
+        public String textValue() {
+            return getValue();
+        }
+
+        @Override
+        public void setTextValue(String value) {
+            setValue(value);
+        }
+
+        @Override
+        public void limitTextLength(int limit) {
+            setCharacterLimit(limit);
+        }
+
+        @Override
+        public void onTextChange(java.util.function.Consumer<String> listener) {
+            setValueListener(listener);
         }
 
         /** Sets whether this multiline field accepts interaction. */
@@ -66,6 +93,11 @@ public final class KineticTextFields {
         @Override
         public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            if (!isFocused() && getValue().isEmpty() && !placeholder.getString().isBlank()) {
+                String plain = net.minecraft.ChatFormatting.stripFormatting(placeholder.getString());
+                graphics.drawWordWrap(font, Component.literal(plain == null ? "" : plain),
+                        getX() + 4, getY() + 4, Math.max(1, getWidth() - 8), GuiTheme.fieldPlaceholderText());
+            }
             GuiTheme.stateOutline(
                     graphics, getX(), getY(), getWidth(), getHeight(),
                     isFocused(), isHovered(), false
@@ -81,6 +113,8 @@ public final class KineticTextFields {
         private long validationErrorStartMillis = -1L;
         private Predicate<String> validator = ignored -> true;
         private Component placeholder = Component.empty();
+        private String defaultText = null;
+        private java.util.function.Function<String, Integer> valueColor = null;
 
         /** Factory-only constructor used by standard Kinetic widget factories. */
         public KineticEditBox(FactoryAccess access, Font font, int x, int y, int width, int height, Component message) {
@@ -90,6 +124,78 @@ public final class KineticTextFields {
             setTextColor(GuiTheme.fieldText());
             setTextColorUneditable(GuiTheme.fieldMutedText());
             setTextEditable(true);
+        }
+
+        @Override
+        public void setDefaultText(String defaultText) {
+            this.defaultText = defaultText;
+        }
+
+        @Override
+        public String defaultText() {
+            return defaultText;
+        }
+
+        @Override
+        public void setValueColor(java.util.function.Function<String, Integer> valueColor) {
+            this.valueColor = valueColor;
+        }
+
+        /**
+         * 内容颜色：自定义规则优先；否则等于默认值为黑色，其它（已修改）为绿色。
+         * Value color: a custom rule wins; otherwise black when equal to the default, green when modified.
+         */
+        private int resolveValueColor(String value) {
+            if (valueColor != null) {
+                try {
+                    Integer custom = valueColor.apply(value);
+                    if (custom != null) return custom;
+                } catch (RuntimeException ignored) {
+                    // 业务颜色回调出错时回退到标准规则 / Fall back to the standard rule when the callback fails.
+                }
+            }
+            return defaultText != null && defaultText.equals(value) ? GuiTheme.fieldDefaultText() : GuiTheme.fieldModifiedText();
+        }
+
+        // ---- 公共 API（稳定名称）委托给原版 EditBox / Public API (stable names) delegating to vanilla EditBox ----
+        @Override
+        public String textValue() {
+            return getValue();
+        }
+
+        @Override
+        public void setTextValue(String value) {
+            setValue(value);
+        }
+
+        @Override
+        public void onTextChange(java.util.function.Consumer<String> responder) {
+            setResponder(responder);
+        }
+
+        @Override
+        public void limitTextLength(int maxLength) {
+            setMaxLength(maxLength);
+        }
+
+        @Override
+        public void filterText(Predicate<String> filter) {
+            setFilter(filter);
+        }
+
+        @Override
+        public void formatText(java.util.function.BiFunction<String, Integer, net.minecraft.util.FormattedCharSequence> formatter) {
+            setFormatter(formatter);
+        }
+
+        @Override
+        public int cursorIndex() {
+            return getCursorPosition();
+        }
+
+        @Override
+        public void setCursorIndex(int position) {
+            setCursorPosition(position);
         }
 
         /** Sets display-only placeholder text; the placeholder never becomes the field value. */
@@ -233,6 +339,7 @@ public final class KineticTextFields {
             // Let vanilla keep cursor/selection/scroll semantics, but render only the text layer.
             // Bounds are restored immediately so hit testing and business layout always see the
             // API-level field rectangle rather than the temporary text rectangle.
+            setTextColor(resolveValueColor(getValue()));
             super.setBordered(false);
             setX(contentX);
             setY(contentY);
@@ -247,15 +354,17 @@ public final class KineticTextFields {
             }
 
             if (!focused && getValue().isEmpty() && !placeholder.getString().isBlank()) {
+                // 占位提示统一纯白：去掉文本自带颜色与格式码 / Placeholder is always pure white: strip styles and codes.
+                String plain = net.minecraft.ChatFormatting.stripFormatting(placeholder.getString());
                 KineticText.drawScrollingLeft(
                         graphics,
                         font,
-                        placeholder,
+                        Component.literal(plain == null ? "" : plain),
                         contentX,
                         contentY,
                         contentWidth,
-                        GuiTheme.fieldMutedText(),
-                        false
+                        GuiTheme.fieldPlaceholderText(),
+                        true
                 );
             }
         }

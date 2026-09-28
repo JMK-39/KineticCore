@@ -110,7 +110,7 @@ public class SetSpawnPage extends KineticPage {
                 .placeholder(inputPlaceholder)
                 .onSelect(value -> {
                     addToList(value);
-                    activeInput.setValue("");
+                    activeInput.setTextValue("");
                 })
                 .build();
 
@@ -332,9 +332,9 @@ public class SetSpawnPage extends KineticPage {
     @Override
     protected boolean onKeyPress(KeyInput input) {
         if (input.isEnter()) {
-            if (isFocused(activeInput) && !activeInput.getValue().isEmpty()) {
-                addToList(activeInput.getValue());
-                activeInput.setValue("");
+            if (isFocused(activeInput) && !activeInput.textValue().isEmpty()) {
+                addToList(activeInput.textValue());
+                activeInput.setTextValue("");
                 return true;
             }
         }

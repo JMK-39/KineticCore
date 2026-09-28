@@ -8,7 +8,7 @@ public interface KineticSlider extends KineticControl {
     double value();
 
     /** 同步数值，不触发回调 / Synchronizes the value without invoking the change callback. */
-    void setValue(double value);
+    void setSliderValue(double value);
 
     /** 当前值是否被校验器拒绝 / Whether the validator currently rejects the value. */
     boolean isError();

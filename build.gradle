@@ -254,3 +254,4 @@ tasks.register('buildJavaDOC', Zip) {
 
 apply from: 'gradle/kinetic-architecture.gradle'
 apply from: 'gradle/kinetic-api-verification.gradle'
+apply from: 'gradle/kinetic-reobf-verification.gradle'

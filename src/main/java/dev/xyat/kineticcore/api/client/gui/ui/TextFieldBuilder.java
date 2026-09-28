@@ -28,6 +28,11 @@ public abstract class TextFieldBuilder extends ControlBuilder<TextFieldBuilder, 
     /** 文本变更回调 / Change callback. */
     protected Consumer<String> onChange = null;
 
+    /** 默认值（显示黑色，其它内容绿色）/ Default value (drawn black; other content green). */
+    protected String defaultText = null;
+    /** 自定义文字颜色规则 / Custom value color rule. */
+    protected java.util.function.Function<String, Integer> valueColor = null;
+
     /** 由 KineticUi 创建 / Created by KineticUi. */
     protected TextFieldBuilder(int x, int y, int width) {
         super(x, y, width);
@@ -72,6 +77,24 @@ public abstract class TextFieldBuilder extends ControlBuilder<TextFieldBuilder, 
     /** 文本变更回调 / Change callback. */
     public final TextFieldBuilder onChange(Consumer<String> onChange) {
         this.onChange = onChange;
+        return this;
+    }
+
+    /**
+     * 默认值：内容等于它时显示黑色，其它非空内容（已修改）显示绿色。
+     * Default value: text equal to it is drawn black, any other non-empty text (modified) green.
+     */
+    public final TextFieldBuilder defaultText(String defaultText) {
+        this.defaultText = defaultText;
+        return this;
+    }
+
+    /**
+     * 按内容自定义文字颜色（如货币不足红色），返回 null 使用标准规则。
+     * Custom text color per value (for example red when unaffordable); return null for the standard rule.
+     */
+    public final TextFieldBuilder valueColor(java.util.function.Function<String, Integer> valueColor) {
+        this.valueColor = valueColor;
         return this;
     }
 }

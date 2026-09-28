@@ -106,7 +106,7 @@ public final class CustomControlSupport {
         private final KineticCustomControl control;
 
         private Widget(KineticCustomControl control) {
-            super(control.getX(), control.getY(), control.getWidth(), control.getHeight(), Component.empty());
+            super(control.controlX(), control.controlY(), control.controlWidth(), control.controlHeight(), Component.empty());
             this.control = control;
         }
 
@@ -121,35 +121,35 @@ public final class CustomControlSupport {
         }
 
         private void sync() {
-            super.setX(control.getX());
-            super.setY(control.getY());
-            super.setWidth(control.getWidth());
-            this.height = control.getHeight();
-            this.visible = control.isVisible();
+            super.setX(control.controlX());
+            super.setY(control.controlY());
+            super.setWidth(control.controlWidth());
+            this.height = control.controlHeight();
+            this.visible = control.controlVisible();
             this.active = control.isEnabled();
         }
 
         @Override
         public void setX(int x) {
-            control.setX(x);
+            control.moveControlX(x);
             super.setX(x);
         }
 
         @Override
         public void setY(int y) {
-            control.setY(y);
+            control.moveControlY(y);
             super.setY(y);
         }
 
         @Override
         public void setWidth(int width) {
-            control.setWidth(width);
+            control.resizeControlWidth(width);
             super.setWidth(width);
         }
 
         @Override
         public void setVisible(boolean visible) {
-            control.setVisible(visible);
+            control.setControlVisible(visible);
             this.visible = visible;
         }
 
@@ -161,7 +161,7 @@ public final class CustomControlSupport {
 
         @Override
         public boolean isVisible() {
-            return control.isVisible();
+            return control.controlVisible();
         }
 
         @Override

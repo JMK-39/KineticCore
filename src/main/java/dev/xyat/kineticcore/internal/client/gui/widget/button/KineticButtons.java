@@ -265,19 +265,6 @@ public final class KineticButtons {
             if (clipEnabled) graphics.enableScissor(clipLeft, clipTop, clipRight, clipBottom);
             Component storedText = null;
             try {
-                if (invertedFlash) {
-                    GuiTheme.selectionFlash(graphics, getX(), getY(), getWidth(), getHeight());
-                    if (textVisible && !getMessage().getString().isEmpty()) {
-                        graphics.drawCenteredString(
-                                KineticClientRuntime.font(),
-                                getMessage().getString(),
-                                getX() + getWidth() / 2,
-                                getY() + (getHeight() - 9) / 2,
-                                GuiTheme.selectionFlashText()
-                        );
-                    }
-                    return;
-                }
                 if (contentCardSurface) {
                     GuiTheme.stateSurface(
                             graphics,
@@ -290,6 +277,7 @@ public final class KineticButtons {
                             isHovered(),
                             error
                     );
+                    if (invertedFlash) GuiTheme.selectionFlash(graphics, getX(), getY(), getWidth(), getHeight());
                     return;
                 }
                 if (!textVisible) {
@@ -310,6 +298,8 @@ public final class KineticButtons {
                             error
                     );
                 }
+                // 中键跳转后的橘黄色边框闪烁，绘制在按钮之上 / Orange border flash after a middle-click jump, on top.
+                if (invertedFlash) GuiTheme.selectionFlash(graphics, getX(), getY(), getWidth(), getHeight());
             } finally {
                 if (storedText != null) setMessage(storedText);
                 if (clipEnabled) graphics.disableScissor();

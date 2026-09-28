@@ -231,6 +231,7 @@
   "cfg.kineticcore.tps.title.tooltip": "Client-side TPS/MSPT HUD settings.",
   "cfg.kineticcore.ui.description": "Shared interaction settings for Kinetic user interfaces.",
   "cfg.kineticcore.ui.title": "UI & Interaction",
+  "cfg.kineticcore.ui.title.tooltip": "Mouse-wheel settings shared by all Kinetic interfaces.",
   "cfg.kineticcore.ui.wheel_items_per_notch": "Items Per Wheel Notch",
   "cfg.kineticcore.ui.wheel_items_per_notch.tooltip": "Number of content items moved per mouse-wheel notch. 1 = one item; fractional values keep smooth scrolling.",
   "cfg.kineticcore.worldinit.apply_notice": "Applies only when a world that has never run its init commands next starts; initialized worlds never run them again.",

@@ -19,6 +19,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.MobType;
 import net.minecraft.world.entity.NeutralMob;
@@ -349,9 +350,12 @@ public final class EntitySelectorScreen extends KineticScreen {
                     && mouseY >= y && mouseY < y + CELL_H;
 
             EntityPreviewRenderer.drawCheckerboard(graphics, x + 2, y + 2, CELL_W - 4, CELL_H - 4);
-            GuiTheme.stateOutline(graphics, x, y, CELL_W, CELL_H, selected, hovered, false);
             if (selected) {
-                GuiTheme.stateOutline(graphics, x + 1, y + 1, CELL_W - 2, CELL_H - 2, true, false, false);
+                // 已选中（已修改）的生物使用绿色双线描边 / Selected (modified) entities use a green double outline.
+                GuiTheme.indicatorOutline(graphics, x, y, CELL_W, CELL_H, KineticTheme.Indicator.SUCCESS);
+                GuiTheme.indicatorOutline(graphics, x + 1, y + 1, CELL_W - 2, CELL_H - 2, KineticTheme.Indicator.SUCCESS);
+            } else {
+                GuiTheme.stateOutline(graphics, x, y, CELL_W, CELL_H, false, hovered, false);
             }
 
             boolean rendered = previewRenderer.renderCanvas(

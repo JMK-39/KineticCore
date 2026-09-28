@@ -45,7 +45,7 @@ public final class KineticCommandAssist {
         KineticCommandSuggestions.Session session = KineticCommandSuggestions.create(editBox, pageWidth, pageHeight,
                 KineticCommandSuggestions.Options.fieldAligned(commandsOnly, false, Math.max(1, maxLines), 0xD0000000));
         session.setAllowSuggestions(true);
-        field.setResponder(value -> {
+        field.onTextChange(value -> {
             session.update();
             if (onChange != null) onChange.accept(value);
         });

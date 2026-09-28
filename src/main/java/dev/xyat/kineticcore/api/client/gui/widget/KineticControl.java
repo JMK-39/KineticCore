@@ -12,38 +12,43 @@ import java.util.function.Supplier;
  * input dispatch and tooltips, so addons never touch vanilla widgets.
  */
 public interface KineticControl {
+    // 名称刻意避开原版控件方法（getX/getWidth/isFocused 等）：ForgeGradle 打包时会把与原版同名同签名的方法
+    // 重映射为 m_*，附属中的调用会在运行时 NoSuchMethodError。
+    // Names deliberately avoid vanilla widget methods (getX/getWidth/isFocused, ...): ForgeGradle remaps
+    // same-name/same-descriptor methods to m_* in the production JAR, which breaks addon call sites at runtime.
+
     /** 左边界（页面坐标）/ Left edge in page coordinates. */
-    int getX();
+    int controlX();
 
     /** 上边界（页面坐标）/ Top edge in page coordinates. */
-    int getY();
+    int controlY();
 
     /** 宽度 / Width. */
-    int getWidth();
+    int controlWidth();
 
     /** 高度 / Height. */
-    int getHeight();
+    int controlHeight();
 
     /** 水平移动 / Moves horizontally. */
-    void setX(int x);
+    void moveControlX(int x);
 
     /** 垂直移动 / Moves vertically. */
-    void setY(int y);
+    void moveControlY(int y);
 
     /** 修改宽度 / Changes the width. */
-    void setWidth(int width);
+    void resizeControlWidth(int width);
 
     /** 同时移动到指定位置 / Moves to the given position. */
     default void moveTo(int x, int y) {
-        setX(x);
-        setY(y);
+        moveControlX(x);
+        moveControlY(y);
     }
 
     /** 是否可见 / Whether the control is visible. */
-    boolean isVisible();
+    boolean controlVisible();
 
     /** 显示或隐藏 / Shows or hides the control. */
-    void setVisible(boolean visible);
+    void setControlVisible(boolean visible);
 
     /** 是否可交互 / Whether the control accepts input. */
     boolean isEnabled();
@@ -53,7 +58,7 @@ public interface KineticControl {
 
     /** 同时设置可见与可用 / Sets visible and enabled together. */
     default void setActive(boolean active) {
-        setVisible(active);
+        setControlVisible(active);
         setEnabled(active);
     }
 
@@ -65,12 +70,12 @@ public interface KineticControl {
 
     /** 点是否在控件矩形内（不考虑可见性）/ Whether the point lies inside the bounds, ignoring visibility. */
     default boolean contains(double x, double y) {
-        return x >= getX() && x < getX() + getWidth() && y >= getY() && y < getY() + getHeight();
+        return x >= controlX() && x < controlX() + controlWidth() && y >= controlY() && y < controlY() + controlHeight();
     }
 
     /** 指针当前是否悬停在控件上 / Whether the pointer currently hovers this control. */
-    boolean isHovered();
+    boolean controlHovered();
 
     /** 控件当前是否拥有键盘焦点 / Whether the control currently owns keyboard focus. */
-    boolean isFocused();
+    boolean controlFocused();
 }

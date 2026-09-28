@@ -305,6 +305,8 @@ final class KTConfigScreen extends KineticScreen {
                     setParsedValue(entry.id(), entry, parsed, box);
                 });
                 setParsedValue(entry.id(), entry, box.getIntValue(), box);
+                // 等于默认值时显示黑色，修改后显示绿色 / Black while equal to the default, green once modified.
+                box.setDefaultText(Integer.toString(((Number) entry.defaultValue()).intValue()));
                 editor = box;
             }
             case LONG -> {
@@ -323,6 +325,8 @@ final class KTConfigScreen extends KineticScreen {
                 });
                 Long parsed = box.getLongValue();
                 setParsedValue(entry.id(), entry, parsed, box);
+                // 等于默认值时显示黑色，修改后显示绿色 / Black while equal to the default, green once modified.
+                box.setDefaultText(Long.toString(((Number) entry.defaultValue()).longValue()));
                 editor = box;
             }
             case DOUBLE -> {
@@ -341,6 +345,8 @@ final class KTConfigScreen extends KineticScreen {
                     setParsedValue(entry.id(), entry, parsed, box);
                 });
                 setParsedValue(entry.id(), entry, box.getDoubleValue(), box);
+                // 等于默认值时显示黑色，修改后显示绿色 / Black while equal to the default, green once modified.
+                box.setDefaultText(dev.xyat.kineticcore.internal.client.gui.widget.input.KineticNumericFields.formatDecimal(((Number) entry.defaultValue()).doubleValue()));
                 editor = box;
             }
             case STRING -> {
@@ -352,6 +358,8 @@ final class KTConfigScreen extends KineticScreen {
                 box.setValue(String.valueOf(pendingValues.get(entry.id())));
                 box.setResponder(value -> updateValidation(entry.id(), entry, value));
                 updateValidation(entry.id(), entry, box.getValue());
+                // 等于默认值时显示黑色，修改后显示绿色 / Black while equal to the default, green once modified.
+                box.setDefaultText(String.valueOf(entry.defaultValue()));
                 editor = box;
             }
             case LONG_TEXT -> editor = addButton(

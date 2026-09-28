@@ -997,6 +997,7 @@ public final class KineticScroll {
             // 自绘控件查询过提示 => 由控件自己显示，Screen 不再重复显示。
             // A widget that queries the hint displays it itself; the screen must not duplicate it.
             ownerHandlesHint = true;
+            if (boundSelection != null && boundSelection.getAsInt() < 0) return null;
             return currentHint();
         }
 
@@ -1048,13 +1049,16 @@ public final class KineticScroll {
         private final class FrameHook implements KineticScrollFrameRuntime.Participant {
             @Override
             public Component pendingHint() {
-                return boundSelection == null || ownerHandlesHint || !canScroll() ? null : currentHint();
+                // 没有可跳转的选中项时不显示提示 / No hint when there is no selection to jump to.
+                return boundSelection == null || ownerHandlesHint || !canScroll() || boundSelection.getAsInt() < 0
+                        ? null : currentHint();
             }
 
             @Override
             public boolean handleMiddleClick() {
                 if (boundSelection == null || !canScroll() || thumbHoverStartedAtNanos == 0L) return false;
                 int selected = boundSelection.getAsInt();
+                if (selected < 0) return false;
                 int target = boundTargetOffset != null
                         ? boundTargetOffset.applyAsInt(selected)
                         : selected - visibleItems / 2;

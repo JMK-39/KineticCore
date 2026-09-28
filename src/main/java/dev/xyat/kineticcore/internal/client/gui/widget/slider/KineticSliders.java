@@ -97,6 +97,11 @@ public final class KineticSliders {
             updateMessage();
         }
 
+        @Override
+        public void setSliderValue(double value) {
+            setValue(value);
+        }
+
         /** Returns whether the current value fails the caller-provided validator. */
         public boolean isError() {
             return error;

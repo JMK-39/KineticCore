@@ -1590,8 +1590,10 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
             if (isInsideCanvas(mouseX, mouseY)
                     && !overlays.blocksInput()
                     && !controls.hasOpenAutoCompletePopup()
-                    && !requestWidgetTooltip(virtualMouseX, virtualMouseY)
-                    && !requestScrollbarHint()) {
+                    // 滑块提示优先：滚动条常位于自绘控件内部，控件的空提示不能挡住它。
+                    // The thumb hint wins: scrollbars often sit inside custom controls whose empty tooltip must not hide it.
+                    && !requestScrollbarHint()
+                    && !requestWidgetTooltip(virtualMouseX, virtualMouseY)) {
                 renderTooltips(canvasGraphics, virtualMouseX, virtualMouseY, mouseX, mouseY);
             }
         } finally {

@@ -40,52 +40,52 @@ public abstract class KineticCustomControl implements KineticControl {
     }
 
     @Override
-    public final int getX() {
+    public final int controlX() {
         return x;
     }
 
     @Override
-    public final int getY() {
+    public final int controlY() {
         return y;
     }
 
     @Override
-    public final int getWidth() {
+    public final int controlWidth() {
         return width;
     }
 
     @Override
-    public final int getHeight() {
+    public final int controlHeight() {
         return height;
     }
 
     @Override
-    public final void setX(int x) {
+    public final void moveControlX(int x) {
         this.x = x;
     }
 
     @Override
-    public final void setY(int y) {
+    public final void moveControlY(int y) {
         this.y = y;
     }
 
     @Override
-    public final void setWidth(int width) {
+    public final void resizeControlWidth(int width) {
         this.width = Math.max(0, width);
     }
 
     /** 修改高度 / Changes the height. */
-    public final void setHeight(int height) {
+    public final void resizeControlHeight(int height) {
         this.height = Math.max(0, height);
     }
 
     @Override
-    public final boolean isVisible() {
+    public final boolean controlVisible() {
         return visible;
     }
 
     @Override
-    public final void setVisible(boolean visible) {
+    public final void setControlVisible(boolean visible) {
         this.visible = visible;
     }
 
@@ -110,12 +110,12 @@ public abstract class KineticCustomControl implements KineticControl {
     }
 
     @Override
-    public final boolean isHovered() {
+    public final boolean controlHovered() {
         return CustomControlSupport.isHovered(widget);
     }
 
     @Override
-    public final boolean isFocused() {
+    public final boolean controlFocused() {
         return CustomControlSupport.isFocused(widget);
     }
 

@@ -33,6 +33,12 @@ public final class GuiTheme {
     private static final int BORDER_SELECTED = 0xFFFFAA00;
     private static final int FIELD_TEXT = 0xFF404040;
     private static final int FIELD_MUTED_TEXT = 0xFF606060;
+    /** 输入框占位提示：纯白，仅在空且无焦点时显示 / Input placeholder: pure white, only while empty and unfocused. */
+    private static final int FIELD_PLACEHOLDER_TEXT = 0xFFFFFFFF;
+    /** 输入框内容等于默认值：黑色 / Input value equal to its default: black. */
+    private static final int FIELD_DEFAULT_TEXT = 0xFF000000;
+    /** 输入框内容已修改（输入了内容）：绿色 / Input value modified (content entered): green. */
+    private static final int FIELD_MODIFIED_TEXT = 0xFF55FF55;
 
     private static final ResourceLocation ITEM_GRID_TEXTURE = KineticResourceIds.of("kineticcore", "textures/gui/item_selector_checkerboard.png");
     private static final int ITEM_GRID_TEXTURE_WIDTH = 475;
@@ -54,6 +60,21 @@ public final class GuiTheme {
     /** Returns the standard placeholder/read-only text color used on the light input surface. */
     public static int fieldMutedText() {
         return FIELD_MUTED_TEXT;
+    }
+
+    /** 输入框占位提示颜色（纯白）/ Input placeholder color (pure white). */
+    public static int fieldPlaceholderText() {
+        return FIELD_PLACEHOLDER_TEXT;
+    }
+
+    /** 输入框内容等于默认值时的颜色（黑）/ Input text color when the value equals its default (black). */
+    public static int fieldDefaultText() {
+        return FIELD_DEFAULT_TEXT;
+    }
+
+    /** 输入框内容已修改时的颜色（绿）/ Input text color when the value was modified (green). */
+    public static int fieldModifiedText() {
+        return FIELD_MODIFIED_TEXT;
     }
 
 
@@ -117,19 +138,26 @@ public final class GuiTheme {
         graphics.renderOutline(x, y, width, height, stateBorder(selected, hovered, error));
     }
 
+    /** 选中边框的反色，用于中键跳转后的边框闪烁 / Inverse of the selected border color, used by the jump flash. */
+    private static final int BORDER_SELECTED_INVERSE = 0xFF000000 | (~BORDER_SELECTED & 0x00FFFFFF);
+
     /**
-     * 中键跳转后选中项的反色闪烁（白底黑框），所有列表/网格/Tab 统一走这里。
-     * Inverse flash drawn over the selected row/cell/tab after a middle-click jump.
+     * 中键跳转后的边框闪烁：选中边框（橘黄色）在闪烁阶段切换为其反色，格子本身不变。
+     * 所有列表/网格/Tab/行内按钮统一走这里，只在闪烁的“亮”阶段调用。
+     * Jump flash: during the flash phase the selection border (orange) switches to its inverse color; the cell itself
+     * is unchanged. Shared by every list, grid, tab and row button; called only during the "on" phase.
      */
     public static void selectionFlash(GuiGraphics graphics, int x, int y, int width, int height) {
         if (graphics == null || width <= 0 || height <= 0) return;
-        graphics.fill(x, y, x + width, y + height, 0xFFFFFFFF);
-        graphics.renderOutline(x, y, width, height, 0xFF000000);
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0F, 0.0F, 200.0F);
+        graphics.renderOutline(x, y, width, height, BORDER_SELECTED_INVERSE);
+        graphics.pose().popPose();
     }
 
-    /** 反色闪烁期间文字颜色 / Text color to use on top of {@link #selectionFlash}. */
+    /** 闪烁期间文字颜色：边框闪烁不改变文字 / Text color during the flash; the border flash keeps normal text. */
     public static int selectionFlashText() {
-        return 0xFF000000;
+        return current().text();
     }
 
     /** Draws a standard theme checkerboard using the active panel and alternate-panel colors. */

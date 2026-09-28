@@ -1,0 +1,23 @@
+// 最终 JAR 名称稳定性检查：reobfJar 之后，确认 api 包内所有公开方法名未被重映射为 m_*。
+// Final-JAR name stability check: after reobfJar, verify that no public API method was remapped to m_*.
+// 附属侧的对应检查见 gradle/kinetic-addon-reobf-verification.gradle（复制到附属仓库使用）。
+// The addon-side counterpart is gradle/kinetic-addon-reobf-verification.gradle (copy it into addon repositories).
+
+tasks.register('checkKineticReobfApi', Exec) {
+    group = 'verification'
+    description = 'Checks that dev.xyat.kineticcore.api method names survive reobf in the final JAR.'
+    dependsOn 'reobfJar'
+    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+    def checker = file('gradle/KineticReobfCheck.java')
+    def devClasses = sourceSets.main.java.classesDirectory
+    def finalJar = tasks.named('jar').flatMap { it.archiveFile }
+    inputs.file(checker)
+    doFirst {
+        commandLine launcher.get().executablePath.asFile.absolutePath, checker.absolutePath, 'core',
+                devClasses.get().asFile.absolutePath, finalJar.get().asFile.absolutePath
+    }
+}
+
+tasks.named('build').configure {
+    dependsOn tasks.named('checkKineticReobfApi')
+}

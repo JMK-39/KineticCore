@@ -5,14 +5,14 @@ import java.util.function.Consumer;
 /** 多行文本输入框 / Multi-line text input. */
 public interface KineticTextArea extends KineticControl {
     /** 当前文本 / Current text. */
-    String getValue();
+    String textValue();
 
     /** 设置文本 / Sets the text. */
-    void setValue(String value);
+    void setTextValue(String value);
 
     /** 最大字符数 / Maximum character count. */
-    void setCharacterLimit(int limit);
+    void limitTextLength(int limit);
 
     /** 文本变更回调 / Change callback. */
-    void setValueListener(Consumer<String> listener);
+    void onTextChange(Consumer<String> listener);
 }

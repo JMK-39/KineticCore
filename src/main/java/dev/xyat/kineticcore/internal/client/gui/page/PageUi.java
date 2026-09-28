@@ -226,6 +226,8 @@ public final class PageUi implements KineticUi {
                 if (maxLength > 0) field.setMaxLength(maxLength);
                 if (value != null) field.setValue(value);
                 if (onChange != null) field.setResponder(onChange);
+                field.setDefaultText(defaultText);
+                field.setValueColor(valueColor);
                 return finish(field, tooltip, dynamicTooltip, enabled, visible);
             }
         };
@@ -257,6 +259,8 @@ public final class PageUi implements KineticUi {
                 };
                 if (value != null) field.setValue(value);
                 if (onChange != null) field.setResponder(onChange);
+                field.setDefaultText(defaultText);
+                field.setValueColor(valueColor);
                 return finish(field, tooltip, dynamicTooltip, enabled, visible);
             }
         };
@@ -271,6 +275,8 @@ public final class PageUi implements KineticUi {
                 if (maxLength > 0) field.setMaxLength(maxLength);
                 if (value != null) field.setValue(value);
                 if (onChange != null) field.setResponder(onChange);
+                field.setDefaultText(defaultText);
+                field.setValueColor(valueColor);
                 if (onSelect != null) field.setSelectionResponder(onSelect);
                 return finish(field, tooltip, dynamicTooltip, enabled, visible);
             }
@@ -293,6 +299,8 @@ public final class PageUi implements KineticUi {
                 };
                 if (value != null) field.setValue(value);
                 if (onChange != null) field.setResponder(onChange);
+                field.setDefaultText(defaultText);
+                field.setValueColor(valueColor);
                 if (onSelect != null) field.setSelectionResponder(onSelect);
                 return finish(field, tooltip, dynamicTooltip, enabled, visible);
             }

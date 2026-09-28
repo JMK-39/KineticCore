@@ -86,6 +86,21 @@ public final class KineticTheme {
         return GuiTheme.fieldMutedText();
     }
 
+    /** 输入框占位提示颜色（纯白，仅空且无焦点时显示）/ Input placeholder color (pure white; empty and unfocused only). */
+    public static int fieldPlaceholderText() {
+        return GuiTheme.fieldPlaceholderText();
+    }
+
+    /** 输入框内容等于默认值时的颜色（黑）/ Input text color when the value equals its default (black). */
+    public static int fieldDefaultText() {
+        return GuiTheme.fieldDefaultText();
+    }
+
+    /** 输入框内容已修改时的颜色（绿）/ Input text color when the value was modified (green). */
+    public static int fieldModifiedText() {
+        return GuiTheme.fieldModifiedText();
+    }
+
     /** Draws the standard full-canvas background using the active theme. */
     public static void canvasBackground(KineticGraphics graphics, int width, int height) {
         GuiTheme.canvasBackground(GuiGraphicsAdapter.unwrap(graphics), width, height);

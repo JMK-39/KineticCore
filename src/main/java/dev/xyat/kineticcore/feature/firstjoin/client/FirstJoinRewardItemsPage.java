@@ -115,8 +115,8 @@ public final class FirstJoinRewardItemsPage extends KineticPage {
                     .allowNegative(false)
                     .range(1, 999)
                     .build();
-            countField.setMaxLength(3);
-            countField.setResponder(value -> applyCount(entryIndex, value));
+            countField.limitTextLength(3);
+            countField.onTextChange(value -> applyCount(entryIndex, value));
             countFields.add(countField);
 
             upButtons.add(list.button(upX, y, MOVE_BUTTON_W)
@@ -161,23 +161,23 @@ public final class FirstJoinRewardItemsPage extends KineticPage {
                 boolean stackable = visible && entries.get(index).stack().getMaxStackSize() > 1;
 
                 KineticNumberField countField = countFields.get(index);
-                countField.setVisible(stackable);
+                countField.setControlVisible(stackable);
                 countField.setTextEditable(stackable);
                 if (stackable) {
                     String value = String.valueOf(entries.get(index).stack().getCount());
-                    if (!isFocused(countField) && !value.equals(countField.getValue())) {
-                        countField.setValue(value);
+                    if (!isFocused(countField) && !value.equals(countField.textValue())) {
+                        countField.setTextValue(value);
                     }
                 } else {
                     blur(countField);
-                    if (!countField.getValue().isEmpty()) {
-                        countField.setValue("");
+                    if (!countField.textValue().isEmpty()) {
+                        countField.setTextValue("");
                     }
                 }
 
-                upButtons.get(index).setVisible(visible);
-                downButtons.get(index).setVisible(visible);
-                deleteButtons.get(index).setVisible(visible);
+                upButtons.get(index).setControlVisible(visible);
+                downButtons.get(index).setControlVisible(visible);
+                deleteButtons.get(index).setControlVisible(visible);
                 if (visible) {
                     upButtons.get(index).setEnabled(index > 0);
                     downButtons.get(index).setEnabled(index < entries.size() - 1);

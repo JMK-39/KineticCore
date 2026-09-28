@@ -231,6 +231,7 @@
   "cfg.kineticcore.tps.title.tooltip": "TPS/MSPT HUD 客户端显示设置。",
   "cfg.kineticcore.ui.description": "Kinetic 界面通用交互设置。",
   "cfg.kineticcore.ui.title": "界面与交互",
+  "cfg.kineticcore.ui.title.tooltip": "Kinetic 界面通用的鼠标滚轮设置。",
   "cfg.kineticcore.ui.wheel_items_per_notch": "滚轮每次滚动数量",
   "cfg.kineticcore.ui.wheel_items_per_notch.tooltip": "每滚动一次鼠标滚轮时移动的内容数量。1 = 1 个内容；支持小数并保持平滑滚动。",
   "cfg.kineticcore.worldinit.apply_notice": "仅在尚未执行初始化命令的世界下次启动时生效；已初始化世界不会因重进或重启再次执行。",

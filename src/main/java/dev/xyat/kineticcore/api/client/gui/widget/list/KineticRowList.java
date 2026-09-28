@@ -37,6 +37,7 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
     private final List<T> itemsView = Collections.unmodifiableList(items);
     private final KineticScrollController scroll = new KineticScrollController();
     private int selectedIndex = -1;
+    private int lastClickedIndex = -1;
     private int hoveredIndex = -1;
     private int lastMouseX = Integer.MIN_VALUE;
     private int lastMouseY = Integer.MIN_VALUE;
@@ -46,7 +47,10 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
     protected KineticRowList(int x, int y, int width, int height, int rowHeight) {
         super(x, y, width, height);
         this.rowHeight = Math.max(1, rowHeight);
-        scroll.bindSelection(() -> selectedIndex);
+        // 中键跳转目标：选中行；没有选中行时为最近一次点击的行（与原版列表“点击即选中”一致）。
+        // Middle-click target: the selected row, or the last clicked row when nothing is selected (vanilla lists
+        // selected a row on click).
+        scroll.bindSelection(this::jumpTargetIndex);
         setTooltip(() -> hoveredIndex >= 0 && hoveredIndex < items.size()
                 ? rowTooltip(items.get(hoveredIndex), hoveredIndex) : null);
     }
@@ -68,6 +72,7 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
         items.clear();
         if (rows != null) items.addAll(rows);
         if (selectedIndex >= items.size()) selectedIndex = -1;
+        if (lastClickedIndex >= items.size()) lastClickedIndex = -1;
         scroll.update(items.size(), visibleRows());
     }
 
@@ -99,6 +104,12 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
         if (onSelect != null) onSelect.accept(next);
     }
 
+    /** 中键跳转目标行 / Row targeted by the middle-click jump. */
+    private int jumpTargetIndex() {
+        if (selectedIndex >= 0 && selectedIndex < items.size()) return selectedIndex;
+        return lastClickedIndex >= 0 && lastClickedIndex < items.size() ? lastClickedIndex : -1;
+    }
+
     /** 当前行偏移 / Current row offset. */
     public final int scrollOffset() {
         return scroll.offset();
@@ -121,21 +132,21 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
 
     /** 完整显示的行数 / Number of fully visible rows. */
     public final int visibleRows() {
-        return Math.max(1, getHeight() / rowHeight);
+        return Math.max(1, controlHeight() / rowHeight);
     }
 
     /** 鼠标下的行，无则 -1 / Row under the pointer, or -1. */
     public final int rowAt(double mouseX, double mouseY) {
-        if (mouseX < getX() || mouseX >= getX() + rowsWidth() || mouseY < getY() || mouseY >= getY() + getHeight()) {
+        if (mouseX < controlX() || mouseX >= controlX() + rowsWidth() || mouseY < controlY() || mouseY >= controlY() + controlHeight()) {
             return -1;
         }
-        int index = scroll.smoothIndexOffset() + (int) ((mouseY - getY() + scroll.visualShift(rowHeight)) / rowHeight);
+        int index = scroll.smoothIndexOffset() + (int) ((mouseY - controlY() + scroll.visualShift(rowHeight)) / rowHeight);
         return index >= 0 && index < items.size() ? index : -1;
     }
 
     /** 某行当前的顶部 Y（含平滑滚动位移）/ Current top Y of a row, including the smooth scroll shift. */
     public final int rowTop(int index) {
-        return getY() + (index - scroll.smoothIndexOffset()) * rowHeight - scroll.visualShift(rowHeight);
+        return controlY() + (index - scroll.smoothIndexOffset()) * rowHeight - scroll.visualShift(rowHeight);
     }
 
     /** 最近一次绘制时的鼠标 X，供 renderRow 内的悬停判断 / Mouse X of the last render, for hover checks in renderRow. */
@@ -150,7 +161,7 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
 
     /** 行区域宽度（扣除滚动条）/ Row area width, excluding the scrollbar gutter. */
     public final int rowsWidth() {
-        return scroll.canScroll() ? Math.max(1, getWidth() - SCROLLBAR_WIDTH - SCROLLBAR_GAP) : getWidth();
+        return scroll.canScroll() ? Math.max(1, controlWidth() - SCROLLBAR_WIDTH - SCROLLBAR_GAP) : controlWidth();
     }
 
     // ---------------------------------------------------------------- subclass hooks
@@ -191,11 +202,11 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
     @Override
     protected final void render(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
         scroll.update(items.size(), visibleRows());
-        int x = getX();
-        int y = getY();
+        int x = controlX();
+        int y = controlY();
         int width = rowsWidth();
-        int height = getHeight();
-        hoveredIndex = isHovered() ? rowAt(mouseX, mouseY) : -1;
+        int height = controlHeight();
+        hoveredIndex = controlHovered() ? rowAt(mouseX, mouseY) : -1;
         lastMouseX = mouseX;
         lastMouseY = mouseY;
         if (items.isEmpty()) {
@@ -214,8 +225,9 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
                     boolean selected = index == selectedIndex;
                     boolean hovered = index == hoveredIndex;
                     renderRowBackground(graphics, index, x, rowY, width, rowHeight, hovered, selected);
-                    if (selected) scroll.renderSelectionFlash(graphics, index, x, rowY + 1, width, rowHeight - 2);
                     renderRow(graphics, items.get(index), index, x, rowY, width, rowHeight, hovered, selected);
+                    // 橘黄色边框闪烁画在行内容之上 / The orange border flash is drawn on top of the row content.
+                    scroll.renderSelectionFlash(graphics, index, x, rowY + 1, width, rowHeight - 2);
                 }
             });
         }
@@ -227,16 +239,18 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
     @Override
     protected final boolean onMouseClick(MouseInput input) {
         if (scroll.canScroll() && scroll.beginDrag(input.x(), input.y(), input.button(),
-                scrollbarX(), getY(), SCROLLBAR_WIDTH, getHeight(), MIN_THUMB)) {
+                scrollbarX(), controlY(), SCROLLBAR_WIDTH, controlHeight(), MIN_THUMB)) {
             return true;
         }
         int index = rowAt(input.x(), input.y());
-        return index >= 0 && onRowClick(items.get(index), index, input);
+        if (index < 0 || !onRowClick(items.get(index), index, input)) return false;
+        lastClickedIndex = index;
+        return true;
     }
 
     @Override
     protected final boolean onMouseDrag(MouseDragInput input) {
-        return scroll.drag(input.y(), getY(), getHeight(), MIN_THUMB);
+        return scroll.drag(input.y(), controlY(), controlHeight(), MIN_THUMB);
     }
 
     @Override
@@ -269,6 +283,6 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
     }
 
     private int scrollbarX() {
-        return getX() + getWidth() - SCROLLBAR_WIDTH;
+        return controlX() + controlWidth() - SCROLLBAR_WIDTH;
     }
 }

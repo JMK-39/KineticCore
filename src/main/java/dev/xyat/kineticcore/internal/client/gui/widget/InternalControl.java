@@ -12,25 +12,53 @@ import java.util.function.Supplier;
  * helpers that only KineticCore's own screens use.
  */
 public interface InternalControl extends KineticControl {
+    // ---- 公共 API（稳定名称）/ Public API (stable names) ----
     @Override
+    default int controlX() { return KineticControlBridge.getX(this); }
+
+    @Override
+    default int controlY() { return KineticControlBridge.getY(this); }
+
+    @Override
+    default int controlWidth() { return KineticControlBridge.getWidth(this); }
+
+    @Override
+    default int controlHeight() { return KineticControlBridge.getHeight(this); }
+
+    @Override
+    default void moveControlX(int x) { KineticControlBridge.setX(this, x); }
+
+    @Override
+    default void moveControlY(int y) { KineticControlBridge.setY(this, y); }
+
+    @Override
+    default void resizeControlWidth(int width) { KineticControlBridge.setWidth(this, width); }
+
+    @Override
+    default boolean controlVisible() { return KineticControlBridge.isVisible(this); }
+
+    @Override
+    default void setControlVisible(boolean visible) { KineticControlBridge.setVisible(this, visible); }
+
+    @Override
+    default boolean controlHovered() { return KineticControlBridge.isHovered(this); }
+
+    @Override
+    default boolean controlFocused() { return KineticControlBridge.isFocused(this); }
+
+    // ---- 以下为核心内部使用的原版同名方法 / Vanilla-named helpers used only inside the core ----
     default int getX() { return KineticControlBridge.getX(this); }
 
-    @Override
     default int getY() { return KineticControlBridge.getY(this); }
 
-    @Override
     default int getWidth() { return KineticControlBridge.getWidth(this); }
 
-    @Override
     default int getHeight() { return KineticControlBridge.getHeight(this); }
 
-    @Override
     default void setX(int x) { KineticControlBridge.setX(this, x); }
 
-    @Override
     default void setWidth(int width) { KineticControlBridge.setWidth(this, width); }
 
-    @Override
     default void setY(int y) { KineticControlBridge.setY(this, y); }
 
     @Override
@@ -38,10 +66,8 @@ public interface InternalControl extends KineticControl {
         return KineticControlBridge.contains(this, mouseX, mouseY);
     }
 
-    @Override
     default boolean isHovered() { return KineticControlBridge.isHovered(this); }
 
-    @Override
     default boolean isFocused() { return KineticControlBridge.isFocused(this); }
 
     /** Returns whether the pointer is currently over this control using the underlying widget interaction state. */
@@ -72,7 +98,6 @@ public interface InternalControl extends KineticControl {
     @Override
     default void setEnabled(boolean enabled) { KineticControlBridge.setEnabled(this, enabled); }
 
-    @Override
     default void setVisible(boolean visible) { KineticControlBridge.setVisible(this, visible); }
 
     @Override
@@ -90,6 +115,5 @@ public interface InternalControl extends KineticControl {
     @Override
     default boolean isEnabled() { return KineticControlBridge.isEnabled(this); }
 
-    @Override
     default boolean isVisible() { return KineticControlBridge.isVisible(this); }
 }

@@ -361,7 +361,9 @@ public final class KTClientConfigAdapterRuntime {
     private static Component localizedComment(String translationKey, String rawComment) {
         if (rawComment == null || rawComment.isBlank()) return null;
         if (translationKey == null || translationKey.isBlank()) return null;
-        return Component.translatable(translationKey + ".tooltip");
+        // 缺少翻译时不显示说明行，避免把语言键原样显示出来 / Hide the description rather than show a raw key.
+        String key = translationKey + ".tooltip";
+        return I18n.exists(key) ? Component.translatable(key) : null;
     }
 
     private static String humanize(String value) {
