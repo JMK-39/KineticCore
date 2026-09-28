@@ -107,6 +107,8 @@ public final class KineticReobfCheck {
             if (!visited.add(current)) continue;
             ClassInfo info = core.get(current);
             if (info == null) {
+                // Enum.ordinal() is inherited from the JDK and is absent from the core JAR.
+                if (current.equals("java/lang/Enum") && name.equals("ordinal") && desc.equals("()I")) return null;
                 if (!current.startsWith("java/")) leavesCore = true;
                 continue;
             }
