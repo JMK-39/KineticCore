@@ -32,7 +32,7 @@ public abstract class NumberFieldBuilder extends ControlBuilder<NumberFieldBuild
     /** 文本变更回调 / Change callback. */
     protected Consumer<String> onChange = null;
 
-    /** 默认值（显示黑色，其它内容绿色）/ Default value (drawn black; other content green). */
+    /** 默认值（显示青色，其它内容绿色）/ Default value (drawn cyan; other content green). */
     protected String defaultText = null;
     /** 自定义文字颜色规则 / Custom value color rule. */
     protected java.util.function.Function<String, Integer> valueColor = null;
@@ -86,8 +86,8 @@ public abstract class NumberFieldBuilder extends ControlBuilder<NumberFieldBuild
     }
 
     /**
-     * 默认值：内容等于它时显示黑色，其它非空内容（已修改）显示绿色。
-     * Default value: text equal to it is drawn black, any other non-empty text (modified) green.
+     * 默认值：内容等于它时显示青色，其它非空内容（已修改）显示绿色。
+     * Default value: text equal to it is drawn cyan, any other non-empty text (modified) green.
      */
     public final NumberFieldBuilder defaultValue(Number defaultValue) {
         this.defaultText = defaultValue == null ? null : type.format(defaultValue);

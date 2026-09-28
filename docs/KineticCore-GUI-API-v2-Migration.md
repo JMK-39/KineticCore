@@ -39,7 +39,7 @@ This file is the only migration reference. Older KineticCore notes and patches (
 
 **Input text colors and selectors**
 
-- Single-line inputs follow one color rule: placeholder pure white (only while empty and unfocused), value equal to the default black, modified value green; `valueColor` overrides it for special cases. New API: `KineticTextField.setDefaultText/defaultText/setValueColor`, builder `.defaultText(...)` / `.defaultValue(...)` / `.valueColor(...)`, and `KineticTheme.fieldPlaceholderText/fieldDefaultText/fieldModifiedText` (§5).
+- Single-line inputs follow one color rule: placeholder pure white (only while empty and unfocused), value equal to the default cyan, modified value green, and invalid value red. Input text has no shadow. `valueColor` overrides the valid-value color for special cases. New API: `KineticTextField.setDefaultText/defaultText/setValueColor`, builder `.defaultText(...)` / `.defaultValue(...)` / `.valueColor(...)`, and `KineticTheme.fieldPlaceholderText/fieldDefaultText/fieldModifiedText/fieldErrorText` (§5).
 - Text areas draw their placeholder in the same pure white.
 - The entity selector marks selected entities with a green outline.
 
@@ -349,8 +349,9 @@ Behaviour notes:
 |---|---|
 | Empty and unfocused: placeholder | pure white (`KineticTheme.fieldPlaceholderText()`); the placeholder's own color styling and `§` codes are ignored |
 | Empty and focused | no placeholder |
-| Value equal to the default | black (`KineticTheme.fieldDefaultText()`) |
+| Value equal to the default | cyan (`KineticTheme.fieldDefaultText()`) |
 | Any other value (content entered / modified) | green (`KineticTheme.fieldModifiedText()`) |
+| Invalid value | red (`KineticTheme.fieldErrorText()`) |
 | Custom rule | whatever `valueColor` returns (return `null` to fall back to the rows above) |
 
 - Set the default with `.defaultText(String)` (text / auto-complete builders) or `.defaultValue(Number)` (number builders), or later `field.setDefaultText(...)`. Without a default, any entered text counts as modified. Search boxes normally have no default.
