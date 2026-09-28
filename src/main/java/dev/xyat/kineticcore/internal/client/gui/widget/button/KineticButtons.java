@@ -262,6 +262,9 @@ public final class KineticButtons {
 
         @Override
         public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            // Vanilla's nine-slice button renderer divides by the inner tile size. A clipped
+            // button narrower than its corners can reduce that size to zero.
+            if (getWidth() < 8 || getHeight() < 8) return;
             if (clipEnabled) graphics.enableScissor(clipLeft, clipTop, clipRight, clipBottom);
             Component storedText = null;
             try {
