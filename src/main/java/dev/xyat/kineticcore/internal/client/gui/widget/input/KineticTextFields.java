@@ -381,7 +381,9 @@ public final class KineticTextFields {
             );
 
             int contentX = fieldX + 4;
-            int contentY = fieldY + Math.max(0, Math.round((fieldHeight - font.lineHeight) / 2.0F));
+            // Minecraft's BakedGlyph renders its top at the supplied text Y minus 3 pixels.
+            // Account for that font origin when centering the visible text, caret and selection.
+            int contentY = fieldY + Math.max(0, (fieldHeight - font.lineHeight + 1) / 2) + 3;
             int contentWidth = Math.max(1, fieldWidth - 8);
 
             // Let vanilla keep cursor/selection/scroll semantics, but render only the text layer.
