@@ -8,6 +8,7 @@
     "client.MiniEffectsMixins$GameRendererMixin",
     "client.MiniEffectsMixins$DisplayEffectsScreenMixin",
     "client.MiniEffectsMixins$DisplayEffectsScreenMixinFailsafe",
-    "client.LivingEntityAccessor"
+    "client.LivingEntityAccessor",
+    "client.MiniEffectsMixins$InventoryEffectRendererGuiHandlerMixin"
   ]
 }

@@ -27,6 +27,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -316,6 +317,17 @@ public class MiniEffectsMixins {
             }
             int duration = instance.getDuration();
             cir.setReturnValue(duration > 20 ? 1.0F : duration * 0.05F);
+        }
+    }
+
+    @Pseudo
+    @Mixin(targets = "mezz.jei.library.plugins.vanilla.gui.InventoryEffectRendererGuiHandler", remap = false)
+    public static class InventoryEffectRendererGuiHandlerMixin {
+        @Inject(method = "getGuiExtraAreas(Lnet/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen;)Ljava/util/List;", at = @At("HEAD"), cancellable = true, require = 0)
+        private void getGuiExtraAreas(EffectRenderingInventoryScreen<?> containerScreen, CallbackInfoReturnable<List<Rect2i>> ci) {
+            if (containerScreen instanceof EffectAreaProvider getter) {
+                ci.setReturnValue(getter.kineticcore$effectAreas());
+            }
         }
     }
 }
