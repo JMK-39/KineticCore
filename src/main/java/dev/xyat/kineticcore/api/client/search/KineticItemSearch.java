@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.api.client.search;
 
+import dev.xyat.kineticcore.internal.client.KineticCreativeTabClientRuntime;
 import dev.xyat.kineticcore.internal.client.search.ItemSearchIndex;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -17,6 +18,7 @@ import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.TieredItem;
 import net.minecraft.world.item.TridentItem;
 
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -217,5 +219,15 @@ public final class KineticItemSearch {
     /** Ensures the shared cache is prepared, invoking the optional callback after a successful cache build. */
     public static void prepare(Runnable onDone) {
         ItemSearchIndex.prepareCache(onDone == null ? () -> { } : onDone);
+    }
+
+    /**
+     * Rebuilds the creative inventory's name and tag search from the given items, for example after an add-on
+     * changes which items the creative tabs show.
+     *
+     * @param items items to index; {@code null} clears the search index
+     */
+    public static void refreshCreativeSearch(Collection<ItemStack> items) {
+        KineticCreativeTabClientRuntime.refreshSearch(items == null ? List.of() : List.copyOf(items));
     }
 }

@@ -1,17 +1,10 @@
 package dev.xyat.kineticcore.api.client.gui.ui;
 
-import dev.xyat.kineticcore.api.client.gui.widget.*;
-import dev.xyat.kineticcore.api.client.gui.widget.list.*;
-import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
+import dev.xyat.kineticcore.api.client.gui.widget.list.KineticToggleList;
+import dev.xyat.kineticcore.api.client.gui.widget.list.ToggleItem;
 
 import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /** 开关列表 / Toggle list. */
 public abstract class ToggleListBuilder extends LayeredControlBuilder<ToggleListBuilder, KineticToggleList> {

@@ -3,13 +3,21 @@ package dev.xyat.kineticcore.api.hook;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Public API contract for hook registration. */
+/** Handle returned by hook registration. Closing it unregisters the hook; closing twice is harmless. */
 @FunctionalInterface
 public interface HookRegistration extends AutoCloseable {
+    /** Unregisters the hook. Does not throw checked exceptions. */
     @Override
     void close();
 
-    /** 创建仅执行一次清理操作的 Hook 句柄；重复关闭不会影响其他注册。 */
+    /**
+     * Creates a handle that runs {@code cleanup} only the first time it is closed, even when closed from several
+     * threads.
+     *
+     * @param cleanup unregistration action
+     * @return the handle
+     * @throws NullPointerException if {@code cleanup} is {@code null}
+     */
     static HookRegistration once(Runnable cleanup) {
         Objects.requireNonNull(cleanup, "cleanup");
         AtomicBoolean closed = new AtomicBoolean();

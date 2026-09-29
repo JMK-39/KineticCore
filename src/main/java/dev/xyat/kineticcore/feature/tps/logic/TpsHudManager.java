@@ -42,7 +42,7 @@ public final class TpsHudManager {
 
         ServerTickTracker tracker = KineticServerPerformance.tracker(server).orElse(null);
         if (tracker == null) return;
-        double mspt = tracker.getStats(2, 0);
+        double mspt = tracker.getStats(2, ServerTickTracker.Stat.AVERAGE);
         TpsNetwork.TpsData packet = new TpsNetwork.TpsData(KineticServerPerformance.tps(mspt), mspt);
 
         for (UUID uuid : Set.copyOf(SUBSCRIBERS)) {

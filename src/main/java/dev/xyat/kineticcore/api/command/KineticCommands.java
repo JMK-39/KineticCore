@@ -56,7 +56,13 @@ public final class KineticCommands {
     }
 
     /**
-     * Registers top level.
+     * Registers a command outside the {@code /kt} root, such as {@code /mymod}. The registrar runs every time
+     * commands are registered, so it must be repeatable; a failing registrar is logged without affecting others.
+     *
+     * @param id unique owner id
+     * @param registrar adds nodes to the dispatcher
+     * @throws NullPointerException if an argument is {@code null}
+     * @throws IllegalStateException if the id is already registered
      */
     public static synchronized void registerTopLevel(
             String id,
@@ -72,7 +78,8 @@ public final class KineticCommands {
     }
 
     /**
-     * Unregisters top level.
+     * Removes a top-level registrar; takes effect the next time commands are registered, for example on
+     * {@code /reload}.
      */
     public static synchronized void unregisterTopLevel(String id) {
         TOP_LEVEL_COMMANDS.remove(id);

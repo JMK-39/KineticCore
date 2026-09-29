@@ -4,12 +4,28 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-/** Public API contract for network codec. */
+/**
+ * Writes and reads one message type. The decoder must read exactly what the encoder wrote, in the same order.
+ *
+ * @param <T> message type
+ */
 public interface NetworkCodec<T> {
+    /** Writes the message; runs on the sending thread. */
     void encode(NetworkBuffer buffer, T message);
 
+    /** Reads a message; runs on the network thread, so it must not touch game state. */
     T decode(NetworkBuffer buffer);
 
+    /**
+     * Creates a codec from two functions, typically method references such as {@code MyMessage::write} and
+     * {@code MyMessage::read}.
+     *
+     * @param encoder writes a message
+     * @param decoder reads a message
+     * @param <T> message type
+     * @return the codec
+     * @throws NullPointerException if an argument is {@code null}
+     */
     static <T> NetworkCodec<T> of(
             BiConsumer<NetworkBuffer, T> encoder,
             Function<NetworkBuffer, T> decoder

@@ -1,17 +1,11 @@
 package dev.xyat.kineticcore.api.client.gui.ui;
 
-import dev.xyat.kineticcore.api.client.gui.widget.*;
-import dev.xyat.kineticcore.api.client.gui.widget.list.*;
-import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
+import dev.xyat.kineticcore.api.client.gui.widget.KineticTabStrip;
+import dev.xyat.kineticcore.api.client.gui.widget.TabStripItem;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /** 可滚动变宽标签条 / Scrollable variable-width tab strip. */
 public abstract class TabStripBuilder extends ControlBuilder<TabStripBuilder, KineticTabStrip> {

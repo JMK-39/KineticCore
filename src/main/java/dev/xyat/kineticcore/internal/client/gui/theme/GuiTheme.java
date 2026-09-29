@@ -83,7 +83,6 @@ public final class GuiTheme {
         return FIELD_ERROR_TEXT;
     }
 
-
     /** Resolves the standard outline color for the supplied control state. */
     private static int stateBorder(boolean selected, boolean hovered, boolean error) {
         if (selected) return BORDER_SELECTED;

@@ -21,6 +21,50 @@ To generate method documentation for an AI or another reader, select `Tasks → 
 
 To package only the API source and documentation, run `apiSourceZip`. It also generates Javadoc when needed, but a regular `build` does not invoke it.
 
+## Which API to Use
+
+Start here before writing addon code. Every row is an existing entry point; builders are called on the `KineticUi` passed to `build(KineticUi ui)`.
+
+| I need | Use |
+|---|---|
+| A screen | `extends KineticPage` + `build(KineticUi ui)`; open it with `KineticGui.open(page)` or, from another page, `openChild(page)` |
+| A container menu screen | `extends KineticContainerPage<M>` + `KineticClientMenus.register(...)`; the menu type comes from `KineticMenuTypes` |
+| A button | `ui.button(x, y, w)`, `.compact()` for the narrow style; `ui.itemButton(...)` for an item icon button |
+| An on/off switch | `ui.toggle(...)` |
+| Text input | `ui.textField(...)`, multi-line `ui.textArea(...)` |
+| Number input (integer or decimal, min/max, negatives) | `ui.numberField(...)` |
+| Input with suggestions | `ui.autoComplete(...)`, for numbers `ui.numberAutoComplete(...)` |
+| A choice | `ui.dropdown(...)`, `ui.cycleButton(...)` or `ui.slider(...)` |
+| A colour | `ui.colorButton(...)` / `ui.colorSwatch(...)`; picker `KineticSelectors.openColorPicker(...)` |
+| Tabs | `ui.tabBar(...)` (fixed) or `ui.tabStrip(...)` (scrollable) |
+| A list of text rows | `ui.selectionList(...)` |
+| Items as a list or a grid | `ui.itemSelectionList(...)` / `ui.itemGrid(...)` |
+| Rows with trailing buttons or toggles | `ui.actionList`, `ui.itemActionList`, `ui.multiActionList`, `ui.toggleList`, `ui.toggleActionList`, `ui.multiToggleList` |
+| Rows the page draws itself | `KineticRowList<T>`, added with `ui.add(...)` |
+| Rows of real controls that scroll together | `ui.scrollViewport(...)` |
+| A control the API does not have | first check whether it is generic and belongs in the API; otherwise `KineticCustomControl` + `ui.add(...)` |
+| Confirm dialog, right-click menu, tooltip | page `openDialog(...)`, `openContextMenu(...)` with `KineticOverlays.MenuItem`, builder `.tooltip(...)` or page `showTooltip(...)` |
+| Pick an item, entity, NBT or colour | `KineticSelectors.open*` |
+| Let players move a HUD element | `KineticHudEditorPage` |
+| Draw on the HUD | `KineticClientEvents.onHudRender(...)` |
+| Draw icons or custom rows in an item tooltip | `KineticItemTooltips.registerComponentFactory(...)` with a `KineticTooltipComponent` |
+| Add a button to a vanilla or third-party screen | `KineticClientEvents.onScreenInitAfter(...)` |
+| Drawing, theme colours, text width | `KineticGraphics`, `KineticTheme`, `KineticText` |
+| Labels that follow world positions (name tags, damage numbers) | `KineticWorldRender.beginScreenOverlay(context)` inside `KineticClientEvents.onLevelRender(...)`; never `RenderSystem` / `PoseStack` |
+| Secondary (muted) text | `KineticTheme.muted(text)`; never the gray `§7` / `§8` codes |
+| Input text cyan while unchanged, green once edited | builder `.defaultText(...)` / `.defaultValue(...)`, or `.firstShownTextAsDefault()` when the value is loaded after building |
+| Player-visible text | `KineticI18n.translatable(...)` with keys in `zh_cn` and `en_us` |
+| An F6 config page | `KTConfigPage.builder(...)` + `KTConfigApi.register(...)`; server-owned values `KTServerConfigSpec` |
+| Network packets | `PacketChannel` (or `KineticNetwork.channel(...)`) |
+| Commands | `KineticCommands`; clickable help lines `CommandText.suggest(...)` |
+| Chat text that runs, suggests, copies or opens a link when clicked | `CommandText.clickToRun / clickToSuggest / clickToCopy / clickToOpenUrl`; never `new ClickEvent(...)` |
+| Key bindings | `KineticKeyBindings` |
+| Client or server side, config folder | `KineticPlatform`; config files `KineticPaths` |
+| Registries and IDs | `KineticRegistries`, `KineticResourceIds` |
+| Flight permission | `KineticFlightSources` |
+
+Before adding API: first try a new parameter on an existing builder or interface, then a combination of existing controls. Add a new API type only for a new interaction model that an unrelated addon could use unchanged.
+
 ## Runtime Environment
 
 - Minecraft 1.20.1
@@ -336,6 +380,15 @@ The project provides the static `checkKineticArchitecture` task to prevent:
 
 Architecture rules run automatically during the build through `gradle/kinetic-architecture.gradle` and `gradle/kinetic-api-verification.gradle`.
 
+Regression checks come in four groups:
+
+- No Minecraft needed: `checkKineticHeadlessRegressions`, runs in every build.
+- Minecraft and Forge classes, no bootstrap: `checkKineticMinecraftRegressions`. Checks that keep static startup state run in their own JVM. Not part of `build` yet; run it with `gradlew checkKineticMinecraftRegressions`.
+- Minecraft bootstrap needed: `KineticScrollStateRegression`, `SmoothSelectionListLifecycleRegression`.
+- Forge mod loading context needed: `SearchEnglishDisplayRegression`, `KTServerConfigGetterRegression`, `ServerConfigDecimalWireRegression`, `HookRegistrationIntegrationRegression`, `GuiDraftConfigureFailureRegression`, `GuiRootNavigationRegression`, `GuiSessionLifecycleRegression`, `GuiSessionNavigationRegression`.
+
+The last two groups have no automated host yet. Do not make runtime code tolerate a missing game environment just to run them in a plain JVM.
+
 ## API Source Archive
 
 The project provides `apiSourceZip`, containing the public `api/` source, this `README.md`, and Javadoc HTML generated during the task.
@@ -358,6 +411,50 @@ KineticCore 是面向 **Minecraft 1.20.1 / Forge 47.4.x / Java 17** 的核心基
 - 发给 AI 的文件：项目根目录下的 `KineticCore-javadoc-<构建版本号>.zip`，其中 `javadoc/index.html` 是文档首页。
 
 仅需包含源码和文档的完整 API 源码包时，仍可单独运行 `apiSourceZip`；它同样会按需生成 Javadoc，但不会由普通 `build` 调用。
+
+## 该用哪个 API
+
+写附属代码前先查这张表。每一行都是现有入口；控件都在 `build(KineticUi ui)` 收到的 `KineticUi` 上创建。
+
+| 我要 | 用 |
+|---|---|
+| 一个界面 | `extends KineticPage` + `build(KineticUi ui)`；用 `KineticGui.open(page)` 打开，从另一个页面打开用 `openChild(page)` |
+| 容器（Menu）界面 | `extends KineticContainerPage<M>` + `KineticClientMenus.register(...)`；Menu 类型用 `KineticMenuTypes` |
+| 按钮 | `ui.button(x, y, w)`，紧凑样式加 `.compact()`；物品图标按钮 `ui.itemButton(...)` |
+| 开关 | `ui.toggle(...)` |
+| 文本输入 | `ui.textField(...)`，多行 `ui.textArea(...)` |
+| 数字输入（整数或小数、最小/最大值、负数） | `ui.numberField(...)` |
+| 带补全的输入 | `ui.autoComplete(...)`，数字用 `ui.numberAutoComplete(...)` |
+| 选项 | `ui.dropdown(...)`、`ui.cycleButton(...)` 或 `ui.slider(...)` |
+| 颜色 | `ui.colorButton(...)` / `ui.colorSwatch(...)`；取色器 `KineticSelectors.openColorPicker(...)` |
+| 标签页 | `ui.tabBar(...)`（固定）或 `ui.tabStrip(...)`（可滚动） |
+| 文字列表 | `ui.selectionList(...)` |
+| 物品列表或网格 | `ui.itemSelectionList(...)` / `ui.itemGrid(...)` |
+| 行尾带按钮或开关的列表 | `ui.actionList`、`ui.itemActionList`、`ui.multiActionList`、`ui.toggleList`、`ui.toggleActionList`、`ui.multiToggleList` |
+| 页面自绘的行 | `KineticRowList<T>`，用 `ui.add(...)` 加入 |
+| 一起滚动的多行真实控件 | `ui.scrollViewport(...)` |
+| API 没有的控件 | 先判断是不是通用能力、该不该进 API；不是才用 `KineticCustomControl` + `ui.add(...)` |
+| 确认框、右键菜单、Tooltip | 页面 `openDialog(...)`、`openContextMenu(...)`（配 `KineticOverlays.MenuItem`）、Builder 的 `.tooltip(...)` 或页面 `showTooltip(...)` |
+| 选择物品、实体、NBT 或颜色 | `KineticSelectors.open*` |
+| 让玩家拖动 HUD 位置 | `KineticHudEditorPage` |
+| 在 HUD 上绘制 | `KineticClientEvents.onHudRender(...)` |
+| 在物品提示框里画图标或自定义行 | `KineticItemTooltips.registerComponentFactory(...)` + `KineticTooltipComponent` |
+| 给原版或第三方界面加按钮 | `KineticClientEvents.onScreenInitAfter(...)` |
+| 绘制、主题颜色、文字宽度 | `KineticGraphics`、`KineticTheme`、`KineticText` |
+| 跟随世界位置的标签（名牌、伤害数字） | 在 `KineticClientEvents.onLevelRender(...)` 里用 `KineticWorldRender.beginScreenOverlay(context)`；不要直接用 `RenderSystem` / `PoseStack` |
+| 次要（灰色）文字 | `KineticTheme.muted(text)`；不要用 `§7` / `§8` |
+| 输入框未改动时青色、改动后绿色 | 构建器 `.defaultText(...)` / `.defaultValue(...)`；数值在构建后才载入时用 `.firstShownTextAsDefault()` |
+| 玩家可见文字 | `KineticI18n.translatable(...)`，语言键同时写 `zh_cn` 和 `en_us` |
+| F6 配置页 | `KTConfigPage.builder(...)` + `KTConfigApi.register(...)`；服务器端数值用 `KTServerConfigSpec` |
+| 网络包 | `PacketChannel`（或 `KineticNetwork.channel(...)`） |
+| 命令 | `KineticCommands`；可点击的帮助行 `CommandText.suggest(...)` |
+| 聊天里点击后执行、填入、复制或打开链接的文字 | `CommandText.clickToRun / clickToSuggest / clickToCopy / clickToOpenUrl`；不要自己 `new ClickEvent(...)` |
+| 按键 | `KineticKeyBindings` |
+| 判断客户端/服务端、配置目录 | `KineticPlatform`；配置文件读写 `KineticPaths` |
+| 注册表和 ID | `KineticRegistries`、`KineticResourceIds` |
+| 飞行权限 | `KineticFlightSources` |
+
+新增 API 之前：先尝试给现有 Builder 或接口加一个参数，再尝试组合现有控件。只有出现一个完全无关的附属也能原样使用的新交互方式时，才新增 API 类型。
 
 ## 运行环境
 
@@ -670,6 +767,15 @@ ServerTickTracker
 - 业务绕过已有统一 GUI、输入、生命周期、网络、Tooltip、命令能力。
 
 架构规则由 `gradle/kinetic-architecture.gradle` 和 `gradle/kinetic-api-verification.gradle` 在构建阶段自动检查。
+
+回归检查分四组：
+
+- 不需要 Minecraft：`checkKineticHeadlessRegressions`，每次构建都会运行。
+- 需要 Minecraft 和 Forge 类，但不需要 bootstrap：`checkKineticMinecraftRegressions`。会保留静态启动状态的检查在独立 JVM 中运行。暂时不在 `build` 里，需要手动运行 `gradlew checkKineticMinecraftRegressions`。
+- 需要 Minecraft bootstrap：`KineticScrollStateRegression`、`SmoothSelectionListLifecycleRegression`。
+- 需要 Forge 模组加载环境：`SearchEnglishDisplayRegression`、`KTServerConfigGetterRegression`、`ServerConfigDecimalWireRegression`、`HookRegistrationIntegrationRegression`、`GuiDraftConfigureFailureRegression`、`GuiRootNavigationRegression`、`GuiSessionLifecycleRegression`、`GuiSessionNavigationRegression`。
+
+后两组暂时没有自动运行的宿主。不要为了让它们在普通 JVM 里通过而让运行时代码容忍缺失的游戏环境。
 
 ## API 源码包
 

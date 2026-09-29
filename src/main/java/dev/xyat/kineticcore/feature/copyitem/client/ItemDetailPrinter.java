@@ -1,12 +1,10 @@
 package dev.xyat.kineticcore.feature.copyitem.client;
 
+import dev.xyat.kineticcore.api.command.CommandText;
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import dev.xyat.kineticcore.api.inventory.KineticItemFluids;
-import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
@@ -60,8 +58,6 @@ public class ItemDetailPrinter {
     }
 
     private static Component copy(Component display, String clipboard, Component hoverInfo) {
-        return display.copy().withStyle(Style.EMPTY
-                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, clipboard))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hoverInfo)));
+        return CommandText.clickToCopy(display, clipboard, hoverInfo);
     }
 }

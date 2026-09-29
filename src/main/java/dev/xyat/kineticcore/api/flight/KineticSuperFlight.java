@@ -23,11 +23,6 @@ public final class KineticSuperFlight {
         return KineticSuperFlightRuntime.active(player);
     }
 
-    /** Returns the raw flight-capability attribute value. Kept for source compatibility with older addons. */
-    public static double maxSpeed(LivingEntity entity) {
-        return KineticFlightAttributes.flightSpeed(entity);
-    }
-
     /** Returns the entity's configured turn damping in the public 0..1 range. */
     public static double turnDamping(LivingEntity entity) {
         return KineticFlightAttributes.turnDamping(entity);

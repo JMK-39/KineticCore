@@ -11,7 +11,12 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/** Public API type for packet channel. */
+/**
+ * Convenience wrapper over {@link NetworkChannel} that remembers a sender per message class, so code can send a
+ * message object without keeping sender references.
+ *
+ * <p>Registration methods are synchronized and should run during common setup; send methods are thread-safe.
+ */
 public final class PacketChannel {
     private static final Map<ResourceLocation, PacketChannel> CHANNELS = new HashMap<>();
 
@@ -25,7 +30,14 @@ public final class PacketChannel {
     }
 
     /**
-     * Performs the create API operation.
+     * Creates the wrapper for a channel, or returns the existing wrapper for the same id.
+     *
+     * @param id channel id
+     * @param protocolVersion protocol version compared with the other side; not blank
+     * @param versionPolicy version compatibility rule
+     * @return the channel wrapper
+     * @throws IllegalStateException if the id is already registered with a different version or policy
+     * @see KineticNetwork#channel(ResourceLocation, String, NetworkVersionPolicy)
      */
     public static synchronized PacketChannel create(
             ResourceLocation id,
@@ -42,15 +54,15 @@ public final class PacketChannel {
         return created;
     }
 
-    /**
-     * Returns the id.
-     */
+    /** Returns the channel id. */
     public ResourceLocation id() {
         return channel.id();
     }
 
     /**
-     * Registers serverbound.
+     * Registers a client-to-server message with the next free discriminator.
+     *
+     * @see NetworkChannel#registerServerbound(Class, NetworkCodec, ServerboundPacketHandler)
      */
     public synchronized <T> void registerServerbound(
             Class<T> messageType,
@@ -62,7 +74,9 @@ public final class PacketChannel {
     }
 
     /**
-     * Registers clientbound.
+     * Registers a server-to-client message with the next free discriminator.
+     *
+     * @see NetworkChannel#registerClientbound(Class, NetworkCodec, Consumer)
      */
     public synchronized <T> void registerClientbound(
             Class<T> messageType,
@@ -85,6 +99,11 @@ public final class PacketChannel {
 
     /**
      * 以固定协议编号注册服务端数据包。部分注册失败后重试时，客户端和服务端编号必须保持一致。
+     *
+     * <p>Registers a client-to-server message with a fixed discriminator, so a retried partial registration still
+     * assigns the same ids on both sides.
+     *
+     * @see NetworkChannel#registerServerbound(int, Class, NetworkCodec, ServerboundPacketHandler)
      */
     public synchronized <T> void registerServerbound(
             int discriminator,
@@ -96,7 +115,14 @@ public final class PacketChannel {
         serverboundSenders.put(messageType, sender);
     }
 
-    /** 以固定协议编号注册客户端数据包，禁止与同频道其他数据包使用相同编号。 */
+    /**
+     * 以固定协议编号注册客户端数据包，禁止与同频道其他数据包使用相同编号。
+     *
+     * <p>Registers a server-to-client message with a fixed discriminator that no other message on the channel may
+     * use.
+     *
+     * @see NetworkChannel#registerClientbound(int, Class, NetworkCodec, Consumer)
+     */
     public synchronized <T> void registerClientbound(
             int discriminator,
             Class<T> messageType,
@@ -119,7 +145,10 @@ public final class PacketChannel {
     }
 
     /**
-     * Sends to server.
+     * Sends a message to the server using the sender registered for its class.
+     *
+     * @throws NullPointerException if {@code message} is {@code null}
+     * @throws IllegalStateException if the message class was not registered as serverbound
      */
     public void sendToServer(Object message) {
         Objects.requireNonNull(message, "message");
@@ -127,7 +156,10 @@ public final class PacketChannel {
     }
 
     /**
-     * Sends to player.
+     * Sends a message to one player.
+     *
+     * @throws NullPointerException if an argument is {@code null}
+     * @throws IllegalStateException if the message class was not registered as clientbound
      */
     public void sendToPlayer(ServerPlayer player, Object message) {
         Objects.requireNonNull(player, "player");
@@ -136,7 +168,10 @@ public final class PacketChannel {
     }
 
     /**
-     * Performs the broadcast API operation.
+     * Sends a message to every connected player.
+     *
+     * @throws NullPointerException if {@code message} is {@code null}
+     * @throws IllegalStateException if the message class was not registered as clientbound
      */
     public void broadcast(Object message) {
         Objects.requireNonNull(message, "message");
@@ -144,7 +179,10 @@ public final class PacketChannel {
     }
 
     /**
-     * Sends to tracking and self.
+     * Sends a message to every player tracking the entity and to the entity itself when it is a player.
+     *
+     * @throws NullPointerException if an argument is {@code null}
+     * @throws IllegalStateException if the message class was not registered as clientbound
      */
     public void sendToTrackingAndSelf(Entity entity, Object message) {
         Objects.requireNonNull(entity, "entity");

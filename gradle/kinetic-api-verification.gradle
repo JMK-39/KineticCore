@@ -233,6 +233,10 @@ tasks.register('checkKineticApiSurface') {
                 }
             }
 
+            if (source.contains('API operation.')) {
+                violations.add("Generated placeholder JavaDoc ('Performs the ... API operation.') must describe the real contract: ${relative}")
+            }
+
             for (int i = 0; i < lines.size(); i++) {
                 String trimmed = lines[i].trim()
                 if (!(trimmed ==~ /^(public|protected)\\b.*/)) continue
@@ -252,6 +256,33 @@ tasks.register('checkKineticApiSurface') {
                         start: bodyStart,
                         end  : bodyEnd
                 ])
+            }
+
+            // Interface members are implicitly public, so the explicit public/protected scan above
+            // cannot see them. Check every direct method declaration of every API interface.
+            List<String> maskedLines = masked.readLines()
+            def interfaceMatcher = Pattern.compile('(?s)\\binterface\\s+[A-Za-z_$][A-Za-z0-9_$]*[^;{}]*\\{').matcher(masked)
+            def interfaceMethodPattern = Pattern.compile('^(?:default\\s+|static\\s+)?(?:<[^>]+>\\s+)?[A-Za-z0-9_$.<>\\[\\]?, ]+\\s+[A-Za-z_$][A-Za-z0-9_$]*\\s*\\(.*')
+            while (interfaceMatcher.find()) {
+                int bodyStart = interfaceMatcher.end() - 1
+                int bodyEnd = kineticMatchingBrace(masked, bodyStart)
+                int depth = 0
+                int lineIndex = kineticLineNumber(masked, bodyStart) - 1
+                for (int i = bodyStart; i <= bodyEnd; i++) {
+                    char ch = masked.charAt(i)
+                    if (ch == '{'.charAt(0)) depth++
+                    if (ch == '}'.charAt(0)) depth--
+                    if (ch != '\n'.charAt(0)) continue
+                    lineIndex++
+                    if (depth != 1 || lineIndex >= maskedLines.size() || lineIndex >= lines.size()) continue
+                    String memberLine = maskedLines[lineIndex].trim()
+                    if (memberLine.isEmpty() || memberLine.startsWith('@')) continue
+                    if (memberLine ==~ /^(public|protected|private|return|throw|new|if|for|while|else|case)\b.*/) continue
+                    if (!interfaceMethodPattern.matcher(memberLine).matches()) continue
+                    if (!kineticHasJavadocBefore(lines, lineIndex)) {
+                        violations.add("API interface method needs JavaDoc: ${relative}:${lineIndex + 1} -> ${lines[lineIndex].trim()}")
+                    }
+                }
             }
 
             def callableSignatures = [:].withDefault { [] }
@@ -317,6 +348,8 @@ tasks.register('checkKineticApiSurface') {
                     "Kinetic public API verification failed:\n - " + violations.unique().join('\n - ')
                             + "\n\nRules:\n"
                             + "  explicit public/protected API declarations require JavaDoc\n"
+                            + "  interface methods are implicitly public and require JavaDoc too\n"
+                            + "  generated placeholder JavaDoc is not documentation\n"
                             + "  public/protected overloads are allowed; duplicate callable signatures are forbidden\n"
                             + "  public/protected API signatures must not expose internal implementation types\n"
                             + "  API must not depend on feature packages or Forge event implementation types\n"
@@ -368,10 +401,31 @@ tasks.register('checkKineticScrollFrame', JavaExec) {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
 }
 
+tasks.register('checkKineticHeadlessRegressions', JavaExec) {
+    group = 'verification'
+    description = 'Runs every regression check that needs no Minecraft runtime (see HeadlessRegressionSuite).'
+    dependsOn tasks.named('testClasses')
+    classpath = files(sourceSets.test.output, sourceSets.main.output)
+    mainClass.set('dev.xyat.kineticcore.HeadlessRegressionSuite')
+    workingDir = projectDir
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+}
+
+tasks.register('checkKineticMinecraftRegressions', JavaExec) {
+    group = 'verification'
+    description = 'Runs the regression checks that need Minecraft classes but no bootstrap or mod loading (see MinecraftRegressionSuite).'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass.set('dev.xyat.kineticcore.MinecraftRegressionSuite')
+    workingDir = projectDir
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+}
+
 tasks.named('check').configure {
     dependsOn tasks.named('checkKineticApiSurface')
     dependsOn tasks.named('checkKineticScreenParity')
     dependsOn tasks.named('checkKineticScrollFrame')
     dependsOn tasks.named('checkKineticWidgetState')
     dependsOn tasks.named('checkKineticPinyin')
+    dependsOn tasks.named('checkKineticHeadlessRegressions')
 }

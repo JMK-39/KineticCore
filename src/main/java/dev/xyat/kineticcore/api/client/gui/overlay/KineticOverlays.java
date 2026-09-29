@@ -8,9 +8,18 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 import java.util.Objects;
 
-/** Public facade for external Kinetic overlay requests and global toasts. */
+/**
+ * Global overlays drawn above the current screen: tooltips, confirmation dialogs and toasts.
+ *
+ * <p>Tooltip requests last for one frame, so call them from render code every frame the tooltip should stay
+ * visible; the last request of a frame wins. Toasts persist until they expire or are removed. Call these methods on
+ * the client thread.
+ */
 public final class KineticOverlays {
-    /** Supported position values exposed by this API. */
+    /**
+     * Screen anchor of a toast. Offsets passed to {@link #toast(String, Component, Position, int, int, int)} are
+     * relative to it.
+     */
     public enum Position {
         TOP_CENTER,
         BOTTOM_CENTER,
@@ -19,14 +28,20 @@ public final class KineticOverlays {
         TOP_RIGHT
     }
 
-    /** Supported menu item style values exposed by this API. */
+    /** Visual style of a context-menu row. */
     public enum MenuItemStyle {
+        /** Standard actionable row. */
         NORMAL,
+        /** Destructive action, drawn in the theme's danger color. */
         DANGER,
+        /** Non-interactive divider line. */
         SEPARATOR
     }
 
-    /** Public API type for menu item. */
+    /**
+     * One immutable context-menu row. Create rows with the static factories and pass them to the screen's
+     * context-menu API.
+     */
     public static final class MenuItem {
         private final Component label;
         private final Component detail;
@@ -55,7 +70,17 @@ public final class KineticOverlays {
         }
 
         /**
-         * Performs the create API operation.
+         * Creates a fully specified row. Prefer the specific factories such as {@link #action(Component, Runnable)}
+         * for common cases.
+         *
+         * @param label row text; {@code null} becomes empty
+         * @param detail secondary text shown to the right of the label; {@code null} becomes empty
+         * @param tooltip hover text; {@code null} becomes empty
+         * @param checked check mark state for toggle rows, or {@code null} for rows without a check mark
+         * @param action run when the row is clicked; {@code null} does nothing
+         * @param enabled whether the row can be clicked; separators are always disabled
+         * @param style row style; {@code null} means {@link MenuItemStyle#NORMAL}
+         * @return the new row
          */
         public static MenuItem create(
                 Component label,
@@ -109,51 +134,41 @@ public final class KineticOverlays {
             return new MenuItem(Component.empty(), Component.empty(), Component.empty(), null, () -> { }, false, MenuItemStyle.SEPARATOR);
         }
 
-        /**
-         * Returns the label.
-         */
+        /** Returns the row text; never {@code null}. */
         public Component label() {
             return label;
         }
 
-        /**
-         * Performs the detail API operation.
-         */
+        /** Returns the secondary text shown to the right of the label; empty when unset. */
         public Component detail() {
             return detail;
         }
 
-        /**
-         * Returns the tooltip.
-         */
+        /** Returns the hover text; empty when unset. */
         public Component tooltip() {
             return tooltip;
         }
 
         /**
-         * Performs the checked API operation.
+         * Returns the check mark state.
+         *
+         * @return {@code true} or {@code false} for toggle rows, or {@code null} for rows without a check mark
          */
         public Boolean checked() {
             return checked;
         }
 
-        /**
-         * Performs the action API operation.
-         */
+        /** Returns the click action; never {@code null}. */
         public Runnable action() {
             return action;
         }
 
-        /**
-         * Enables d.
-         */
+        /** Returns whether the row can be clicked. Always {@code false} for separators. */
         public boolean enabled() {
             return enabled;
         }
 
-        /**
-         * Performs the style API operation.
-         */
+        /** Returns the row style; never {@code null}. */
         public MenuItemStyle style() {
             return style;
         }
@@ -183,21 +198,38 @@ public final class KineticOverlays {
     }
 
     /**
-     * Requests formatted tooltip.
+     * Requests pre-formatted tooltip lines for this frame, for text that was already split or styled.
+     *
+     * @param lines lines to show; {@code null} elements are skipped and an empty request is ignored
+     * @param mouseX anchor X in screen coordinates
+     * @param mouseY anchor Y in screen coordinates
      */
     public static void requestFormattedTooltip(List<FormattedCharSequence> lines, int mouseX, int mouseY) {
         GuiOverlayRuntime.requestFormattedTooltip(lines, mouseX, mouseY);
     }
 
     /**
-     * Requests item tooltip.
+     * Requests the standard item tooltip for this frame, including lines added by other mods.
+     *
+     * @param stack item to describe; copied, and ignored when {@code null} or empty
+     * @param mouseX anchor X in screen coordinates
+     * @param mouseY anchor Y in screen coordinates
      */
     public static void requestItemTooltip(ItemStack stack, int mouseX, int mouseY) {
         GuiOverlayRuntime.requestItemTooltip(stack, mouseX, mouseY);
     }
 
     /**
-     * Performs the open current dialog API operation.
+     * Opens the standard confirmation dialog on the current Kinetic screen.
+     *
+     * @param title dialog title
+     * @param message dialog body
+     * @param confirmText confirm button text
+     * @param cancelText cancel button text
+     * @param onConfirm run after the player confirms
+     * @param onCancel run after the player cancels or closes the dialog
+     * @return {@code true} if a Kinetic screen is open and showed the dialog; {@code false} otherwise, in which
+     *   case neither callback runs
      */
     public static boolean openCurrentDialog(
             Component title,
@@ -222,7 +254,14 @@ public final class KineticOverlays {
     }
 
     /**
-     * Performs the toast API operation.
+     * Shows a toast, replacing an active toast with the same id at the same position.
+     *
+     * @param id identity used for replacement and {@link #removeToast(String)}; {@code null} never replaces
+     * @param message toast text; {@code null} does nothing
+     * @param position screen anchor; {@code null} means {@link Position#BOTTOM_CENTER}
+     * @param durationMs display time in milliseconds, at least 1
+     * @param offsetX horizontal offset from the anchor in screen pixels
+     * @param offsetY vertical offset from the anchor in screen pixels
      */
     public static void toast(
             String id,
@@ -235,16 +274,12 @@ public final class KineticOverlays {
         GuiOverlayRuntime.toast(id, message, position, durationMs, offsetX, offsetY);
     }
 
-    /**
-     * Removes toast.
-     */
+    /** Removes every active toast with this id at any position; {@code null} does nothing. */
     public static void removeToast(String id) {
         GuiOverlayRuntime.removeToast(id);
     }
 
-    /**
-     * Performs the clear toasts API operation.
-     */
+    /** Removes every active toast. */
     public static void clearToasts() {
         GuiOverlayRuntime.clearToasts();
     }

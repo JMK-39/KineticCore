@@ -7,13 +7,13 @@ import dev.xyat.kineticcore.api.client.gui.widget.KineticTextArea;
 
 import dev.xyat.kineticcore.internal.client.gui.widget.InternalControl;
 import dev.xyat.kineticcore.internal.client.widget.KineticValidation;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.Util;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
@@ -31,7 +31,13 @@ import java.util.function.Predicate;
 public final class KineticTextFields {
     private KineticTextFields() {}
 
-    /** Keeps vanilla editing, cursor and selection behavior while removing its forced text shadow. */
+    /**
+     * Keeps vanilla editing, cursor and selection behavior while removing its forced text shadow.
+     *
+     * <p>The wrapper starts from the target's current transform, so text drawn through {@link #pose()} by
+     * vanilla scroll widgets or by font mods that bypass {@code drawString} stays inside the responsive canvas.
+     * Scissor calls are forwarded to the target so they keep its canvas conversion and nesting.
+     */
     private static final class ShadowlessGraphics extends GuiGraphics {
         private final GuiGraphics target;
         private final Integer valueColor;
@@ -44,6 +50,10 @@ public final class KineticTextFields {
             super(Minecraft.getInstance(), target.bufferSource());
             this.target = target;
             this.valueColor = valueColor;
+            PoseStack.Pose source = target.pose().last();
+            PoseStack.Pose local = pose().last();
+            local.pose().set(source.pose());
+            local.normal().set(source.normal());
         }
 
         private int textColor(int original) {
@@ -52,27 +62,27 @@ public final class KineticTextFields {
 
         @Override
         public int drawString(Font font, String text, int x, int y, int color) {
-            return target.drawString(font, text, x, y, textColor(color), false);
+            return super.drawString(font, text, x, y, textColor(color), false);
         }
 
         @Override
         public int drawString(Font font, FormattedCharSequence text, int x, int y, int color) {
-            return target.drawString(font, text, x, y, textColor(color), false);
+            return super.drawString(font, text, x, y, textColor(color), false);
         }
 
         @Override
         public int drawString(Font font, Component text, int x, int y, int color) {
-            return target.drawString(font, text, x, y, textColor(color), false);
+            return super.drawString(font, text, x, y, textColor(color), false);
         }
 
         @Override
-        public void fill(RenderType type, int x1, int y1, int x2, int y2, int color) {
-            target.fill(type, x1, y1, x2, y2, color);
+        public void enableScissor(int left, int top, int right, int bottom) {
+            target.enableScissor(left, top, right, bottom);
         }
 
         @Override
-        public void fill(int x1, int y1, int x2, int y2, int color) {
-            target.fill(x1, y1, x2, y2, color);
+        public void disableScissor() {
+            target.disableScissor();
         }
     }
 
@@ -166,6 +176,7 @@ public final class KineticTextFields {
         private Predicate<String> validator = ignored -> true;
         private Component placeholder = Component.empty();
         private String defaultText = null;
+        private boolean defaultFromFirstShownText;
         private java.util.function.Function<String, Integer> valueColor = null;
 
         /** Factory-only constructor used by standard Kinetic widget factories. */
@@ -181,6 +192,13 @@ public final class KineticTextFields {
         @Override
         public void setDefaultText(String defaultText) {
             this.defaultText = defaultText;
+            this.defaultFromFirstShownText = false;
+        }
+
+        @Override
+        public void useFirstShownTextAsDefault() {
+            this.defaultText = null;
+            this.defaultFromFirstShownText = true;
         }
 
         @Override
@@ -199,6 +217,10 @@ public final class KineticTextFields {
          */
         private int resolveValueColor(String value) {
             if (hasBorderError()) return GuiTheme.fieldErrorText();
+            if (defaultFromFirstShownText) {
+                defaultText = value;
+                defaultFromFirstShownText = false;
+            }
             if (valueColor != null) {
                 try {
                     Integer custom = valueColor.apply(value);
@@ -380,11 +402,9 @@ public final class KineticTextFields {
                     error
             );
 
-            int contentX = fieldX + 4;
-            // Minecraft's BakedGlyph renders its top at the supplied text Y minus 3 pixels.
-            // Account for that font origin when centering the visible text, caret and selection.
-            int contentY = fieldY + Math.max(0, (fieldHeight - font.lineHeight + 1) / 2) + 3;
-            int contentWidth = Math.max(1, fieldWidth - 8);
+            int contentX = InputTextLayout.textLeft(fieldX);
+            int contentY = InputTextLayout.textTop(fieldY, fieldHeight, font.lineHeight);
+            int contentWidth = InputTextLayout.textWidth(fieldWidth);
 
             // Let vanilla keep cursor/selection/scroll semantics, but render only the text layer.
             // Bounds are restored immediately so hit testing and business layout always see the

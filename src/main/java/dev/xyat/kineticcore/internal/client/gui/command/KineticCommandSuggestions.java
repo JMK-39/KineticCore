@@ -77,7 +77,13 @@ public final class KineticCommandSuggestions {
     }
 
     /**
-     * Performs the create API operation.
+     * Attaches vanilla-style command suggestions to a text field.
+     *
+     * @param input field whose text is parsed as a command
+     * @param hostWidth width of the host screen, used to keep the popup on screen
+     * @param hostHeight height of the host screen
+     * @param options popup placement and colors
+     * @return a session the host must forward render and input events to
      */
     public static Session create(EditBox input, int hostWidth, int hostHeight, Options options) {
         return KineticCommandSuggestionRuntime.create(input, hostWidth, hostHeight, options);

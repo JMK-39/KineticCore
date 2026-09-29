@@ -305,6 +305,12 @@ public final class KineticLivingEventRuntime {
 
         @Override
         public ItemStack item() { return event.getItem(); }
+
+        @Override
+        public ItemStack resultStack() { return event.getResultStack(); }
+
+        @Override
+        public void setResultStack(ItemStack stack) { event.setResultStack(stack); }
     }
 
     private record KnockbackContextImpl(LivingKnockBackEvent event) implements KineticLivingEvents.KnockbackContext {

@@ -15,76 +15,104 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
 
-/** Public Kinetic API facade for registries. */
+/**
+ * Read-only access to the common game registries without touching Forge or vanilla registry classes directly.
+ *
+ * <p>Views are shared singletons backed by the live registries, so lookups always see the current content. Registry
+ * contents are frozen after mod loading; reading them is safe from any thread, while tag queries reflect the tags
+ * of the most recent data-pack reload.
+ */
 public final class KineticRegistries {
     private KineticRegistries() {
     }
 
     /**
-     * Performs the items API operation.
+     * Returns a read-only view of the item registry.
+     *
+     * @return the shared item view; never {@code null}
      */
     public static KineticRegistryView<Item> items() {
         return KineticRegistryRuntime.items();
     }
 
     /**
-     * Performs the entity types API operation.
+     * Returns a read-only view of the entity type registry.
+     *
+     * @return the shared entity type view; never {@code null}
      */
     public static KineticRegistryView<EntityType<?>> entityTypes() {
         return KineticRegistryRuntime.entityTypes();
     }
 
     /**
-     * Performs the blocks API operation.
+     * Returns a read-only view of the block registry.
+     *
+     * @return the shared block view; never {@code null}
      */
     public static KineticRegistryView<Block> blocks() {
         return KineticRegistryRuntime.blocks();
     }
 
     /**
-     * Performs the fluids API operation.
+     * Returns a read-only view of the fluid registry.
+     *
+     * @return the shared fluid view; never {@code null}
      */
     public static KineticRegistryView<Fluid> fluids() {
         return KineticRegistryRuntime.fluids();
     }
 
     /**
-     * Performs the mob effects API operation.
+     * Returns a read-only view of the mob effect registry.
+     *
+     * @return the shared mob effect view; never {@code null}
      */
     public static KineticRegistryView<MobEffect> mobEffects() {
         return KineticRegistryRuntime.mobEffects();
     }
 
     /**
-     * Performs the attributes API operation.
+     * Returns a read-only view of the attribute registry.
+     *
+     * @return the shared attribute view; never {@code null}
      */
     public static KineticRegistryView<Attribute> attributes() {
         return KineticRegistryRuntime.attributes();
     }
 
     /**
-     * Performs the enchantments API operation.
+     * Returns a read-only view of the enchantment registry.
+     *
+     * @return the shared enchantment view; never {@code null}
      */
     public static KineticRegistryView<Enchantment> enchantments() {
         return KineticRegistryRuntime.enchantments();
     }
 
     /**
-     * Performs the recipe types API operation.
+     * Returns a read-only view of the recipe type registry.
+     *
+     * @return the shared recipe type view; never {@code null}
      */
     public static KineticRegistryView<RecipeType<?>> recipeTypes() {
         return KineticRegistryRuntime.recipeTypes();
     }
 
     /**
-     * Performs the villager professions API operation.
+     * Returns a read-only view of the villager profession registry.
+     *
+     * @return the shared villager profession view; never {@code null}
      */
     public static KineticRegistryView<VillagerProfession> villagerProfessions() {
         return KineticRegistryRuntime.villagerProfessions();
     }
 
     /**
-     * Performs the custom API operation.
+     * Returns a view of any Forge-managed registry by id, including registries added by other mods.
+     *
+     * @param registryId registry id, for example {@code minecraft:block}; {@code null} yields an empty result
+     * @param <T> registry element type; the caller must match the registry's actual type
+     * @return the view, or empty when no such registry exists
      */
     public static <T> Optional<KineticRegistryView<T>> custom(ResourceLocation registryId) {
         return KineticRegistryRuntime.custom(registryId);

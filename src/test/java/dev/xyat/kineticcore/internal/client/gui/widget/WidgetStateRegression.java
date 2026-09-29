@@ -3,6 +3,7 @@ package dev.xyat.kineticcore.internal.client.gui.widget;
 import dev.xyat.kineticcore.api.client.gui.state.DragStateController;
 import dev.xyat.kineticcore.api.client.gui.state.EditedEntryTracker;
 import dev.xyat.kineticcore.api.client.gui.state.LayerState;
+import dev.xyat.kineticcore.internal.client.gui.widget.input.InputTextLayout;
 import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll;
 
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ public final class WidgetStateRegression {
         verifyEditedOrder(new EditedEntryTracker<>());
         verifyLayers(new LayerState<>());
         verifyScrollState();
+        verifyInputTextLayout();
         System.out.println("Widget state regression: public implementations passed.");
     }
 
@@ -67,6 +69,23 @@ public final class WidgetStateRegression {
         state.snap(-20, 100);
         check(state.current() == 0, "clamp lower end");
         check(state.update(40, 0, true) == 0, "empty scroll range");
+    }
+
+    private static void verifyInputTextLayout() {
+        int lineHeight = 9;
+        check(InputTextLayout.textTop(0, 20, lineHeight) == 6, "20px field matches vanilla EditBox text row");
+        check(InputTextLayout.textTop(0, 16, lineHeight) == 4, "standard 16px field centers the glyph cell");
+        check(InputTextLayout.textTop(30, 16, lineHeight) == 34, "text row follows the field origin");
+        for (int height = lineHeight - 1; height <= 64; height++) {
+            int top = InputTextLayout.textTop(0, height, lineHeight);
+            int below = height - (top + lineHeight - 1);
+            check(top >= 0 && below >= 0 && below - top >= 0 && below - top <= 1,
+                    "glyph cell must be centered in a " + height + "px field, got top=" + top + " bottom=" + below);
+        }
+        check(InputTextLayout.textTop(10, 4, lineHeight) == 10, "short field keeps text at its top edge");
+        check(InputTextLayout.textLeft(10) == 14, "text starts after the standard horizontal padding");
+        check(InputTextLayout.textWidth(100) == 92 && InputTextLayout.textWidth(3) == 1,
+                "text width removes both paddings and never collapses");
     }
 
     private static void check(boolean condition, String message) {

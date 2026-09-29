@@ -5,13 +5,20 @@ import dev.xyat.kineticcore.internal.network.NetworkBufferRuntime;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-/** Public API type for network buffers. */
+/**
+ * Encodes and decodes standalone byte payloads with {@link NetworkBuffer}, for data stored or nested outside a
+ * packet.
+ */
 public final class NetworkBuffers {
     private NetworkBuffers() {
     }
 
     /**
-     * Performs the encode API operation.
+     * Runs the writer against a fresh buffer and returns the written bytes.
+     *
+     * @param writer writes the payload
+     * @return the encoded bytes
+     * @throws NullPointerException if {@code writer} is {@code null}
      */
     public static byte[] encode(Consumer<NetworkBuffer> writer) {
         return NetworkBufferRuntime.encode(writer);

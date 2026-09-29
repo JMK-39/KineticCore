@@ -5,7 +5,13 @@ import dev.xyat.kineticcore.internal.runtime.FeatureSwitchRuntime;
 import java.util.List;
 import java.util.Objects;
 
-/** Public Kinetic API facade for feature switches. */
+/**
+ * Startup feature switches: features that can be turned off before the game loads, including their Mixins.
+ *
+ * <p>Each switch has two values. The active value was read at startup and stays fixed for the whole session,
+ * because Mixins cannot be undone at runtime. The configured value is what the player chose for the next launch.
+ * All methods are thread-safe.
+ */
 public final class KineticFeatureSwitches {
     private KineticFeatureSwitches() {
     }
@@ -28,36 +34,44 @@ public final class KineticFeatureSwitches {
     }
 
     /**
-     * Returns whether enabled.
+     * Returns whether the feature is active in this session.
+     *
+     * @param featureId registered feature id
+     * @return the value read at startup, or the default when no saved value exists
+     * @throws IllegalArgumentException if the feature is not registered
      */
     public static boolean isEnabled(String featureId) {
         return FeatureSwitchRuntime.isEnabled(featureId);
     }
 
     /**
-     * Performs the configured enabled API operation.
+     * Returns the value chosen for the next launch.
+     *
+     * @param featureId registered feature id
+     * @throws IllegalArgumentException if the feature is not registered
      */
     public static boolean configuredEnabled(String featureId) {
         return FeatureSwitchRuntime.configuredEnabled(featureId);
     }
 
     /**
-     * Updates configured enabled.
+     * Changes the value for the next launch in memory. Call {@link #saveConfigured()} to persist it. The active
+     * value is not affected.
+     *
+     * @param featureId registered feature id
+     * @param enabled value to use from the next launch
+     * @throws IllegalArgumentException if the feature is not registered
      */
     public static void setConfiguredEnabled(String featureId, boolean enabled) {
         FeatureSwitchRuntime.setConfiguredEnabled(featureId, enabled);
     }
 
-    /**
-     * Performs the save configured API operation.
-     */
+    /** Writes every configured value to the startup feature file. */
     public static void saveConfigured() {
         FeatureSwitchRuntime.saveConfigured();
     }
 
-    /**
-     * Performs the descriptors API operation.
-     */
+    /** Returns every registered switch in registration order as an unmodifiable list. */
     public static List<Descriptor> descriptors() {
         return FeatureSwitchRuntime.descriptors().stream()
                 .map(definition -> new Descriptor(
@@ -71,7 +85,16 @@ public final class KineticFeatureSwitches {
                 .toList();
     }
 
-    /** Immutable descriptor data exposed by this API. */
+    /**
+     * Identity and display keys of one startup feature switch.
+     *
+     * @param id stable feature id saved in the config file; letters, digits and {@code _ . : -}
+     * @param sectionId id of the group the switch is listed under; same character rules
+     * @param defaultEnabled value used when the config file has no entry
+     * @param sectionTranslationKey language key of the group title
+     * @param nameTranslationKey language key of the switch name
+     * @param tooltipTranslationKey language key of the switch description
+     */
     public record Descriptor(
             String id,
             String sectionId,
@@ -81,7 +104,10 @@ public final class KineticFeatureSwitches {
             String tooltipTranslationKey
     ) {
         /**
-         * Validates and normalizes this descriptor value.
+         * Trims every text field and checks it.
+         *
+         * @throws NullPointerException if a text field is {@code null}
+         * @throws IllegalArgumentException if a field is blank or an id contains unsupported characters
          */
         public Descriptor {
             id = requireIdentifier(id, "id");

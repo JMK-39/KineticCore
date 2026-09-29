@@ -1,17 +1,11 @@
 package dev.xyat.kineticcore.api.client.gui.ui;
 
-import dev.xyat.kineticcore.api.client.gui.widget.*;
-import dev.xyat.kineticcore.api.client.gui.widget.list.*;
-import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
+import dev.xyat.kineticcore.api.client.gui.widget.list.ItemGridDensity;
+import dev.xyat.kineticcore.api.client.gui.widget.list.ItemGridItem;
+import dev.xyat.kineticcore.api.client.gui.widget.list.KineticItemGrid;
 
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /** 物品网格 / Item grid. */
 public abstract class ItemGridBuilder extends LayeredControlBuilder<ItemGridBuilder, KineticItemGrid> {

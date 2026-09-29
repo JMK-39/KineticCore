@@ -5,6 +5,7 @@ import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
 import dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter;
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -209,6 +210,14 @@ public final class KineticTheme {
     /** Draws the standard full-surface Kinetic shadow. */
     public static void shadow(KineticGraphics graphics, int width, int height) {
         GuiTheme.shadow(GuiGraphicsAdapter.unwrap(graphics), width, height);
+    }
+
+    /**
+     * Returns a copy of {@code text} in the theme's muted text color, for secondary tooltip and detail lines.
+     * Formatting codes inside the text still take precedence.
+     */
+    public static MutableComponent muted(Component text) {
+        return text.copy().withStyle(style -> style.withColor(current().mutedText() & 0xFFFFFF));
     }
 
     /** Draws theme text with the requested opacity while the API owns blend-state handling. */

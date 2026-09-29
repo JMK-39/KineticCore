@@ -4,7 +4,7 @@ import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.api.flight.KineticFlightClient;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
-import dev.xyat.kineticcore.api.runtime.KineticFeatures;
+import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
 import dev.xyat.kineticcore.feature.crawl.network.PlayerNetwork;
 import dev.xyat.kineticcore.feature.crawl.util.PlayerCrawlStateUtil;
 import net.minecraft.world.entity.player.Player;
@@ -20,8 +20,8 @@ public final class PlayerCrawlHandler {
                 .category("key.categories.movement")
                 .context(KineticKeyBindings.Context.IN_GAME)
                 .keyboard(KineticKeyBindings.Key.C)
-                .registerWhen(() -> KineticFeatures.isEnabled("player.crawling"))
-                .enabledWhen(() -> KineticFeatures.isEnabled("player.crawling"))
+                .registerWhen(() -> KineticFeatureSwitches.isEnabled("player.crawling"))
+                .enabledWhen(() -> KineticFeatureSwitches.isEnabled("player.crawling"))
                 .onPressed(PlayerCrawlHandler::toggleCrawl)
                 .register());
     }

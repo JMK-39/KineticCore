@@ -1,10 +1,16 @@
 package dev.xyat.kineticcore.internal.client.render;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
+import dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter;
 import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -19,6 +25,34 @@ public final class KineticWorldRenderRuntime {
     private static final RenderType THICK_WORLD_LINES = ThickWorldLineType.createType();
 
     private KineticWorldRenderRuntime() {
+    }
+
+    /**
+     * Switches to a GUI-scaled orthographic projection with an identity model view, blending on and depth testing off,
+     * and returns a graphics surface drawing into a fresh immediate buffer.
+     */
+    public static KineticGraphics beginScreenOverlay(int width, int height) {
+        RenderSystem.backupProjectionMatrix();
+        RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0, width, height, 0, -1000, 1000), RenderSystem.getVertexSorting());
+        PoseStack modelView = RenderSystem.getModelViewStack();
+        modelView.pushPose();
+        modelView.setIdentity();
+        RenderSystem.applyModelViewMatrix();
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableDepthTest();
+        MultiBufferSource.BufferSource bufferSource = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
+        return GuiGraphicsAdapter.wrap(new GuiGraphics(Minecraft.getInstance(), bufferSource));
+    }
+
+    /** Flushes a surface from {@link #beginScreenOverlay(int, int)} and restores the world render state. */
+    public static void endScreenOverlay(KineticGraphics graphics) {
+        GuiGraphicsAdapter.unwrap(graphics).flush();
+        RenderSystem.enableDepthTest();
+        RenderSystem.disableBlend();
+        RenderSystem.getModelViewStack().popPose();
+        RenderSystem.applyModelViewMatrix();
+        RenderSystem.restoreProjectionMatrix();
     }
 
     /** Draws one camera-relative line box into the shared line buffer. */

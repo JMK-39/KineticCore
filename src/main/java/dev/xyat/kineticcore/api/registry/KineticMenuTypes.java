@@ -11,9 +11,22 @@ import java.util.Objects;
 
 /** Public Kinetic API facade for menu types. */
 public final class KineticMenuTypes {
-    /** Factory contract used by the enclosing API. */
+    /**
+     * Creates the client-side menu instance when the server opens a menu of this type.
+     *
+     * @param <T> menu type
+     */
     @FunctionalInterface
     public interface Factory<T extends AbstractContainerMenu> {
+        /**
+         * Creates the menu on the client.
+         *
+         * @param containerId container id assigned by the server
+         * @param inventory local player's inventory
+         * @param data extra data the server wrote when it opened the menu through {@code KineticMenus}; empty when
+         *   it wrote none or the menu was opened without KineticMenus
+         * @return the new menu
+         */
         T create(int containerId, Inventory inventory, NetworkBuffer data);
     }
 
@@ -21,7 +34,13 @@ public final class KineticMenuTypes {
     }
 
     /**
-     * Registers this API capability.
+     * Registers a menu type whose client instance is created by {@code factory}. Call it from the mod constructor.
+     *
+     * @param id menu type id
+     * @param factory client-side menu factory
+     * @param <T> menu type
+     * @return a handle that resolves after registration
+     * @throws NullPointerException if an argument is {@code null}
      */
     public static <T extends AbstractContainerMenu> KineticRegistryHandle<MenuType<T>> register(
             ResourceLocation id,

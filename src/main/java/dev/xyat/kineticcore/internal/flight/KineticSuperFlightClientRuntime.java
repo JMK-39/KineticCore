@@ -170,10 +170,6 @@ public final class KineticSuperFlightClientRuntime {
         return maneuvering();
     }
 
-    public static float renderPitch() {
-        return freeLookDown() ? 0.0F : flightPitch;
-    }
-
     public static boolean appliesTo(Player player) {
         return active
                 && player != null

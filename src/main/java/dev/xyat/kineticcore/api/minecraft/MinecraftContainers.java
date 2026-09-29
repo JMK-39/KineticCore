@@ -12,10 +12,16 @@ public final class MinecraftContainers {
     private MinecraftContainers() {
     }
 
-    /** Extension contract implemented by the container-screen mixin without exposing the mixin package to the API. */
+    /**
+     * Read access to container screen internals. Implemented by a KineticCore mixin; add-ons call the static
+     * helpers instead.
+     */
     public interface Access {
+        /** Returns the slot under the mouse, or {@code null}. */
         Slot kineticcore$getHoveredSlot();
+        /** Returns the left edge of the container background in GUI pixels. */
         int kineticcore$getLeftPos();
+        /** Returns the top edge of the container background in GUI pixels. */
         int kineticcore$getTopPos();
     }
 

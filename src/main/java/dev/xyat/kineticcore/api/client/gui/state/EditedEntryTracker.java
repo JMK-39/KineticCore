@@ -7,13 +7,25 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
 
-/** Public API type for edited entry tracker. */
+/**
+ * Remembers which list entries were edited and in what order, so editors can list modified entries first with the
+ * most recent edit on top. Entries are compared with {@code equals}/{@code hashCode}. Not thread-safe.
+ *
+ * @param <T> entry key type
+ */
 public class EditedEntryTracker<T> {
     private final Map<T, Long> editedOrder = new HashMap<>();
     private long sequence;
 
     /**
-     * Refreshes the current API state.
+     * Rebuilds the edited set from the current data, for example after loading or undoing. Entries that were
+     * already edited keep their position; newly edited entries go on top. On the first refresh every edited entry
+     * gets the same rank, so the fallback order decides between them. If the predicate throws, the previous state
+     * is kept.
+     *
+     * @param entries all current entries
+     * @param editedPredicate returns whether an entry differs from its default
+     * @throws NullPointerException if an argument is {@code null}
      */
     public void refresh(
             Collection<T> entries,
@@ -38,7 +50,11 @@ public class EditedEntryTracker<T> {
     }
 
     /**
-     * Performs the update API operation.
+     * Records that one entry became edited or went back to its default.
+     *
+     * @param entry entry that changed
+     * @param edited whether the entry now differs from its default
+     * @return {@code true} if the edited set changed, meaning the list order should be refreshed
      */
     public boolean update(
             T entry,
@@ -58,15 +74,17 @@ public class EditedEntryTracker<T> {
         return editedOrder.remove(entry) != null;
     }
 
-    /**
-     * Returns whether edited.
-     */
+    /** Returns whether the entry is currently marked as edited. */
     public boolean isEdited(T entry) {
         return editedOrder.containsKey(entry);
     }
 
     /**
-     * Performs the comparator API operation.
+     * Returns a comparator that puts edited entries first, most recent edit first, and orders everything else with
+     * {@code fallback}. The comparator reads the live state, so re-sort after {@link #update(Object, boolean)}.
+     *
+     * @param fallback order for unedited entries and for ties
+     * @throws NullPointerException if {@code fallback} is {@code null}
      */
     public Comparator<T> comparator(Comparator<T> fallback) {
         Objects.requireNonNull(fallback, "fallback");
@@ -92,9 +110,7 @@ public class EditedEntryTracker<T> {
         };
     }
 
-    /**
-     * Clears the current API state.
-     */
+    /** Forgets every edit. */
     public void clear() {
         editedOrder.clear();
     }

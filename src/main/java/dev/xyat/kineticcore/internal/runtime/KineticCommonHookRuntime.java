@@ -25,10 +25,6 @@ public final class KineticCommonHookRuntime {
         return HookRegistration.once(() -> PLAYER_POSE_UPDATE.remove(handler));
     }
 
-    public static HookRegistration registerCrawlPose(CommonHooks.CrawlPoseHandler handler) {
-        return registerPlayerPoseUpdate(handler);
-    }
-
     public static HookRegistration registerMobPersistence(CommonHooks.MobPersistenceHandler handler) {
         MOB_PERSISTENCE.add(handler);
         return HookRegistration.once(() -> MOB_PERSISTENCE.remove(handler));
@@ -41,10 +37,6 @@ public final class KineticCommonHookRuntime {
 
     public static boolean handlePlayerPoseUpdate(Player player) {
         return KineticCallbackQueries.anyMatch(PLAYER_POSE_UPDATE, handler -> handler.handle(player));
-    }
-
-    public static boolean handleCrawlPose(Player player) {
-        return handlePlayerPoseUpdate(player);
     }
 
     public static boolean mobPersistenceEnabled() {

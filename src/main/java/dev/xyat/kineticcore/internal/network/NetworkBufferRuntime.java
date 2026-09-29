@@ -16,6 +16,11 @@ public final class NetworkBufferRuntime {
         return new ForgeNetworkBuffer(java.util.Objects.requireNonNull(buffer, "buffer"));
     }
 
+    /** Wraps an opening payload that vanilla menu opening leaves {@code null}, as an empty buffer. */
+    public static NetworkBuffer wrapOrEmpty(FriendlyByteBuf buffer) {
+        return wrap(buffer == null ? new FriendlyByteBuf(Unpooled.buffer(0)) : buffer);
+    }
+
     public static byte[] encode(Consumer<NetworkBuffer> writer) {
         Objects.requireNonNull(writer, "writer");
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());

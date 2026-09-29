@@ -7,13 +7,16 @@ import net.minecraft.world.entity.Entity;
 
 import java.util.Objects;
 
-/** Public Kinetic API facade for entity networking. */
+/** Networking helpers for custom entities. */
 public final class KineticEntityNetworking {
     private KineticEntityNetworking() {
     }
 
     /**
-     * Performs the spawning packet API operation.
+     * Returns the spawn packet for a custom entity; return it from {@code Entity#getAddEntityPacket()} so the
+     * client can create entities that carry extra spawn data.
+     *
+     * @throws NullPointerException if {@code entity} is {@code null}
      */
     public static Packet<ClientGamePacketListener> spawningPacket(Entity entity) {
         return KineticEntityNetworkingRuntime.spawningPacket(Objects.requireNonNull(entity, "entity"));

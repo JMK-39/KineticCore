@@ -7,9 +7,7 @@ import dev.xyat.kineticcore.feature.setspawn.util.StructureUtils;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -51,11 +49,8 @@ public class SetSpawnCommand {
 
             MutableComponent msg = KineticI18n.translatable("msg.kineticcore.structure.found_simple");
             for (String id : structures) {
-                msg.append(KineticI18n.translatable("msg.kineticcore.structure.entry", Component.literal(id))
-                        .withStyle(style -> style
-                                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, id))
-                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, KineticI18n.translatable("msg.kineticcore.copy")))
-                        ));
+                msg.append(CommandText.clickToCopy(KineticI18n.translatable("msg.kineticcore.structure.entry", Component.literal(id)),
+                        id, KineticI18n.translatable("msg.kineticcore.copy")));
             }
             source.sendSuccess(() -> msg, false);
         } catch (Exception e) {
@@ -75,11 +70,8 @@ public class SetSpawnCommand {
             MutableComponent msg = KineticI18n.translatable("msg.kineticcore.list.structures", Component.literal(String.valueOf(ids.size())));
             if (!ids.isEmpty()) {
                 msg.append(Component.literal("  "));
-                msg.append(KineticI18n.styled("fmt.kineticcore.bold_underlined", KineticI18n.translatable("msg.kineticcore.copy_all"))
-                        .withStyle(style -> style
-                                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, allIdsStr))
-                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, KineticI18n.translatable("cmd.kineticcore.copy.too_long")))
-                        ));
+                msg.append(CommandText.clickToCopy(KineticI18n.styled("fmt.kineticcore.bold_underlined", KineticI18n.translatable("msg.kineticcore.copy_all")),
+                        allIdsStr, KineticI18n.translatable("cmd.kineticcore.copy.too_long")));
             }
             source.sendSuccess(() -> msg, false);
         } catch (Exception e) {

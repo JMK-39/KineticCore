@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.feature.flight.mixin;
 
+import dev.xyat.kineticcore.api.flight.KineticFlight;
 import dev.xyat.kineticcore.api.flight.KineticFlightSources;
 import dev.xyat.kineticcore.api.flight.KineticSuperFlight;
 import dev.xyat.kineticcore.feature.flight.FlightState;
@@ -43,7 +44,7 @@ public class FlightServerMixins {
         @Inject(method = "getEyeHeight(Lnet/minecraft/world/entity/Pose;Lnet/minecraft/world/entity/EntityDimensions;)F", at = @At("HEAD"), cancellable = true)
         private void kineticcore$getEyeHeight(Pose pose, EntityDimensions dimensions, CallbackInfoReturnable<Float> cir) {
             Player player = (Player) (Object) this;
-            if (player.isCreative() && FlightState.noclipEnabled(player)) {
+            if (player.isCreative() && KineticFlight.noclipEnabled(player)) {
                 cir.setReturnValue(1.62F);
             }
         }
@@ -55,12 +56,11 @@ public class FlightServerMixins {
 
         @Inject(method = "restoreFrom", at = @At("TAIL"))
         private void kineticcore$onClone(ServerPlayer oldPlayer, boolean wonGame, CallbackInfo ci) {
-            FlightState.copyPersistentState(oldPlayer, (ServerPlayer) (Object) this);
+            KineticFlight.copyPersistentState(oldPlayer, (ServerPlayer) (Object) this);
         }
 
         @Inject(method = "setGameMode", at = @At("HEAD"))
         private void kineticcore$captureFlightState(GameType gameType, CallbackInfoReturnable<Boolean> cir) {
-            FlightState.isGamemodeSwitching = true;
             this.kineticcore$wasFlyingBeforeGamemode = ((ServerPlayer) (Object) this).getAbilities().flying;
         }
 
@@ -69,9 +69,9 @@ public class FlightServerMixins {
             ServerPlayer self = (ServerPlayer) (Object) this;
 
             if (gameType != GameType.CREATIVE) {
-                FlightState.applyServerNoclip(self, false);
+                KineticFlight.applyServerNoclip(self, false);
             } else {
-                FlightState.syncServerNoclip(self);
+                KineticFlight.syncServerNoclip(self);
             }
 
             if (KineticFlightSources.allowsFlight(self)) {
@@ -81,7 +81,6 @@ public class FlightServerMixins {
                 self.onUpdateAbilities();
                 FlightState.isInternalUpdate = false;
             }
-            FlightState.isGamemodeSwitching = false;
         }
     }
 
@@ -145,7 +144,7 @@ public class FlightServerMixins {
         @Inject(method = "isPlayerCollidingWithAnythingNew", at = @At("HEAD"), cancellable = true)
         private void kineticcore$bypassBlockCollisionCheck(LevelReader level, AABB aabb, double x, double y, double z, CallbackInfoReturnable<Boolean> cir) {
             ServerPlayer player = this.kineticcore$getPlayer();
-            if (player.isCreative() && FlightState.noclipEnabled(player)) cir.setReturnValue(false);
+            if (player.isCreative() && KineticFlight.noclipEnabled(player)) cir.setReturnValue(false);
         }
 
         @ModifyConstant(method = "handleMovePlayer", constant = @Constant(floatValue = 100.0F), require = 0)

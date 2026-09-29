@@ -1,16 +1,11 @@
 package dev.xyat.kineticcore.api.client.gui.ui;
 
-import dev.xyat.kineticcore.api.client.gui.widget.*;
-import dev.xyat.kineticcore.api.client.gui.widget.list.*;
+import dev.xyat.kineticcore.api.client.gui.widget.KineticAutoCompleteField;
 import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /** 自动补全输入框 / Autocomplete field. */
@@ -32,6 +27,8 @@ public abstract class AutoCompleteBuilder extends ControlBuilder<AutoCompleteBui
 
     /** 默认值（显示青色，其它内容绿色）/ Default value (drawn cyan; other content green). */
     protected String defaultText = null;
+    /** 默认值取第一次绘制时的内容 / Default taken from the first drawn text. */
+    protected boolean firstShownTextAsDefault = false;
     /** 自定义文字颜色规则 / Custom value color rule. */
     protected java.util.function.Function<String, Integer> valueColor = null;
 
@@ -88,6 +85,16 @@ public abstract class AutoCompleteBuilder extends ControlBuilder<AutoCompleteBui
      */
     public final AutoCompleteBuilder defaultText(String defaultText) {
         this.defaultText = defaultText;
+        return this;
+    }
+
+    /**
+     * 默认值取字段第一次绘制时显示的内容（数值在构建后才载入时使用），取代 {@code defaultText}。
+     * Uses the text shown when the field is first drawn as the default value, for editors that load their values
+     * after building the field; replaces {@code defaultText}.
+     */
+    public final AutoCompleteBuilder firstShownTextAsDefault() {
+        this.firstShownTextAsDefault = true;
         return this;
     }
 

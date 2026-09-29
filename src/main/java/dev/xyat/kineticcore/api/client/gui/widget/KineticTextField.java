@@ -42,6 +42,13 @@ public interface KineticTextField extends KineticControl {
     String defaultText();
 
     /**
+     * 默认值取字段第一次绘制时显示的内容，适合构建后才载入数值的编辑页；之后调用 setDefaultText 会取代它。
+     * Uses the text shown when the field is first drawn as the default value, for editors that load their values
+     * after building the field; a later {@link #setDefaultText(String)} call replaces it.
+     */
+    void useFirstShownTextAsDefault();
+
+    /**
      * 按内容自定义文字颜色（例如货币不足显示红色），返回 null 时使用标准规则（默认值青色、修改过绿色、错误红色）。
      * Custom text color per value (for example red when a price is unaffordable); return null to use the
      * standard rule (default value cyan, modified green; invalid red).

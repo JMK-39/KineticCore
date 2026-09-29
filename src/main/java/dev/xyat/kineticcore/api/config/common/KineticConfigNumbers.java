@@ -3,8 +3,10 @@ package dev.xyat.kineticcore.api.config.common;
 import java.math.BigDecimal;
 
 /**
- * 为核心及附属提供无截断的配置数字转换；返回 null 表示输入无法精确表示。
- * 不允许通过先转换为 double 的方式判断高精度整数是否有效。
+ * 为核心及附属提供无截断的配置数字转换；返回 null 表示输入无法精确表示。 不允许通过先转换为 double 的方式判断高精度整数是否有效。
+ *
+ * <p>Exact number conversion for config values. Methods return {@code null} when the input cannot be represented
+ * exactly; large integers are never validated by converting them to {@code double} first.
  */
 public final class KineticConfigNumbers {
     private KineticConfigNumbers() {

@@ -15,9 +15,13 @@ public final class MinecraftChat {
     private MinecraftChat() {
     }
 
-    /** Extension contract implemented by the chat mixin without exposing the mixin package to the API. */
+    /**
+     * Read access to chat internals. Implemented by a KineticCore mixin; add-ons call the static helpers instead.
+     */
     public interface Access {
+        /** Returns the live list of wrapped chat lines, newest first. */
         List<GuiMessage.Line> kineticcore$getTrimmedMessages();
+        /** Returns how many lines the chat is scrolled up. */
         int kineticcore$getChatScrollbarPos();
     }
 

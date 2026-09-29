@@ -12,9 +12,9 @@ public final class ServerTickTrackerBoundaryRegression {
         ServerTickTracker tracker = new ServerTickTracker();
         tracker.addTick(50_000_000L);
         tracker.addTick(100_000_000L);
-        check(tracker.getStats(Integer.MAX_VALUE, 0) == 75.0D, "large seconds must not overflow to zero");
-        check(tracker.getStats(Integer.MAX_VALUE, 1) == 100.0D, "large seconds must keep peak sample");
-        check(tracker.getStats(-1, 0) == 0.0D, "negative interval has no sample");
+        check(tracker.getStats(Integer.MAX_VALUE, ServerTickTracker.Stat.AVERAGE) == 75.0D, "large seconds must not overflow to zero");
+        check(tracker.getStats(Integer.MAX_VALUE, ServerTickTracker.Stat.MAXIMUM) == 100.0D, "large seconds must keep peak sample");
+        check(tracker.getStats(-1, ServerTickTracker.Stat.AVERAGE) == 0.0D, "negative interval has no sample");
         check(tracker.getLatestMspt() == 100.0D, "latest sample remains correct");
         check(Double.isFinite(ServerTickTracker.tps(Double.NaN)), "NaN MSPT must not produce NaN TPS");
         check(ServerTickTracker.tps(Double.POSITIVE_INFINITY) == 0.0D, "infinite MSPT is zero TPS");

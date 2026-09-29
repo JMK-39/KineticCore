@@ -1,4 +1,4 @@
-package dev.xyat.kineticcore.feature.attribute.mixin;
+package dev.xyat.kineticcore.internal.mixin.api.minecraft;
 
 import dev.xyat.kineticcore.api.minecraft.MinecraftAttributes;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;

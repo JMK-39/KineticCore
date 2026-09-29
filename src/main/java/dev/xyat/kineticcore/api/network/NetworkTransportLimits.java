@@ -1,6 +1,19 @@
 package dev.xyat.kineticcore.api.network;
 
-/** Immutable network transport limits data exposed by this API. */
+/**
+ * Size and time limits applied to vanilla packet decoding. Raising them lets large modpacks sync big recipes, NBT
+ * or chunks; lowering them hardens servers.
+ *
+ * @param timeoutSeconds connection read timeout in seconds
+ * @param customPayloadBytes maximum custom payload packet size in bytes
+ * @param decoderBytes maximum decoded frame size in bytes
+ * @param chunkPacketBytes maximum chunk data packet size in bytes
+ * @param nbtBytes maximum accounted NBT size in bytes
+ * @param stringChars maximum string length in characters
+ * @param varIntBytes maximum encoded VarInt length in bytes
+ * @param varLongBytes maximum encoded VarLong length in bytes
+ * @param varInt21Bytes maximum length of the 21-bit VarInt frame prefix in bytes
+ */
 public record NetworkTransportLimits(
         int timeoutSeconds,
         int customPayloadBytes,
@@ -12,9 +25,7 @@ public record NetworkTransportLimits(
         int varLongBytes,
         int varInt21Bytes
 ) {
-    /**
-     * Creates a new network transport limits instance.
-     */
+    /** Limits used until a config changes them; they match or slightly relax the vanilla values. */
     public static final NetworkTransportLimits DEFAULT = new NetworkTransportLimits(
             30,
             1_048_576,
@@ -28,7 +39,7 @@ public record NetworkTransportLimits(
     );
 
     /**
-     * Validates and normalizes this network transport limits value.
+     * @throws IllegalArgumentException if any limit is zero or negative
      */
     public NetworkTransportLimits {
         requirePositive(timeoutSeconds, "timeoutSeconds");

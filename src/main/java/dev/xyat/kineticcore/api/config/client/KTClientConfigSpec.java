@@ -15,8 +15,13 @@ import java.util.function.Predicate;
 /**
  * Loader-independent description of a local client configuration.
  *
- * <p>Addons declare values through this API. KineticCore owns the underlying
- * config-loader implementation, persistence, and config-screen adaptation.</p>
+ * <p>Add-ons declare values through {@link #builder()}, register the result once with
+ * {@link KTClientConfigAdapter#registerSpec(KTClientConfigSpec, String)} during mod construction, and keep the
+ * returned {@link Value} handles to read and write settings. KineticCore owns the underlying config-loader
+ * implementation, file persistence and config-screen adaptation.
+ *
+ * <p>A built spec is immutable. {@link Value#get()} is safe to call from any thread; writes and {@link #save()} are
+ * intended for the client thread.
  */
 public final class KTClientConfigSpec {
     private final List<Operation> operations;
@@ -26,38 +31,54 @@ public final class KTClientConfigSpec {
     }
 
     /**
-     * Creates a new builder.
+     * Starts a new client config definition.
+     *
+     * @return an empty builder at the root section
      */
     public static Builder builder() {
         return new Builder();
     }
 
     /**
-     * Returns the operations.
+     * Returns the declaration steps in order: section starts, entries and section ends. Used by KineticCore to
+     * build the native config and the config page; add-ons rarely need it.
+     *
+     * @return an unmodifiable list of operations
      */
     public List<Operation> operations() {
         return operations;
     }
 
     /**
-     * Saves the current values.
+     * Writes the current values of this spec to its config file.
+     *
+     * <p>Does nothing until the spec has been registered or adapted into a page, because no file exists before
+     * that.
      */
     public void save() {
         KineticClientConfigSpecRuntime.save(this);
     }
 
-    /** Public API contract for operation. */
+    /** One declaration step recorded by {@link Builder}. */
     public sealed interface Operation permits SectionStart, SectionEnd, EntryDefinition {
     }
 
-    /** Immutable section start data exposed by this API. */
+    /**
+     * Opens a named section; every entry until the matching {@link SectionEnd} is nested under it.
+     *
+     * @param name section key used in the file and in dot-separated paths
+     * @param translationKey optional language key for the section title; empty when unset
+     * @param comments file comments written above the section; empty when unset
+     */
     public record SectionStart(
             String name,
             String translationKey,
             List<String> comments
     ) implements Operation {
         /**
-         * Validates and normalizes this section start value.
+         * Normalizes optional metadata: a {@code null} translation key becomes empty and comments are copied.
+         *
+         * @throws NullPointerException if {@code name} is {@code null}
          */
         public SectionStart {
             Objects.requireNonNull(name, "name");
@@ -66,11 +87,11 @@ public final class KTClientConfigSpec {
         }
     }
 
-    /** Immutable section end data exposed by this API. */
+    /** Closes the most recently opened {@link SectionStart}. */
     public record SectionEnd() implements Operation {
     }
 
-    /** Supported value type values exposed by this API. */
+    /** Storage type of a declared value; decides the file format and the editor shown in the config screen. */
     public enum ValueType {
         BOOLEAN,
         INTEGER,
@@ -80,7 +101,18 @@ public final class KTClientConfigSpec {
         ENUM
     }
 
-    /** Immutable entry definition data exposed by this API. */
+    /**
+     * One declared value with its metadata.
+     *
+     * @param value typed handle returned to the add-on
+     * @param name entry key inside its section
+     * @param type storage type
+     * @param translationKey optional language key for the row label; empty when unset
+     * @param comments file comments written above the entry; empty when unset
+     * @param minimum inclusive lower bound for numeric values, or {@code null} when unbounded
+     * @param maximum inclusive upper bound for numeric values, or {@code null} when unbounded
+     * @param validator accepts raw values read from disk or typed in the editor
+     */
     public record EntryDefinition(
             Value<?> value,
             String name,
@@ -92,7 +124,10 @@ public final class KTClientConfigSpec {
             Predicate<Object> validator
     ) implements Operation {
         /**
-         * Validates and normalizes this entry definition value.
+         * Normalizes optional metadata: a {@code null} translation key becomes empty, comments are copied and a
+         * {@code null} validator accepts everything.
+         *
+         * @throws NullPointerException if {@code value}, {@code name} or {@code type} is {@code null}
          */
         public EntryDefinition {
             Objects.requireNonNull(value, "value");
@@ -104,7 +139,14 @@ public final class KTClientConfigSpec {
         }
     }
 
-    /** Typed value wrapper exposed by the configuration API. */
+    /**
+     * Typed handle to one declared client setting.
+     *
+     * <p>Handles are created only by {@link Builder} and stay valid for the lifetime of the game. Before the spec
+     * is registered, reads and writes use an in-memory copy that starts at the default value.
+     *
+     * @param <T> stored value type
+     */
     public abstract static class Value<T> {
         private final T defaultValue;
         private volatile T localValue;
@@ -116,14 +158,21 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the get API operation.
+         * Returns the current value.
+         *
+         * @return the value from the loaded config file, or the in-memory value while the spec is not registered
+         *   yet; never {@code null}
          */
         public final T get() {
             return KineticClientConfigSpecRuntime.get(this, localValue);
         }
 
         /**
-         * Performs the set API operation.
+         * Changes the value in memory. Call {@link KTClientConfigSpec#save()} afterwards to write it to disk.
+         *
+         * @param value new value; must pass the declared range or validator
+         * @throws NullPointerException if {@code value} is {@code null}
+         * @throws IllegalArgumentException if the value is rejected; the previous value is kept
          */
         public final void set(T value) {
             T next = Objects.requireNonNull(value, "value");
@@ -135,57 +184,64 @@ public final class KTClientConfigSpec {
             localValue = next;
         }
 
-        /**
-         * Returns the default value.
-         */
+        /** Returns the declared default value, which never changes after declaration. */
         public final T defaultValue() {
             return defaultValue;
         }
     }
 
-    /** Typed boolean value wrapper exposed by the configuration API. */
+    /** Handle for an on/off setting. */
     public static final class BooleanValue extends Value<Boolean> {
         private BooleanValue(boolean defaultValue) {
             super(defaultValue);
         }
     }
 
-    /** Typed int value wrapper exposed by the configuration API. */
+    /** Handle for an {@code int} setting limited to an inclusive range. */
     public static final class IntValue extends Value<Integer> {
         private IntValue(int defaultValue) {
             super(defaultValue);
         }
     }
 
-    /** Typed long value wrapper exposed by the configuration API. */
+    /** Handle for a {@code long} setting limited to an inclusive range. */
     public static final class LongValue extends Value<Long> {
         private LongValue(long defaultValue) {
             super(defaultValue);
         }
     }
 
-    /** Typed double value wrapper exposed by the configuration API. */
+    /** Handle for a finite decimal setting. */
     public static final class DoubleValue extends Value<Double> {
         private DoubleValue(double defaultValue) {
             super(defaultValue);
         }
     }
 
-    /** Typed string value wrapper exposed by the configuration API. */
+    /** Handle for a text setting checked by a caller-supplied validator. */
     public static final class StringValue extends Value<String> {
         private StringValue(String defaultValue) {
             super(defaultValue);
         }
     }
 
-    /** Typed enum value wrapper exposed by the configuration API. */
+    /**
+     * Handle for a setting restricted to one enum type's constants.
+     *
+     * @param <E> enum type
+     */
     public static final class EnumValue<E extends Enum<E>> extends Value<E> {
         private EnumValue(E defaultValue) {
             super(defaultValue);
         }
     }
 
-    /** Builder for definitions owned by the enclosing API. */
+    /**
+     * Declares sections and values in file order.
+     *
+     * <p>Metadata set with {@link #comment(String...)} and {@link #translation(String)} applies to the next section
+     * or value only. Builders are single-use and not thread-safe.
+     */
     public static final class Builder {
         private final List<Operation> operations = new ArrayList<>();
         private final List<String> sectionPath = new ArrayList<>();
@@ -199,7 +255,12 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the comment API operation.
+         * Sets file comments for the next section or value. Blank and {@code null} lines are dropped; calling it
+         * again replaces the pending comments.
+         *
+         * @param comments comment lines, or none to clear
+         * @return this builder
+         * @throws IllegalStateException if the builder was already built
          */
         public Builder comment(String... comments) {
             ensureMutable();
@@ -216,7 +277,11 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the translation API operation.
+         * Sets the language key used as the label of the next section or value in the config screen.
+         *
+         * @param translationKey language key, or {@code null} to clear
+         * @return this builder
+         * @throws IllegalStateException if the builder was already built
          */
         public Builder translation(String translationKey) {
             ensureMutable();
@@ -225,7 +290,13 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the push API operation.
+         * Opens a nested section. Every value declared until the matching {@link #pop()} is stored under it.
+         *
+         * @param name section key; trimmed, must not be blank
+         * @return this builder
+         * @throws NullPointerException if {@code name} is {@code null}
+         * @throws IllegalArgumentException if {@code name} is blank
+         * @throws IllegalStateException if the builder was already built
          */
         public Builder push(String name) {
             ensureMutable();
@@ -238,7 +309,10 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the pop API operation.
+         * Closes the most recently opened section.
+         *
+         * @return this builder
+         * @throws IllegalStateException if no section is open or the builder was already built
          */
         public Builder pop() {
             ensureMutable();
@@ -251,7 +325,12 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the define boolean API operation.
+         * Declares an on/off value in the current section.
+         *
+         * @param name entry key; trimmed, must not be blank and must be unique in its section
+         * @param defaultValue value used when the file has none
+         * @return the value handle
+         * @throws IllegalArgumentException if the name is blank or already used in this section
          */
         public BooleanValue defineBoolean(String name, boolean defaultValue) {
             BooleanValue value = new BooleanValue(defaultValue);
@@ -260,7 +339,15 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the define int API operation.
+         * Declares an {@code int} value limited to an inclusive range. Negative bounds are allowed.
+         *
+         * @param name entry key; trimmed, must not be blank and must be unique in its section
+         * @param defaultValue value used when the file has none; must lie within the range
+         * @param minimum smallest accepted value
+         * @param maximum largest accepted value
+         * @return the value handle
+         * @throws IllegalArgumentException if {@code minimum > maximum}, the default is out of range, or the name
+         *   is blank or already used
          */
         public IntValue defineInt(String name, int defaultValue, int minimum, int maximum) {
             if (minimum > maximum) throw new IllegalArgumentException("minimum cannot exceed maximum");
@@ -274,7 +361,15 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the define long API operation.
+         * Declares a {@code long} value limited to an inclusive range. Negative bounds are allowed.
+         *
+         * @param name entry key; trimmed, must not be blank and must be unique in its section
+         * @param defaultValue value used when the file has none; must lie within the range
+         * @param minimum smallest accepted value
+         * @param maximum largest accepted value
+         * @return the value handle
+         * @throws IllegalArgumentException if {@code minimum > maximum}, the default is out of range, or the name
+         *   is blank or already used
          */
         public LongValue defineLong(String name, long defaultValue, long minimum, long maximum) {
             if (minimum > maximum) throw new IllegalArgumentException("minimum cannot exceed maximum");
@@ -288,7 +383,15 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the define double API operation.
+         * Declares a finite decimal value limited to an inclusive range. Negative bounds are allowed.
+         *
+         * @param name entry key; trimmed, must not be blank and must be unique in its section
+         * @param defaultValue value used when the file has none; must lie within the range
+         * @param minimum smallest accepted value, finite
+         * @param maximum largest accepted value, finite
+         * @return the value handle
+         * @throws IllegalArgumentException if any number is not finite, {@code minimum > maximum}, the default is
+         *   out of range, or the name is blank or already used
          */
         public DoubleValue defineDouble(String name, double defaultValue, double minimum, double maximum) {
             if (!Double.isFinite(defaultValue) || !Double.isFinite(minimum) || !Double.isFinite(maximum)) {
@@ -305,7 +408,15 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the define double validated API operation.
+         * Declares a finite decimal value checked by a custom rule instead of a range.
+         *
+         * @param name entry key; trimmed, must not be blank and must be unique in its section
+         * @param defaultValue value used when the file has none; finite and accepted by {@code validator}
+         * @param validator receives the candidate {@link Double}; non-finite values are rejected before it runs
+         * @return the value handle
+         * @throws NullPointerException if {@code validator} is {@code null}
+         * @throws IllegalArgumentException if the default is not finite or is rejected, or the name is blank or
+         *   already used
          */
         public DoubleValue defineDoubleValidated(String name, double defaultValue, Predicate<Object> validator) {
             Objects.requireNonNull(validator, "validator");
@@ -322,7 +433,14 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the define string API operation.
+         * Declares a text value checked by a custom rule.
+         *
+         * @param name entry key; trimmed, must not be blank and must be unique in its section
+         * @param defaultValue value used when the file has none; must be non-null and accepted by {@code validator}
+         * @param validator accepts or rejects candidate text
+         * @return the value handle
+         * @throws NullPointerException if {@code validator} or {@code defaultValue} is {@code null}
+         * @throws IllegalArgumentException if the default is rejected, or the name is blank or already used
          */
         public StringValue defineString(String name, String defaultValue, Predicate<String> validator) {
             Objects.requireNonNull(validator, "validator");
@@ -336,7 +454,15 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Performs the define enum API operation.
+         * Declares a value restricted to the constants of {@code defaultValue}'s enum type. The config screen shows
+         * a dropdown of the constant names.
+         *
+         * @param name entry key; trimmed, must not be blank and must be unique in its section
+         * @param defaultValue value used when the file has none
+         * @param <E> enum type
+         * @return the value handle
+         * @throws NullPointerException if {@code defaultValue} is {@code null}
+         * @throws IllegalArgumentException if the name is blank or already used
          */
         public <E extends Enum<E>> EnumValue<E> defineEnum(String name, E defaultValue) {
             EnumValue<E> value = new EnumValue<>(Objects.requireNonNull(defaultValue, "defaultValue"));
@@ -346,7 +472,10 @@ public final class KTClientConfigSpec {
         }
 
         /**
-         * Builds the configured API value.
+         * Finishes the definition. The builder cannot be used afterwards.
+         *
+         * @return the immutable spec
+         * @throws IllegalStateException if a section is still open or the builder was already built
          */
         public KTClientConfigSpec build() {
             ensureMutable();

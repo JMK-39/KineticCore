@@ -16,7 +16,8 @@
     "setspawn.SetSpawnMixins$MinecraftServerMixin",
     "setspawn.SetSpawnMixins$PlayerListMixin",
     "setspawn.SetSpawnMixins$ServerPlayerMixin",
-    "setspawn.SetSpawnMixins$ServerLevelMixin"
+    "setspawn.SetSpawnMixins$ServerLevelMixin",
+    "minecraft.RangedAttributeAccessor"
   ],
   "client": [
     "datapack.client.ScreenReloadNoticeMixin",
@@ -31,6 +32,9 @@
     "recipebook.client.RecipeBookClientMixins$Gui",
     "recipebook.client.RecipeBookClientMixins$Logic",
     "worldmanagement.client.WorldManagementMixins$RecycleBin",
-    "worldmanagement.client.WorldManagementMixins$Navigation"
+    "worldmanagement.client.WorldManagementMixins$Navigation",
+    "minecraft.client.AbstractContainerScreenAccessor",
+    "minecraft.client.ChatComponentAccess",
+    "advancement.client.ClientAdvancementsAccessor"
   ]
 }

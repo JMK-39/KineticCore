@@ -1,7 +1,22 @@
 package dev.xyat.kineticcore.api.monitoring;
 
-/** Public API type for server tick tracker. */
+import java.util.Objects;
+
+/**
+ * Rolling window of the last 1200 server tick durations (one minute at 20 TPS).
+ *
+ * <p>Not thread-safe: the server records ticks on the server thread, so read it from the server thread too, for
+ * example inside a command.
+ */
 public final class ServerTickTracker {
+    /** Statistic returned by {@link #getStats(int, Stat)}. */
+    public enum Stat {
+        /** Mean tick duration. */
+        AVERAGE,
+        /** Longest tick duration. */
+        MAXIMUM
+    }
+
     private static final int WINDOW_TICKS = 1200;
 
     private final long[] tickTimes = new long[WINDOW_TICKS];
@@ -9,7 +24,10 @@ public final class ServerTickTracker {
     private int filled;
 
     /**
-     * Adds tick.
+     * Records one tick duration, replacing the oldest sample once the window is full.
+     *
+     * @param nanoTime tick duration in nanoseconds
+     * @throws IllegalArgumentException if {@code nanoTime} is negative
      */
     public void addTick(long nanoTime) {
         if (nanoTime < 0L) throw new IllegalArgumentException("tick duration must be non-negative");
@@ -21,9 +39,15 @@ public final class ServerTickTracker {
     }
 
     /**
-     * Returns stats.
+     * Returns a statistic over the most recent samples.
+     *
+     * @param seconds how far back to look; capped at the recorded window of 60 seconds
+     * @param stat whether to return the average or the longest tick
+     * @return milliseconds per tick, or {@code 0} when there are no samples
+     * @throws NullPointerException if {@code stat} is {@code null}
      */
-    public double getStats(int seconds, int mode) {
+    public double getStats(int seconds, Stat stat) {
+        Objects.requireNonNull(stat, "stat");
         // Multiply as long: Integer.MAX_VALUE seconds must not wrap to a negative sample count.
         int ticksToSample = (int) Math.min((long) seconds * 20L, filled);
         if (ticksToSample <= 0) return 0.0D;
@@ -42,20 +66,21 @@ public final class ServerTickTracker {
             }
         }
 
-        if (mode == 1) return maxNano * 1.0E-6D;
+        if (stat == Stat.MAXIMUM) return maxNano * 1.0E-6D;
         return totalNano / (double) ticksToSample * 1.0E-6D;
     }
 
-    /**
-     * Returns latest mspt.
-     */
+    /** Returns the duration of the most recent tick in milliseconds, or {@code 0} before the first tick. */
     public double getLatestMspt() {
         if (filled == 0) return 0.0D;
         return tickTimes[(cursor - 1 + WINDOW_TICKS) % WINDOW_TICKS] * 1.0E-6D;
     }
 
     /**
-     * Performs the tps API operation.
+     * Converts milliseconds per tick to ticks per second.
+     *
+     * @param mspt average milliseconds per tick
+     * @return {@code 1000 / mspt} capped at 20; {@code 0} for non-finite input
      */
     public static double tps(double mspt) {
         // Preserve the historical cap for finite negative inputs, but do not

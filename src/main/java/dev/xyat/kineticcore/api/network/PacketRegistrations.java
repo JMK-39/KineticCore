@@ -3,9 +3,11 @@ package dev.xyat.kineticcore.api.network;
 import java.util.Objects;
 
 /**
- * 在同一个频道上独立尝试注册每种数据包。
- * 单项失败不跳过后续项目，首次异常保留原样，后续异常附加为 suppressed；
- * 调用方应当对每个已成功的 Sender 独立记录状态，重试时跳过它。
+ * 在同一个频道上独立尝试注册每种数据包。 单项失败不跳过后续项目，首次异常保留原样，后续异常附加为 suppressed； 调用方应当对每个已成功的 Sender 独立记录状态，重试时跳过它。
+ *
+ * <p>Runs several packet registrations on one channel independently. A failing registration does not skip the rest;
+ * the first exception is rethrown unchanged with later ones attached as suppressed. Callers should remember each
+ * sender that succeeded and skip it when retrying.
  */
 public final class PacketRegistrations {
     private PacketRegistrations() {

@@ -9,23 +9,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Public Kinetic API facade for paths. */
+/**
+ * Safe file helpers below the shared config directory. Use {@link KineticPlatform} for the config and game
+ * directories themselves.
+ *
+ * <p>Relative paths are normalized and must stay inside the config directory; absolute paths and {@code ..} escapes
+ * are rejected, so values read from configs or packets cannot reach other files.
+ */
 public final class KineticPaths {
     private KineticPaths() {
-    }
-
-    /**
-     * Performs the config directory API operation.
-     */
-    public static Path configDirectory() {
-        return KineticPlatformRuntime.configDirectory();
-    }
-
-    /**
-     * Performs the game directory API operation.
-     */
-    public static Path gameDirectory() {
-        return KineticPlatformRuntime.gameDirectory();
     }
 
     /**
@@ -80,27 +72,52 @@ public final class KineticPaths {
         return KineticPlatformRuntime.readConfigLines(Objects.requireNonNull(relativeFile, "relativeFile"));
     }
 
-    /** Reads one existing UTF-8 text file below the shared configuration directory. */
+    /**
+     * Reads one existing UTF-8 text file below the shared config directory.
+     *
+     * @param relativeFile relative file such as {@code "examplemod/notes.txt"}
+     * @return the file content
+     * @throws IOException if the file is missing or cannot be read
+     * @throws IllegalArgumentException if the path is absolute, blank, names no file, or escapes the config
+     *   directory
+     */
     public static String readConfigText(String relativeFile) throws IOException {
         return KineticPlatformRuntime.readConfigText(Objects.requireNonNull(relativeFile, "relativeFile"));
     }
 
-    /** Returns whether one regular file exists below the shared configuration directory. */
+    /**
+     * Returns whether a regular file exists below the shared config directory.
+     *
+     * @throws IllegalArgumentException if the path is absolute, blank, names no file, or escapes the config
+     *   directory
+     */
     public static boolean configFileExists(String relativeFile) {
         return KineticPlatformRuntime.configFileExists(Objects.requireNonNull(relativeFile, "relativeFile"));
     }
 
 
-    /** Reads the exact bytes of one existing file below the shared configuration directory. */
+    /**
+     * Reads the exact bytes of one existing file below the shared config directory.
+     *
+     * @throws IOException if the file is missing or cannot be read
+     * @throws IllegalArgumentException if the path is absolute, blank, names no file, or escapes the config
+     *   directory
+     */
     public static byte[] readConfigBytes(String relativeFile) throws IOException {
         return KineticPlatformRuntime.readConfigBytes(Objects.requireNonNull(relativeFile, "relativeFile"));
     }
 
     /**
-     * Copies one bundled classpath resource into the configuration directory only when the target file is missing.
-     * Existing regular files are preserved; an existing non-file path is rejected.
+     * Copies a bundled resource into the config directory only when the target file is missing, for shipping
+     * default config files. Existing files are never overwritten.
      *
+     * @param resourceOwner class whose class loader loads the resource
+     * @param resourcePath classpath path of the default file; a leading {@code /} is optional
+     * @param relativeFile target file below the config directory
      * @return {@code true} when a new config file was created
+     * @throws IOException if the resource is missing, the target exists but is not a regular file, or writing fails
+     * @throws IllegalArgumentException if {@code resourcePath} is blank, or {@code relativeFile} is absolute,
+     *   blank, or escapes the config directory
      */
     public static boolean ensureConfigResource(Class<?> resourceOwner, String resourcePath, String relativeFile) throws IOException {
         return KineticPlatformRuntime.ensureConfigResource(
@@ -111,8 +128,12 @@ public final class KineticPaths {
     }
 
     /**
-     * Writes multiple UTF-8 configuration files through sibling temporary files before replacement.
-     * All supplied keys are relative to the shared configuration directory.
+     * Writes several UTF-8 files through sibling temporary files and then replaces the targets, so a crash never
+     * leaves a half-written file. {@code null} contents are written as empty files.
+     *
+     * @param files contents keyed by path relative to the config directory
+     * @throws IOException if a file cannot be written
+     * @throws IllegalArgumentException if a path is absolute, blank, or escapes the config directory
      */
     public static void writeConfigTextsAtomic(Map<String, String> files) throws IOException {
         Map<String, String> safeFiles = new LinkedHashMap<>();

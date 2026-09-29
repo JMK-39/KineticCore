@@ -32,10 +32,10 @@ public final class TpsCommand {
         }
 
         double currentMspt = tracker.getLatestMspt();
-        double average10Mspt = tracker.getStats(10, 0);
-        double maximum10Mspt = tracker.getStats(10, 1);
-        double average60Mspt = tracker.getStats(60, 0);
-        double maximum60Mspt = tracker.getStats(60, 1);
+        double average10Mspt = tracker.getStats(10, ServerTickTracker.Stat.AVERAGE);
+        double maximum10Mspt = tracker.getStats(10, ServerTickTracker.Stat.MAXIMUM);
+        double average60Mspt = tracker.getStats(60, ServerTickTracker.Stat.AVERAGE);
+        double maximum60Mspt = tracker.getStats(60, ServerTickTracker.Stat.MAXIMUM);
 
         MutableComponent message = Component.empty()
                 .append(KineticI18n.translatable("cmd.kineticcore.tps.report_header")).append("\n")

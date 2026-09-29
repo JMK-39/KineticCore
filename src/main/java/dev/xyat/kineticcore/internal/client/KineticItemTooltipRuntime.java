@@ -1,10 +1,14 @@
 package dev.xyat.kineticcore.internal.client;
 
+import dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter;
 import dev.xyat.kineticcore.internal.runtime.KineticCallbackBatch;
 import dev.xyat.kineticcore.internal.runtime.KineticForgeListenerRegistrations;
 import dev.xyat.kineticcore.api.client.tooltip.KineticItemTooltips;
+import dev.xyat.kineticcore.api.client.tooltip.KineticTooltipComponent;
 import dev.xyat.kineticcore.api.event.KineticEventSubscription;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.network.chat.Component;
@@ -27,7 +31,7 @@ public final class KineticItemTooltipRuntime {
     private static final CopyOnWriteArrayList<KineticItemTooltips.Builder> BUILDERS = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<KineticItemTooltips.RenderObserver> RENDER_OBSERVERS = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<KineticItemTooltips.Gatherer> GATHERERS = new CopyOnWriteArrayList<>();
-    private static final Map<Class<? extends TooltipComponent>, Function<TooltipComponent, ? extends ClientTooltipComponent>> COMPONENT_FACTORIES = new LinkedHashMap<>();
+    private static final Map<Class<? extends TooltipComponent>, Function<TooltipComponent, ? extends KineticTooltipComponent>> COMPONENT_FACTORIES = new LinkedHashMap<>();
     private static final KineticForgeListenerRegistrations LISTENER_REGISTRATIONS = new KineticForgeListenerRegistrations();
     private static boolean initialized;
     private static boolean componentFactoryRegistrationClosed;
@@ -72,7 +76,7 @@ public final class KineticItemTooltipRuntime {
 
     public static synchronized <T extends TooltipComponent> void registerComponentFactory(
             Class<T> componentType,
-            Function<T, ? extends ClientTooltipComponent> factory
+            Function<T, ? extends KineticTooltipComponent> factory
     ) {
         initialize();
         if (componentFactoryRegistrationClosed) {
@@ -97,9 +101,26 @@ public final class KineticItemTooltipRuntime {
     private static <T extends TooltipComponent> void registerComponentFactory(
             RegisterClientTooltipComponentFactoriesEvent event,
             Class<T> componentType,
-            Function<TooltipComponent, ? extends ClientTooltipComponent> factory
+            Function<TooltipComponent, ? extends KineticTooltipComponent> factory
     ) {
-        event.register(componentType, value -> factory.apply(value));
+        event.register(componentType, value -> new TooltipComponentAdapter(factory.apply(value)));
+    }
+
+    private record TooltipComponentAdapter(KineticTooltipComponent component) implements ClientTooltipComponent {
+        @Override
+        public int getHeight() {
+            return component.height();
+        }
+
+        @Override
+        public int getWidth(Font font) {
+            return component.width();
+        }
+
+        @Override
+        public void renderImage(Font font, int x, int y, GuiGraphics graphics) {
+            component.render(GuiGraphicsAdapter.wrap(graphics), x, y);
+        }
     }
 
     private static void onBuildTooltip(ItemTooltipEvent event) {

@@ -288,7 +288,6 @@ public class SetSpawnPage extends KineticPage {
                 null,
                 true,
                 false,
-                false,
                 KineticI18n.translatable("gui.kineticcore.setspawn.remove_short"),
                 null,
                 true,

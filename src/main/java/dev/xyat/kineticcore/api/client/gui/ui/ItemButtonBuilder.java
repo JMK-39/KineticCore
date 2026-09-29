@@ -1,17 +1,8 @@
 package dev.xyat.kineticcore.api.client.gui.ui;
 
-import dev.xyat.kineticcore.api.client.gui.widget.*;
-import dev.xyat.kineticcore.api.client.gui.widget.list.*;
-import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
+import dev.xyat.kineticcore.api.client.gui.widget.KineticItemButton;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
-
-import java.util.List;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /** 物品卡片按钮 / Item card button. */
 public abstract class ItemButtonBuilder extends ControlBuilder<ItemButtonBuilder, KineticItemButton> {

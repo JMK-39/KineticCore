@@ -1,4 +1,4 @@
-package dev.xyat.kineticcore.feature.clientui.mixin.client;
+package dev.xyat.kineticcore.internal.mixin.api.minecraft.client;
 
 import dev.xyat.kineticcore.api.minecraft.MinecraftChat;
 import net.minecraft.client.GuiMessage;

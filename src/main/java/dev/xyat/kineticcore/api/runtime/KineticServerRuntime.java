@@ -9,7 +9,8 @@ public final class KineticServerRuntime {
     }
 
     /**
-     * Returns server.
+     * Returns the running server: the dedicated server, or the integrated server in singleplayer; {@code null} when
+     * no world is open.
      */
     public static MinecraftServer currentServer() {
         return KineticServerRuntimeImpl.currentServer();

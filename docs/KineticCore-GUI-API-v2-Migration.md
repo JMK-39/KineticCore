@@ -55,6 +55,7 @@ This file is the only migration reference. Older KineticCore notes and patches (
 - Removed `api.compat.curios.KineticCuriosEvents` and its internal runtime.
 - Removed the built-in Curios slots in the item selector's inventory tab, the JEI hovered-item lookup used by copy-item, and the JEI exclusion-area mixin used by mini effects.
 - New neutral extension points replace them: `KineticSelectors.registerInventorySource(...)` and `KineticHoveredItems.register(...)`. The `EffectAreaProvider` interface is unchanged. See §8.12 for where each integration should live now.
+- API cleanup after v2: duplicate entry points such as `KineticUiState`, `KineticEnvironment` and `KineticFeatures` were removed, and a few members were renamed. The full old → new table and a scan command are in §13.
 
 ---
 
@@ -232,7 +233,7 @@ An `int button` in such a context is not a migration error.
 | `api.client.selector.HudPositionEditor` | `api.client.gui.selector.KineticHudEditorPage` (§8.4) |
 | `api.client.editor.KineticCommandListEditor` | `api.client.gui.editor.KineticCommandListEditor` (`open(...)`, `action(...)`) |
 | `api.client.command.KineticCommandSuggestions` | `api.client.gui.command.KineticCommandAssist` (§8.6) |
-| `api.client.widget.state.*` (`DragStateController`, `EditedEntryTracker`, `KineticUiState`, `LayerState`) | `api.client.gui.state.*` (package move only) |
+| `api.client.widget.state.*` (`DragStateController`, `EditedEntryTracker`, `LayerState`) | `api.client.gui.state.*` (package move only; `KineticUiState` was removed, see the API cleanup section) |
 | `api.client.widget.scroll.KineticScrollSettings` | `api.client.gui.scroll.KineticScrollSettings` |
 | `KineticScroll.GridScrollController` | `api.client.gui.scroll.KineticScrollController` |
 | `KineticScroll.State` | `api.client.gui.scroll.KineticScrollAnimator` |
@@ -973,3 +974,85 @@ Division of work:
    - tooltips, context menus and dialogs
    - GUI scale 1–4 and a 4K window
    - the business-equivalence items from §11
+
+
+---
+
+## 13. API cleanup after v2: removed duplicates and renamed members
+
+Several public entry points did exactly what another API already does. They were removed without bridges, so
+an addon that uses one of them no longer compiles against this core and must be updated. Run this scan from the
+addon root and replace **every** hit using the table below:
+
+```bash
+rg -n --type java \
+  -e '\bKineticUiState\b' -e '\bKineticEnvironment\b' -e '\bKineticFeatures\b' \
+  -e 'KineticPaths\.(configDirectory|gameDirectory)\(' \
+  -e 'CommandText\.createSuggestCommand\(' -e 'onCrawlPose\(|\bCrawlPoseHandler\b' \
+  -e 'KineticSuperFlight\.maxSpeed\(' -e 'superFlightRenderPitch\(' \
+  -e 'KineticCreativeTabs\.refreshSearch\(' -e '\.getStats\([^,)]*,\s*[0-9]' \
+  -e 'KineticFlight\.(sources|addSource|removeSource|isFlightAllowed|refresh|isDebouncing|setDebouncing|lastKnownFlying|setLastKnownFlying|serverNoclipEnabled|isInternalUpdate|isProcessingExplicitCancel|isGamemodeSwitching)\b' \
+  src
+```
+
+The `getStats` pattern only matches the old `ServerTickTracker` call with a numeric mode; vanilla
+`player.getStats()` and the new `Stat` form do not match.
+
+| Removed | Replacement |
+|---|---|
+| `KineticUiState.Drag<T>` | `api.client.gui.state.DragStateController<T>` (same methods) |
+| `KineticUiState.EditedEntries<T>` | `api.client.gui.state.EditedEntryTracker<T>` (same methods) |
+| `KineticUiState.Layer<L>` | `api.client.gui.state.LayerState<L>` (same methods) |
+| `KineticEnvironment.isClient / isDedicatedServer / runOnClient / callOnClient / runOnDedicatedServer` | `KineticPlatform.` + the same method name and arguments |
+| `KineticFeatures.isEnabled(id)` | `KineticFeatureSwitches.isEnabled(id)` |
+| `KineticPaths.configDirectory()` / `gameDirectory()` | `KineticPlatform.configDirectory()` / `gameDirectory()` |
+| `CommandText.createSuggestCommand(display, prefix, key)` | `CommandText.suggest(display, prefix, key)`; a translated label uses `CommandText.suggest(KineticI18n.translatable(labelKey), prefix, key)` |
+| `CommonHooks.onCrawlPose(handler)` / `CommonHooks.CrawlPoseHandler` | `CommonHooks.onPlayerPoseUpdate(handler)` / `CommonHooks.PlayerPoseUpdateHandler` |
+| `KineticSuperFlight.maxSpeed(entity)` | `KineticFlightAttributes.flightSpeed(entity)` |
+| `KineticFlightClient.superFlightRenderPitch()` | removed without replacement; it was only kept for old addons |
+| `KineticCreativeTabs.refreshSearch(items)` (common class, crashed on servers) | `api.client.search.KineticItemSearch.refreshCreativeSearch(items)` (client only) |
+| `ServerTickTracker.getStats(seconds, 0)` / `getStats(seconds, 1)` | `getStats(seconds, ServerTickTracker.Stat.AVERAGE)` / `getStats(seconds, ServerTickTracker.Stat.MAXIMUM)` |
+| `KineticFlight.sources / addSource / removeSource / isFlightAllowed / refresh` | `KineticFlightSources.sources / addSource / removeSource / allowsFlight / refresh` |
+| `KineticFlight.serverNoclipEnabled(player)` | `KineticFlight.noclipEnabled(player)` |
+| `KineticFlight.isDebouncing / setDebouncing / lastKnownFlying / setLastKnownFlying` and the public fields `isInternalUpdate / isProcessingExplicitCancel / isGamemodeSwitching` | removed; they were KineticCore flight-feature internals that nothing outside the feature read |
+| `KineticItemTooltips.registerComponentFactory(type, data -> new X())` where `X implements ClientTooltipComponent` (`getHeight`, `getWidth(Font)`, `renderImage(Font, x, y, GuiGraphics)`) | the same call where `X implements KineticTooltipComponent`: `height()`, `width()` (measure text with `KineticText.width`), `render(KineticGraphics, x, y)`. Draw text with `g.text(..., true)` and icons with `g.item(...)`; `g.push()` / `g.translate` / `g.scale` / `g.pop()` replace `pose()` |
+| The `marked` component of `SelectionItem`, `ItemSelectionItem`, `ActionItem`, `ItemActionItem`, `ToggleActionItem`, `MultiActionItem` and `MultiToggleItem` (the small green dot at the row end) | removed without replacement; delete the argument right after `active` in full constructor calls and drop `item.marked()` reads. The short convenience constructors keep their parameters |
+
+`KineticFlight` keeps `installNoclipSyncSender`, `noclipEnabled`, `applyServerNoclip`, `syncServerNoclip` and
+`copyPersistentState`.
+
+**Behaviour changes that need no addon code change:**
+
+- `MinecraftContainers`, `MinecraftAttributes` and `MinecraftChat` now always work. Their mixins used to live in
+  feature packages, so turning off the "Container Item Access" or "Attribute Range Extension" startup switch made
+  every call throw `ClassCastException`. The switches now only turn off the matching KineticCore features.
+- A menu type registered with `KineticMenuTypes.register` receives an empty `NetworkBuffer` when the server opened
+  it without an opening payload, instead of crashing the client.
+- Single-line input text sits exactly where vanilla `EditBox` puts it (the earlier extra 3 px downward offset was
+  removed). Multi-line text areas now scroll their text with the scrollbar and clip it to the field, and font mods
+  that draw input text themselves render it inside the scaled canvas.
+- Leaving creative mode now tells the client that noclip was switched off.
+
+**Known hits in the addons checked with this release:**
+
+- RealmControl `teleport/TpdCommand.java` lines 63–69: four `CommandText.createSuggestCommand(` →
+  `CommandText.suggest(`.
+
+## 14. Addon-local helpers that the core now covers
+
+The addons checked with this release each carried private copies of helpers that do what a core API does. Delete
+the helper and use the core entry point; the visible result stays the same.
+
+| Addon helper or pattern | Core replacement |
+|---|---|
+| `InputColors.apply(ui.textField(...)...build())` (cyan until edited, white placeholder) | `ui.textField(...)...firstShownTextAsDefault().build()`; the same on `numberField`, `autoComplete` and `numberAutoComplete`. An already built field: `field.useFirstShownTextAsDefault()` |
+| `ColorText.translatable(key, args)` with a per-key `ChatFormatting` table | `KineticI18n.translatable(key, args)`; put a `§` code right before each placeholder in the language files |
+| `.withStyle(style -> style.withClickEvent(new ClickEvent(...)).withHoverEvent(...))` | `CommandText.clickToRun / clickToSuggest / clickToCopy / clickToOpenUrl(text, value, hover)` |
+| `CommandUtils` help lines | `CommandText.header / executable / suggest` |
+| `MinecraftForge.EVENT_BUS.post(event)` / `@SubscribeEvent` for the addon's own or a third-party event | `KineticExternalEvents.post(event)` / `KineticExternalEvents.subscribe(Type.class, listener)` |
+| World-to-screen labels drawn with `RenderSystem`, `PoseStack` and `Font.drawInBatch` | `KineticWorldRender.beginScreenOverlay(context)`: `project(worldPos)` and `graphics()` |
+| Hand-written scrollbars (thumb maths, grab offset, `KineticScrollAnimator` wheel handling) | `KineticScrollController`: `update` / `updateRange`, `render`, `beginDrag` / `drag` / `release`, `scroll` |
+| A custom HUD position editor screen | `KineticHudEditorPage` (`renderBackdrop`, `scalable()` for fixed-scale elements) |
+| `ClientTooltipComponent` implementations | `KineticTooltipComponent` |
+| `mx >= c.controlX() && mx < c.controlX() + c.controlWidth() && ...` | `c.contains(mx, my)` |
+| Gray `ChatFormatting.GRAY` / `§7` on client text | `KineticTheme.muted(text)` |

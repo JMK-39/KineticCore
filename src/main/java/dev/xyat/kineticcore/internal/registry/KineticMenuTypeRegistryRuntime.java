@@ -33,7 +33,7 @@ public final class KineticMenuTypeRegistryRuntime {
         RegistryObject<MenuType<T>> object = registry.register(
                 id.getPath(),
                 () -> IForgeMenuType.create((containerId, inventory, data) ->
-                        factory.create(containerId, inventory, NetworkBufferRuntime.wrap(data)))
+                        factory.create(containerId, inventory, NetworkBufferRuntime.wrapOrEmpty(data)))
         );
         return new Handle<>(id, object);
     }

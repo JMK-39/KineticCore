@@ -245,7 +245,7 @@ public final class KineticClientRuntime {
         return KineticClientRuntimeImpl.cameraType();
     }
 
-    /** Sets camera type. */
+    /** Switches between first-person and the two third-person camera modes; {@code null} does nothing. */
     public static void setCameraType(CameraType cameraType) {
         if (cameraType == null) return;
         KineticClientRuntimeImpl.initialize();

@@ -1,4 +1,4 @@
-package dev.xyat.kineticcore.feature.copyitem.mixin.client;
+package dev.xyat.kineticcore.internal.mixin.api.minecraft.client;
 
 import dev.xyat.kineticcore.api.minecraft.MinecraftContainers;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;

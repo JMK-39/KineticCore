@@ -309,7 +309,7 @@ public final class FeatureSwitchRuntime {
         definitions.add(def("vanilla.recipe_book_client", "vanilla", true,
                 List.of("RecipeBookClientMixins", "ButtonAccess")));
         definitions.add(def("attributes.range_limits", "vanilla", true,
-                List.of("RangedAttributeAccessor")));
+                List.of()));
 
         definitions.add(def("monitoring.tps", "monitoring", true,
                 List.of("ServerMixin")));
@@ -320,7 +320,7 @@ public final class FeatureSwitchRuntime {
                 List.of("RenderTargetMixin")));
 
         definitions.add(def("client.copy_item_container_access", "client", true,
-                List.of("AbstractContainerScreenAccessor")));
+                List.of()));
         definitions.add(def("client.default_options", "client", true,
                 List.of()));
         definitions.add(def("client.interface_automation", "client", true,

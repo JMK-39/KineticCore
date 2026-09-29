@@ -14,8 +14,12 @@ public final class KineticClientRenderers {
     }
 
     /**
-     * 在实体渲染器注册事件前登记工厂。监听器安装失败不会留下无效登记；
-     * 注册事件中某项失败仍会继续处理其他项，并在结束后报告错误。事件开始后再登记会抛出 IllegalStateException。
+     * 在实体渲染器注册事件前登记工厂。监听器安装失败不会留下无效登记； 注册事件中某项失败仍会继续处理其他项，并在结束后报告错误。事件开始后再登记会抛出 IllegalStateException。
+     *
+     * <p>Registers the renderer factory for an entity type before Forge's renderer registration event. One failing
+     * registration does not stop the others.
+     *
+     * @throws IllegalStateException if renderer registration has already started
      */
     public static <T extends Entity> void registerEntityRenderer(
             Supplier<? extends EntityType<T>> entityType,

@@ -16,30 +16,48 @@ import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
 
-/** Public API type for kt config page. */
+/**
+ * Immutable description of one configuration page shown by the Kinetic config screens.
+ *
+ * <p>A page lists its rows (values, headings, dividers, descriptions and actions), says where its source of truth
+ * lives ({@link KTConfigScope}) and when saved values take effect ({@link ApplyTiming}). Pages are built once with
+ * {@link #builder(String, Component)} and registered through {@code KTConfigApi}; the screen reads and writes
+ * values only through the supplied reader and writer callbacks, so persistence stays owned by the add-on.
+ *
+ * <p>Pages are immutable after {@link Builder#build()} and may be shared. The reader, writer and saver callbacks
+ * run on the client thread while a config screen is open.
+ */
 public final class KTConfigPage {
-    /** Supported apply timing values exposed by this API. */
+    /**
+     * When a saved value takes effect. The screen shows a short badge, a detail tooltip and a saved toast derived
+     * from this value unless the page supplies its own {@link Builder#applyNotice(Component) notice}.
+     */
     public enum ApplyTiming {
+        /** Saved values take effect immediately. */
         IMMEDIATE(
                 "gui.kineticcore.config.apply.immediate.short",
                 "gui.kineticcore.config.apply.immediate.detail",
                 "gui.kineticcore.config.saved.immediate"
         ),
+        /** The feature's own reload operation must run after saving. */
         RELOAD_REQUIRED(
                 "gui.kineticcore.config.apply.reload_required.short",
                 "gui.kineticcore.config.apply.reload_required.detail",
                 "gui.kineticcore.config.saved.reload_required"
         ),
+        /** Values apply the next time an uninitialized world is loaded. */
         NEXT_WORLD_LOAD(
                 "gui.kineticcore.config.apply.next_world_load.short",
                 "gui.kineticcore.config.apply.next_world_load.detail",
                 "gui.kineticcore.config.saved.next_world_load"
         ),
+        /** The game or server must restart before values apply. */
         RESTART_GAME(
                 "gui.kineticcore.config.apply.restart_game.short",
                 "gui.kineticcore.config.apply.restart_game.detail",
                 "gui.kineticcore.config.saved.restart_game"
         ),
+        /** Rows apply at different times; each row's description explains its timing. This is the default. */
         MIXED(
                 "gui.kineticcore.config.apply.mixed.short",
                 "gui.kineticcore.config.apply.mixed.detail",
@@ -100,77 +118,86 @@ public final class KTConfigPage {
     }
 
     /**
-     * Creates a new builder.
+     * Starts a page definition.
+     *
+     * @param id namespaced page id such as {@code mymod:general}; lower-case letters, digits and {@code _ . - /}
+     * @param title page title shown in the config index and screen header
+     * @return a new builder with {@link KTConfigScope#LOCAL_INSTALLATION} scope and {@link ApplyTiming#MIXED}
+     *   timing
+     * @throws NullPointerException if {@code id} or {@code title} is {@code null}
+     * @throws IllegalArgumentException if {@code id} is not namespaced
      */
     public static Builder builder(String id, Component title) {
         return new Builder(id, title);
     }
 
-    /**
-     * Returns the id.
-     */
+    /** Returns the namespaced page id used for registration, navigation and server sync. */
     public String id() {
         return id;
     }
 
-    /**
-     * Returns the title.
-     */
+    /** Returns the page title shown in the config index and screen header. */
     public Component title() {
         return title;
     }
 
     /**
-     * Returns the description.
+     * Returns the optional page description shown under the title.
+     *
+     * @return the description, or {@code null} when none was set
      */
     public Component description() {
         return description;
     }
 
-    /**
-     * Returns the scope.
-     */
+    /** Returns where this page's values live: this client, this installation or the connected server. */
     public KTConfigScope scope() {
         return scope;
     }
 
     /**
-     * Performs the server managed API operation.
+     * Returns whether a {@link KTConfigScope#SERVER_AUTHORITATIVE} page is edited through Kinetic's server config
+     * sync.
+     *
+     * <p>A server-authoritative page that is not server managed is shown read-only with an explanation instead of
+     * writing values locally.
      */
     public boolean serverManaged() {
         return serverManaged;
     }
 
-    /**
-     * Applies timing.
-     */
+    /** Returns when saved values from this page take effect. */
     public ApplyTiming applyTiming() {
         return applyTiming;
     }
 
     /**
-     * Applies notice.
+     * Returns the custom apply notice that replaces the standard {@link #applyTiming()} text.
+     *
+     * @return the notice, or {@code null} when the standard timing text is used
      */
     public Component applyNotice() {
         return applyNotice;
     }
 
-    /**
-     * Returns the entries.
-     */
+    /** Returns the page rows in display order as an unmodifiable list. */
     public List<KTConfigEntry<?>> entries() {
         return entries;
     }
 
     /**
-     * Performs the shows apply timing API operation.
+     * Returns whether the screen should show when changes take effect.
+     *
+     * <p>This is {@code true} when a custom notice was set or at least one row stores a value; pages that only
+     * contain headings, descriptions or actions have nothing to apply.
      */
     public boolean showsApplyTiming() {
         return applyNotice != null || entries.stream().anyMatch(KTConfigEntry::isValueEntry);
     }
 
     /**
-     * Applies detail.
+     * Returns the player-facing explanation of when saved values apply: the custom notice if set, otherwise the
+     * standard text for {@link #applyTiming()}.
      */
     public Component applyDetail() {
         return applyNotice != null
@@ -179,13 +206,23 @@ public final class KTConfigPage {
     }
 
     /**
-     * Saves the current values.
+     * Runs the page's {@link Builder#onSave(Runnable) save callback}.
+     *
+     * <p>Screens call this after every changed value has been written through its writer, so the callback should
+     * persist the add-on's config (for example flush it to disk). Exceptions propagate to the caller.
      */
     public void save() {
         saver.run();
     }
 
-    /** Builder for definitions owned by the enclosing API. */
+    /**
+     * Collects rows and page options for a {@link KTConfigPage}.
+     *
+     * <p>Every value method validates its arguments immediately and throws on bad input, so a page that builds is
+     * always renderable. Methods ending in {@code Validated} accept an extra business rule; the others accept every
+     * value that passes the built-in type and range checks. Builders are not thread-safe and are meant to be used
+     * once.
+     */
     public static final class Builder {
         private final String id;
         private final Component title;
@@ -205,7 +242,10 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the page description API operation.
+         * Sets the optional description shown under the page title.
+         *
+         * @param description description text, or {@code null} to show none
+         * @return this builder
          */
         public Builder pageDescription(Component description) {
             this.description = description;
@@ -213,7 +253,12 @@ public final class KTConfigPage {
         }
 
         /**
-         * Returns the scope.
+         * Sets where this page's values live. The scope controls the badge shown on the page and, for
+         * {@link KTConfigScope#SERVER_AUTHORITATIVE}, whether the page is editable in the current client context.
+         *
+         * @param scope value source of truth
+         * @return this builder
+         * @throws NullPointerException if {@code scope} is {@code null}
          */
         public Builder scope(KTConfigScope scope) {
             this.scope = Objects.requireNonNull(scope, "scope");
@@ -221,7 +266,11 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the server managed API operation.
+         * Marks a {@link KTConfigScope#SERVER_AUTHORITATIVE} page as edited through Kinetic's server config sync:
+         * values load from the connected server and saves are sent back to it when the player has permission.
+         *
+         * @return this builder
+         * @see #build()
          */
         public Builder serverManaged() {
             this.serverManaged = true;
@@ -229,7 +278,11 @@ public final class KTConfigPage {
         }
 
         /**
-         * Applies timing.
+         * Sets when saved values take effect. Defaults to {@link ApplyTiming#MIXED}.
+         *
+         * @param applyTiming apply timing shown on the page and in the saved toast
+         * @return this builder
+         * @throws NullPointerException if {@code applyTiming} is {@code null}
          */
         public Builder applyTiming(ApplyTiming applyTiming) {
             this.applyTiming = Objects.requireNonNull(applyTiming, "applyTiming");
@@ -237,7 +290,12 @@ public final class KTConfigPage {
         }
 
         /**
-         * Applies notice.
+         * Replaces the standard apply-timing text with a custom notice, for pages whose rules do not fit one
+         * {@link ApplyTiming} value.
+         *
+         * @param applyNotice player-facing notice shown on the page and in the saved toast
+         * @return this builder
+         * @throws NullPointerException if {@code applyNotice} is {@code null}
          */
         public Builder applyNotice(Component applyNotice) {
             this.applyNotice = Objects.requireNonNull(applyNotice, "applyNotice");
@@ -245,7 +303,11 @@ public final class KTConfigPage {
         }
 
         /**
-         * Registers a listener for save.
+         * Sets the callback that persists the page after its values have been written.
+         *
+         * @param saver persistence callback; replaces any previous callback
+         * @return this builder
+         * @throws NullPointerException if {@code saver} is {@code null}
          */
         public Builder onSave(Runnable saver) {
             this.saver = Objects.requireNonNull(saver, "saver");
@@ -253,7 +315,11 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the section API operation.
+         * Adds a section heading row. Headings group the rows that follow them and take part in search.
+         *
+         * @param label heading text
+         * @return this builder
+         * @throws NullPointerException if {@code label} is {@code null}
          */
         public Builder section(Component label) {
             entries.add(KTConfigEntry.structural(
@@ -279,7 +345,12 @@ public final class KTConfigPage {
         }
 
         /**
-         * Returns the description.
+         * Adds a read-only paragraph row between value rows, for example to explain the rows below it. Use
+         * {@link #pageDescription(Component)} for the page-level description.
+         *
+         * @param text paragraph text
+         * @return this builder
+         * @throws NullPointerException if {@code text} is {@code null}
          */
         public Builder description(Component text) {
             entries.add(KTConfigEntry.structural(
@@ -291,7 +362,18 @@ public final class KTConfigPage {
         }
 
         /**
-         * Returns the boolean value.
+         * Adds an on/off toggle row.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder booleanValue(
                 String id, Component label, Supplier<Boolean> reader, Consumer<Boolean> writer,
@@ -301,7 +383,20 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the boolean value validated API operation.
+         * Adds an on/off toggle row with an extra business rule.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must pass {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder booleanValueValidated(
                 String id, Component label, Supplier<Boolean> reader, Consumer<Boolean> writer,
@@ -315,7 +410,20 @@ public final class KTConfigPage {
         }
 
         /**
-         * Returns the int value.
+         * Adds an integer input row limited to an inclusive range.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must lie within the range
+         * @param minimum smallest accepted value, may be negative
+         * @param maximum largest accepted value
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or {@code minimum > maximum}
          */
         public Builder intValue(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
@@ -325,7 +433,22 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the int value validated API operation.
+         * Adds an integer input row limited to an inclusive range, with an extra business rule.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must lie within the range and pass {@code validator}
+         * @param minimum smallest accepted value, may be negative
+         * @param maximum largest accepted value
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or {@code minimum > maximum}
          */
         public Builder intValueValidated(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
@@ -340,7 +463,20 @@ public final class KTConfigPage {
         }
 
         /**
-         * Returns the long value.
+         * Adds a {@code long} input row limited to an inclusive range.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must lie within the range
+         * @param minimum smallest accepted value, may be negative
+         * @param maximum largest accepted value
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or {@code minimum > maximum}
          */
         public Builder longValue(
                 String id, Component label, Supplier<Long> reader, Consumer<Long> writer,
@@ -350,7 +486,22 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the long value validated API operation.
+         * Adds a {@code long} input row limited to an inclusive range, with an extra business rule.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must lie within the range and pass {@code validator}
+         * @param minimum smallest accepted value, may be negative
+         * @param maximum largest accepted value
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or {@code minimum > maximum}
          */
         public Builder longValueValidated(
                 String id, Component label, Supplier<Long> reader, Consumer<Long> writer,
@@ -365,7 +516,18 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the int value unbounded API operation.
+         * Adds an integer input row that accepts the whole {@code int} range, including negatives.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder intValueUnbounded(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
@@ -378,7 +540,20 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the int value unbounded validated API operation.
+         * Adds an integer input row that accepts the whole {@code int} range and applies an extra business rule.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must pass {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder intValueUnboundedValidated(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
@@ -391,7 +566,18 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the long value unbounded API operation.
+         * Adds a {@code long} input row that accepts the whole {@code long} range, including negatives.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder longValueUnbounded(
                 String id, Component label, Supplier<Long> reader, Consumer<Long> writer,
@@ -404,7 +590,21 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the long value unbounded validated API operation.
+         * Adds a {@code long} input row that accepts the whole {@code long} range and applies an extra business
+         * rule.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must pass {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder longValueUnboundedValidated(
                 String id, Component label, Supplier<Long> reader, Consumer<Long> writer,
@@ -417,7 +617,20 @@ public final class KTConfigPage {
         }
 
         /**
-         * Returns the double value.
+         * Adds a decimal input row limited to a finite inclusive range.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must lie within the range
+         * @param minimum smallest accepted value, finite and may be negative
+         * @param maximum largest accepted value, finite
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or a bound is not finite or {@code minimum > maximum}
          */
         public Builder doubleValue(
                 String id, Component label, Supplier<Double> reader, Consumer<Double> writer,
@@ -427,7 +640,22 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the double value validated API operation.
+         * Adds a decimal input row limited to a finite inclusive range, with an extra business rule.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must lie within the range and pass {@code validator}
+         * @param minimum smallest accepted value, finite and may be negative
+         * @param maximum largest accepted value, finite
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or a bound is not finite or {@code minimum > maximum}
          */
         public Builder doubleValueValidated(
                 String id, Component label, Supplier<Double> reader, Consumer<Double> writer,
@@ -444,7 +672,18 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the double value unbounded API operation.
+         * Adds a decimal input row that accepts every finite {@code double}, including negatives.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder doubleValueUnbounded(
                 String id, Component label, Supplier<Double> reader, Consumer<Double> writer,
@@ -457,7 +696,20 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the double value unbounded validated API operation.
+         * Adds a decimal input row that accepts every finite {@code double} and applies an extra business rule.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must pass {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder doubleValueUnboundedValidated(
                 String id, Component label, Supplier<Double> reader, Consumer<Double> writer,
@@ -470,7 +722,18 @@ public final class KTConfigPage {
         }
 
         /**
-         * Returns the string value.
+         * Adds a single-line text input row.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder stringValue(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
@@ -480,7 +743,20 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the string value validated API operation.
+         * Adds a single-line text input row with an extra business rule.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must pass {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder stringValueValidated(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
@@ -494,7 +770,18 @@ public final class KTConfigPage {
         }
 
         /**
-         * Returns the long text value.
+         * Adds a text row edited in the multi-line text editor, for long values such as commands or scripts.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder longTextValue(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
@@ -504,7 +791,20 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the long text value validated API operation.
+         * Adds a multi-line text row with an extra business rule.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must pass {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder longTextValueValidated(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
@@ -518,7 +818,19 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the choice API operation.
+         * Adds a dropdown row whose options are raw strings shown as-is.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must be one of {@code choices}
+         * @param choices allowed raw values, non-empty and unique
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or {@code choices} is empty or contains duplicates
          */
         public Builder choice(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
@@ -528,7 +840,21 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the choice validated API operation.
+         * Adds a dropdown row of raw string options with an extra business rule.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must be one of {@code choices} and pass {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param choices allowed raw values, non-empty and unique
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or {@code choices} is empty or contains duplicates
          */
         public Builder choiceValidated(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
@@ -541,7 +867,22 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the choice options API operation.
+         * Adds a dropdown row whose options carry optional translations and tooltips.
+         *
+         * <p>The persisted value is always {@link KTConfigEntry.ChoiceOption#value()}; translations and tooltips
+         * are display-only.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must match one option value
+         * @param choices options, non-empty with unique values
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or {@code choices} is empty or contains duplicate values
          */
         public Builder choiceOptions(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
@@ -551,7 +892,24 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the choice options validated API operation.
+         * Adds a dropdown row of described options with an extra business rule.
+         *
+         * <p>The persisted value is always {@link KTConfigEntry.ChoiceOption#value()}; translations and tooltips
+         * are display-only.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must match one option value and pass {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param choices options, non-empty with unique values
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or {@code choices} is empty or contains duplicate values
          */
         public Builder choiceOptionsValidated(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
@@ -577,7 +935,21 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the translated choice API operation.
+         * Adds a dropdown row whose display names come from language keys.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must be one of {@code choices}
+         * @param translationKeyPrefix key prefix; each option uses
+         *   {@code prefix + "." + value.toLowerCase(Locale.ROOT)}
+         * @param choices allowed raw values, non-empty and unique
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or the prefix is blank, or {@code choices} is empty or contains duplicates
          */
         public Builder translatedChoice(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
@@ -590,7 +962,23 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the translated choice validated API operation.
+         * Adds a dropdown row with translated display names and an extra business rule.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue value restored by reset; must be one of {@code choices} and pass {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param translationKeyPrefix key prefix; each option uses
+         *   {@code prefix + "." + value.toLowerCase(Locale.ROOT)}
+         * @param choices allowed raw values, non-empty and unique
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used, {@code defaultValue} is
+         *   rejected, or the prefix is blank, or {@code choices} is empty or contains duplicates
          */
         public Builder translatedChoiceValidated(
                 String id, Component label, Supplier<String> reader, Consumer<String> writer,
@@ -610,7 +998,18 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the string list API operation.
+         * Adds a free-text string list row edited in the list editor.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue list restored by reset; copied, must not be {@code null}
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder stringList(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
@@ -620,7 +1019,21 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the string list validated API operation.
+         * Adds a free-text string list row with an extra business rule on the whole list.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue list restored by reset; copied, must not be {@code null} and must pass
+         *   {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder stringListValidated(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
@@ -634,7 +1047,18 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the entity list API operation.
+         * Adds an entity-id list row edited with the entity selector.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue entity ids restored by reset; copied, must not be {@code null}
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder entityList(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
@@ -644,7 +1068,21 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the entity list validated API operation.
+         * Adds an entity-id list row with an extra business rule on the whole list.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue entity ids restored by reset; copied, must not be {@code null} and must pass
+         *   {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder entityListValidated(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
@@ -658,7 +1096,18 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the item list API operation.
+         * Adds an item-id list row edited with the item selector.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue item ids restored by reset; copied, must not be {@code null}
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder itemList(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
@@ -668,7 +1117,21 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the item list validated API operation.
+         * Adds an item-id list row with an extra business rule on the whole list.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue item ids restored by reset; copied, must not be {@code null} and must pass
+         *   {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder itemListValidated(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
@@ -682,7 +1145,19 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the item rule list API operation.
+         * Adds an item-rule list row whose entries may be item ids, tags or other selector rules understood by the
+         * add-on.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue rules restored by reset; copied, must not be {@code null}
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder itemRuleList(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
@@ -692,7 +1167,21 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the item rule list validated API operation.
+         * Adds an item-rule list row with an extra business rule on the whole list.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue rules restored by reset; copied, must not be {@code null} and must pass
+         *   {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder itemRuleListValidated(
                 String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
@@ -707,7 +1196,23 @@ public final class KTConfigPage {
 
 
         /**
-         * Returns the tick seconds value.
+         * Adds a duration row that stores game ticks but lets the player edit seconds.
+         *
+         * <p>The editor shows {@code ticks / 20} and converts edits back by rounding to the nearest tick, clamped
+         * to the tick range. When {@code minimumTicks} is {@code 0}, any positive input rounds up to at least one
+         * tick.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param tickReader supplies the live value in ticks
+         * @param tickWriter receives the accepted value in ticks when the page is saved
+         * @param defaultTicks ticks restored by reset; must lie within the tick range
+         * @param minimumTicks smallest accepted tick count
+         * @param maximumTicks largest accepted tick count
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if {@code minimumTicks > maximumTicks}, or the id or default is rejected
          */
         public Builder tickSecondsValue(
                 String id, Component label, Supplier<Integer> tickReader, Consumer<Integer> tickWriter,
@@ -720,7 +1225,22 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the tick seconds value validated API operation.
+         * Adds a seconds-edited, tick-stored duration row with an extra business rule on the seconds value.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param tickReader supplies the live value in ticks
+         * @param tickWriter receives the accepted value in ticks when the page is saved
+         * @param defaultTicks ticks restored by reset; must lie within the tick range and pass {@code validator}
+         * @param minimumTicks smallest accepted tick count
+         * @param maximumTicks largest accepted tick count
+         * @param validator business rule applied to the edited value in seconds
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws NullPointerException if {@code validator} is {@code null}
+         * @throws IllegalArgumentException if {@code minimumTicks > maximumTicks}, or the id or default is rejected
+         * @see #tickSecondsValue(String, Component, Supplier, Consumer, int, int, int, Component)
          */
         public Builder tickSecondsValueValidated(
                 String id, Component label, Supplier<Integer> tickReader, Consumer<Integer> tickWriter,
@@ -745,7 +1265,18 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the int list API operation.
+         * Adds an integer list row edited in the list editor.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue list restored by reset; copied, must not be {@code null}
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder intList(
                 String id, Component label, Supplier<List<Integer>> reader, Consumer<List<Integer>> writer,
@@ -755,7 +1286,21 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the int list validated API operation.
+         * Adds an integer list row with an extra business rule on the whole list.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue list restored by reset; copied, must not be {@code null} and must pass
+         *   {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder intListValidated(
                 String id, Component label, Supplier<List<Integer>> reader, Consumer<List<Integer>> writer,
@@ -769,7 +1314,18 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the color API operation.
+         * Adds an RGB color row edited with the color picker. Values are {@code 0xRRGGBB} without alpha.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue color restored by reset, between {@code 0x000000} and {@code 0xFFFFFF}
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder color(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
@@ -779,7 +1335,21 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the color validated API operation.
+         * Adds an RGB color row with an extra business rule. Values are {@code 0xRRGGBB} without alpha.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue color restored by reset, between {@code 0x000000} and {@code 0xFFFFFF}, and must pass
+         *   {@code validator}
+         * @param validator extra business rule run after the built-in type and range checks; a rejected value
+         *   blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws IllegalArgumentException if the id is malformed or already used or {@code defaultValue} is
+         *   rejected
          */
         public Builder colorValidated(
                 String id, Component label, Supplier<Integer> reader, Consumer<Integer> writer,
@@ -793,7 +1363,17 @@ public final class KTConfigPage {
         }
 
         /**
-         * Performs the action API operation.
+         * Adds a button row that runs an action instead of storing a value, for example "open editor" or "reset
+         * statistics". Actions are not part of save or reset.
+         *
+         * @param id entry id, unique within this page; lower-case {@code [a-z0-9_.-]+}, not starting with
+         *   {@code __}
+         * @param label button text
+         * @param action code run on the client thread when the button is pressed
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         * @throws NullPointerException if {@code label} or {@code action} is {@code null}
+         * @throws IllegalArgumentException if the id is malformed or already used
          */
         public Builder action(String id, Component label, Runnable action, Component tooltip) {
             requireEntryId(id);
@@ -810,7 +1390,11 @@ public final class KTConfigPage {
         }
 
         /**
-         * Builds the configured API value.
+         * Creates the immutable page.
+         *
+         * @return the page
+         * @throws IllegalStateException if {@link #serverManaged()} was called on a page whose scope is not
+         *   {@link KTConfigScope#SERVER_AUTHORITATIVE}
          */
         public KTConfigPage build() {
             if (serverManaged && scope != KTConfigScope.SERVER_AUTHORITATIVE) {

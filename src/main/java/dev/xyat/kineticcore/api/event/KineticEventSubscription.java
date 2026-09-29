@@ -3,13 +3,21 @@ package dev.xyat.kineticcore.api.event;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Cancellable handle returned by runtime Kinetic event subscriptions. */
+/** Handle returned by Kinetic event subscriptions. Closing it unsubscribes; closing twice is harmless. */
 @FunctionalInterface
 public interface KineticEventSubscription extends AutoCloseable {
+    /** Unsubscribes the handler. Does not throw checked exceptions. */
     @Override
     void close();
 
-    /** 创建仅执行一次注销操作的订阅句柄；重复关闭不会取消其他同名监听注册。 */
+    /**
+     * Creates a handle that runs {@code cleanup} only the first time it is closed, even when closed from several
+     * threads.
+     *
+     * @param cleanup unsubscription action
+     * @return the handle
+     * @throws NullPointerException if {@code cleanup} is {@code null}
+     */
     static KineticEventSubscription once(Runnable cleanup) {
         Objects.requireNonNull(cleanup, "cleanup");
         AtomicBoolean closed = new AtomicBoolean();

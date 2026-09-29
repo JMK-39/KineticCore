@@ -7,7 +7,13 @@ import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-/** Public Kinetic API facade for flight client. */
+/**
+ * Client-side flight state: flight speed, inertia, noclip and the super-flight controller.
+ *
+ * <p>The {@code install...} methods connect key bindings and network senders; KineticCore's flight feature calls
+ * them during client setup. The remaining methods expose state for rendering and for add-ons. Call everything on
+ * the client thread.
+ */
 public final class KineticFlightClient {
     private static volatile boolean noclipEnabled;
     private static volatile float flightSpeedMultiplier = 1.0F;
@@ -20,7 +26,8 @@ public final class KineticFlightClient {
     }
 
     /**
-     * Performs the install speed modifier state API operation.
+     * Installs the source that reports whether the flight speed-modifier key is held; {@code null} means never
+     * held.
      */
     public static void installSpeedModifierState(BooleanSupplier supplier) {
         speedModifierDown = supplier == null ? () -> false : supplier;
@@ -48,58 +55,49 @@ public final class KineticFlightClient {
     }
 
     /**
-     * Performs the install noclip request handler API operation.
+     * Installs the sender used by {@link #requestNoclip(boolean)} to ask the server for a noclip change.
+     *
+     * @param handler sender; {@code null} restores local-only behavior that applies the state immediately
      */
     public static void installNoclipRequestHandler(Consumer<Boolean> handler) {
         noclipRequestHandler = handler == null ? KineticFlightClient::applyLocalNoclip : handler;
     }
 
-    /**
-     * Returns whether speed modifier down.
-     */
+    /** Returns whether the flight speed-modifier key is currently held. */
     public static boolean isSpeedModifierDown() {
         return speedModifierDown.getAsBoolean();
     }
 
-    /**
-     * Performs the noclip enabled API operation.
-     */
+    /** Returns the local player's noclip state as last applied on this client. */
     public static boolean noclipEnabled() {
         return noclipEnabled;
     }
 
     /**
-     * Requests noclip.
+     * Asks for a noclip change through the installed request handler; the server confirms it with
+     * {@link #applyServerNoclip(boolean)}.
      */
     public static void requestNoclip(boolean enabled) {
         noclipRequestHandler.accept(enabled);
     }
 
-    /**
-     * Applies server noclip.
-     */
+    /** Applies the noclip state confirmed by the server to the local player. */
     public static void applyServerNoclip(boolean enabled) {
         applyLocalNoclip(enabled);
     }
 
-    /**
-     * Applies local noclip.
-     */
+    /** Applies a noclip state to the local player immediately, without asking the server. */
     public static void applyLocalNoclip(boolean enabled) {
         noclipEnabled = enabled;
         KineticFlightClientRuntime.applyLocalNoclip(enabled);
     }
 
-    /**
-     * Performs the flight speed multiplier API operation.
-     */
+    /** Returns the creative flight speed multiplier; {@code 1.0} is vanilla speed. */
     public static float flightSpeedMultiplier() {
         return flightSpeedMultiplier;
     }
 
-    /**
-     * Updates flight speed multiplier.
-     */
+    /** Sets the creative flight speed multiplier; {@code 1.0} is vanilla speed. Takes effect on the next tick. */
     public static void setFlightSpeedMultiplier(float multiplier) {
         flightSpeedMultiplier = multiplier;
     }
@@ -152,11 +150,6 @@ public final class KineticFlightClient {
     /** Returns whether the local player is in the persistent real fall-flying maneuver state. */
     public static boolean superFlightFastPose() {
         return KineticSuperFlightClientRuntime.fastPose();
-    }
-
-    /** Returns the steering pitch retained for source compatibility with older addons. */
-    public static float superFlightRenderPitch() {
-        return KineticSuperFlightClientRuntime.renderPitch();
     }
 
     /** Runs one client update for super-flight cruise, acceleration, steering, roll, free-look and FOV. */
@@ -225,15 +218,14 @@ public final class KineticFlightClient {
     }
 
     /**
-     * Performs the inertia enabled API operation.
+     * Returns whether creative flight keeps vanilla inertia; when {@code false} the player stops as soon as
+     * movement keys are released.
      */
     public static boolean inertiaEnabled() {
         return inertiaEnabled;
     }
 
-    /**
-     * Updates inertia enabled.
-     */
+    /** Sets whether creative flight keeps vanilla inertia. */
     public static void setInertiaEnabled(boolean enabled) {
         inertiaEnabled = enabled;
     }

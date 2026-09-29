@@ -125,7 +125,8 @@ public final class KineticEntityPreview {
         }
 
         /**
-         * Performs the adjust zoom API operation.
+         * Zooms the preview identified by {@code stateKey} one step in the direction of {@code delta}, clamped to
+         * the zoom range.
          */
         public void adjustZoom(String stateKey, double delta) {
             if (stateKey == null || delta == 0D) return;
@@ -143,7 +144,9 @@ public final class KineticEntityPreview {
         }
 
         /**
-         * Performs the render API operation.
+         * Renders the entity type with the given id inside a box, using screen coordinates supplied by the caller.
+         *
+         * @return {@code false} when the id is invalid or the entity cannot be rendered
          */
         public boolean render(
                 GuiGraphics graphics,

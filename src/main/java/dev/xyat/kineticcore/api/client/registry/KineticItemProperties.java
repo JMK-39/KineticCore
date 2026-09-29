@@ -14,8 +14,11 @@ public final class KineticItemProperties {
     }
 
     /**
-     * 在客户端初始化前登记物品模型属性。各属性独立执行，一个供应器失败不会跳过其他属性。
-     * 初始化事件开始后禁止新增登记。
+     * 在客户端初始化前登记物品模型属性。各属性独立执行，一个供应器失败不会跳过其他属性。 初始化事件开始后禁止新增登记。
+     *
+     * <p>Registers an item model property before client setup. Each property is applied independently.
+     *
+     * @throws IllegalStateException if client setup has already started
      */
     public static void register(
             Supplier<? extends Item> item,

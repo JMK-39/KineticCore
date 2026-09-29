@@ -1,6 +1,9 @@
 package dev.xyat.kineticcore.api.event;
 
-/** Shared priority ordering for Kinetic runtime event subscriptions. */
+/**
+ * Order of Kinetic event handlers; maps to the Forge priority of the same name. Handlers with equal priority run in
+ * registration order.
+ */
 public enum KineticEventPriority {
     HIGHEST,
     HIGH,

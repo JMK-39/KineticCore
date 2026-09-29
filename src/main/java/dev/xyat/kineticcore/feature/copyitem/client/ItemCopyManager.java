@@ -8,7 +8,7 @@ import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.tooltip.KineticItemTooltips;
 import dev.xyat.kineticcore.api.minecraft.MinecraftContainers;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
-import dev.xyat.kineticcore.api.runtime.KineticFeatures;
+import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
 import dev.xyat.kineticcore.api.client.item.KineticHoveredItems;
 import net.minecraft.Util;
 import net.minecraft.client.gui.screens.Screen;
@@ -90,7 +90,7 @@ public final class ItemCopyManager {
     }
 
     private static ItemStack getContainerHoveredStack(Screen screen) {
-        if (!KineticFeatures.isEnabled("client.copy_item_container_access")) {
+        if (!KineticFeatureSwitches.isEnabled("client.copy_item_container_access")) {
             return ItemStack.EMPTY;
         }
         if (!(screen instanceof AbstractContainerScreen<?> containerScreen)) {

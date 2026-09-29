@@ -1,17 +1,7 @@
 package dev.xyat.kineticcore.api.client.gui.ui;
 
-import dev.xyat.kineticcore.api.client.gui.widget.*;
-import dev.xyat.kineticcore.api.client.gui.widget.list.*;
-import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
+import dev.xyat.kineticcore.api.client.gui.widget.KineticColorButton;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
-
-import java.util.List;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /** 颜色预览按钮 / Color preview button. */
 public abstract class ColorButtonBuilder extends ControlBuilder<ColorButtonBuilder, KineticColorButton> {

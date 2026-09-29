@@ -74,6 +74,18 @@ public abstract class KineticHudEditorPage extends KineticPage {
                 mouseX, mouseY);
     }
 
+    /**
+     * Draws behind the guides and the element, for example {@link #renderInventoryReference} for an element placed
+     * inside the inventory. Draws nothing by default.
+     */
+    protected void renderBackdrop(KineticGraphics graphics, int mouseX, int mouseY) {
+    }
+
+    /** Whether the mouse wheel over the element changes its scale; {@code false} keeps the initial scale. */
+    protected boolean scalable() {
+        return true;
+    }
+
     /** 最小缩放 / Minimum scale. */
     protected double minimumScale() {
         return DEFAULT_MINIMUM_SCALE;
@@ -139,6 +151,7 @@ public abstract class KineticHudEditorPage extends KineticPage {
 
     @Override
     protected final void renderBackground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackdrop(graphics, mouseX, mouseY);
         editor.render(GuiGraphicsAdapter.unwrap(graphics), KineticClientRuntimeImpl.font(), mouseX, mouseY, title(),
                 instruction(), positionText(currentLayout()),
                 (vanilla, x, y, elementMouseX, elementMouseY) ->
@@ -162,7 +175,7 @@ public abstract class KineticHudEditorPage extends KineticPage {
 
     @Override
     protected final boolean onMouseScroll(ScrollInput input) {
-        return editor.mouseScrolled(input.x(), input.y(), input.deltaY());
+        return scalable() && editor.mouseScrolled(input.x(), input.y(), input.deltaY());
     }
 
     @Override

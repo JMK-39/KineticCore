@@ -195,7 +195,7 @@ public final class HudPositionEditor {
     }
 
     /**
-     * Performs the render API operation.
+     * Draws the alignment guides, the three header lines and the element preview at its current position and scale.
      */
     public void render(
             GuiGraphics graphics,
@@ -215,7 +215,7 @@ public final class HudPositionEditor {
     }
 
     /**
-     * Performs the mouse clicked API operation.
+     * Starts dragging when the primary button is pressed over the element; returns whether the click was consumed.
      */
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!KineticMouseButtons.isPrimary(button) || !isElementHovered(mouseX, mouseY)) {
@@ -229,7 +229,8 @@ public final class HudPositionEditor {
     }
 
     /**
-     * Performs the mouse dragged API operation.
+     * Moves the element with the cursor while dragging, clamped to the screen; returns whether the drag was
+     * consumed.
      */
     public boolean mouseDragged(double mouseX, double mouseY, int button) {
         if (!dragging || !KineticMouseButtons.isPrimary(button)) {
@@ -241,9 +242,7 @@ public final class HudPositionEditor {
         return true;
     }
 
-    /**
-     * Performs the mouse released API operation.
-     */
+    /** Ends a drag started with the primary button; returns whether the release was consumed. */
     public boolean mouseReleased(int button) {
         if (!KineticMouseButtons.isPrimary(button) || !dragging) {
             return false;
@@ -254,7 +253,8 @@ public final class HudPositionEditor {
     }
 
     /**
-     * Performs the mouse scrolled API operation.
+     * Scales the hovered element in 0.1 steps around the cursor, never below the minimum scale; returns whether the
+     * wheel was consumed.
      */
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollDelta) {
         if (scrollDelta == 0.0D || !isElementHovered(mouseX, mouseY)) {
@@ -282,9 +282,7 @@ public final class HudPositionEditor {
         return true;
     }
 
-    /**
-     * Performs the key pressed API operation.
-     */
+    /** Nudges the element with the arrow keys by 1 pixel, or 5 with Shift; returns whether the key was consumed. */
     public boolean keyPressed(int keyCode, boolean shiftDown) {
         int step = shiftDown ? 5 : 1;
 
@@ -360,7 +358,8 @@ public final class HudPositionEditor {
     }
 
     /**
-     * Performs the restore API operation.
+     * Restores a {@link #snapshot()}, re-clamping it to the current screen size and ending any drag; {@code null}
+     * does nothing.
      */
     public void restore(State state) {
         if (state == null) return;

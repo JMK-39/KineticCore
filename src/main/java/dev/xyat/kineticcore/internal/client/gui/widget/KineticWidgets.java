@@ -1904,12 +1904,6 @@ public final class KineticWidgets {
                                 : Integer.MIN_VALUE;
                         button.setInvertedFlash(scroll.isSelectionFlashInverted(index));
                         button.render(graphics, clippedMouseX, mouseY, partialTick);
-                        SelectionItem item = items.get(index);
-                        if (item != null && item.marked()) {
-                            int markerX = button.getX() + button.getWidth() - 8;
-                            int markerY = button.getY() + Math.max(2, (button.getHeight() - 4) / 2);
-                            graphics.fill(markerX, markerY, markerX + 4, markerY + 4, 0xFF00C853);
-                        }
                     }
                 } finally {
                     KineticRenderRuntime.disableScissor(graphics);
@@ -2192,11 +2186,6 @@ public final class KineticWidgets {
                     button.getY() + Math.max(1, (ROW_HEIGHT - font.lineHeight) / 2),
                     textWidth, invertedFlash ? GuiTheme.selectionFlashText() : GuiTheme.current().text(), true
             );
-            if (item.marked()) {
-                int markerX = button.getX() + button.getWidth() - 8;
-                int markerY = button.getY() + Math.max(2, (button.getHeight() - 4) / 2);
-                graphics.fill(markerX, markerY, markerX + 4, markerY + 4, 0xFF00C853);
-            }
         }
 
         @Override
@@ -2658,12 +2647,6 @@ public final class KineticWidgets {
                         rowButton.setInvertedFlash(scroll.isSelectionFlashInverted(index));
                         rowButton.render(graphics, clippedMouseX, mouseY, partialTick);
                         actionButton.render(graphics, clippedMouseX, mouseY, partialTick);
-                        ActionItem item = items.get(index);
-                        if (item != null && item.marked()) {
-                            int markerX = rowButton.getX() + rowButton.getWidth() - 8;
-                            int markerY = rowButton.getY() + Math.max(2, (rowButton.getHeight() - 4) / 2);
-                            graphics.fill(markerX, markerY, markerX + 4, markerY + 4, 0xFF00C853);
-                        }
                     }
                 } finally {
                     KineticRenderRuntime.disableScissor(graphics);
@@ -2971,12 +2954,6 @@ public final class KineticWidgets {
                         rowButton.render(graphics, clippedMouseX, mouseY, partialTick);
                         toggleButtons.get(index).render(graphics, clippedMouseX, mouseY, partialTick);
                         actionButtons.get(index).render(graphics, clippedMouseX, mouseY, partialTick);
-                        ToggleActionItem item = items.get(index);
-                        if (item != null && item.marked()) {
-                            int markerX = rowButton.getX() + rowButton.getWidth() - 8;
-                            int markerY = rowButton.getY() + Math.max(2, (rowButton.getHeight() - 4) / 2);
-                            graphics.fill(markerX, markerY, markerX + 4, markerY + 4, 0xFF00C853);
-                        }
                     }
                 } finally {
                     KineticRenderRuntime.disableScissor(graphics);
@@ -3126,7 +3103,7 @@ public final class KineticWidgets {
 
         private static ToggleActionItem withToggleValue(ToggleActionItem item, boolean value) {
             return new ToggleActionItem(
-                    item.label(), item.secondaryLabel(), item.tooltip(), item.active(), item.marked(), item.error(), value,
+                    item.label(), item.secondaryLabel(), item.tooltip(), item.active(), item.error(), value,
                     item.toggleOnLabel(), item.toggleOffLabel(), item.toggleTooltip(), item.toggleActive(),
                     item.actionLabel(), item.actionTooltip(), item.actionActive(), item.actionError()
             );
@@ -3342,12 +3319,6 @@ public final class KineticWidgets {
                         rowButton.render(graphics, clippedMouseX, mouseY, partialTick);
                         for (StateButton actionButton : actionButtons.get(index)) {
                             if (actionButton.visible) actionButton.render(graphics, clippedMouseX, mouseY, partialTick);
-                        }
-                        MultiActionItem item = items.get(index);
-                        if (item != null && item.marked()) {
-                            int markerX = rowButton.getX() + rowButton.getWidth() - 8;
-                            int markerY = rowButton.getY() + Math.max(2, (rowButton.getHeight() - 4) / 2);
-                            graphics.fill(markerX, markerY, markerX + 4, markerY + 4, 0xFF00C853);
                         }
                     }
                 } finally {
@@ -3719,11 +3690,6 @@ public final class KineticWidgets {
                     invertedFlash ? GuiTheme.selectionFlashText() : GuiTheme.current().text(),
                     true
             );
-            if (item.marked()) {
-                int markerX = button.getX() + button.getWidth() - 8;
-                int markerY = button.getY() + Math.max(2, (button.getHeight() - 4) / 2);
-                graphics.fill(markerX, markerY, markerX + 4, markerY + 4, 0xFF00C853);
-            }
         }
 
         @Override
@@ -4033,12 +3999,6 @@ public final class KineticWidgets {
                         for (ToggleButton toggleButton : toggleButtons.get(index)) {
                             if (toggleButton.visible) toggleButton.render(graphics, clippedMouseX, mouseY, partialTick);
                         }
-                        MultiToggleItem item = items.get(index);
-                        if (item != null && item.marked()) {
-                            int markerX = rowButton.getX() + rowButton.getWidth() - 8;
-                            int markerY = rowButton.getY() + Math.max(2, (rowButton.getHeight() - 4) / 2);
-                            graphics.fill(markerX, markerY, markerX + 4, markerY + 4, 0xFF00C853);
-                        }
                     }
                 } finally {
                     KineticRenderRuntime.disableScissor(graphics);
@@ -4097,7 +4057,7 @@ public final class KineticWidgets {
             nextToggles.set(toggleIndex, withValue(toggle, value));
             List<MultiToggleItem> nextItems = new ArrayList<>(items);
             nextItems.set(rowIndex, new MultiToggleItem(
-                    item.label(), item.secondaryLabel(), item.tooltip(), item.active(), item.marked(), item.error(),
+                    item.label(), item.secondaryLabel(), item.tooltip(), item.active(), item.error(),
                     List.copyOf(nextToggles)
             ));
             items = List.copyOf(nextItems);

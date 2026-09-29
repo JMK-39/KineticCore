@@ -17,6 +17,7 @@ public final class KTConfigEntryAtomicMirrorRegression {
         AtomicInteger validations = new AtomicInteger();
         AtomicInteger writes = new AtomicInteger();
         KTConfigPage page = page(value, validations, writes, false);
+        validations.set(0);
         apply(page, Map.of("value", 6));
         check(value.get() == 6, "valid mirror value not written");
         check(validations.get() == 1, "mirror validated same value more than once");
@@ -33,6 +34,7 @@ public final class KTConfigEntryAtomicMirrorRegression {
         AtomicInteger failureValidations = new AtomicInteger();
         AtomicInteger failureWrites = new AtomicInteger();
         KTConfigPage failingPage = page(fails, failureValidations, failureWrites, true);
+        failureValidations.set(0);
         apply(failingPage, Map.of("value", 9));
         check(fails.get() == 4, "writer that mutated before throwing must be rolled back");
         check(failureValidations.get() == 1, "failure path must only validate incoming value once");
