@@ -19,8 +19,7 @@ public class DuplicateLogFilter extends AbstractFilter {
     private static final KineticRegistrationBatch INJECTION = new KineticRegistrationBatch();
 
     private LogEvent lastEvent = null;
-    private EventKey lastKey = null;
-    private int suppressedCount = 0;
+    private final ConsecutiveLogState<EventKey> state = new ConsecutiveLogState<>();
 
     private final ThreadLocal<Boolean> isInjecting = ThreadLocal.withInitial(() -> false);
 
@@ -48,45 +47,23 @@ public class DuplicateLogFilter extends AbstractFilter {
     }
 
     private synchronized void flush() {
-        if (lastEvent == null || suppressedCount <= 0) return;
-
-        String suffix = " [重复 " + suppressedCount + " 次 / Repeated " + suppressedCount + " additional times]";
-        LogEvent summaryEvent = new Log4jLogEvent.Builder()
-                .setLoggerName(lastEvent.getLoggerName())
-                .setMarker(lastEvent.getMarker())
-                .setLoggerFqcn(lastEvent.getLoggerFqcn())
-                .setLevel(lastEvent.getLevel())
-                .setMessage(new SimpleMessage(lastEvent.getMessage().getFormattedMessage() + suffix))
-                .setContextStack(lastEvent.getContextStack())
-                .setThreadName(lastEvent.getThreadName())
-                .setSource(lastEvent.getSource())
-                .setTimeMillis(System.currentTimeMillis())
-                .build();
-
-        isInjecting.set(true);
-        try {
-            LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-            LoggerConfig loggerConfig = ctx.getConfiguration().getLoggerConfig(summaryEvent.getLoggerName());
-            loggerConfig.log(summaryEvent);
-        } catch (Exception ignored) {
-        } finally {
-            isInjecting.set(false);
-        }
-
-        suppressedCount = 0;
+        publishSummary(state.drain());
+        lastEvent = null;
     }
 
     private synchronized void resetDeduplicationState() {
         lastEvent = null;
-        lastKey = null;
-        suppressedCount = 0;
+        state.drain();
     }
 
     @Override
     public Result filter(LogEvent event) {
         if (isInjecting.get()) return Result.NEUTRAL;
         if (event == null || event.getMessage() == null || event.getLevel() == null) return Result.NEUTRAL;
-        if (!event.getLevel().isMoreSpecificThan(Level.ERROR)) return Result.DENY;
+        if (!event.getLevel().isMoreSpecificThan(Level.ERROR)) {
+            flush();
+            return Result.DENY;
+        }
 
         String msg = event.getMessage().getFormattedMessage();
         if (msg == null) return Result.DENY;
@@ -94,6 +71,7 @@ public class DuplicateLogFilter extends AbstractFilter {
         if (LogCleanerConfig.filteredKeywords != null) {
             for (String keyword : LogCleanerConfig.filteredKeywords) {
                 if (!keyword.isEmpty() && msg.contains(keyword)) {
+                    flush();
                     return Result.DENY;
                 }
             }
@@ -107,16 +85,35 @@ public class DuplicateLogFilter extends AbstractFilter {
 
         EventKey key = EventKey.from(event, msg);
         synchronized (this) {
-            if (lastEvent != null && key.equals(lastKey)) {
-                suppressedCount++;
-                return Result.DENY;
-            }
-
-            flush();
+            int repetitions = state.accept(key);
+            if (repetitions < 0) return Result.DENY;
+            if (repetitions > 0) publishSummary(repetitions);
             lastEvent = event.toImmutable();
-            lastKey = key;
-            suppressedCount = 0;
             return Result.NEUTRAL;
+        }
+    }
+
+    private void publishSummary(int repetitions) {
+        if (lastEvent == null || repetitions <= 0) return;
+        LogEvent summaryEvent = new Log4jLogEvent.Builder()
+                .setLoggerName(lastEvent.getLoggerName())
+                .setMarker(lastEvent.getMarker())
+                .setLoggerFqcn(lastEvent.getLoggerFqcn())
+                .setLevel(lastEvent.getLevel())
+                .setMessage(new SimpleMessage("上一条日志重复 " + repetitions
+                        + " 次 / Previous log repeated " + repetitions + " additional times"))
+                .setContextStack(lastEvent.getContextStack())
+                .setThreadName(lastEvent.getThreadName())
+                .setSource(lastEvent.getSource())
+                .setTimeMillis(System.currentTimeMillis())
+                .build();
+        isInjecting.set(true);
+        try {
+            LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+            ctx.getConfiguration().getLoggerConfig(summaryEvent.getLoggerName()).log(summaryEvent);
+        } catch (Exception ignored) {
+        } finally {
+            isInjecting.set(false);
         }
     }
 

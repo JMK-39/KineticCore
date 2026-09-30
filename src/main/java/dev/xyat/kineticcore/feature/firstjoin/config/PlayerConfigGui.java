@@ -6,7 +6,6 @@ import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.config.client.KTConfigPage;
 import dev.xyat.kineticcore.api.config.client.KTConfigScope;
 import dev.xyat.kineticcore.api.client.gui.editor.KineticCommandListEditor;
-import dev.xyat.kineticcore.feature.firstjoin.client.FirstJoinEquipmentPage;
 import dev.xyat.kineticcore.feature.firstjoin.client.FirstJoinRewardItemsPage;
 
 
@@ -51,10 +50,6 @@ public final class PlayerConfigGui {
                                 )
                         ),
                         KineticI18n.translatable("cfg.kineticcore.join.commands.tooltip"))
-                .divider()
-                .action("equipment_editor", KineticI18n.translatable("cfg.kineticcore.join.equipment.editor"),
-                        KTConfigApi.pageAction(FirstJoinEquipmentPage::new),
-                        KineticI18n.translatable("cfg.kineticcore.join.equipment.editor.tooltip"))
                 .build());
     }
 

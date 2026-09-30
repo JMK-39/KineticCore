@@ -1,502 +1,306 @@
 package dev.xyat.kineticcore.feature.firstjoin.client;
 
-import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
-
-
-import dev.xyat.kineticcore.api.text.KineticI18n;
-import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors;
-
-import dev.xyat.kineticcore.api.client.gui.input.MouseDragInput;
-import dev.xyat.kineticcore.api.client.gui.input.MouseInput;
-import dev.xyat.kineticcore.api.client.gui.input.ScrollInput;
-import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
-import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollController;
+import dev.xyat.kineticcore.api.client.gui.render.KineticTexture;
+import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors;
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
+import dev.xyat.kineticcore.api.client.gui.input.MouseInput;
+import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.gui.ui.KineticUi;
 import dev.xyat.kineticcore.api.client.gui.ui.NumberType;
-import dev.xyat.kineticcore.api.client.gui.widget.KineticButton;
+import dev.xyat.kineticcore.api.client.gui.widget.KineticEntityPreview;
 import dev.xyat.kineticcore.api.client.gui.widget.KineticNumberField;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.config.client.KTServerConfigClient;
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfigGui;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.TagParser;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/** One inventory-shaped editor for all first-join rewards. */
 public final class FirstJoinRewardItemsPage extends KineticPage {
-    private static final int PANEL_X = 24;
-    private static final int PANEL_Y = 18;
-    private static final int PANEL_W = 592;
-    private static final int PANEL_H = 324;
-    private static final int LIST_X = 44;
-    private static final int LIST_Y = 58;
-    private static final int LIST_W = 538;
-    private static final int ROW_H = 32;
-    private static final int VISIBLE_ROWS = 7;
-    private static final int LIST_H = ROW_H * VISIBLE_ROWS;
-    private static final int COUNT_LABEL_X = LIST_X + 12;
-    private static final int COUNT_FIELD_X = LIST_X + 52;
-    private static final int COUNT_FIELD_W = 30;
-    private static final int ITEM_X = LIST_X + 94;
-    private static final int ITEM_Y_OFFSET = 7;
-    private static final int SLOT_SIZE = 18;
-    private static final int SCROLL_X = LIST_X + LIST_W + 6;
-    private static final int SCROLL_W = 4;
-    private static final int MOVE_BUTTON_W = 30;
-    private static final int DELETE_BUTTON_W = 48;
-    private static final int BUTTON_GAP = 3;
+    private static final int SLOT = 18;
+    private static final int BASE_X = 232;
+    private static final int BASE_Y = 56;
+    private static final KineticTexture INVENTORY_TEXTURE = KineticTexture.of("minecraft", "textures/gui/container/inventory.png");
+    private static final int INVENTORY_X = BASE_X + 8;
+    private static final int INVENTORY_Y = BASE_Y + 84;
+    private static final int HOTBAR_Y = BASE_Y + 142;
+    private static final int ARMOR_X = BASE_X + 8;
+    private static final int ARMOR_Y = BASE_Y + 8;
+    private static final int OFFHAND_X = BASE_X + 77;
+    private static final int OFFHAND_Y = BASE_Y + 62;
+    private static final List<String> ARMOR = List.of("helmet", "chestplate", "leggings", "boots", "offhand");
 
-    private final List<RewardEntry> entries = new ArrayList<>();
-    private final List<RewardEntry> savedEntries = new ArrayList<>();
-    private final KineticScrollController scroll = new KineticScrollController();
-    private final List<KineticNumberField> countFields = new ArrayList<>();
-    private final List<KineticButton> upButtons = new ArrayList<>();
-    private final List<KineticButton> downButtons = new ArrayList<>();
-    private final List<KineticButton> deleteButtons = new ArrayList<>();
-    private boolean updatingCountFields;
+    private final Map<Integer, ItemStack> inventory = new LinkedHashMap<>();
+    private final List<String> legacyExtras = new ArrayList<>();
+    private final Map<String, ItemStack> equipment = new LinkedHashMap<>();
+    private final KineticEntityPreview preview = KineticEntityPreview.create();
+    private KineticNumberField countField;
+    private SlotRef editingCountSlot;
+    private Map<String, Object> savedSnapshot;
 
     public FirstJoinRewardItemsPage() {
         super(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.title"));
         setPausesGame(false);
-        List<String> rawItems = KTServerConfigClient.getStringList(
-                PlayerConfigGui.PAGE_ID,
-                "items",
-                PlayerConfig.firstJoinItemsRaw
-        );
-        int defaultSlot = 0;
-        for (String raw : rawItems) {
-            int slot = defaultSlot;
-            String itemText = raw == null ? "" : raw.trim();
-            if (itemText.startsWith("[")) {
-                int end = itemText.indexOf(']');
-                if (end > 1) {
+        int fallback = 0;
+        for (String raw : KTServerConfigClient.getStringList(PlayerConfigGui.PAGE_ID, "items", PlayerConfig.firstJoinItemsRaw)) {
+            if (raw == null) continue;
+            int slot = fallback;
+            String text = raw.trim();
+            if (text.startsWith("[")) {
+                int close = text.indexOf(']');
+                if (close > 1) {
                     try {
-                        slot = Integer.parseInt(itemText.substring(1, end));
-                        itemText = itemText.substring(end + 1).trim();
+                        slot = Integer.parseInt(text.substring(1, close));
+                        text = text.substring(close + 1).trim();
                     } catch (NumberFormatException ignored) {
                     }
                 }
             }
-            ItemStack stack = PlayerConfig.parseItemStack(itemText);
-            if (!stack.isEmpty()) {
-                RewardEntry loaded = new RewardEntry(slot, stack.copy());
-                entries.add(loaded);
-                savedEntries.add(copyEntry(loaded));
-            }
-            defaultSlot++;
+            ItemStack stack = PlayerConfig.parseItemStack(text);
+            if (slot >= 0 && slot < 36 && !stack.isEmpty()) inventory.put(slot, stack);
+            else legacyExtras.add(raw);
+            fallback++;
         }
+        for (String key : ARMOR) {
+            equipment.put(key, PlayerConfig.parseItemStack(KTServerConfigClient.getString(
+                    PlayerConfigGui.PAGE_ID, key, defaultEquipment(key))));
+        }
+        savedSnapshot = payload();
+    }
+
+    private static String defaultEquipment(String key) {
+        return switch (key) {
+            case "helmet" -> PlayerConfig.helmetId;
+            case "chestplate" -> PlayerConfig.chestplateId;
+            case "leggings" -> PlayerConfig.leggingsId;
+            case "boots" -> PlayerConfig.bootsId;
+            default -> PlayerConfig.offhandId;
+        };
     }
 
     @Override
     protected void build(KineticUi ui) {
-        countFields.clear();
-        upButtons.clear();
-        downButtons.clear();
-        deleteButtons.clear();
-        updateScrollRange();
+        countField = ui.numberField(462, 150, 52, NumberType.INT)
+                .label(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.count"))
+                .allowNegative(false).range(1, 999).onChange(this::updateCount).build();
+        countField.limitTextLength(3);
+        countField.setActive(false);
+        ui.button(118, 317, 136).text(KineticI18n.translatable("gui.kineticcore.firstjoin.import_inventory"))
+                .onClick(this::importInventory).build();
+        ui.button(269, 317, 100).text(KineticI18n.translatable("gui.kineticcore.config.back"))
+                .onClick(this::requestClose).build();
+        ui.button(384, 317, 136).text(KineticI18n.translatable("gui.kineticcore.config.save"))
+                .onClick(this::save).build();
+    }
 
-        int deleteX = LIST_X + LIST_W - DELETE_BUTTON_W - 4;
-        int downX = deleteX - BUTTON_GAP - MOVE_BUTTON_W;
-        int upX = downX - BUTTON_GAP - MOVE_BUTTON_W;
-        KineticUi list = ui.scrollViewport(LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H,
-                () -> scroll.smoothOffset() * ROW_H);
-
-        for (int index = 0; index < entries.size(); index++) {
-            final int entryIndex = index;
-            int y = LIST_Y + index * ROW_H + 6;
-
-            KineticNumberField countField = list.numberField(COUNT_FIELD_X, y, COUNT_FIELD_W, NumberType.INT)
-                    .label(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.count"))
-                    .allowNegative(false)
-                    .range(1, 999)
-                    .build();
-            countField.limitTextLength(3);
-            countField.onTextChange(value -> applyCount(entryIndex, value));
-            countFields.add(countField);
-
-            upButtons.add(list.button(upX, y, MOVE_BUTTON_W)
-                    .text(KineticI18n.translatable("gui.kineticcore.symbol.up"))
-                    .onClick(() -> moveIndex(entryIndex, -1))
-                    .build());
-            downButtons.add(list.button(downX, y, MOVE_BUTTON_W)
-                    .text(KineticI18n.translatable("gui.kineticcore.symbol.down"))
-                    .onClick(() -> moveIndex(entryIndex, 1))
-                    .build());
-            deleteButtons.add(list.button(deleteX, y, DELETE_BUTTON_W)
-                    .text(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.delete"))
-                    .onClick(() -> deleteIndex(entryIndex))
-                    .build());
+    private void importInventory() {
+        hideCountEditor();
+        LocalPlayer player = KineticClientRuntime.localPlayer();
+        if (player == null) return;
+        inventory.clear();
+        legacyExtras.clear();
+        for (int i = 0; i < Math.min(36, player.getInventory().items.size()); i++) {
+            ItemStack stack = player.getInventory().items.get(i);
+            if (!stack.isEmpty()) inventory.put(i, stack.copy());
         }
-
-        ui.button(44, 314, 110)
-                .text(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.add"))
-                .onClick(this::addEntry)
-                .build();
-        ui.button(265, 314, 110)
-                .text(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.back"))
-                .onClick(this::requestClose)
-                .build();
-        ui.button(472, 314, 110)
-                .text(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.save"))
-                .onClick(() -> save())
-                .build();
-        updateRowButtons();
+        equipment.put("helmet", player.getInventory().armor.get(3).copy());
+        equipment.put("chestplate", player.getInventory().armor.get(2).copy());
+        equipment.put("leggings", player.getInventory().armor.get(1).copy());
+        equipment.put("boots", player.getInventory().armor.get(0).copy());
+        equipment.put("offhand", player.getInventory().offhand.get(0).copy());
+        save();
     }
 
-    private void updateScrollRange() {
-        scroll.update(entries.size(), VISIBLE_ROWS);
+    private ItemStack stackAt(SlotRef ref) {
+        if (ref == null) return ItemStack.EMPTY;
+        if (ref.type().equals("inventory")) return inventory.getOrDefault(ref.index(), ItemStack.EMPTY);
+        if (ref.type().equals("equipment")) return equipment.getOrDefault(ARMOR.get(ref.index()), ItemStack.EMPTY);
+        return ItemStack.EMPTY;
     }
 
-    private void updateRowButtons() {
-        updatingCountFields = true;
-        try {
-            int widgetCount = Math.min(entries.size(), countFields.size());
-            for (int index = 0; index < countFields.size(); index++) {
-                boolean visible = index < widgetCount;
-                boolean stackable = visible && entries.get(index).stack().getMaxStackSize() > 1;
-
-                KineticNumberField countField = countFields.get(index);
-                countField.setControlVisible(stackable);
-                countField.setTextEditable(stackable);
-                if (stackable) {
-                    String value = String.valueOf(entries.get(index).stack().getCount());
-                    if (!isFocused(countField) && !value.equals(countField.textValue())) {
-                        countField.setTextValue(value);
-                    }
-                } else {
-                    blur(countField);
-                    if (!countField.textValue().isEmpty()) {
-                        countField.setTextValue("");
-                    }
-                }
-
-                upButtons.get(index).setControlVisible(visible);
-                downButtons.get(index).setControlVisible(visible);
-                deleteButtons.get(index).setControlVisible(visible);
-                if (visible) {
-                    upButtons.get(index).setEnabled(index > 0);
-                    downButtons.get(index).setEnabled(index < entries.size() - 1);
-                    deleteButtons.get(index).setEnabled(true);
-                }
-            }
-        } finally {
-            updatingCountFields = false;
+    private void setStack(SlotRef ref, ItemStack stack) {
+        ItemStack copy = stack == null ? ItemStack.EMPTY : stack.copy();
+        if (ref.type().equals("inventory")) {
+            if (copy.isEmpty()) inventory.remove(ref.index());
+            else inventory.put(ref.index(), copy);
+        } else if (ref.type().equals("equipment")) {
+            equipment.put(ARMOR.get(ref.index()), copy);
         }
     }
 
-    private void applyCount(int index, String value) {
-        if (updatingCountFields || value == null || value.isBlank()) return;
-        if (index < 0 || index >= entries.size()) return;
-        ItemStack stack = entries.get(index).stack();
-        if (stack.getMaxStackSize() <= 1) return;
-        try {
-            stack.setCount(Math.max(1, Math.min(999, Integer.parseInt(value))));
-        } catch (NumberFormatException ignored) {
-        }
-    }
-
-    private void moveIndex(int index, int direction) {
-        clearCountFieldFocus();
-        int target = index + direction;
-        if (index < 0 || index >= entries.size() || target < 0 || target >= entries.size()) return;
-        RewardEntry entry = entries.remove(index);
-        entries.add(target, entry);
-        if (target < scroll.smoothOffset()) scroll.setOffset(target);
-        if (target >= scroll.smoothOffset() + VISIBLE_ROWS) scroll.setOffset(target - VISIBLE_ROWS + 1);
-        updateRowButtons();
-    }
-
-    private void deleteIndex(int index) {
-        clearCountFieldFocus();
-        if (index < 0 || index >= entries.size()) return;
-        entries.remove(index);
-        updateScrollRange();
-        rebuild();
-    }
-
-    private void clearCountFieldFocus() {
-        for (KineticNumberField countField : countFields) {
-            blur(countField);
-        }
-    }
-
-    private void addEntry() {
-        clearCountFieldFocus();
-        KineticSelectors.openItemSelector(selection -> {
-                if (selection == null || !selection.isItem()) return;
-                entries.add(new RewardEntry(firstFreeInventorySlot(), selection.stack().copy()));
-                updateScrollRange();
-                int last = entries.size() - 1;
-                if (last >= scroll.smoothOffset() + VISIBLE_ROWS) {
-                    scroll.setOffset(last - VISIBLE_ROWS + 1);
-                }
-                updateRowButtons();
-        });
-    }
-
-    private int firstFreeInventorySlot() {
+    private SlotRef slotAt(double x, double y) {
         for (int slot = 0; slot < 36; slot++) {
-            boolean used = false;
-            for (RewardEntry entry : entries) {
-                if (entry.slot() == slot) {
-                    used = true;
-                    break;
-                }
-            }
-            if (!used) return slot;
+            int sx = INVENTORY_X + slot % 9 * SLOT;
+            int sy = slot < 9 ? HOTBAR_Y : INVENTORY_Y + (slot - 9) / 9 * SLOT;
+            if (KineticTheme.hovering(x, y, sx, sy, SLOT, SLOT)) return new SlotRef("inventory", slot);
         }
-        return entries.size();
+        for (int i = 0; i < 4; i++) {
+            if (KineticTheme.hovering(x, y, ARMOR_X, ARMOR_Y + i * SLOT, SLOT, SLOT))
+                return new SlotRef("equipment", i);
+        }
+        if (KineticTheme.hovering(x, y, OFFHAND_X, OFFHAND_Y, SLOT, SLOT))
+            return new SlotRef("equipment", 4);
+        return null;
     }
 
-    private void openItemSelector(int index) {
-        clearCountFieldFocus();
-        if (index < 0 || index >= entries.size()) return;
-        KineticSelectors.openItemSelector(selection -> {
-                if (selection == null || !selection.isItem() || index >= entries.size()) return;
-                ItemStack selected = selection.stack().copy();
-                int oldCount = entries.get(index).stack().getCount();
-                if (selected.getMaxStackSize() > 1) {
-                    selected.setCount(Math.max(1, Math.min(999, oldCount)));
-                } else {
-                    selected.setCount(1);
-                }
-                entries.set(index, new RewardEntry(entries.get(index).slot(), selected));
-                updateRowButtons();
-        });
-    }
-
-    private void openNbtEditor(int index) {
-        clearCountFieldFocus();
-        if (index < 0 || index >= entries.size()) return;
-        ItemStack stack = entries.get(index).stack();
+    private void drawSlot(KineticGraphics graphics, ItemStack stack, int x, int y, boolean hovered) {
+        if (hovered) KineticTheme.itemSlot(graphics, x, y, SLOT, true);
         if (stack.isEmpty()) return;
-        String initialNbt = stack.hasTag() && stack.getTag() != null ? stack.getTag().toString() : "";
-        KineticSelectors.openNbtEditor(initialNbt, value -> {
-            if (value == null || value.isBlank()) {
-                stack.setTag(null);
-                return;
-            }
-            try {
-                stack.setTag(TagParser.parseTag(value));
-            } catch (Exception ignored) {
-            }
-        });
-    }
-
-    private boolean save() {
-        clearCountFieldFocus();
-        List<String> saved = new ArrayList<>();
-        for (RewardEntry entry : entries) {
-            if (!entry.stack().isEmpty()) {
-                saved.add("[" + entry.slot() + "] " + PlayerConfig.serializeItemStack(entry.stack()));
-            }
+        KineticTheme.item(graphics, stack, x, y, SLOT, 1.0F, false);
+        graphics.itemDecorations(stack, x + 1, y + 1, "");
+        if (stack.getCount() > 1) {
+            String count = Integer.toString(stack.getCount());
+            graphics.push();
+            graphics.raise(1);
+            graphics.text(count, x + 18 - graphics.textWidth(count), y + 10, 0xFF55FF55, true);
+            graphics.pop();
         }
-        if (!KTServerConfigClient.savePartial(PlayerConfigGui.PAGE_ID, Map.of("items", saved))) {
-            KineticOverlays.toast(null, KineticI18n.translatable("gui.kineticcore.config.server.save_failed"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
-            return false;
-        }
-        savedEntries.clear();
-        for (RewardEntry entry : entries) {
-            savedEntries.add(copyEntry(entry));
-        }
-        return true;
-    }
-
-    private void saveAndClose() {
-        if (save()) {
-            navigateBack();
-        }
-    }
-
-    private void requestClose() {
-        clearCountFieldFocus();
-        if (hasNoUnsavedChanges()) {
-            navigateBack();
-            return;
-        }
-
-        openDialog(
-                KineticI18n.translatable("gui.kineticcore.config.unsaved_action.title"),
-                KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.unsaved"),
-                KineticI18n.translatable("gui.yes"),
-                KineticI18n.translatable("gui.no"),
-                this::saveAndClose,
-                () -> navigateBack()
-        );
-    }
-
-    private boolean hasNoUnsavedChanges() {
-        if (entries.size() != savedEntries.size()) return false;
-        for (int i = 0; i < entries.size(); i++) {
-            RewardEntry current = entries.get(i);
-            RewardEntry saved = savedEntries.get(i);
-            if (current.slot() != saved.slot()) return false;
-            if (stacksDiffer(current.stack(), saved.stack())) return false;
-        }
-        return true;
-    }
-
-    private static boolean stacksDiffer(ItemStack left, ItemStack right) {
-        CompoundTag leftTag = new CompoundTag();
-        CompoundTag rightTag = new CompoundTag();
-        left.save(leftTag);
-        right.save(rightTag);
-        return !leftTag.equals(rightTag);
-    }
-
-    private static RewardEntry copyEntry(RewardEntry entry) {
-        return new RewardEntry(entry.slot(), entry.stack().copy());
-    }
-
-    private boolean inList(double mouseX, double mouseY) {
-        return mouseX >= LIST_X && mouseX < LIST_X + LIST_W
-                && mouseY >= LIST_Y && mouseY < LIST_Y + LIST_H;
-    }
-
-    private int rowIndex(double mouseY) {
-        if (mouseY < LIST_Y || mouseY >= LIST_Y + LIST_H) return -1;
-        double contentY = mouseY - LIST_Y + scroll.smoothOffset() * ROW_H;
-        int index = (int) Math.floor(contentY / ROW_H);
-        return index >= 0 && index < entries.size() ? index : -1;
-    }
-
-    private boolean overItem(double mouseX, double mouseY, int index) {
-        if (index < 0 || index >= entries.size() || !inList(mouseX, mouseY)) return false;
-        int y = LIST_Y + (int) Math.round((index - scroll.smoothOffset()) * ROW_H) + ITEM_Y_OFFSET;
-        return KineticTheme.hovering(mouseX, mouseY, ITEM_X, y, SLOT_SIZE, SLOT_SIZE);
     }
 
     @Override
     protected void renderBackground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        int hoveredIndex = rowIndex(mouseY);
-        updateRowButtons();
-        KineticTheme.canvasBackground(graphics, width(), height());
-        KineticTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_W, PANEL_H);
-        KineticTheme.panelAlt(graphics, LIST_X - 4, LIST_Y - 4, LIST_W + 8, LIST_H + 8);
-        graphics.centeredText(title(), width() / 2, 30, KineticTheme.current().text(), true);
-
-        scroll.update(entries.size(), VISIBLE_ROWS);
-        double smoothOffset = scroll.smoothOffset();
-        int first = Math.max(0, (int) Math.floor(smoothOffset));
-        int end = Math.min(entries.size(), first + VISIBLE_ROWS + 2);
-        graphics.scissor(LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H);
-        try {
-            for (int index = first; index < end; index++) {
-                int y = LIST_Y + (int) Math.round((index - smoothOffset) * ROW_H);
-                boolean rowHovered = index == hoveredIndex;
-                KineticTheme.stateSurface(
-                        graphics,
-                        LIST_X,
-                        y,
-                        LIST_W,
-                        ROW_H - 2,
-                        index % 2 == 0 ? KineticTheme.Surface.PANEL_ALT : KineticTheme.Surface.PANEL,
-                        false,
-                        rowHovered,
-                        false
-                );
-
-                RewardEntry entry = entries.get(index);
-                ItemStack stack = entry.stack();
-                int itemY = y + ITEM_Y_OFFSET;
-                boolean itemHovered = overItem(mouseX, mouseY, index);
-                if (!stack.isEmpty() && stack.getMaxStackSize() > 1) {
-                    graphics.text(
-                            KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.count"),
-                            COUNT_LABEL_X,
-                            y + 12,
-                            KineticTheme.current().text(),
-                            false
-                    );
-                }
-
-                KineticTheme.itemSlot(graphics, ITEM_X, itemY, SLOT_SIZE, SLOT_SIZE, 4, false, itemHovered, false);
-                KineticTheme.item(graphics, stack, ITEM_X, itemY, SLOT_SIZE, 1.0F, false);
-
-                graphics.scrollingText(
-                        stack.getHoverName(),
-                        ITEM_X + SLOT_SIZE + 8,
-                        y + 11,
-                        220,
-                        KineticTheme.current().text(),
-                        false
-                );
-            }
-        } finally {
-            graphics.endScissor();
+        KineticTheme.panel(graphics, 100, 16, 440, 330);
+        graphics.centeredText(title(), width() / 2, 31, KineticTheme.current().text(), true);
+        graphics.texture(INVENTORY_TEXTURE, BASE_X, BASE_Y, 0, 0, 176, 166);
+        graphics.fill(BASE_X + 87, BASE_Y + 15, BASE_X + 169, BASE_Y + 59, 0xFFC6C6C6);
+        graphics.centeredText(KineticI18n.translatable("gui.kineticcore.firstjoin.inventory"),
+                BASE_X + 128, BASE_Y + 41, 0xFF404040, false);
+        LocalPlayer player = KineticClientRuntime.localPlayer();
+        if (player != null) preview.render(graphics, player, "first-join-player",
+                BASE_X + 25, BASE_Y + 10, 49, 62, false);
+        for (int i = 0; i < 36; i++) {
+            int x = INVENTORY_X + i % 9 * SLOT;
+            int y = i < 9 ? HOTBAR_Y : INVENTORY_Y + (i - 9) / 9 * SLOT;
+            drawSlot(graphics, inventory.getOrDefault(i, ItemStack.EMPTY), x, y,
+                    KineticTheme.hovering(mouseX, mouseY, x, y, SLOT, SLOT));
         }
-
-        scroll.render(graphics, mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18);
-        if (entries.isEmpty()) {
-            graphics.centeredText(
-                    KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.empty"),
-                    LIST_X + LIST_W / 2,
-                    LIST_Y + LIST_H / 2,
-                    KineticTheme.current().text(),
-                    true
-            );
+        for (int i = 0; i < 4; i++) {
+            int y = ARMOR_Y + i * SLOT;
+            drawSlot(graphics, equipment.getOrDefault(ARMOR.get(i), ItemStack.EMPTY), ARMOR_X, y,
+                    KineticTheme.hovering(mouseX, mouseY, ARMOR_X, y, SLOT, SLOT));
         }
-        graphics.centeredText(
-                KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.hint"),
-                width() / 2,
-                292,
-                KineticTheme.current().text(),
-                true
-        );
+        drawSlot(graphics, equipment.getOrDefault("offhand", ItemStack.EMPTY), OFFHAND_X, OFFHAND_Y,
+                KineticTheme.hovering(mouseX, mouseY, OFFHAND_X, OFFHAND_Y, SLOT, SLOT));
+        if (editingCountSlot != null) {
+            graphics.text(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.count"),
+                    421, 154, KineticTheme.current().text(), false);
+        }
+        graphics.centeredText(KineticI18n.translatable("gui.kineticcore.firstjoin.inventory.hint"),
+                width() / 2, 282, KineticTheme.current().text(), true);
     }
 
     @Override
     protected void renderTooltips(int mouseX, int mouseY) {
-        int index = rowIndex(mouseY);
-        if (!overItem(mouseX, mouseY, index)) return;
-        ItemStack stack = entries.get(index).stack();
-        if (stack.isEmpty()) return;
-        showItemTooltip(stack);
+        ItemStack stack = stackAt(slotAt(mouseX, mouseY));
+        if (!stack.isEmpty()) showItemTooltip(stack);
     }
 
     @Override
     protected boolean onMouseClick(MouseInput input) {
-        double mouseX = input.x();
-        double mouseY = input.y();
-        if (scroll.beginDrag(mouseX, mouseY, input.button(), SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18)) return true;
-        if (inList(mouseX, mouseY)) {
-            int index = rowIndex(mouseY);
-            if (overItem(mouseX, mouseY, index)) {
-                if (input.isLeft()) {
-                    openItemSelector(index);
-                    return true;
-                }
-                if (input.isRight()) {
-                    openNbtEditor(index);
-                    return true;
-                }
-            }
+        SlotRef ref = slotAt(input.x(), input.y());
+        if (ref == null) return false;
+        hideCountEditor();
+        ItemStack stack = stackAt(ref);
+        if (stack.isEmpty()) {
+            KineticSelectors.openItemSelector(selection -> {
+                if (selection != null && selection.isItem()) setStack(ref, selection.stack());
+            });
+        } else {
+            openContextMenu(input.x(), input.y(), List.of(
+                    KineticOverlays.MenuItem.action(
+                            KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.edit_count"),
+                            () -> editCount(ref)),
+                    KineticOverlays.MenuItem.action(
+                            KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.replace"),
+                            () -> KineticSelectors.openItemSelector(selection -> {
+                                if (selection != null && selection.isItem()) {
+                                    ItemStack replacement = selection.stack().copy();
+                                    replacement.setCount(stackAt(ref).getCount());
+                                    setStack(ref, replacement);
+                                }
+                            })),
+                    KineticOverlays.MenuItem.danger(
+                            KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.delete"),
+                            () -> setStack(ref, ItemStack.EMPTY))));
         }
-        return false;
+        return true;
     }
 
-    @Override
-    protected boolean onMouseDrag(MouseDragInput input) {
-        return scroll.drag(input.y(), LIST_Y, LIST_H, 18);
+    private void editCount(SlotRef ref) {
+        ItemStack stack = stackAt(ref);
+        if (stack.isEmpty() || countField == null) return;
+        editingCountSlot = ref;
+        countField.setTextValue(Integer.toString(stack.getCount()));
+        countField.setActive(true);
+        focus(countField);
     }
 
-    @Override
-    protected boolean onMouseRelease(MouseInput input) {
-        return scroll.release(input.button());
-    }
-
-    @Override
-    protected boolean onMouseScroll(ScrollInput input) {
-        if (inList(input.x(), input.y()) && scroll.scroll(input.deltaY(), 1.0D)) {
-            clearCountFieldFocus();
-            return true;
+    private void updateCount(String value) {
+        if (editingCountSlot == null) return;
+        try {
+            int count = Integer.parseInt(value);
+            if (count < 1 || count > 999) return;
+            ItemStack stack = stackAt(editingCountSlot).copy();
+            if (stack.isEmpty()) return;
+            stack.setCount(count);
+            setStack(editingCountSlot, stack);
+        } catch (NumberFormatException ignored) {
         }
-        return false;
+    }
+
+    private void hideCountEditor() {
+        editingCountSlot = null;
+        if (countField != null) {
+            blur(countField);
+            countField.setActive(false);
+        }
+    }
+
+    private Map<String, Object> payload() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        List<String> items = new ArrayList<>();
+        for (int slot = 0; slot < 36; slot++) {
+            ItemStack stack = inventory.get(slot);
+            if (stack != null && !stack.isEmpty()) items.add("[" + slot + "] " + PlayerConfig.serializeItemStack(stack));
+        }
+        items.addAll(legacyExtras);
+        result.put("items", items);
+        for (String key : ARMOR) result.put(key, PlayerConfig.serializeItemStack(equipment.get(key)));
+        return result;
+    }
+
+    private void save() {
+        Map<String, Object> values = payload();
+        if (KTServerConfigClient.savePartial(PlayerConfigGui.PAGE_ID, values)) {
+            savedSnapshot = values;
+        } else {
+            KineticOverlays.toast(null, KineticI18n.translatable("gui.kineticcore.config.server.save_failed"),
+                    KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
+        }
+    }
+
+    private void requestClose() {
+        if (payload().equals(savedSnapshot)) {
+            navigateBack();
+            return;
+        }
+        openDialog(KineticI18n.translatable("gui.kineticcore.config.unsaved_action.title"),
+                KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.unsaved"),
+                KineticI18n.translatable("gui.yes"), KineticI18n.translatable("gui.no"),
+                () -> {
+                    Map<String, Object> before = savedSnapshot;
+                    save();
+                    if (savedSnapshot != before) navigateBack();
+                }, this::navigateBack);
     }
 
     @Override
@@ -505,6 +309,6 @@ public final class FirstJoinRewardItemsPage extends KineticPage {
         return true;
     }
 
-    private record RewardEntry(int slot, ItemStack stack) {
+    private record SlotRef(String type, int index) {
     }
 }
