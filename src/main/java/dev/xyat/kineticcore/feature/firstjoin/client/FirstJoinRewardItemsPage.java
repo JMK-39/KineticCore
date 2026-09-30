@@ -95,10 +95,13 @@ public final class FirstJoinRewardItemsPage extends KineticPage {
         countField.limitTextLength(3);
         countField.setActive(false);
         ui.button(118, 317, 136).text(KineticI18n.translatable("gui.kineticcore.firstjoin.import_inventory"))
+                .tooltip(KineticI18n.translatable("gui.kineticcore.firstjoin.import_inventory.tooltip"))
                 .onClick(this::importInventory).build();
         ui.button(269, 317, 100).text(KineticI18n.translatable("gui.kineticcore.config.back"))
+                .tooltip(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.back.tooltip"))
                 .onClick(this::requestClose).build();
         ui.button(384, 317, 136).text(KineticI18n.translatable("gui.kineticcore.config.save"))
+                .tooltip(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.save.tooltip"))
                 .onClick(this::save).build();
     }
 
@@ -218,9 +221,11 @@ public final class FirstJoinRewardItemsPage extends KineticPage {
             openContextMenu(input.x(), input.y(), List.of(
                     KineticOverlays.MenuItem.action(
                             KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.edit_count"),
+                            KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.edit_count.tooltip"),
                             () -> editCount(ref)),
                     KineticOverlays.MenuItem.action(
                             KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.replace"),
+                            KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.replace.tooltip"),
                             () -> KineticSelectors.openItemSelector(selection -> {
                                 if (selection != null && selection.isItem()) {
                                     ItemStack replacement = selection.stack().copy();
@@ -230,6 +235,7 @@ public final class FirstJoinRewardItemsPage extends KineticPage {
                             })),
                     KineticOverlays.MenuItem.danger(
                             KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.delete"),
+                            KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.delete.tooltip"),
                             () -> setStack(ref, ItemStack.EMPTY))));
         }
         return true;
