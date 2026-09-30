@@ -13,6 +13,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.NotNull;
@@ -24,6 +25,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 首次进入奖励。只有同时满足以下两点才会发放：
+ * <ol>
+ *     <li>玩家没有“已领取”标记（存档数据或玩家 NBT 任一处有标记即视为已领取）；</li>
+ *     <li>玩家在这个世界的游玩时间不超过 1 分钟（原版统计 PLAY_TIME）。</li>
+ * </ol>
+ * 任一条件不满足就既不清理也不发放。发放时只清空快捷栏（9 格），背包与装备不动；
+ * 奖励指定的槽位上已有物品时直接替换为奖励。发放完成后打上标记。
+ */
 public class FirstJoinHandler {
     private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
 
@@ -34,32 +44,23 @@ public class FirstJoinHandler {
         );
     }
 
-
+    /** 游玩时间上限：超过 1 分钟（1200 tick）的玩家不再发放。 */
+    private static final int MAX_PLAY_TICKS = 1200;
     private static final String NBT_KEY = "kineticcore:first_join_received";
-    private static final String PENDING_NBT_KEY = "kineticcore:first_join_pending";
+    private static final String LEGACY_PENDING_NBT_KEY = "kineticcore:first_join_pending";
     private static final String DATA_NAME = "kineticcore_first_join_received";
     private static final Map<UUID, Integer> PENDING_REWARDS = new ConcurrentHashMap<>();
 
     public static void onPlayerLogin(ServerPlayer player) {
         if (!PlayerConfig.enableFirstJoin) return;
+        if (!isEligible(player)) return;
 
-        UUID uuid = player.getUUID();
-        CompoundTag persistentData = player.getPersistentData();
-        FirstJoinRewardData rewardData = getRewardData(player.server);
-
-        if (rewardData.hasReceived(uuid) || persistentData.getBoolean(NBT_KEY)) {
-            markReceived(player, rewardData);
-            return;
+        int delay = Math.max(0, PlayerConfig.firstJoinDelay);
+        if (delay > 0) {
+            PENDING_REWARDS.put(player.getUUID(), delay);
+        } else {
+            grantAndMark(player);
         }
-
-        boolean pending = rewardData.isPending(uuid) || persistentData.getBoolean(PENDING_NBT_KEY);
-        if (!pending && hasExistingPlayerState(player)) {
-            markReceived(player, rewardData);
-            return;
-        }
-
-        markPending(player, rewardData);
-        scheduleOrGrant(player, rewardData);
     }
 
     public static void onServerTick(MinecraftServer server) {
@@ -69,135 +70,100 @@ public class FirstJoinHandler {
         while (iterator.hasNext()) {
             Map.Entry<UUID, Integer> entry = iterator.next();
             int ticksLeft = entry.getValue() - 1;
-
-            if (ticksLeft <= 0) {
-                ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
-                if (player != null && player.isAlive()) {
-                    grantAndMark(player, getRewardData(server));
-                }
-                iterator.remove();
-            } else {
+            if (ticksLeft > 0) {
                 entry.setValue(ticksLeft);
+                continue;
+            }
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            if (player == null) {
+                // 延迟期间离开：下次进入时按游玩时间重新判断。
+                iterator.remove();
+            } else if (!player.isAlive()) {
+                entry.setValue(1);
+            } else {
+                iterator.remove();
+                grantAndMark(player);
             }
         }
     }
 
-    private static void scheduleOrGrant(ServerPlayer player, FirstJoinRewardData rewardData) {
-        int delay = Math.max(0, PlayerConfig.firstJoinDelay);
-        if (delay > 0) {
-            PENDING_REWARDS.put(player.getUUID(), delay);
-            return;
-        }
-
-        grantAndMark(player, rewardData);
+    /** 没有标记，且在这个世界游玩不超过 1 分钟。 */
+    private static boolean isEligible(ServerPlayer player) {
+        if (hasReceived(player)) return false;
+        return playTicks(player) <= MAX_PLAY_TICKS;
     }
 
-    private static void grantAndMark(ServerPlayer player, FirstJoinRewardData rewardData) {
-        if (hasExistingPlayerState(player, Math.max(20, PlayerConfig.firstJoinDelay + 20))) {
-            markReceived(player, rewardData);
-            PENDING_REWARDS.remove(player.getUUID());
-            return;
-        }
+    private static int playTicks(ServerPlayer player) {
+        return player.getStats().getValue(Stats.CUSTOM.get(Stats.PLAY_TIME));
+    }
+
+    private static boolean hasReceived(ServerPlayer player) {
+        return player.getPersistentData().getBoolean(NBT_KEY) || getRewardData(player.server).hasReceived(player.getUUID());
+    }
+
+    private static void grantAndMark(ServerPlayer player) {
+        // 延迟期间可能已被其它途径标记（例如同一玩家重复登录事件）。
+        if (hasReceived(player)) return;
         try {
             grantRewards(player);
-            markReceived(player, rewardData);
-            PENDING_REWARDS.remove(player.getUUID());
         } catch (Throwable throwable) {
-            KineticRuntime.logger().error("首次进服奖励发放失败，保留待发放状态: {}", player.getGameProfile().getName(), throwable);
-            markPending(player, rewardData);
+            KineticRuntime.logger().error("首次进服奖励发放失败: {}", player.getGameProfile().getName(), throwable);
         }
+        // 无论发放中途是否出错都打标记，避免下次登录再次清理快捷栏。
+        markReceived(player);
     }
 
     private static void grantRewards(ServerPlayer player) {
+        Inventory inventory = player.getInventory();
         if (PlayerConfig.clearInvBeforeJoin) {
-            player.getInventory().clearContent();
+            for (int slot = 0; slot < Inventory.getSelectionSize(); slot++) {
+                inventory.setItem(slot, ItemStack.EMPTY);
+            }
         }
 
         PlayerConfig.getJoinItems().forEach((slot, stack) -> {
-            if (!stack.isEmpty()) {
-                ItemStack copy = stack.copy();
-                if (slot >= 0 && slot < player.getInventory().items.size()) {
-                    ItemStack existing = player.getInventory().getItem(slot);
-                    if (existing.isEmpty()) {
-                        player.getInventory().setItem(slot, copy);
-                    } else {
-                        player.getInventory().add(copy);
-                    }
-                } else {
-                    player.getInventory().add(copy);
-                }
+            if (stack.isEmpty()) return;
+            ItemStack copy = stack.copy();
+            if (slot >= 0 && slot < inventory.items.size()) {
+                // 指定槽位：已有物品直接替换为奖励。
+                inventory.setItem(slot, copy);
+            } else if (!inventory.add(copy) && !copy.isEmpty()) {
+                player.drop(copy, false);
             }
         });
 
         PlayerConfig.getArmor().forEach((slot, stack) -> {
-            if (!stack.isEmpty()) {
-                player.setItemSlot(slot, stack.copy());
-            }
+            if (!stack.isEmpty()) player.setItemSlot(slot, stack.copy());
         });
 
-        if (!PlayerConfig.firstJoinCommands.isEmpty()) {
-            CommandSourceStack source = player.createCommandSourceStack()
-                    .withPermission(2)
-                    .withSuppressedOutput();
-
-            for (String cmd : PlayerConfig.firstJoinCommands) {
-                try {
-                    String parsedCmd = cmd.replace("@s", player.getScoreboardName())
-                            .replace("@player", player.getScoreboardName())
-                            .trim();
-                    while (parsedCmd.startsWith("/")) {
-                        parsedCmd = parsedCmd.substring(1).trim();
-                    }
-                    if (!parsedCmd.isEmpty()) {
-                        player.server.getCommands().performPrefixedCommand(source, parsedCmd);
-                    }
-                } catch (Exception e) {
-                    KineticRuntime.logger().error("首次进服指令执行失败: {}", cmd, e);
-                }
-            }
-        }
-
+        runCommands(player);
         player.inventoryMenu.broadcastChanges();
     }
 
-    private static boolean hasExistingPlayerState(ServerPlayer player) {
-        return hasExistingPlayerState(player, 20);
-    }
-
-    private static boolean hasExistingPlayerState(ServerPlayer player, int playTickLimit) {
-        int playTicks = player.getStats().getValue(Stats.CUSTOM.get(Stats.PLAY_TIME));
-        if (playTicks > playTickLimit) return true;
-        if (player.totalExperience > 0) return true;
-        if (player.experienceLevel > 0) return true;
-        if (player.getHealth() < player.getMaxHealth()) return true;
-        return hasAnyInventoryItem(player);
-    }
-
-    private static boolean hasAnyInventoryItem(ServerPlayer player) {
-        for (ItemStack stack : player.getInventory().items) {
-            if (!stack.isEmpty()) return true;
+    private static void runCommands(ServerPlayer player) {
+        if (PlayerConfig.firstJoinCommands.isEmpty()) return;
+        CommandSourceStack source = player.createCommandSourceStack().withPermission(2).withSuppressedOutput();
+        for (String cmd : PlayerConfig.firstJoinCommands) {
+            try {
+                String parsedCmd = cmd.replace("@s", player.getScoreboardName())
+                        .replace("@player", player.getScoreboardName())
+                        .trim();
+                while (parsedCmd.startsWith("/")) {
+                    parsedCmd = parsedCmd.substring(1).trim();
+                }
+                if (!parsedCmd.isEmpty()) {
+                    player.server.getCommands().performPrefixedCommand(source, parsedCmd);
+                }
+            } catch (Exception e) {
+                KineticRuntime.logger().error("首次进服指令执行失败: {}", cmd, e);
+            }
         }
-
-        for (ItemStack stack : player.getInventory().armor) {
-            if (!stack.isEmpty()) return true;
-        }
-
-        for (ItemStack stack : player.getInventory().offhand) {
-            if (!stack.isEmpty()) return true;
-        }
-
-        return false;
     }
 
-    private static void markPending(ServerPlayer player, FirstJoinRewardData rewardData) {
-        player.getPersistentData().putBoolean(PENDING_NBT_KEY, true);
-        rewardData.markPending(player.getUUID());
-    }
-
-    private static void markReceived(ServerPlayer player, FirstJoinRewardData rewardData) {
+    private static void markReceived(ServerPlayer player) {
         player.getPersistentData().putBoolean(NBT_KEY, true);
-        player.getPersistentData().remove(PENDING_NBT_KEY);
-        rewardData.markReceived(player.getUUID());
+        player.getPersistentData().remove(LEGACY_PENDING_NBT_KEY);
+        getRewardData(player.server).markReceived(player.getUUID());
     }
 
     private static FirstJoinRewardData getRewardData(MinecraftServer server) {
@@ -206,60 +172,35 @@ public class FirstJoinHandler {
 
     private static final class FirstJoinRewardData extends SavedData {
         private final Set<UUID> receivedPlayers = new HashSet<>();
-        private final Set<UUID> pendingPlayers = new HashSet<>();
 
         private static FirstJoinRewardData load(CompoundTag tag) {
             FirstJoinRewardData data = new FirstJoinRewardData();
-            loadUuidSet(tag.getList("players", Tag.TAG_STRING), data.receivedPlayers);
-            loadUuidSet(tag.getList("pending", Tag.TAG_STRING), data.pendingPlayers);
-            data.pendingPlayers.removeAll(data.receivedPlayers);
-            return data;
-        }
-
-        private static void loadUuidSet(ListTag list, Set<UUID> target) {
+            ListTag list = tag.getList("players", Tag.TAG_STRING);
             for (int i = 0; i < list.size(); i++) {
                 try {
-                    target.add(UUID.fromString(list.getString(i)));
+                    data.receivedPlayers.add(UUID.fromString(list.getString(i)));
                 } catch (Exception ignored) {
                 }
             }
+            return data;
         }
 
         @Override
         public @NotNull CompoundTag save(@NotNull CompoundTag tag) {
-            tag.put("players", saveUuidSet(receivedPlayers));
-            tag.put("pending", saveUuidSet(pendingPlayers));
-            return tag;
-        }
-
-        private static ListTag saveUuidSet(Set<UUID> source) {
             ListTag list = new ListTag();
-            for (UUID uuid : source) {
+            for (UUID uuid : receivedPlayers) {
                 list.add(StringTag.valueOf(uuid.toString()));
             }
-            return list;
+            tag.put("players", list);
+            return tag;
         }
 
         private boolean hasReceived(UUID uuid) {
             return receivedPlayers.contains(uuid);
         }
 
-        private boolean isPending(UUID uuid) {
-            return pendingPlayers.contains(uuid);
-        }
-
-        private void markPending(UUID uuid) {
-            if (!receivedPlayers.contains(uuid) && pendingPlayers.add(uuid)) {
-                setDirty();
-            }
-        }
-
         private void markReceived(UUID uuid) {
-            boolean changed = receivedPlayers.add(uuid);
-            changed |= pendingPlayers.remove(uuid);
-            if (changed) {
-                setDirty();
-            }
+            if (receivedPlayers.add(uuid)) setDirty();
         }
     }
 }

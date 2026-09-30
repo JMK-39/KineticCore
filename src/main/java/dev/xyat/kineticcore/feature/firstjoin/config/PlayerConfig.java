@@ -91,8 +91,8 @@ public class PlayerConfig {
               启用首次加入奖励功能
                Enable the First Join reward feature""");
         define("first_join.clear_inventory", true, """
-               发放奖励前清空玩家背包
-               Clear the player's inventory before giving rewards""");
+               发放奖励前清空快捷栏（背包和装备不动）
+               Clear the hotbar before giving rewards (backpack and equipment are kept)""");
         define("first_join.delay_ticks", 20, """
                发放奖励的延迟时间 (刻)
                Delay before giving rewards (in ticks)""");
