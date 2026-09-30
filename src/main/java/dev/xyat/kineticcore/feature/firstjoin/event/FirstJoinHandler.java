@@ -15,7 +15,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraft.world.level.storage.LevelResource;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
@@ -47,11 +46,6 @@ public class FirstJoinHandler {
         UUID uuid = player.getUUID();
         CompoundTag persistentData = player.getPersistentData();
         FirstJoinRewardData rewardData = getRewardData(player.server);
-
-        if (!rewardData.isWorldEligible(player.server)) {
-            markReceived(player, rewardData);
-            return;
-        }
 
         if (rewardData.hasReceived(uuid) || persistentData.getBoolean(NBT_KEY)) {
             markReceived(player, rewardData);
@@ -99,8 +93,7 @@ public class FirstJoinHandler {
     }
 
     private static void grantAndMark(ServerPlayer player, FirstJoinRewardData rewardData) {
-        if (!rewardData.isWorldEligible(player.server)
-                || hasExistingPlayerState(player, Math.max(20, PlayerConfig.firstJoinDelay + 20))) {
+        if (hasExistingPlayerState(player, Math.max(20, PlayerConfig.firstJoinDelay + 20))) {
             markReceived(player, rewardData);
             PENDING_REWARDS.remove(player.getUUID());
             return;
@@ -214,18 +207,12 @@ public class FirstJoinHandler {
     private static final class FirstJoinRewardData extends SavedData {
         private final Set<UUID> receivedPlayers = new HashSet<>();
         private final Set<UUID> pendingPlayers = new HashSet<>();
-        private boolean worldEligibilityKnown;
-        private boolean newWorld;
-        private long validUntilMillis;
 
         private static FirstJoinRewardData load(CompoundTag tag) {
             FirstJoinRewardData data = new FirstJoinRewardData();
             loadUuidSet(tag.getList("players", Tag.TAG_STRING), data.receivedPlayers);
             loadUuidSet(tag.getList("pending", Tag.TAG_STRING), data.pendingPlayers);
             data.pendingPlayers.removeAll(data.receivedPlayers);
-            data.worldEligibilityKnown = tag.getBoolean("worldEligibilityKnown");
-            data.newWorld = tag.getBoolean("newWorld");
-            data.validUntilMillis = tag.getLong("validUntilMillis");
             return data;
         }
 
@@ -242,37 +229,7 @@ public class FirstJoinHandler {
         public @NotNull CompoundTag save(@NotNull CompoundTag tag) {
             tag.put("players", saveUuidSet(receivedPlayers));
             tag.put("pending", saveUuidSet(pendingPlayers));
-            tag.putBoolean("worldEligibilityKnown", worldEligibilityKnown);
-            tag.putBoolean("newWorld", newWorld);
-            tag.putLong("validUntilMillis", validUntilMillis);
             return tag;
-        }
-
-        private boolean isWorldEligible(MinecraftServer server) {
-            if (!worldEligibilityKnown) {
-                FirstJoinWorldEligibility.Inspection inspection = inspectNewWorld(server);
-                newWorld = inspection.eligible();
-                if (newWorld) {
-                    validUntilMillis = System.currentTimeMillis()
-                            + FirstJoinWorldEligibility.MAX_WORLD_AGE_MILLIS - inspection.ageMillis();
-                }
-                worldEligibilityKnown = true;
-                setDirty();
-            }
-            return newWorld && FirstJoinWorldEligibility.isStillNew(
-                    server.overworld().getGameTime(), System.currentTimeMillis(), validUntilMillis);
-        }
-
-        private static FirstJoinWorldEligibility.Inspection inspectNewWorld(MinecraftServer server) {
-            try {
-                return FirstJoinWorldEligibility.inspect(
-                        server.getWorldPath(LevelResource.ROOT),
-                        server.getWorldPath(LevelResource.PLAYER_DATA_DIR),
-                        server.overworld().getGameTime(), System.currentTimeMillis());
-            } catch (Exception error) {
-                KineticRuntime.logger().warn("Cannot verify world age for first-join rewards; rewards disabled for this save", error);
-                return new FirstJoinWorldEligibility.Inspection(false, -1);
-            }
         }
 
         private static ListTag saveUuidSet(Set<UUID> source) {

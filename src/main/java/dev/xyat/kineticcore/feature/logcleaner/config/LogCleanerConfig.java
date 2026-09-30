@@ -16,6 +16,7 @@ public class LogCleanerConfig {
     private static CommentedFileConfig configData;
 
     public static boolean enableCleanup = true;
+    public static boolean errorsOnly = !KineticPlatform.isDedicatedServer();
     public static boolean enableLogDeduplication = true;
     public static int maxCrashReports = 3;
     public static int maxLogs = 3;
@@ -46,8 +47,11 @@ public class LogCleanerConfig {
         define("log_cleaner.enable", true,
                 "是否在游戏关闭时自动在后台清理旧的日志和崩溃报告。\nWhether to auto-clean old logs and crash reports asynchronously on game shutdown.");
 
+        define("log_cleaner.errors_only", !KineticPlatform.isDedicatedServer(),
+                "仅保留 ERROR/FATAL 错误日志。专用服务器默认关闭，否则控制台只剩报错，看不到启动完成、玩家进出和指令输出。\nOnly ERROR/FATAL logs are kept. Disabled by default on dedicated servers, otherwise the console only shows errors.");
+
         define("log_cleaner.deduplication", true,
-                "仅保留 ERROR/FATAL 错误日志，并对连续重复错误自动去重。\nOnly ERROR/FATAL logs are kept, with consecutive duplicate errors automatically collapsed.");
+                "连续重复的日志只输出一次，并在下一条不同日志前输出重复次数。\nConsecutive duplicate logs are output once, followed by their repeat count before the next different log.");
 
         define("log_cleaner.filtered_keywords", "Tried to load a block entity for block",
                 """
@@ -74,6 +78,7 @@ public class LogCleanerConfig {
 
     private static void readValues() {
         enableCleanup = configData.getOrElse("log_cleaner.enable", true);
+        errorsOnly = configData.getOrElse("log_cleaner.errors_only", !KineticPlatform.isDedicatedServer());
         enableLogDeduplication = configData.getOrElse("log_cleaner.deduplication", true);
 
         rawFilteredKeywords = configData.getOrElse("log_cleaner.filtered_keywords", "Tried to load a block entity for block");
@@ -95,6 +100,7 @@ public class LogCleanerConfig {
     public static void save() {
         if (configData == null) return;
         configData.set("log_cleaner.enable", enableCleanup);
+        configData.set("log_cleaner.errors_only", errorsOnly);
         configData.set("log_cleaner.deduplication", enableLogDeduplication);
         configData.set("log_cleaner.filtered_keywords", rawFilteredKeywords);
         configData.set("log_cleaner.max_crash_reports", Math.max(1, maxCrashReports));

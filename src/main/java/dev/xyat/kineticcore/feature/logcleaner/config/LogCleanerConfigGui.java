@@ -31,6 +31,14 @@ public final class LogCleanerConfigGui {
                         KineticI18n.translatable("cfg.kineticcore.logcleaner.enable.tooltip")
                 )
                 .booleanValue(
+                        "errors_only",
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.errors_only"),
+                        () -> LogCleanerConfig.errorsOnly,
+                        value -> LogCleanerConfig.errorsOnly = value,
+                        true,
+                        KineticI18n.translatable("cfg.kineticcore.logcleaner.errors_only.tooltip")
+                )
+                .booleanValue(
                         "deduplication",
                         KineticI18n.translatable("cfg.kineticcore.logcleaner.deduplication"),
                         () -> LogCleanerConfig.enableLogDeduplication,

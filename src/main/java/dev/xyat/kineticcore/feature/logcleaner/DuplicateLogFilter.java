@@ -60,7 +60,7 @@ public class DuplicateLogFilter extends AbstractFilter {
     public Result filter(LogEvent event) {
         if (isInjecting.get()) return Result.NEUTRAL;
         if (event == null || event.getMessage() == null || event.getLevel() == null) return Result.NEUTRAL;
-        if (!event.getLevel().isMoreSpecificThan(Level.ERROR)) {
+        if (LogCleanerConfig.errorsOnly && !event.getLevel().isMoreSpecificThan(Level.ERROR)) {
             flush();
             return Result.DENY;
         }

@@ -35,8 +35,6 @@ import dev.xyat.kineticcore.internal.config.client.KineticConfigBuildAtomicRegre
 import dev.xyat.kineticcore.internal.config.client.KineticNativeSetRollbackRegression;
 import dev.xyat.kineticcore.internal.network.ForgeNetworkUtf8Regression;
 import dev.xyat.kineticcore.internal.runtime.FeatureSwitchPersistenceRegression;
-import dev.xyat.kineticcore.feature.firstjoin.event.FirstJoinWorldEligibilityRegression;
-import dev.xyat.kineticcore.feature.firstjoin.event.FirstJoinWorldDiskRegression;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -64,8 +62,6 @@ public final class MinecraftRegressionSuite {
     }
 
     public static void main(String[] args) {
-        run("FirstJoinWorldEligibilityRegression", () -> FirstJoinWorldEligibilityRegression.main(NO_ARGS));
-        run("FirstJoinWorldDiskRegression", () -> FirstJoinWorldDiskRegression.main(NO_ARGS));
         run("SearchComparatorRecoveryRegression", () -> SearchComparatorRecoveryRegression.main(NO_ARGS));
         run("SearchModelAtomicRegression", () -> SearchModelAtomicRegression.main(NO_ARGS));
         run("KTClientConfigDecimalMetadataRegression", () -> KTClientConfigDecimalMetadataRegression.main(NO_ARGS));
