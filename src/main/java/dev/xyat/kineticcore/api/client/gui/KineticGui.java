@@ -3,6 +3,8 @@ package dev.xyat.kineticcore.api.client.gui;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
 import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
 import dev.xyat.kineticcore.internal.client.gui.page.PageScreens;
+import dev.xyat.kineticcore.internal.client.screen.GuiSessionRuntime;
+import net.minecraft.client.gui.screens.Screen;
 
 /**
  * 打开与关闭 Kinetic 页面的入口。页面内部请优先使用 {@link KineticPage#openChild(KineticPage)} 与
@@ -84,5 +86,21 @@ public final class KineticGui {
     public static <P extends KineticPage> P currentPage(Class<P> type) {
         KineticPage page = currentPage();
         return type.isInstance(page) ? type.cast(page) : null;
+    }
+
+    /**
+     * 在当前页面及其返回链（父页面、祖父页面……）中查找第一个指定类型的页面，找不到返回 null。
+     * 用于子页面打开期间，服务器数据仍能更新到下层的父页面。
+     * Finds the first page of the given type in the current page or its back-navigation chain, or null; lets
+     * server data reach a parent page while one of its child pages is shown.
+     */
+    public static <P extends KineticPage> P findPage(Class<P> type) {
+        Screen screen = KineticClientRuntimeImpl.currentScreen();
+        for (int depth = 0; screen != null && depth < 64; depth++) {
+            KineticPage page = PageScreens.pageOf(screen);
+            if (type.isInstance(page)) return type.cast(page);
+            screen = GuiSessionRuntime.navigationParent(screen);
+        }
+        return null;
     }
 }
