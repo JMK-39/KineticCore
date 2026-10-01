@@ -1211,6 +1211,7 @@ public abstract class KineticNativeScreen extends Screen implements KineticScree
     /** {@inheritDoc} */
     @Override
     public final boolean mouseReleased(double mouseX, double mouseY, int button) {
+        overlays.mouseReleased();
         if (overlays.blocksInput()) {
             return true;
         }
@@ -1223,6 +1224,7 @@ public abstract class KineticNativeScreen extends Screen implements KineticScree
     /** {@inheritDoc} */
     @Override
     public final boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (overlays.mouseDragged(mouseX, mouseY, width, height, font)) return true;
         if (overlays.blocksInput()) return true;
         if (controls.handleAutoCompleteDragged(mouseX, mouseY)) return true;
         if (nativeMouseDragged(mouseX, mouseY, button, dragX, dragY)) return true;
@@ -1233,6 +1235,7 @@ public abstract class KineticNativeScreen extends Screen implements KineticScree
     /** {@inheritDoc} */
     @Override
     public final boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (overlays.mouseScrolled(mouseX, mouseY, delta, width, height, font)) return true;
         if (overlays.blocksInput()) return true;
         if (controls.handleAutoCompleteScroll(mouseX, mouseY, delta)) return true;
         if (nativeMouseScrolled(mouseX, mouseY, delta)) return true;

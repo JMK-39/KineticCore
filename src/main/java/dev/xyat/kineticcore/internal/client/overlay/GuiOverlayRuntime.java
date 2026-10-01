@@ -91,6 +91,13 @@ public final class GuiOverlayRuntime {
 
     private TooltipRequest tooltip;
     private ContextMenu contextMenu;
+    // 菜单最多显示 MAX_VISIBLE_MENU_ITEMS 行，超出部分用滚轮 / 滚动条浏览。
+    // Menus show at most MAX_VISIBLE_MENU_ITEMS rows; the rest scrolls with the wheel or the scrollbar.
+    private static final int MAX_VISIBLE_MENU_ITEMS = 10;
+    private static final int MENU_SCROLLBAR_WIDTH = 4;
+    private int menuScroll;
+    private boolean draggingMenuThumb;
+    private double menuThumbGrab;
     private Dialog dialog;
 
     public void beginFrame() {
@@ -208,6 +215,8 @@ public final class GuiOverlayRuntime {
             contextMenu = null;
             return;
         }
+        menuScroll = 0;
+        draggingMenuThumb = false;
         contextMenu = new ContextMenu(screenX, screenY, List.copyOf(controls), preferredWidth);
         dialog = null;
     }
@@ -293,12 +302,21 @@ public final class GuiOverlayRuntime {
             return true;
         }
 
-        MenuBounds bounds = menuBounds(contextMenu, screenWidth, screenHeight, font);
+        MenuBounds bounds = menuBounds(contextMenu, screenWidth, screenHeight, font, menuScroll);
         layoutMenuButtons(bounds);
         if (!GuiTheme.hovering(mouseX, mouseY, bounds.x, bounds.y, bounds.width, bounds.height)) {
             contextMenu = null;
             return true;
         }
+        if (bounds.scrollable() && mouseX >= bounds.scrollbarX()) {
+            int thumbY = menuThumbY(bounds);
+            int thumbHeight = menuThumbHeight(bounds);
+            menuThumbGrab = mouseY >= thumbY && mouseY < thumbY + thumbHeight ? mouseY - thumbY : thumbHeight / 2.0D;
+            draggingMenuThumb = true;
+            dragMenuThumb(bounds, mouseY);
+            return true;
+        }
+        if (mouseY < bounds.viewportTop() || mouseY >= bounds.viewportTop() + bounds.viewportHeight()) return true;
 
         for (MenuRow row : bounds.rows()) {
             MenuButton menuButton = row.control().button();
@@ -325,6 +343,52 @@ public final class GuiOverlayRuntime {
             return true;
         }
         return false;
+    }
+
+    /** 菜单打开时滚轮滚动菜单内容；返回 true 表示已处理 / Scrolls an open menu; true when handled. */
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta, int screenWidth, int screenHeight, Font font) {
+        if (contextMenu == null || delta == 0D) return false;
+        MenuBounds bounds = menuBounds(contextMenu, screenWidth, screenHeight, font, menuScroll);
+        if (!bounds.scrollable() || !GuiTheme.hovering(mouseX, mouseY, bounds.x, bounds.y, bounds.width, bounds.height)) {
+            return false;
+        }
+        int step = KineticScreen.STANDARD_CONTROL_HEIGHT;
+        menuScroll = clampMenuScroll(bounds, menuScroll - (int) Math.signum(delta) * step);
+        return true;
+    }
+
+    /** 拖动菜单滚动条 / Drags the menu scrollbar thumb. */
+    public boolean mouseDragged(double mouseX, double mouseY, int screenWidth, int screenHeight, Font font) {
+        if (contextMenu == null || !draggingMenuThumb) return false;
+        dragMenuThumb(menuBounds(contextMenu, screenWidth, screenHeight, font, menuScroll), mouseY);
+        return true;
+    }
+
+    /** 松开鼠标结束滚动条拖动 / Ends a scrollbar drag. */
+    public void mouseReleased() {
+        draggingMenuThumb = false;
+    }
+
+    private static int clampMenuScroll(MenuBounds bounds, int scroll) {
+        return Math.max(0, Math.min(scroll, bounds.maxScroll()));
+    }
+
+    private static int menuThumbHeight(MenuBounds bounds) {
+        if (bounds.contentHeight() <= 0) return bounds.viewportHeight();
+        return Math.max(12, bounds.viewportHeight() * bounds.viewportHeight() / bounds.contentHeight());
+    }
+
+    private int menuThumbY(MenuBounds bounds) {
+        int track = bounds.viewportHeight() - menuThumbHeight(bounds);
+        if (bounds.maxScroll() <= 0 || track <= 0) return bounds.viewportTop();
+        return bounds.viewportTop() + (int) Math.round(track * (menuScroll / (double) bounds.maxScroll()));
+    }
+
+    private void dragMenuThumb(MenuBounds bounds, double mouseY) {
+        int track = bounds.viewportHeight() - menuThumbHeight(bounds);
+        if (track <= 0) return;
+        double ratio = (mouseY - menuThumbGrab - bounds.viewportTop()) / track;
+        menuScroll = clampMenuScroll(bounds, (int) Math.round(ratio * bounds.maxScroll()));
     }
 
     public void render(
@@ -389,33 +453,51 @@ public final class GuiOverlayRuntime {
             int mouseX,
             int mouseY
     ) {
-        MenuBounds bounds = menuBounds(contextMenu, screenWidth, screenHeight, font);
+        MenuBounds bounds = menuBounds(contextMenu, screenWidth, screenHeight, font, menuScroll);
+        menuScroll = clampMenuScroll(bounds, menuScroll);
         layoutMenuButtons(bounds);
         MenuItem hoveredItem = null;
+        int viewportTop = bounds.viewportTop();
+        int viewportBottom = viewportTop + bounds.viewportHeight();
+        boolean mouseInViewport = mouseY >= viewportTop && mouseY < viewportBottom;
+        // 视口外的行不参与悬停 / Rows outside the viewport never count as hovered.
+        int rowMouseY = mouseInViewport ? mouseY : Integer.MIN_VALUE / 2;
+        int rowRight = bounds.x + bounds.width - (bounds.scrollable() ? MENU_SCROLLBAR_WIDTH + 2 : 0);
 
         graphics.pose().pushPose();
         try {
             graphics.pose().translate(0, 0, 900);
             GuiTheme.panel(graphics, bounds.x, bounds.y, bounds.width, bounds.height);
-            for (MenuRow row : bounds.rows()) {
-                MenuControl control = row.control();
-                MenuItem item = control.item();
-                if (item.style() == MenuItemStyle.SEPARATOR) {
-                    int lineY = row.y() + row.height() / 2;
-                    graphics.fill(bounds.x + 5, lineY, bounds.x + bounds.width - 5, lineY + 1, GuiTheme.current().border());
-                    continue;
+            graphics.enableScissor(bounds.x, viewportTop, rowRight, viewportBottom);
+            try {
+                for (MenuRow row : bounds.rows()) {
+                    if (row.y() + row.height() <= viewportTop || row.y() >= viewportBottom) continue;
+                    MenuControl control = row.control();
+                    MenuItem item = control.item();
+                    if (item.style() == MenuItemStyle.SEPARATOR) {
+                        int lineY = row.y() + row.height() / 2;
+                        graphics.fill(bounds.x + 5, lineY, rowRight - 5, lineY + 1, GuiTheme.current().border());
+                        continue;
+                    }
+                    MenuButton button = control.button();
+                    if (button == null) continue;
+                    button.render(graphics, mouseX, rowMouseY, 0f);
+                    if (!item.detail().getString().isBlank()) {
+                        int detailX = rowRight - 7 - font.width(item.detail());
+                        int detailY = row.y() + (row.height() - 8) / 2;
+                        graphics.drawString(font, item.detail(), detailX, detailY, GuiTheme.current().text(), false);
+                    }
+                    if (button.isMouseOver(mouseX, rowMouseY)) {
+                        hoveredItem = item;
+                    }
                 }
-                MenuButton button = control.button();
-                if (button == null) continue;
-                button.render(graphics, mouseX, mouseY, 0f);
-                if (!item.detail().getString().isBlank()) {
-                    int detailX = bounds.x + bounds.width - 7 - font.width(item.detail());
-                    int detailY = row.y() + (row.height() - 8) / 2;
-                    graphics.drawString(font, item.detail(), detailX, detailY, GuiTheme.current().mutedText(), false);
-                }
-                if (button.isMouseOver(mouseX, mouseY)) {
-                    hoveredItem = item;
-                }
+            } finally {
+                graphics.disableScissor();
+            }
+            if (bounds.scrollable()) {
+                GuiTheme.scrollbar(graphics, mouseX, mouseY, bounds.scrollbarX(), viewportTop,
+                        MENU_SCROLLBAR_WIDTH, bounds.viewportHeight(), menuThumbHeight(bounds),
+                        bounds.maxScroll(), menuScroll, draggingMenuThumb);
             }
         } finally {
             graphics.pose().popPose();
@@ -436,7 +518,8 @@ public final class GuiOverlayRuntime {
         for (MenuRow row : bounds.rows()) {
             MenuButton button = row.control().button();
             if (button == null) continue;
-            button.setBounds(bounds.x + 3, row.y(), bounds.width - 6, row.height());
+            int scrollbarSpace = bounds.scrollable() ? MENU_SCROLLBAR_WIDTH + 2 : 0;
+            button.setBounds(bounds.x + 3, row.y(), bounds.width - 6 - scrollbarSpace, row.height());
         }
     }
 
@@ -492,7 +575,7 @@ public final class GuiOverlayRuntime {
         return true;
     }
 
-    private static MenuBounds menuBounds(ContextMenu menu, int screenWidth, int screenHeight, Font font) {
+    private static MenuBounds menuBounds(ContextMenu menu, int screenWidth, int screenHeight, Font font, int scroll) {
         int itemHeight = KineticScreen.STANDARD_CONTROL_HEIGHT;
         int separatorHeight = 5;
         int width = 126;
@@ -510,22 +593,29 @@ public final class GuiOverlayRuntime {
             width = Math.max(width, rowWidth);
             contentHeight += itemHeight;
         }
+        int viewportHeight = Math.min(contentHeight, Math.min(MAX_VISIBLE_MENU_ITEMS * itemHeight, Math.max(6, screenHeight - 14)));
+        boolean scrollable = contentHeight > viewportHeight;
         if (menu.preferredWidth() > 0) {
             width = menu.preferredWidth();
+        } else if (scrollable) {
+            width += MENU_SCROLLBAR_WIDTH + 2;
         }
         width = Math.min(width, Math.max(20, screenWidth - 8));
-        int height = Math.min(contentHeight + 6, Math.max(12, screenHeight - 8));
+        int height = viewportHeight + 6;
         int x = Math.max(4, Math.min(menu.x(), screenWidth - width - 4));
         int y = Math.max(4, Math.min(menu.y(), screenHeight - height - 4));
+        int maxScroll = Math.max(0, contentHeight - viewportHeight);
+        int safeScroll = Math.max(0, Math.min(scroll, maxScroll));
 
         List<MenuRow> rows = new ArrayList<>();
-        int cursorY = y + 3;
+        int cursorY = y + 3 - safeScroll;
         for (MenuControl control : menu.controls()) {
             int rowHeight = control.item().style() == MenuItemStyle.SEPARATOR ? separatorHeight : itemHeight;
             rows.add(new MenuRow(control, cursorY, rowHeight));
             cursorY += rowHeight;
         }
-        return new MenuBounds(x, y, width, height, List.copyOf(rows));
+        return new MenuBounds(x, y, width, height, List.copyOf(rows), y + 3, viewportHeight, contentHeight, maxScroll,
+                x + width - 3 - MENU_SCROLLBAR_WIDTH);
     }
 
     private static Component displayMenuLabel(MenuItem item) {
@@ -538,7 +628,11 @@ public final class GuiOverlayRuntime {
     private record MenuRow(MenuControl control, int y, int height) {
     }
 
-    private record MenuBounds(int x, int y, int width, int height, List<MenuRow> rows) {
+    private record MenuBounds(int x, int y, int width, int height, List<MenuRow> rows,
+                              int viewportTop, int viewportHeight, int contentHeight, int maxScroll, int scrollbarX) {
+        boolean scrollable() {
+            return maxScroll > 0;
+        }
     }
 
     private DialogBounds dialogBounds(int screenWidth, int screenHeight, Font font) {

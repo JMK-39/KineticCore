@@ -1357,6 +1357,7 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     /** {@inheritDoc} */
     @Override
     public final boolean mouseReleased(double mouseX, double mouseY, int button) {
+        overlays.mouseReleased();
         if (overlays.blocksInput()) {
             return true;
         }
@@ -1371,6 +1372,7 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     /** {@inheritDoc} */
     @Override
     public final boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (overlays.mouseDragged(mouseX, mouseY, width, height, font)) return true;
         if (overlays.blocksInput()) return true;
         double virtualMouseX = toVirtualX(mouseX);
         double virtualMouseY = toVirtualY(mouseY);
@@ -1397,6 +1399,7 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     /** {@inheritDoc} */
     @Override
     public final boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (overlays.mouseScrolled(mouseX, mouseY, delta, width, height, font)) return true;
         if (overlays.blocksInput()) return true;
         double virtualMouseX = toVirtualX(mouseX);
         double virtualMouseY = toVirtualY(mouseY);
