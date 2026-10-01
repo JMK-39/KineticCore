@@ -35,6 +35,7 @@
     "worldmanagement.client.WorldManagementMixins$Navigation",
     "minecraft.client.AbstractContainerScreenAccessor",
     "minecraft.client.ChatComponentAccess",
+    "minecraft.client.EditBoxAccessor",
     "advancement.client.ClientAdvancementsAccessor"
   ]
 }

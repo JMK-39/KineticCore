@@ -189,6 +189,25 @@ public final class KineticTextFields {
             setTextEditable(true);
         }
 
+        /**
+         * 原版只按“字段 X + 前缀宽度”计算字符位置，没有计入文字内边距和横向滚动，长命令时补全弹窗会错位。
+         * 这里按实际绘制位置计算（滚出左边的字符归到文字起点），命令补全与用法提示因此始终对齐。
+         * Vanilla ignores the text inset and horizontal scroll, so suggestions drift on long commands; this returns the
+         * drawn position (characters scrolled off the left map to the text start).
+         */
+        @Override
+        public int getScreenX(int charIndex) {
+            String value = getValue();
+            int left = InputTextLayout.textLeft(getX());
+            if (charIndex <= 0 || charIndex > value.length()) return left;
+            int start = 0;
+            if ((Object) this instanceof EditBoxScrollAccess accessor) {
+                start = Math.max(0, Math.min(accessor.kineticcore$getDisplayPos(), value.length()));
+            }
+            if (charIndex <= start) return left;
+            return left + font.width(value.substring(start, charIndex));
+        }
+
         @Override
         public void setDefaultText(String defaultText) {
             this.defaultText = defaultText;
