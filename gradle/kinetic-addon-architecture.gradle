@@ -1,8 +1,9 @@
 // 附属架构检查：compileJava 之前扫描附属源码，附属绕过 KineticCore 已提供的 GUI API 时直接让构建失败。
 // Addon architecture check: before compileJava, scan the addon's main sources and fail the build when code bypasses
 // a capability the KineticCore API already provides (internal packages, raw vanilla screens and widgets, vanilla
-// navigation, raw translations). This turns the hard rules of docs/KineticCore-GUI-API-v2-Migration.md into a
-// build error instead of a review checklist.
+// GUI types that have a Kinetic replacement, vanilla navigation, raw translations). Where the API has no
+// equivalent, the addon may build its own, declared in build.gradle (see below). This turns the hard rules of
+// docs/KineticCore-GUI-API-v2-Migration.md into a build error instead of a review checklist.
 //
 // 用法 / Usage: copy this file to the addon's gradle/ directory and add to build.gradle
 //     apply from: 'gradle/kinetic-addon-architecture.gradle'
@@ -15,7 +16,7 @@
 // Exceptions are per file and per rule, and live in build.gradle where review sees them. Set them AFTER the
 // apply line; each value is the list of rule ids (shown in the failure output) allowed in that file:
 //     ext.kineticArchitectureAllow = [
-//             'src/main/java/com/example/compat/jei/ExampleCategory.java': ['vanilla-gui-import'],
+//             'src/main/java/com/example/compat/jei/ExampleCategory.java': ['vanilla-gui-type'],
 //     ]
 
 import java.util.regex.Pattern
@@ -40,9 +41,14 @@ def kineticAddonRules = [
         [id: 'screen-navigation', mixins: false,
          pattern: ~/\.setScreen\s*\(|\bMenuScreens\.register\s*\(|\bNetworkHooks\.openScreen\s*\(/,
          hint: 'use openChild(...), KineticGui.open / closeScreen, KineticClientMenus.register, KineticMenus.open'],
-        [id: 'vanilla-gui-import', mixins: false,
-         pattern: ~/(?m)^\s*import\s+(?:static\s+)?net\.minecraft\.client\.gui\.[\w.*]+\s*;/,
-         hint: 'pages use KineticGraphics, KineticText, KineticTexture, KineticTooltipComponent and input records'],
+        // Only vanilla GUI types with a Kinetic replacement. Screen types such as Screen, PauseScreen or
+        // InventoryScreen stay importable: the API hands out vanilla screens and instanceof checks have no replacement.
+        [id: 'vanilla-gui-type', mixins: false,
+         pattern: ~/(?m)^\s*import\s+net\.minecraft\.client\.gui\.(?:GuiGraphics|Font|components\.(?:\*|AbstractWidget|AbstractButton|Button|ImageButton|PlainTextButton|EditBox|MultiLineEditBox|Checkbox|CycleButton|AbstractSliderButton|Tooltip|StringWidget|MultiLineTextWidget|ObjectSelectionList|AbstractSelectionList|ContainerObjectSelectionList)|screens\.(?:ConfirmScreen|AlertScreen)|screens\.inventory\.tooltip\.ClientTooltipComponent)\s*;/,
+         hint: 'use KineticGraphics, KineticText, ui.* builders and controls, openDialog(...) or KineticTooltipComponent'],
+        [id: 'vanilla-modifier-keys', mixins: false,
+         pattern: ~/\bScreen\.has(?:Shift|Control|Alt)Down\s*\(/,
+         hint: 'use KineticClientRuntime.shiftModifierDown() / controlModifierDown() / altModifierDown()'],
         [id: 'raw-translation', mixins: true,
          pattern: ~/\bComponent\.translatable\s*\(|\bKineticText\.translatable\s*\(/,
          hint: 'use KineticI18n.translatable(...)'],
@@ -97,6 +103,17 @@ def kineticAddonLine = { String source, int index ->
     line
 }
 
+// Project-relative path with '/' separators; absolute when the source lives on another drive or root.
+def kineticAddonDisplayPath = { File root, File file ->
+    String path
+    try {
+        path = root.toPath().relativize(file.toPath()).toString()
+    } catch (IllegalArgumentException ignored) {
+        path = file.absolutePath
+    }
+    path.replace('\\', '/')
+}
+
 // ext.kineticArchitectureAllow as path -> sorted rule ids, with '/' separators.
 def kineticAddonAllowances = { ->
     def configured = project.findProperty('kineticArchitectureAllow')
@@ -140,7 +157,7 @@ def kineticAddonCheck = tasks.register('checkKineticAddonArchitecture') {
         }
 
         javaSources.files.findAll { it.name.endsWith('.java') }.sort { it.absolutePath }.each { File file ->
-            String relative = rootDirectory.toPath().relativize(file.toPath()).toString().replace('\\', '/')
+            String relative = kineticAddonDisplayPath(rootDirectory, file)
             String source = file.getText('UTF-8')
             String code = kineticAddonMask(source, false)
             String codeWithStrings = null
