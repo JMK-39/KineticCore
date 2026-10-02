@@ -18,11 +18,19 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+//? if >=1.20.5
+/*import org.joml.Matrix4fStack;*/
+//? if >=1.21
+/*import com.mojang.blaze3d.vertex.ByteBufferBuilder;*/
 
 /** Internal Minecraft rendering bridge used by the public Kinetic world-render API. */
 public final class KineticWorldRenderRuntime {
     private static final double CHUNK_CAGE_THICKNESS = 0.04D;
     private static final RenderType THICK_WORLD_LINES = ThickWorldLineType.createType();
+    //? if >=1.21 {
+    /*// Reused by every screen overlay; it grows to the largest overlay drawn so far.
+    private static final ByteBufferBuilder OVERLAY_BUFFER = new ByteBufferBuilder(256);
+    *///?}
 
     private KineticWorldRenderRuntime() {
     }
@@ -34,14 +42,24 @@ public final class KineticWorldRenderRuntime {
     public static KineticGraphics beginScreenOverlay(int width, int height) {
         RenderSystem.backupProjectionMatrix();
         RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0, width, height, 0, -1000, 1000), RenderSystem.getVertexSorting());
+        //? if >=1.20.5 {
+        /*Matrix4fStack modelView = RenderSystem.getModelViewStack();
+        modelView.pushMatrix();
+        modelView.identity();
+        *///?} else {
         PoseStack modelView = RenderSystem.getModelViewStack();
         modelView.pushPose();
         modelView.setIdentity();
+        //?}
         RenderSystem.applyModelViewMatrix();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableDepthTest();
+        //? if >=1.21 {
+        /*MultiBufferSource.BufferSource bufferSource = MultiBufferSource.immediate(OVERLAY_BUFFER);
+        *///?} else {
         MultiBufferSource.BufferSource bufferSource = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
+        //?}
         return GuiGraphicsAdapter.wrap(new GuiGraphics(Minecraft.getInstance(), bufferSource));
     }
 
@@ -50,7 +68,11 @@ public final class KineticWorldRenderRuntime {
         GuiGraphicsAdapter.unwrap(graphics).flush();
         RenderSystem.enableDepthTest();
         RenderSystem.disableBlend();
+        //? if >=1.20.5 {
+        /*RenderSystem.getModelViewStack().popMatrix();
+        *///?} else {
         RenderSystem.getModelViewStack().popPose();
+        //?}
         RenderSystem.applyModelViewMatrix();
         RenderSystem.restoreProjectionMatrix();
     }
@@ -200,10 +222,17 @@ public final class KineticWorldRenderRuntime {
             float blue,
             float alpha
     ) {
+        //? if >=1.21 {
+        /*consumer.addVertex(pose, (float) x1, (float) y1, (float) z1).setColor(red, green, blue, alpha);
+        consumer.addVertex(pose, (float) x2, (float) y2, (float) z2).setColor(red, green, blue, alpha);
+        consumer.addVertex(pose, (float) x3, (float) y3, (float) z3).setColor(red, green, blue, alpha);
+        consumer.addVertex(pose, (float) x4, (float) y4, (float) z4).setColor(red, green, blue, alpha);
+        *///?} else {
         consumer.vertex(pose, (float) x1, (float) y1, (float) z1).color(red, green, blue, alpha).endVertex();
         consumer.vertex(pose, (float) x2, (float) y2, (float) z2).color(red, green, blue, alpha).endVertex();
         consumer.vertex(pose, (float) x3, (float) y3, (float) z3).color(red, green, blue, alpha).endVertex();
         consumer.vertex(pose, (float) x4, (float) y4, (float) z4).color(red, green, blue, alpha).endVertex();
+        //?}
     }
 
     private static final class ThickWorldLineType extends RenderType {

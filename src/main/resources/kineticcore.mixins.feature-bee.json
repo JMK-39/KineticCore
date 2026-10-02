@@ -6,6 +6,7 @@
   "refmap": "kineticcore.mixins.refmap.json",
   "mixins": [
     "BeeMixins$BeeMixin",
+    "BeeMixins$BeeSpawnMixin",
     "BeeMixins$LevelMixin",
     "BeeMixins$PathNavigationMixin",
     "BeeMixins$RandomPosMixin",

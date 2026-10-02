@@ -42,7 +42,11 @@ public abstract class DatapackRepositoryMixin {
         selectedPacks.removeAll(customPacks);
         Collections.reverse(customPacks);
         for (Pack pack : customPacks) {
+            //? if >=1.20.5 {
+            /*pack.getDefaultPosition().insert(selectedPacks, pack, Pack::selectionConfig, false);
+            *///?} else {
             pack.getDefaultPosition().insert(selectedPacks, pack, Functions.identity(), false);
+            //?}
         }
         cir.setReturnValue(ImmutableList.copyOf(selectedPacks));
     }

@@ -3,12 +3,14 @@ package dev.xyat.kineticcore.feature.flight.mixin;
 import dev.xyat.kineticcore.api.flight.KineticFlight;
 import dev.xyat.kineticcore.api.flight.KineticFlightSources;
 import dev.xyat.kineticcore.api.flight.KineticSuperFlight;
+import dev.xyat.kineticcore.feature.flight.FlightAbilityPackets;
 import dev.xyat.kineticcore.feature.flight.FlightState;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientboundPlayerAbilitiesPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+//? if >=1.20.2
+/*import net.minecraft.server.network.ServerCommonPacketListenerImpl;*/
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
@@ -41,12 +43,30 @@ public class FlightServerMixins {
             }
         }
 
-        @Inject(method = "getEyeHeight(Lnet/minecraft/world/entity/Pose;Lnet/minecraft/world/entity/EntityDimensions;)F", at = @At("HEAD"), cancellable = true)
+        // Noclip keeps the standing eye height in any pose. 1.20.1 asks Player for it; since 1.20.5 it is part of the
+        // pose dimensions, so only their eye height is replaced and the hitbox stays as it is. Entity's constructor asks
+        // as well, before abilities and the server game mode exist, so isCreative() cannot be used here.
+        //? if >=1.20.5 {
+        /*@Inject(method = "getDefaultDimensions", at = @At("RETURN"), cancellable = true)
+        private void kineticcore$getEyeHeight(Pose pose, CallbackInfoReturnable<EntityDimensions> cir) {
+            Player player = (Player) (Object) this;
+            if (kineticcore$creativeNoclip(player)) {
+                cir.setReturnValue(cir.getReturnValue().withEyeHeight(1.62F));
+            }
+        }
+        *///?} else {
+        @Inject(method = "getStandingEyeHeight", at = @At("HEAD"), cancellable = true)
         private void kineticcore$getEyeHeight(Pose pose, EntityDimensions dimensions, CallbackInfoReturnable<Float> cir) {
             Player player = (Player) (Object) this;
-            if (player.isCreative() && KineticFlight.noclipEnabled(player)) {
+            if (kineticcore$creativeNoclip(player)) {
                 cir.setReturnValue(1.62F);
             }
+        }
+        //?}
+
+        @Unique
+        private static boolean kineticcore$creativeNoclip(Player player) {
+            return KineticFlight.noclipEnabled(player) && player.getAbilities() != null && player.getAbilities().instabuild;
         }
     }
 
@@ -103,32 +123,12 @@ public class FlightServerMixins {
             }
         }
 
+        //? if <1.20.2 {
         @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;)V", at = @At("HEAD"), cancellable = true)
         private void kineticcore$interceptOutboundAbilities(Packet<?> packet, net.minecraft.network.PacketSendListener listener, CallbackInfo ci) {
-            if (!(packet instanceof ClientboundPlayerAbilitiesPacket)) return;
-            if (FlightState.isInternalUpdate || KineticFlightSources.abilityRefreshInProgress() || FlightState.isProcessingExplicitCancel) return;
-
-            ServerPlayer player = this.kineticcore$getPlayer();
-            boolean outgoingMayfly = player.getAbilities().mayfly;
-            boolean wasFlying = FlightState.lastKnownFlying(player);
-
-            if (outgoingMayfly && !player.getAbilities().flying && wasFlying) {
-                ci.cancel();
-                player.getAbilities().flying = true;
-                FlightState.isInternalUpdate = true;
-                player.onUpdateAbilities();
-                FlightState.isInternalUpdate = false;
-                return;
-            }
-            if (!outgoingMayfly && KineticFlightSources.allowsFlight(player)) {
-                ci.cancel();
-                player.getAbilities().mayfly = true;
-                if (wasFlying) player.getAbilities().flying = true;
-                FlightState.isInternalUpdate = true;
-                player.onUpdateAbilities();
-                FlightState.isInternalUpdate = false;
-            }
+            FlightAbilityPackets.interceptOutbound(this.kineticcore$getPlayer(), packet, ci);
         }
+        //?}
 
         @Inject(method = "handlePlayerAbilities", at = @At("HEAD"))
         private void kineticcore$onHandleAbilitiesStart(ServerboundPlayerAbilitiesPacket packet, CallbackInfo ci) {
@@ -153,4 +153,16 @@ public class FlightServerMixins {
         @ModifyConstant(method = "handleMoveVehicle", constant = @Constant(doubleValue = 100.0D), require = 0)
         private double kineticcore$disableVehicleCheck(double original) { return Double.MAX_VALUE; }
     }
+
+    // Outbound ability packets go through the game packet listener before 1.20.2 and through the listener shared by
+    // the configuration and game phases since.
+    //? if >=1.20.2 {
+    /*@Mixin(ServerCommonPacketListenerImpl.class)
+    public static abstract class CommonNetworkTweaks {
+        @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;)V", at = @At("HEAD"), cancellable = true)
+        private void kineticcore$interceptOutboundAbilities(Packet<?> packet, net.minecraft.network.PacketSendListener listener, CallbackInfo ci) {
+            if ((Object) this instanceof ServerGamePacketListenerImpl game) FlightAbilityPackets.interceptOutbound(game.player, packet, ci);
+        }
+    }
+    *///?}
 }

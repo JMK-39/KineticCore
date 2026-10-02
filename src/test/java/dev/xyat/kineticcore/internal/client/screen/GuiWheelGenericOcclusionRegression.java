@@ -24,8 +24,13 @@ public final class GuiWheelGenericOcclusionRegression {
             return hovered;
         }
 
+        //? if >=1.20.2 {
+        /*@Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
+        *///?} else {
         @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        //?}
             scrollCalls++;
             return consumes;
         }

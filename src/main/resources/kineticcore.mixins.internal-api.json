@@ -9,6 +9,7 @@
     "attribute.AttributeMapRuntimeMixin",
     "datapack.DatapackRepositoryMixin",
     "despawn.MobDespawnMixins$MobTweaks",
+    "despawn.MobDespawnMixins$LivingEntityTweaks",
     "despawn.MobDespawnMixins$EnderManTweaks",
     "recipebook.RecipeBookServerMixins$Advancements",
     "recipebook.RecipeBookServerMixins$BookData",
@@ -17,6 +18,7 @@
     "setspawn.SetSpawnMixins$PlayerListMixin",
     "setspawn.SetSpawnMixins$ServerPlayerMixin",
     "setspawn.SetSpawnMixins$ServerLevelMixin",
+    "setspawn.SetSpawnMixins$LevelMixin",
     "minecraft.RangedAttributeAccessor"
   ],
   "client": [

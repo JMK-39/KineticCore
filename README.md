@@ -67,12 +67,41 @@ Before adding API: first try a new parameter on an existing builder or interface
 
 ## Runtime Environment
 
-- Minecraft 1.20.1
-- Forge 47.4.x
-- Java 17
-- Gradle 8.8 (the pinned source-build version)
-- GitHub Releases are published manually; local builds do not create, upload, or publish a release.
+- Minecraft 1.20.1 with Forge 47.4.x, and Minecraft 1.21.1 with NeoForge 21.1.x. Both JARs are Java 21 bytecode; the 1.20.1 JAR does not start on Java 17. Support for 26.1.2 and 26.2 is in progress.
+- Gradle 9.8.0 (pinned by the wrapper), running on Java 21. Gradle picks or downloads a Java 21 for itself (`gradle/gradle-daemon-jvm.properties`). Every Minecraft version compiles with at least JDK 21; `--release` sets each version's bytecode and Java API to the Java its game runs on (`java_version` in `versions/<node>/gradle.properties`).
+- One JAR per Minecraft version, named `kineticcore-<loader>-<minecraft>-<version>.jar`, for example `kineticcore-forge-1.20.1-26.10.2.jar`.
+- A push to `master` that changes source or build files builds every enabled version and publishes the JARs as GitHub Release `v<yy.M.d>` (`.github/workflows/auto-release.yml`); `manual-release.yml` does the same on demand. Local builds never create, upload or publish a release.
 - No third-party mod integrations in the core. Curios, JEI and similar integrations belong in optional compat addons, which plug in through `KineticSelectors.registerInventorySource` and `KineticHoveredItems.register`.
+
+### Multi-version build
+
+The build uses [Stonecutter](https://stonecutter.kikugie.dev/): `src/` is the single source tree, and each Minecraft version is a Gradle subproject under `versions/<minecraft>-<loader>/`.
+
+| File | Contents |
+|---|---|
+| `settings.gradle` | Which versions are enabled |
+| `stonecutter.gradle` | The active version (the one whose code `src/` currently holds) and the `buildAll` task |
+| `versions/<node>/gradle.properties` | Minecraft, loader, Java and resource pack versions of that node |
+| `build.forge.gradle` / `build.neoforge.gradle` | Loader-specific build logic (ModDevGradle Legacy Forge / ModDevGradle) |
+| `gradle/kinetic-node.gradle` | Build logic shared by every version: JAR name, resources, checks |
+
+`gradlew buildAll` (or `gradlew build`) builds and checks every enabled version. `gradlew :1.20.1-forge:build` builds one. Code that differs between versions is marked with Stonecutter comments such as `//? if >=1.21 {`; switch the active version from the `stonecutter` task group before editing another version's code.
+
+### Differences on 1.21.1
+
+The API is the same on every version except where Minecraft itself changed:
+
+- Items as text (`KineticItemText`, first-join config, copied items) follow the version's `/give` syntax: `id{NBT}` on 1.20.1, `id[components]` on 1.21.1, for example `minecraft:diamond_sword[enchantments={levels:{"minecraft:sharpness":5}}]`. On 1.21.1 the 1.20.1 form is still read and upgraded to components.
+- `KineticClientAdvancements.all()` returns `List<AdvancementHolder>` (1.20.2+).
+- `KineticEnchantments.register` is not available: enchantments are data-driven since 1.21 and ship as data pack JSON.
+- Networking uses NeoForge payloads; the `KineticNetwork` API is unchanged.
+
+### Development
+
+- Forge runs use `run/`, NeoForge runs use `run-<node>/`, so worlds and configs of different versions never mix.
+- `gradlew :<node>:runClient -Pkinetic_quick_play=<save folder>` joins that singleplayer world straight away, which is the quickest way to check joining, spawning and first-join items.
+- `checkKineticMixinTargets` (part of `check`) reads the compiled Mixins and fails the build when a target class, method, injection point, shadowed member or accessor does not exist in that version's Minecraft, or when code refers to a class inside a Mixin package. Mixin itself skips such injectors silently at runtime.
+- 1.20.1 compiles noticeably slower than 1.21.1: the Mixin annotation processor that writes the refmap for the reobfuscated JAR is not incremental, so every 1.20.1 build recompiles all sources, while 1.21.1 needs no refmap and recompiles only changed classes.
 
 ## Source Layout
 
@@ -458,12 +487,41 @@ KineticCore 是面向 **Minecraft 1.20.1 / Forge 47.4.x / Java 17** 的核心基
 
 ## 运行环境
 
-- Minecraft 1.20.1
-- Forge 47.4.x
-- Java 17
-- Gradle 8.8（源码构建固定版本）
-- GitHub Release 仅手动发布；本地构建不会自动创建、上传或发布 GitHub Release
+- Minecraft 1.20.1 + Forge 47.4.x，以及 Minecraft 1.21.1 + NeoForge 21.1.x。两个 JAR 都是 Java 21 字节码，1.20.1 的 JAR 在 Java 17 下无法启动。26.1.2、26.2 正在适配。
+- Gradle 9.8.0（由 wrapper 固定），运行在 Java 21 上。Gradle 会自行选用或下载 Java 21（`gradle/gradle-daemon-jvm.properties`）。所有 Minecraft 版本至少用 JDK 21 编译，`--release` 把每个版本的字节码与 Java API 定为其游戏运行时的 Java（`versions/<节点>/gradle.properties` 中的 `java_version`）。
+- 每个 Minecraft 版本一个 JAR，命名为 `kineticcore-<加载器>-<MC版本>-<版本号>.jar`，例如 `kineticcore-forge-1.20.1-26.10.2.jar`。
+- 向 `master` 推送源码或构建文件的改动时，会构建所有启用的版本，并把 JAR 发布为 GitHub Release `v<yy.M.d>`（`.github/workflows/auto-release.yml`）；`manual-release.yml` 可按需手动执行同样流程。本地构建不会创建、上传或发布 Release
 - 核心不内置任何第三方模组联动。Curios、JEI 等联动放在可选兼容附属中，通过 `KineticSelectors.registerInventorySource` 与 `KineticHoveredItems.register` 接入。
+
+### 多版本构建
+
+构建使用 [Stonecutter](https://stonecutter.kikugie.dev/)：`src/` 是唯一一份源码，每个 Minecraft 版本是 `versions/<MC版本>-<加载器>/` 下的一个 Gradle 子项目。
+
+| 文件 | 内容 |
+|---|---|
+| `settings.gradle` | 启用哪些版本 |
+| `stonecutter.gradle` | 当前激活版本（`src/` 里现在是哪个版本的代码）与 `buildAll` 任务 |
+| `versions/<节点>/gradle.properties` | 该节点的 Minecraft、加载器、Java 与资源包版本 |
+| `build.forge.gradle` / `build.neoforge.gradle` | 各加载器的构建逻辑（ModDevGradle Legacy Forge / ModDevGradle） |
+| `gradle/kinetic-node.gradle` | 所有版本共用的构建逻辑：JAR 命名、资源处理、检查 |
+
+`gradlew buildAll`（或 `gradlew build`）构建并检查所有启用的版本；`gradlew :1.20.1-forge:build` 只构建一个。版本间不同的代码用 Stonecutter 注释标记，例如 `//? if >=1.21 {`；要改另一个版本的代码，先在 `stonecutter` 任务组里切换激活版本。
+
+### 1.21.1 上的差异
+
+各版本 API 相同，只有 Minecraft 本身变化的地方不同：
+
+- 以文本表示的物品（`KineticItemText`、首次加入配置、复制物品）与该版本的 `/give` 写法一致：1.20.1 为 `物品ID{NBT}`，1.21.1 为 `物品ID[组件]`，例如 `minecraft:diamond_sword[enchantments={levels:{"minecraft:sharpness":5}}]`。1.21.1 仍可读取 1.20.1 写法，并自动升级为组件。
+- `KineticClientAdvancements.all()` 返回 `List<AdvancementHolder>`（1.20.2 起）。
+- 不支持 `KineticEnchantments.register`：1.21 起附魔由数据驱动，需以数据包 JSON 提供。
+- 网络改用 NeoForge payload，`KineticNetwork` API 不变。
+
+### 开发
+
+- Forge 的运行目录是 `run/`，NeoForge 是 `run-<节点>/`，不同版本的存档与配置不会混用。
+- `gradlew :<节点>:runClient -Pkinetic_quick_play=<存档文件夹>` 会直接进入该单人存档，是检查进入世界、出生点和首次加入物品最快的方法。
+- `checkKineticMixinTargets`（属于 `check`）读取编译后的 Mixin，当目标类、方法、注入点、影子成员或访问器在该版本 Minecraft 中不存在，或代码引用了 Mixin 包内的类时，构建失败。Mixin 自身在运行时会静默跳过这类注入。
+- 1.20.1 的编译明显比 1.21.1 慢：为重混淆 JAR 生成 refmap 的 Mixin 注解处理器不支持增量编译，所以 1.20.1 每次都重新编译全部源码；1.21.1 不需要 refmap，只重新编译改动的类。
 
 ## 源码结构
 

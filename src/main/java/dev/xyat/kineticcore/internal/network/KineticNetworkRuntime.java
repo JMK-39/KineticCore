@@ -38,7 +38,11 @@ public final class KineticNetworkRuntime {
             return existing.channel();
         }
 
+        //? if forge {
         NetworkChannel channel = new ForgeNetworkChannel(id, version, policy);
+        //?} else {
+        /*NetworkChannel channel = new NeoForgeNetworkChannel(id, version, policy);
+        *///?}
         CHANNELS.put(id, new ChannelRegistration(version, policy, channel));
         return channel;
     }

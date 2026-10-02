@@ -14,6 +14,8 @@ public class ServerLevelMixin {
     @Inject(
             method = {
                     "sendParticles(Lnet/minecraft/core/particles/ParticleOptions;DDDIDDDD)I",
+                    // Forge runs on SRG names in production; NeoForge only has the Mojang name above.
+                    //? if forge
                     "m_8767_(Lnet/minecraft/core/particles/ParticleOptions;DDDIDDDD)I"
             },
             at = @At("HEAD"),

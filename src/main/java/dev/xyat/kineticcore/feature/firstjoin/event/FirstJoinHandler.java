@@ -167,7 +167,11 @@ public class FirstJoinHandler {
     }
 
     private static FirstJoinRewardData getRewardData(MinecraftServer server) {
+        //? if >=1.20.5 {
+        /*return server.overworld().getDataStorage().computeIfAbsent(new SavedData.Factory<>(FirstJoinRewardData::new, (tag, registries) -> FirstJoinRewardData.load(tag)), DATA_NAME);
+        *///?} else {
         return server.overworld().getDataStorage().computeIfAbsent(FirstJoinRewardData::load, FirstJoinRewardData::new, DATA_NAME);
+        //?}
     }
 
     private static final class FirstJoinRewardData extends SavedData {
@@ -186,7 +190,11 @@ public class FirstJoinHandler {
         }
 
         @Override
+        //? if >=1.20.5 {
+        /*public @NotNull CompoundTag save(@NotNull CompoundTag tag, @NotNull net.minecraft.core.HolderLookup.Provider registries) {
+        *///?} else {
         public @NotNull CompoundTag save(@NotNull CompoundTag tag) {
+        //?}
             ListTag list = new ListTag();
             for (UUID uuid : receivedPlayers) {
                 list.add(StringTag.valueOf(uuid.toString()));

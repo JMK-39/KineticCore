@@ -36,16 +36,24 @@ public class BeeMixins {
             }
         }
 
-        @Inject(method = "finalizeSpawn", at = @At("RETURN"))
-        private void onFinalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, SpawnGroupData spawnData, CompoundTag dataTag, CallbackInfoReturnable<SpawnGroupData> cir) {
-            ((Bee) (Object) this).setNoGravity(true);
-        }
-
         @Inject(method = "getBreedOffspring", at = @At("RETURN"))
         private void onGetBreedOffspring(ServerLevel level, AgeableMob otherParent, CallbackInfoReturnable<AgeableMob> cir) {
             if (cir.getReturnValue() != null) {
                 cir.getReturnValue().setNoGravity(true);
             }
+        }
+    }
+
+    // Bee inherits finalizeSpawn from Mob, so spawned bees are handled here.
+    @Mixin(Mob.class)
+    public static abstract class BeeSpawnMixin {
+        @Inject(method = "finalizeSpawn", at = @At("RETURN"))
+        //? if >=1.20.5 {
+        /*private void onFinalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, SpawnGroupData spawnData, CallbackInfoReturnable<SpawnGroupData> cir) {
+        *///?} else {
+        private void onFinalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, SpawnGroupData spawnData, CompoundTag dataTag, CallbackInfoReturnable<SpawnGroupData> cir) {
+        //?}
+            if ((Object) this instanceof Bee bee) bee.setNoGravity(true);
         }
     }
 

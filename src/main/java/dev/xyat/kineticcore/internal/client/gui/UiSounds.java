@@ -11,6 +11,6 @@ public final class UiSounds {
 
     /** 原版按钮点击音效 / Vanilla button click sound. */
     public static void buttonClick() {
-        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.get(), 1.0F));
+        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), 1.0F));
     }
 }

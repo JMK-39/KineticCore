@@ -21,6 +21,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import net.minecraft.world.entity.MobCategory;
+//? if <1.20.5
 import net.minecraft.world.entity.MobType;
 import net.minecraft.world.entity.NeutralMob;
 import org.jetbrains.annotations.NotNull;
@@ -246,7 +247,11 @@ public final class EntitySelectorScreen extends KineticScreen {
                 try {
                     Entity preview = type.create(level);
                     neutral = preview instanceof NeutralMob;
+                    //? if >=1.20.5 {
+                    /*undead = preview instanceof LivingEntity living && living.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD);
+                    *///?} else {
                     undead = preview instanceof LivingEntity living && living.getMobType() == MobType.UNDEAD;
+                    //?}
                 } catch (Throwable ignored) {
                     // An incompatible mod preview cannot break the shared selector.
                 }

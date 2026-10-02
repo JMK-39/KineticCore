@@ -20,6 +20,7 @@ import net.minecraft.client.gui.screens.worldselection.WorldSelectionList;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.storage.PrimaryLevelData;
+//? if forge
 import net.minecraftforge.client.ForgeHooksClient;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -59,6 +60,7 @@ public class ClientInterfaceMixins {
     }
 
     // 2. 移除多人游戏列表的 Forge 详情
+    //? if forge {
     @Mixin(value = ForgeHooksClient.class, remap = false)
     public static class ForgePingTweaks {
         /** @author xyat @reason 清理界面 */
@@ -67,6 +69,7 @@ public class ClientInterfaceMixins {
             // 不进行任何渲染
         }
     }
+    //?}
 
     // 3. 将“未经验证服务器”弹窗改为聊天提示
     @Mixin(ToastComponent.class)
@@ -74,7 +77,11 @@ public class ClientInterfaceMixins {
         @Inject(method = "addToast", at = @At("HEAD"), cancellable = true)
         private void interceptUnsecureToast(Toast toast, CallbackInfo ci) {
             if (toast instanceof SystemToast systemToast) {
+                //? if >=1.20.3 {
+                /*if (systemToast.getToken() == SystemToast.SystemToastId.UNSECURE_SERVER_WARNING) {
+                *///?} else {
                 if (systemToast.getToken() == SystemToast.SystemToastIds.UNSECURE_SERVER_WARNING) {
+                //?}
                     ci.cancel();
                     MinecraftChat.addMessage(KineticI18n.translatable("msg.kineticcore.validation.warning"));
                 }

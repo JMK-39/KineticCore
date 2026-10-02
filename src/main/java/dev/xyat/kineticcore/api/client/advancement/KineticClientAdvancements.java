@@ -1,7 +1,11 @@
 package dev.xyat.kineticcore.api.client.advancement;
 
 import dev.xyat.kineticcore.internal.client.advancement.KineticClientAdvancementRuntime;
+//? if >=1.20.2 {
+/*import net.minecraft.advancements.AdvancementHolder;
+*///?} else {
 import net.minecraft.advancements.Advancement;
+//?}
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
@@ -21,6 +25,16 @@ public final class KineticClientAdvancements {
         return KineticClientAdvancementRuntime.completedIds();
     }
 
+    //? if >=1.20.2 {
+    /*/^*
+     * Returns every advancement the server has sent, with its id.
+     *
+     * @return a new list; empty while not connected
+     ^/
+    public static List<AdvancementHolder> all() {
+        return KineticClientAdvancementRuntime.all();
+    }
+    *///?} else {
     /**
      * Returns every advancement the server has sent.
      *
@@ -29,4 +43,5 @@ public final class KineticClientAdvancements {
     public static List<Advancement> all() {
         return KineticClientAdvancementRuntime.all();
     }
+    //?}
 }

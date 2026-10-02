@@ -99,7 +99,11 @@ public final class ItemSearchIndex {
 
         private static String uniqueKey(ItemStack stack, String id) {
             if (stack == null || stack.isEmpty()) return "";
+            //? if >=1.20.5 {
+            /*if (!stack.getComponentsPatch().isEmpty()) return id + "|" + stack.getComponentsPatch();
+            *///?} else {
             if (stack.hasTag() && stack.getTag() != null) return id + "|" + stack.getTag();
+            //?}
             return id;
         }
 

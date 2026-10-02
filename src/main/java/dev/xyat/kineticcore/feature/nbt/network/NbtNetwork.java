@@ -24,6 +24,11 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+//? if >=1.20.5 {
+/*import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.world.InteractionHand;
+*///?}
 
 import java.util.Map;
 import java.util.UUID;
@@ -202,12 +207,23 @@ public final class NbtNetwork {
             return;
         }
 
+        //? if >=1.20.5 {
+        /*// Since 1.20.5 an item has data components instead of NBT; the editor shows them as one compound,
+        // the "components" part of /data get entity @s SelectedItem.
+        String text = DataComponentPatch.CODEC
+                .encodeStart(level.registryAccess().createSerializationContext(NbtOps.INSTANCE), item.getComponentsPatch())
+                .result()
+                .map(Object::toString)
+                .orElse("{}");
+        openEditor(player, new EditorSession(TARGET_HAND, level.dimension(), item), text);
+        *///?} else {
         CompoundTag tag = item.getTag();
         openEditor(
                 player,
                 new EditorSession(TARGET_HAND, level.dimension(), item),
                 tag == null ? "{}" : tag.toString()
         );
+        //?}
     }
 
     private static void openEntityEditor(ServerPlayer player, ServerLevel level, String targetId) {
@@ -237,7 +253,11 @@ public final class NbtNetwork {
         openEditor(
                 player,
                 new EditorSession(TARGET_BLOCK_ENTITY, level.dimension(), target),
+                //? if >=1.20.5 {
+                /*target.saveWithId(level.registryAccess()).toString()
+                *///?} else {
                 target.saveWithId().toString()
+                //?}
         );
     }
 
@@ -310,7 +330,15 @@ public final class NbtNetwork {
             return;
         }
 
+        //? if >=1.20.5 {
+        /*// An item's components cannot be replaced in place, so the edited item replaces the held one.
+        DataComponentPatch components = DataComponentPatch.CODEC
+                .parse(player.serverLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE), tag)
+                .getOrThrow();
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(item.getItemHolder(), item.getCount(), components));
+        *///?} else {
         item.setTag(tag.isEmpty() ? null : tag);
+        //?}
         sendNotify(player, HAND_SUCCESS_KEY);
     }
 
@@ -360,12 +388,24 @@ public final class NbtNetwork {
         tag.putInt("x", pos.getX());
         tag.putInt("y", pos.getY());
         tag.putInt("z", pos.getZ());
+        //? if >=1.20.5 {
+        /*CompoundTag previousTag = target.saveWithId(level.registryAccess());
+        *///?} else {
         CompoundTag previousTag = target.saveWithId();
+        //?}
         try {
+            //? if >=1.20.5 {
+            /*target.loadWithComponents(tag, level.registryAccess());
+            *///?} else {
             target.load(tag);
+            //?}
         } catch (RuntimeException failure) {
             try {
+                //? if >=1.20.5 {
+                /*target.loadWithComponents(previousTag, level.registryAccess());
+                *///?} else {
                 target.load(previousTag);
+                //?}
             } catch (RuntimeException rollbackFailure) {
                 if (rollbackFailure != failure) failure.addSuppressed(rollbackFailure);
             }

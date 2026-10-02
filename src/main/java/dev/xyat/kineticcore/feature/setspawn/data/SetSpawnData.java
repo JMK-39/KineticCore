@@ -32,7 +32,11 @@ public class SetSpawnData extends SavedData {
     private int originalSpawnZ = 0;
 
     public static SetSpawnData get(ServerLevel level) {
+        //? if >=1.20.5 {
+        /*return level.getDataStorage().computeIfAbsent(new SavedData.Factory<>(SetSpawnData::new, (tag, registries) -> SetSpawnData.load(tag)), DATA_NAME);
+        *///?} else {
         return level.getDataStorage().computeIfAbsent(SetSpawnData::load, SetSpawnData::new, DATA_NAME);
+        //?}
     }
 
     public static SetSpawnData load(CompoundTag tag) {
@@ -58,7 +62,11 @@ public class SetSpawnData extends SavedData {
     }
 
     @Override
+    //? if >=1.20.5 {
+    /*public @NotNull CompoundTag save(@Nonnull CompoundTag tag, @Nonnull net.minecraft.core.HolderLookup.Provider registries) {
+    *///?} else {
     public @NotNull CompoundTag save(@Nonnull CompoundTag tag) {
+    //?}
         tag.putInt("dataVersion", dataVersion);
         tag.putBoolean("initialized", initialized);
         tag.putBoolean("spawnCalculated", spawnCalculated);

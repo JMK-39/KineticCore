@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.scroll;
 
+import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
@@ -46,9 +47,9 @@ public final class SmoothSelectionListLifecycleRegression {
         ListUnderTest list = new ListUnderTest();
         list.snapScrollAmount(30D);
         check(list.targetScrollAmount() == 30D, "valid initial scroll");
-        check(!list.mouseScrolled(30D, 30D, Double.NaN), "NaN wheel rejected");
+        check(!GuiInputCompat.mouseScrolled(list, 30D, 30D, Double.NaN), "NaN wheel rejected");
         check(list.targetScrollAmount() == 30D, "NaN wheel preserves target");
-        check(!list.mouseScrolled(30D, 30D, Double.POSITIVE_INFINITY), "infinite wheel rejected");
+        check(!GuiInputCompat.mouseScrolled(list, 30D, 30D, Double.POSITIVE_INFINITY), "infinite wheel rejected");
         check(list.targetScrollAmount() == 30D, "infinite wheel preserves target");
         list.setScrollAmount(Double.NaN);
         check(list.targetScrollAmount() == 30D, "invalid programmatic amount ignored");

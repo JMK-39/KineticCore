@@ -29,13 +29,13 @@ public final class KineticResourceIds {
     }
 
     /**
-     * Parses one resource identifier using the same strict constructor semantics as Minecraft 1.20.1.
+     * Parses one complete resource identifier strictly, throwing for invalid syntax.
      *
      * @param value complete resource identifier text
      * @return parsed resource identifier
      */
     public static ResourceLocation parse(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 
     /**

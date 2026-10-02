@@ -593,6 +593,18 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
                                 renderCanvasFrame(canvas, virtualMouseX, virtualMouseY, mouseX, mouseY, canvasTick)));
     }
 
+    //? if >=1.20.2 {
+    /*// Screen.render draws the background itself since 1.20.2; KineticScreenRuntime already drew it this frame.
+    @Override
+    public void renderBackground(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    }
+
+    @Override
+    public void renderVanillaBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(graphics, mouseX, mouseY, partialTick);
+    }
+    *///?}
+
     private void renderCanvasFrame(GuiGraphics canvasGraphics, int virtualMouseX, int virtualMouseY,
                                    int screenMouseX, int screenMouseY, float partialTick) {
         updateScrollableWidgetPositions();
@@ -658,15 +670,24 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
     }
 
     /** {@inheritDoc} */
+    //? if >=1.20.2 {
+    /*@Override
+    public final boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
+    *///?} else {
     @Override
     public final boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    //?}
         return runtime.mouseScrolled(mouseX, mouseY, delta, this::canvasMouseScrolled);
     }
 
     /** Handles mouse scrolling in virtual canvas coordinates. */
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
         if (GuiSessionRuntime.routeSelectionListWheel(children(), mouseX, mouseY, delta)) return true;
+        //? if >=1.20.2 {
+        /*return super.mouseScrolled(mouseX, mouseY, 0.0D, delta);
+        *///?} else {
         return super.mouseScrolled(mouseX, mouseY, delta);
+        //?}
     }
 
     /** {@inheritDoc} */

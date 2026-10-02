@@ -7,10 +7,10 @@ tasks.register('checkKineticReobfApi', Exec) {
     group = 'verification'
     description = 'Checks that dev.xyat.kineticcore.api method names survive reobf in the final JAR.'
     dependsOn 'reobfJar'
-    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
-    def checker = file('gradle/KineticReobfCheck.java')
+    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(kineticJavaVersion) }
+    def checker = rootProject.file('gradle/KineticReobfCheck.java')
     def devClasses = sourceSets.main.java.classesDirectory
-    def finalJar = tasks.named('jar').flatMap { it.archiveFile }
+    def finalJar = tasks.named('reobfJar', Jar).flatMap { it.archiveFile }
     inputs.file(checker)
     doFirst {
         commandLine launcher.get().executablePath.asFile.absolutePath, checker.absolutePath, 'core',

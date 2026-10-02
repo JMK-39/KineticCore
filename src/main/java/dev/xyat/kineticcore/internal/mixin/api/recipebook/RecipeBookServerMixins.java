@@ -69,7 +69,11 @@ public class RecipeBookServerMixins {
         }
 
         @Inject(method = "awardRecipesByKey", at = @At("HEAD"), cancellable = true)
+        //? if >=1.20.2 {
+        /*private void kineticcore$onAwardKey(List<ResourceLocation> resourceLocations, CallbackInfo ci) {
+        *///?} else {
         private void kineticcore$onAwardKey(ResourceLocation[] resourceLocations, CallbackInfo ci) {
+        //?}
             if (KineticCommonHookRuntime.recipeBookRemovalEnabled()) ci.cancel();
         }
     }

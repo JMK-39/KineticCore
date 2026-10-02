@@ -4,6 +4,7 @@ import dev.xyat.kineticcore.internal.runtime.KineticForgeListenerRegistrations;
 import dev.xyat.kineticcore.internal.runtime.KineticCallbackQueries;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
+import dev.xyat.kineticcore.internal.runtime.KineticModContextRuntime;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -13,8 +14,11 @@ import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.settings.KeyConflictContext;
 import net.minecraftforge.client.settings.KeyModifier;
 import net.minecraftforge.common.MinecraftForge;
+//? if forge {
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+//?} else {
+/*import net.neoforged.neoforge.client.event.ClientTickEvent;
+*///?}
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -37,7 +41,7 @@ public final class KineticKeyBindingRuntime {
     public static synchronized void initialize() {
         if (initialized) return;
         var attempt = LISTENER_REGISTRATIONS.begin();
-        attempt.install(() -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticKeyBindingRuntime::onRegisterKeyMappings));
+        attempt.install(() -> KineticModContextRuntime.modEventBus().addListener(KineticKeyBindingRuntime::onRegisterKeyMappings));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticKeyBindingRuntime::onClientTick));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticKeyBindingRuntime::onScreenKeyPressed));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticKeyBindingRuntime::onScreenMousePressed));
@@ -131,8 +135,12 @@ public final class KineticKeyBindingRuntime {
         registrationFinished = true;
     }
 
+    //? if forge {
     private static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+    //?} else {
+    /*private static void onClientTick(ClientTickEvent.Post event) {
+    *///?}
         if (Minecraft.getInstance().screen != null) return;
 
         for (Entry entry : snapshot()) {

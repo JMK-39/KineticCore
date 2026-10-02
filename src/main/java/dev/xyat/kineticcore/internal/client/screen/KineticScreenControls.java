@@ -147,6 +147,7 @@ public final class KineticScreenControls {
     }
 
     public void tickManagedControls() {
+        //? if <1.20.2 {
         for (AbstractWidget widget : List.copyOf(registeredRenderables)) {
             if (widget instanceof EditBox editBox) {
                 editBox.tick();
@@ -154,6 +155,8 @@ public final class KineticScreenControls {
                 multiLineEditBox.tick();
             }
         }
+        //?}
+        // Since 1.20.2 text fields blink their cursor by time and have no tick.
     }
 
 

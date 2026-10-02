@@ -29,9 +29,14 @@ public final class FlightAttributeTooltipHandler {
     }
 
     private static boolean hasModifier(ItemStack stack, Attribute attribute) {
+        //? if >=1.20.5 {
+        /*// Item attribute modifiers are one data component covering every slot since 1.20.5.
+        return stack.getAttributeModifiers().modifiers().stream().anyMatch(entry -> entry.attribute().value() == attribute);
+        *///?} else {
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             if (stack.getAttributeModifiers(slot).containsKey(attribute)) return true;
         }
         return false;
+        //?}
     }
 }

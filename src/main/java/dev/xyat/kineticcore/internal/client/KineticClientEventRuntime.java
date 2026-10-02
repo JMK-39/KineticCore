@@ -5,6 +5,7 @@ import dev.xyat.kineticcore.internal.runtime.KineticCallbackBatch;
 import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
 import dev.xyat.kineticcore.api.client.effect.KineticEffectDisplay;
 import dev.xyat.kineticcore.api.event.KineticEventSubscription;
+import dev.xyat.kineticcore.internal.runtime.KineticModContextRuntime;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
 import net.minecraftforge.client.event.InputEvent;
@@ -12,10 +13,8 @@ import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.client.event.RenderBlockScreenEffectEvent;
 import net.minecraftforge.client.event.RenderGuiEvent;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.event.ViewportEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
@@ -24,10 +23,18 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.function.Consumer;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+//? if forge {
+import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.minecraftforge.event.TickEvent;
+//?} else {
+/*import net.minecraft.client.DeltaTracker;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+*///?}
 
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -67,7 +74,12 @@ public final class KineticClientEventRuntime {
         if (initialized) return;
         var attempt = LISTENER_REGISTRATIONS.begin();
 
+        //? if forge {
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onClientTick));
+        //?} else {
+        /*attempt.install(() -> MinecraftForge.EVENT_BUS.addListener((ClientTickEvent.Pre event) -> fire(TICK_START)));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> fire(TICK_END)));
+        *///?}
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogin));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogout));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onItemTooltip));
@@ -89,7 +101,7 @@ public final class KineticClientEventRuntime {
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onCameraAngles));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onBlockScreenEffect));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onInventoryEffectLayout));
-        attempt.install(() -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticClientEventRuntime::onRegisterClientReloadListeners));
+        attempt.install(() -> KineticModContextRuntime.modEventBus().addListener(KineticClientEventRuntime::onRegisterClientReloadListeners));
         attempt.finish();
         initialized = true;
     }
@@ -201,9 +213,11 @@ public final class KineticClientEventRuntime {
         return add(INVENTORY_EFFECT_LAYOUT, listener);
     }
 
+    //? if forge {
     private static void onClientTick(TickEvent.ClientTickEvent event) {
         fire(event.phase == TickEvent.Phase.START ? TICK_START : TICK_END);
     }
+    //?}
 
     private static void onLogin(ClientPlayerNetworkEvent.LoggingIn event) {
         fire(LOGIN);
@@ -286,19 +300,43 @@ public final class KineticClientEventRuntime {
     }
 
     private static void onScreenMouseScrolledBefore(ScreenEvent.MouseScrolled.Pre event) {
-        if (ScreenOverlayControls.mouseScrolled(event.getScreen(), event.getMouseX(), event.getMouseY(), event.getScrollDelta())) {
+        //? if forge {
+        double scrollDelta = event.getScrollDelta();
+        //?} else {
+        /*double scrollDelta = event.getScrollDeltaY();
+        *///?}
+        if (ScreenOverlayControls.mouseScrolled(event.getScreen(), event.getMouseX(), event.getMouseY(), scrollDelta)) {
             event.setCanceled(true);
         }
     }
 
+    //? if forge {
     private static void onHudOverlayRender(RenderGuiOverlayEvent.Post event) {
-        if (event.getOverlay() == VanillaGuiOverlay.HOTBAR.type()) {
-            KineticCallbackBatch.runAll(HUD_HOTBAR, listener -> listener.render(dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), event.getPartialTick()));
+        boolean hotbar = event.getOverlay() == VanillaGuiOverlay.HOTBAR.type();
+        boolean chat = event.getOverlay() == VanillaGuiOverlay.CHAT_PANEL.type();
+    //?} else {
+    /*private static void onHudOverlayRender(RenderGuiLayerEvent.Post event) {
+        boolean hotbar = VanillaGuiLayers.HOTBAR.equals(event.getName());
+        boolean chat = VanillaGuiLayers.CHAT.equals(event.getName());
+    *///?}
+        if (hotbar) {
+            KineticCallbackBatch.runAll(HUD_HOTBAR, listener -> listener.render(dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), partialTick(event.getPartialTick())));
         }
-        if (event.getOverlay() == VanillaGuiOverlay.CHAT_PANEL.type()) {
-            KineticCallbackBatch.runAll(HUD_AFTER_CHAT, listener -> listener.render(dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), event.getPartialTick()));
+        if (chat) {
+            KineticCallbackBatch.runAll(HUD_AFTER_CHAT, listener -> listener.render(dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), partialTick(event.getPartialTick())));
         }
     }
+
+    //? if forge {
+    private static float partialTick(float partialTick) {
+        return partialTick;
+    }
+    //?} else {
+    /*// Render events carry a DeltaTracker since 1.21; this is the partial tick they used to pass.
+    private static float partialTick(DeltaTracker deltaTracker) {
+        return deltaTracker.getGameTimeDeltaPartialTick(false);
+    }
+    *///?}
 
     private static void onMouseButtonBefore(InputEvent.MouseButton.Pre event) {
         if (MOUSE_BUTTON_BEFORE.isEmpty()) return;
@@ -369,7 +407,7 @@ public final class KineticClientEventRuntime {
     }
 
     private static void onHudRenderEnd(RenderGuiEvent.Post event) {
-        KineticCallbackBatch.runAll(HUD_END, listener -> listener.render(dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), event.getPartialTick()));
+        KineticCallbackBatch.runAll(HUD_END, listener -> listener.render(dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), partialTick(event.getPartialTick())));
     }
 
     private static void onBlockScreenEffect(RenderBlockScreenEffectEvent event) {
@@ -722,7 +760,7 @@ public final class KineticClientEventRuntime {
 
         @Override
         public float partialTick() {
-            return event.getPartialTick();
+            return KineticClientEventRuntime.partialTick(event.getPartialTick());
         }
     }
 

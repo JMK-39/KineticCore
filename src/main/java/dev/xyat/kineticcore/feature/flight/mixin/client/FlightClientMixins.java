@@ -293,7 +293,11 @@ public class FlightClientMixins {
         public abstract Entity kineticcore$getEntity();
 
         @Inject(method = "getMaxZoom", at = @At("HEAD"), cancellable = true)
+        //? if >=1.21 {
+        /*private void kineticcore$allowCameraThroughBlocks(float startingDistance, CallbackInfoReturnable<Float> cir) {
+        *///?} else {
         private void kineticcore$allowCameraThroughBlocks(double startingDistance, CallbackInfoReturnable<Double> cir) {
+        //?}
             if (this.kineticcore$getEntity() instanceof LocalPlayer && KineticFlightClient.noclipEnabled()) {
                 cir.setReturnValue(startingDistance);
             }
@@ -312,6 +316,8 @@ public class FlightClientMixins {
                 float ageInTicks,
                 float bodyYaw,
                 float partialTick,
+                //? if >=1.20.5
+                /*float scale,*/
                 CallbackInfo ci
         ) {
             float roll = KineticFlightClient.superFlightPlayerRoll(player, partialTick);

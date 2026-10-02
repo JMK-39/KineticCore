@@ -1,10 +1,10 @@
 package dev.xyat.kineticcore.internal.client.registry;
 
+import dev.xyat.kineticcore.internal.runtime.KineticModContextRuntime;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +32,7 @@ public final class KineticClientRendererRuntime {
 
     private static void ensureListener() {
         if (listenerRegistered) return;
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticClientRendererRuntime::onRegisterRenderers);
+        KineticModContextRuntime.modEventBus().addListener(KineticClientRendererRuntime::onRegisterRenderers);
         listenerRegistered = true;
     }
 

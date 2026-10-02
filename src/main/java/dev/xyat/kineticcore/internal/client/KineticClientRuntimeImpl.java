@@ -14,6 +14,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.Component;
@@ -168,7 +169,11 @@ public final class KineticClientRuntimeImpl {
     }
 
     public static boolean debugScreenVisible() {
+        //? if >=1.20.2 {
+        /*return Minecraft.getInstance().getDebugOverlay().showDebugScreen();
+        *///?} else {
         return Minecraft.getInstance().options.renderDebug;
+        //?}
     }
 
     public static boolean attackKeyDown() {
@@ -325,6 +330,12 @@ public final class KineticClientRuntimeImpl {
         return level.registryAccess().registry(registryKey)
                 .map(registry -> Set.copyOf(registry.keySet()))
                 .orElseGet(Set::of);
+    }
+
+    /** The registries of the world the client is in, or {@code null} outside a world. */
+    public static RegistryAccess registryAccess() {
+        ClientLevel level = Minecraft.getInstance().level;
+        return level == null ? null : level.registryAccess();
     }
 
     public static void openScreen(Screen screen) {

@@ -503,7 +503,11 @@ public class ItemSelectorScreen extends KineticScreen {
             case "redstone" -> isRedstoneItem(item, path);
             case "tools" -> isToolItem(item, path);
             case "combat" -> isCombatItem(item, path);
+            //? if >=1.20.5 {
+            /*case "food" -> stack.has(net.minecraft.core.component.DataComponents.FOOD) || item instanceof PotionItem;
+            *///?} else {
             case "food" -> stack.isEdible() || item instanceof PotionItem;
+            //?}
             case "ingredients" -> isIngredientItem(cachedItem, path);
             case "spawn_eggs" -> item instanceof SpawnEggItem;
             default -> false;

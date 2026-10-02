@@ -66,7 +66,11 @@ public class MiniEffectsMixins {
 
             for (MobEffectInstance effectInstance : player.getActiveEffects()) {
                 ++effects;
+                //? if >=1.20.5 {
+                /*if (!effectInstance.getEffect().value().isBeneficial()) ++bad;
+                *///?} else {
                 if (!effectInstance.getEffect().isBeneficial()) ++bad;
+                //?}
             }
 
             this.kineticrefined$effects = effects;
@@ -109,8 +113,15 @@ public class MiniEffectsMixins {
                         }
                     } else {
                         // 【修改点】调用刚才拆分出去的新独立接口
+                        //? if >=1.20.5 {
+                        /*// The synced effect colour is gone since 1.20.5; mix it from the active effects as vanilla does.
+                        int color = net.minecraft.world.item.alchemy.PotionContents.getColor(player.getActiveEffects());
+                        kineticrefined$iconItem.set(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
+                                new net.minecraft.world.item.alchemy.PotionContents(java.util.Optional.empty(), java.util.Optional.of(color), java.util.List.of()));
+                        *///?} else {
                         int color = player.getEntityData().get(LivingEntityAccessor.getParameter());
                         kineticrefined$iconItem.getOrCreateTag().putInt("CustomPotionColor", color);
+                        //?}
                         guiGraphics.renderFakeItem(kineticrefined$iconItem, x + 3, y + 4);
                     }
 
@@ -194,7 +205,11 @@ public class MiniEffectsMixins {
 
         @Unique
         private Component minieffects$getEffectName(MobEffectInstance effect) {
+            //? if >=1.20.5 {
+            /*net.minecraft.network.chat.MutableComponent component = effect.getEffect().value().getDisplayName().copy();
+            *///?} else {
             net.minecraft.network.chat.MutableComponent component = effect.getEffect().getDisplayName().copy();
+            //?}
             if (effect.getAmplifier() >= 1 && effect.getAmplifier() <= 9) {
                 component.append(" ").append(KineticI18n.translatable("enchantment.level." + (effect.getAmplifier() + 1)));
             }

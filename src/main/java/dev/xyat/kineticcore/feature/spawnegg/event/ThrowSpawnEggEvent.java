@@ -12,6 +12,10 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SpawnEggItem;
+//? if >=1.20.5 {
+/*import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
+*///?}
 
 public final class ThrowSpawnEggEvent {
     private static final String MODE_KEY = "DisableEggThrow";
@@ -49,7 +53,11 @@ public final class ThrowSpawnEggEvent {
 
         ItemStack projectileStack = stack.copy();
         if (projectileStack.getItem() instanceof SpawnEggItem spawnEgg
+                //? if >=1.20.5 {
+                /*&& spawnEgg.getType(projectileStack) == EntityType.WARDEN) {
+                *///?} else {
                 && spawnEgg.getType(projectileStack.getTag()) == EntityType.WARDEN) {
+                //?}
             addWardenDigCooldown(projectileStack);
         }
 
@@ -67,7 +75,20 @@ public final class ThrowSpawnEggEvent {
     }
 
     private static void addWardenDigCooldown(ItemStack stack) {
+        //? if >=1.20.5 {
+        /*// The egg's entity data is the entity_data component since 1.20.5, which must name the entity.
+        CustomData.update(DataComponents.ENTITY_DATA, stack, entityTag -> {
+            if (!entityTag.contains("id", Tag.TAG_STRING)) entityTag.putString("id", "minecraft:warden");
+            putDigCooldown(entityTag);
+        });
+        *///?} else {
         CompoundTag entityTag = stack.getOrCreateTagElement("EntityTag");
+        putDigCooldown(entityTag);
+        stack.addTagElement("EntityTag", entityTag);
+        //?}
+    }
+
+    private static void putDigCooldown(CompoundTag entityTag) {
         CompoundTag brain = entityTag.contains("Brain", Tag.TAG_COMPOUND)
                 ? entityTag.getCompound("Brain")
                 : new CompoundTag();
@@ -80,6 +101,5 @@ public final class ThrowSpawnEggEvent {
         memories.put("minecraft:dig_cooldown", cooldown);
         brain.put("memories", memories);
         entityTag.put("Brain", brain);
-        stack.addTagElement("EntityTag", entityTag);
     }
 }

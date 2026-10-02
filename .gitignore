@@ -22,6 +22,7 @@ build
 # other
 eclipse
 run
+run-*
 # 临时压缩包（截图里有 kineticCore.zip 等，不要传上去）
 *.zip
 *.tar.gz

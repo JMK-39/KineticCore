@@ -7,7 +7,8 @@
   "mixins": [
     "FlightServerMixins$PlayerAbilityTweaks",
     "FlightServerMixins$ServerPlayerTweaks",
-    "FlightServerMixins$NetworkTweaks"
+    "FlightServerMixins$NetworkTweaks",
+    "FlightServerMixins$CommonNetworkTweaks"
   ],
   "client": [
     "client.FlightClientMixins$LocalPlayerTweaks",

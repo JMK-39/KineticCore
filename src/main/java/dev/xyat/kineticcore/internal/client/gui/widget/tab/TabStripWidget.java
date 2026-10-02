@@ -264,8 +264,13 @@ public final class TabStripWidget extends AbstractWidget implements KineticTabSt
         return scroll.release(button);
     }
 
+    //? if >=1.20.2 {
+    /*@Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
+    *///?} else {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    //?}
         if (!isMouseOver(mouseX, mouseY) || delta == 0D || !scroll.canScroll()) return false;
         scroll.scroll(delta, 28D);
         refreshLayout();

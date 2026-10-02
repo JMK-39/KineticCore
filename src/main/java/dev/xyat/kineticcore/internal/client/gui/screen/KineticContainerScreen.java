@@ -178,6 +178,19 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
         runtime.render(graphics, mouseX, mouseY, partialTick, this::renderContainerFrame);
     }
 
+    //? if >=1.20.2 {
+    /*// Screen.render draws the background itself since 1.20.2; KineticScreenRuntime already drew it this frame.
+    @Override
+    public void renderBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBg(graphics, partialTick, mouseX, mouseY);
+    }
+
+    @Override
+    public void renderVanillaBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderTransparentBackground(graphics);
+    }
+    *///?}
+
     private void renderContainerFrame(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         runtime.renderInCanvas(graphics, mouseX, mouseY, partialTick, (uiGraphics, virtualMouseX, virtualMouseY, tick) -> {
             super.render(uiGraphics, virtualMouseX, virtualMouseY, tick);
@@ -316,12 +329,21 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     }
 
     /** {@inheritDoc} */
+    //? if >=1.20.2 {
+    /*@Override
+    public final boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
+    *///?} else {
     @Override
     public final boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    //?}
         return runtime.mouseScrolled(mouseX, mouseY, delta, (x, y, wheel) ->
                 containerMouseScrolled(x, y, wheel)
                         || GuiSessionRuntime.routeSelectionListWheel(children(), x, y, wheel)
+                        //? if >=1.20.2 {
+                        /*|| super.mouseScrolled(x, y, scrollX, wheel)
+                        *///?} else {
                         || super.mouseScrolled(x, y, wheel)
+                        //?}
                         || afterMouseScrolled(x, y, wheel));
     }
 

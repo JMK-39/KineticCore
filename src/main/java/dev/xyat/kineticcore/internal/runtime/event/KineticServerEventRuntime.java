@@ -8,13 +8,14 @@ import dev.xyat.kineticcore.api.event.KineticEventSubscription;
 import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.event.OnDatapackSyncEvent;
 import net.minecraftforge.event.ServerChatEvent;
-import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
@@ -22,6 +23,12 @@ import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
+//? if forge {
+import net.minecraftforge.event.TickEvent;
+//?} else {
+/*import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+*///?}
 
 import java.util.EnumMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -58,8 +65,17 @@ public final class KineticServerEventRuntime {
 
         for (KineticEventPriority priority : KineticEventPriority.values()) {
             EventPriority forgePriority = toForge(priority);
-            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (TickEvent.ServerTickEvent event) -> onServerTick(priority, event)));
-            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (TickEvent.PlayerTickEvent event) -> onPlayerTick(priority, event)));
+            //? if forge {
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (TickEvent.ServerTickEvent event) ->
+                    onServerTick(priority, event.getServer(), event.phase == TickEvent.Phase.START)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (TickEvent.PlayerTickEvent event) ->
+                    onPlayerTick(priority, event.player, event.phase == TickEvent.Phase.START)));
+            //?} else {
+            /*attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerTickEvent.Pre event) -> onServerTick(priority, event.getServer(), true)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerTickEvent.Post event) -> onServerTick(priority, event.getServer(), false)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerTickEvent.Pre event) -> onPlayerTick(priority, event.getEntity(), true)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerTickEvent.Post event) -> onPlayerTick(priority, event.getEntity(), false)));
+            *///?}
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerAboutToStartEvent event) -> onServerAboutToStart(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerStartingEvent event) -> onServerStarting(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerStartedEvent event) -> onServerStarted(priority, event)));
@@ -159,16 +175,16 @@ public final class KineticServerEventRuntime {
         return add(CHAT, priority, listener);
     }
 
-    private static void onServerTick(KineticEventPriority priority, TickEvent.ServerTickEvent event) {
+    private static void onServerTick(KineticEventPriority priority, MinecraftServer server, boolean start) {
         CopyOnWriteArrayList<KineticServerEvents.ServerHandler> listeners =
-                event.phase == TickEvent.Phase.START ? TICK_START.get(priority) : TICK_END.get(priority);
-        KineticCallbackBatch.runAll(listeners, listener -> listener.handle(event.getServer()));
+                start ? TICK_START.get(priority) : TICK_END.get(priority);
+        KineticCallbackBatch.runAll(listeners, listener -> listener.handle(server));
     }
 
-    private static void onPlayerTick(KineticEventPriority priority, TickEvent.PlayerTickEvent event) {
-        if (!(event.player instanceof ServerPlayer player)) return;
+    private static void onPlayerTick(KineticEventPriority priority, Player tickingPlayer, boolean start) {
+        if (!(tickingPlayer instanceof ServerPlayer player)) return;
         CopyOnWriteArrayList<KineticServerEvents.PlayerHandler> listeners =
-                event.phase == TickEvent.Phase.START ? PLAYER_TICK_START.get(priority) : PLAYER_TICK_END.get(priority);
+                start ? PLAYER_TICK_START.get(priority) : PLAYER_TICK_END.get(priority);
         KineticCallbackBatch.runAll(listeners, listener -> listener.handle(player));
     }
 

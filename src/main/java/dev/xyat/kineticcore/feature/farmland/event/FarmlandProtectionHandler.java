@@ -21,7 +21,11 @@ public class FarmlandProtectionHandler {
         if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "farmland", true)) return;
         if (context.entity() instanceof Player player) {
             ItemStack boots = player.getInventory().getArmor(0);
+            //? if >=1.21 {
+            /*if (!boots.isEmpty() && boots.getEnchantments().keySet().stream().anyMatch(enchantment -> enchantment.is(Enchantments.FEATHER_FALLING))) {
+            *///?} else {
             if (!boots.isEmpty() && EnchantmentHelper.getTagEnchantmentLevel(Enchantments.FALL_PROTECTION, boots) > 0) {
+            //?}
                 context.cancel();
             }
         }

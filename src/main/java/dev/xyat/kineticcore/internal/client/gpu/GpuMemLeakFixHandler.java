@@ -6,7 +6,11 @@ import com.mojang.blaze3d.platform.TextureUtil;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import net.minecraft.core.Vec3i;
 import net.minecraftforge.common.MinecraftForge;
+//? if forge {
 import net.minecraftforge.event.TickEvent;
+//?} else {
+/*import net.neoforged.neoforge.client.event.ClientTickEvent;
+*///?}
 
 import java.lang.ref.Cleaner;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -23,11 +27,17 @@ public class GpuMemLeakFixHandler {
         registered = true;
     }
 
+    //? if forge {
     private static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
             processPendingDeletions();
         }
     }
+    //?} else {
+    /*private static void onClientTick(ClientTickEvent.Post event) {
+        processPendingDeletions();
+    }
+    *///?}
 
     public static class RenderTargetState implements Runnable {
         private int colorTextureId = -1;

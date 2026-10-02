@@ -89,6 +89,7 @@ public final class KineticScreenRuntime {
     }
 
     private final Screen screen;
+    private final KineticScreenHost hostScreen;
     private final Supplier<Font> font;
     private final Supplier<Minecraft> minecraft;
     private final KineticCanvasTransform canvas;
@@ -113,6 +114,7 @@ public final class KineticScreenRuntime {
     ) {
         KineticClientRuntimeImpl.initialize();
         this.screen = screen;
+        this.hostScreen = screen;
         this.canvas = canvas;
         this.font = font;
         this.minecraft = minecraft;
@@ -158,7 +160,11 @@ public final class KineticScreenRuntime {
         KineticScrollFrameRuntime.enter(scrollFrame);
         try {
             focus.synchronizeControlState();
+            //? if >=1.20.2 {
+            /*hostScreen.renderVanillaBackground(graphics, mouseX, mouseY, partialTick);
+            *///?} else {
             screen.renderBackground(graphics);
+            //?}
             overlays.beginFrame();
             previewWheelTargets.clear();
             content.render(graphics, mouseX, mouseY, partialTick);

@@ -132,7 +132,11 @@ public final class KTClientConfigAdapterRuntime {
         collectEntries(nativeSpec.getValues(), List.of(), nativeSpec, entries);
         return entries.stream()
                 .filter(entry -> includePath.test(String.join(".", entry.path())))
+                //? if neoforge {
+                /*.anyMatch(entry -> entry.valueSpec().restartType() != ForgeConfigSpec.RestartType.NONE)
+                *///?} else {
                 .anyMatch(entry -> entry.valueSpec().needsWorldRestart())
+                //?}
                 ? KTConfigPage.ApplyTiming.RESTART_GAME
                 : KTConfigPage.ApplyTiming.IMMEDIATE;
     }

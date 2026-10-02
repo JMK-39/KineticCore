@@ -10,6 +10,10 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.item.ItemStack;
+//? if >=1.20.5 {
+/*import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
+*///?}
 
 import java.util.HashSet;
 import java.util.List;
@@ -94,10 +98,7 @@ public class LetMeDespawnLogic {
         if (hasPickedUp) {
             for (EquipmentSlot slot : EquipmentSlot.values()) {
                 ItemStack stack = entity.getItemBySlot(slot);
-                if (!stack.isEmpty() && stack.hasTag()) {
-                    CompoundTag tag = stack.getTag();
-                    if (tag != null && tag.getBoolean("kt_picked_up")) return true;
-                }
+                if (isPickedUp(stack)) return true;
             }
         }
 
@@ -109,7 +110,7 @@ public class LetMeDespawnLogic {
         ItemStack itemStack = entity.getItemBySlot(slot);
         if (itemStack.isEmpty()) return;
 
-        itemStack.getOrCreateTag().putBoolean("kt_picked_up", true);
+        markPickedUp(itemStack);
         entity.addTag("kt_picked_up_entity");
     }
 
@@ -127,14 +128,31 @@ public class LetMeDespawnLogic {
         if (entity.getTags().contains("kt_picked_up_entity")) {
             for (EquipmentSlot slot : EquipmentSlot.values()) {
                 ItemStack stack = entity.getItemBySlot(slot);
-                if (!stack.isEmpty() && stack.hasTag()) {
-                    CompoundTag tag = stack.getTag();
-                    if (tag != null && tag.getBoolean("kt_picked_up")) {
-                        entity.spawnAtLocation(stack.copy());
-                        entity.setItemSlot(slot, ItemStack.EMPTY);
-                    }
+                if (isPickedUp(stack)) {
+                    entity.spawnAtLocation(stack.copy());
+                    entity.setItemSlot(slot, ItemStack.EMPTY);
                 }
             }
         }
+    }
+
+    // The marker lives in the item's own NBT; since 1.20.5 that is the custom_data component.
+    private static boolean isPickedUp(ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        //? if >=1.20.5 {
+        /*CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        return data != null && data.copyTag().getBoolean("kt_picked_up");
+        *///?} else {
+        CompoundTag tag = stack.getTag();
+        return tag != null && tag.getBoolean("kt_picked_up");
+        //?}
+    }
+
+    private static void markPickedUp(ItemStack stack) {
+        //? if >=1.20.5 {
+        /*CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putBoolean("kt_picked_up", true));
+        *///?} else {
+        stack.getOrCreateTag().putBoolean("kt_picked_up", true);
+        //?}
     }
 }

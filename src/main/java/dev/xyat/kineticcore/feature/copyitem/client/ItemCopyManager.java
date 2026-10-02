@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.copyitem.client;
 
+//? if >=1.20.5
+/*import dev.xyat.kineticcore.api.inventory.KineticItemText;*/
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
@@ -148,12 +150,22 @@ public final class ItemCopyManager {
         String itemId = itemKey.toString();
         String result;
 
+        //? if >=1.20.5 {
+        /*// KubeJS on 1.20.5+ takes the item and its components in command syntax: Item.of('id[components]').
+        String text = KineticItemText.format(stack);
+        if (!text.equals(itemId)) {
+            result = "Item.of('" + text.replace("\\", "\\\\").replace("'", "\\'") + "')";
+        } else {
+            result = "\"" + itemId + "\"";
+        }
+        *///?} else {
         if (stack.hasTag() && stack.getTag() != null) {
             String tag = stack.getTag().toString().replace("\\", "\\\\").replace("'", "\\'");
             result = "Item.of(\"" + itemId + "\", '" + tag + "')";
         } else {
             result = "\"" + itemId + "\"";
         }
+        //?}
 
         KineticClientRuntime.setClipboard(result);
         KineticOverlays.toast(null, KineticI18n.translatable("msg.kineticcore.copyitem.copy.item_id.success", Component.literal(result)), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);

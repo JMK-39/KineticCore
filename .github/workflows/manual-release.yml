@@ -18,16 +18,17 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      # Gradle runs on Java 21, and 1.20.1 and 1.21.1 both compile for Java 21.
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
-      - name: Set up Gradle 8.8
+      - name: Set up Gradle 9.8.0
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.8'
+          gradle-version: '9.8.0'
 
       - name: Validate version format
         env:
@@ -43,19 +44,30 @@ jobs:
           datetime.strptime(version, "%y.%m.%d")
           PY
 
-      - name: Build mod JAR
+      # Builds one JAR per enabled Minecraft version: kineticcore-<loader>-<minecraft>-<version>.jar.
+      - name: Build mod JARs
         env:
           VERSION: ${{ inputs.mod_version }}
         run: >-
-          gradle build --no-daemon --stacktrace
+          gradle buildAll --no-daemon --stacktrace
           -Puse_auto_version=false
           -Pmod_version="$VERSION"
           -Poutput_mods_dir=build/release
 
-      - name: Check release artifact
+      - name: Check release artifacts
         env:
           VERSION: ${{ inputs.mod_version }}
-        run: test -s "build/release/kineticcore-$VERSION.jar"
+        run: |
+          shopt -s nullglob
+          artifacts=(build/release/kineticcore-*-"$VERSION".jar)
+          if [ ${#artifacts[@]} -eq 0 ]; then
+            echo "No release JARs in build/release" >&2
+            exit 1
+          fi
+          for artifact in "${artifacts[@]}"; do
+            test -s "$artifact"
+            echo "$artifact"
+          done
 
       - name: Publish GitHub Release
         env:
@@ -63,11 +75,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="v$VERSION"
-          artifact="build/release/kineticcore-$VERSION.jar"
+          artifacts=(build/release/kineticcore-*-"$VERSION".jar)
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$tag" "$artifact" --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload "$tag" "${artifacts[@]}" --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$tag" "$artifact" \
+            gh release create "$tag" "${artifacts[@]}" \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
               --title "KineticCore $VERSION" \

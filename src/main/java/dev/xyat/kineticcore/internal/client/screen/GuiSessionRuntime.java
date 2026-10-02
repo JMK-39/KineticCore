@@ -4,6 +4,7 @@ import dev.xyat.kineticcore.internal.client.gui.screen.KineticContainerScreen;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticNativeScreen;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -47,7 +48,7 @@ public final class GuiSessionRuntime {
         for (int index = children.size() - 1; index >= 0; index--) {
             GuiEventListener child = children.get(index);
             if (child != null && child.isMouseOver(mouseX, mouseY)) {
-                child.mouseScrolled(mouseX, mouseY, delta);
+                GuiInputCompat.mouseScrolled(child, mouseX, mouseY, delta);
                 return true;
             }
         }

@@ -67,7 +67,7 @@
   "cfg.kineticcore.logcleaner.enable": "退出时清理旧日志",
   "cfg.kineticcore.logcleaner.enable.tooltip": "游戏退出时在后台清理旧日志和崩溃报告。",
   "cfg.kineticcore.logcleaner.errors_only": "仅保留错误日志",
-  "cfg.kineticcore.logcleaner.errors_only.tooltip": "开启后只输出 ERROR/FATAL 日志。专用服务器默认关闭，避免控制台看不到启动完成、玩家进出和指令输出。",
+  "cfg.kineticcore.logcleaner.errors_only.tooltip": "开启后只输出 ERROR/FATAL 日志，其余日志都不输出。默认关闭。",
   "cfg.kineticcore.logcleaner.filtered_keywords": "日志过滤关键词",
   "cfg.kineticcore.logcleaner.filtered_keywords.tooltip": "同时屏蔽控制台和日志文件中包含关键词的行；多个关键词请使用英文逗号（,）分隔。",
   "cfg.kineticcore.logcleaner.max_crash_reports": "保留崩溃报告数量",

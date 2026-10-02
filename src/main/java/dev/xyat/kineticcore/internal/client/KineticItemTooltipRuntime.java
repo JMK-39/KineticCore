@@ -6,6 +6,7 @@ import dev.xyat.kineticcore.internal.runtime.KineticForgeListenerRegistrations;
 import dev.xyat.kineticcore.api.client.tooltip.KineticItemTooltips;
 import dev.xyat.kineticcore.api.client.tooltip.KineticTooltipComponent;
 import dev.xyat.kineticcore.api.event.KineticEventSubscription;
+import dev.xyat.kineticcore.internal.runtime.KineticModContextRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -19,7 +20,6 @@ import net.minecraftforge.client.event.RenderTooltipEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 import javax.annotation.Nonnull;
 import java.util.LinkedHashMap;
@@ -46,7 +46,7 @@ public final class KineticItemTooltipRuntime {
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticItemTooltipRuntime::onBuildTooltip));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, true, KineticItemTooltipRuntime::onRenderTooltip));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticItemTooltipRuntime::onGatherTooltip));
-        attempt.install(() -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticItemTooltipRuntime::onRegisterTooltipComponentFactories));
+        attempt.install(() -> KineticModContextRuntime.modEventBus().addListener(KineticItemTooltipRuntime::onRegisterTooltipComponentFactories));
         attempt.finish();
         initialized = true;
     }

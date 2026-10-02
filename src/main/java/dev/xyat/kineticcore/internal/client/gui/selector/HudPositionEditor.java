@@ -112,6 +112,21 @@ public final class HudPositionEditor {
                 4210752,
                 false
         );
+        //? if >=1.20.2 {
+        /*// The arguments vanilla's inventory screen uses for its player preview box.
+        InventoryScreen.renderEntityInInventoryFollowsMouse(
+                graphics,
+                left + 26,
+                top + 8,
+                left + 75,
+                top + 78,
+                30,
+                0.0625F,
+                mouseX,
+                mouseY,
+                player
+        );
+        *///?} else {
         InventoryScreen.renderEntityInInventoryFollowsMouse(
                 graphics,
                 left + 51,
@@ -121,6 +136,7 @@ public final class HudPositionEditor {
                 top + 25 - mouseY,
                 player
         );
+        //?}
     }
 
     /**

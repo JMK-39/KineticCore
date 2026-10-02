@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.internal.network;
 
+//? if forge {
 import dev.xyat.kineticcore.api.network.ClientboundSender;
 import dev.xyat.kineticcore.api.network.NetworkChannel;
 import dev.xyat.kineticcore.api.network.NetworkCodec;
@@ -178,3 +179,4 @@ public final class ForgeNetworkChannel implements NetworkChannel {
     }
 
 }
+//?}

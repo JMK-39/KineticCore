@@ -98,6 +98,11 @@ public final class CustomControlSupport {
 
     /** Ticks a custom control's widget adapter. */
     public static void tick(Widget widget) {
+        //? if >=1.20.3 {
+        /*// AbstractWidget.render is final since 1.20.3 and skips hidden widgets, so a control that becomes
+        // visible is picked up here, once per tick.
+        widget.sync();
+        *///?}
         access().onTick(widget.control);
     }
 
@@ -170,14 +175,18 @@ public final class CustomControlSupport {
             return control.isEnabled();
         }
 
+        //? if <1.20.3 {
         @Override
         public void render(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             sync();
             super.render(graphics, mouseX, mouseY, partialTick);
         }
+        //?}
 
         @Override
         protected void renderWidget(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            //? if >=1.20.3
+            /*sync();*/
             access().render(control, GuiGraphicsAdapter.wrap(graphics), mouseX, mouseY, partialTick);
         }
 
@@ -221,8 +230,13 @@ public final class CustomControlSupport {
             return access().onMouseDrag(control, InputRecords.drag(mouseX, mouseY, button, dragX, dragY));
         }
 
+        //? if >=1.20.2 {
+        /*@Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
+        *///?} else {
         @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        //?}
             sync();
             if (!active || !visible || !isMouseOver(mouseX, mouseY)) return false;
             return access().onMouseScroll(control, InputRecords.scroll(mouseX, mouseY, delta));

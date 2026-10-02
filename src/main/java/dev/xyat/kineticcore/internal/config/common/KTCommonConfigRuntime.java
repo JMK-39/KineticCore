@@ -1,7 +1,7 @@
 package dev.xyat.kineticcore.internal.config.common;
 
+import dev.xyat.kineticcore.internal.runtime.KineticModContextRuntime;
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.config.ModConfig;
 
 import java.util.ArrayList;
@@ -89,7 +89,7 @@ public final class KTCommonConfigRuntime {
                         "Common config spec already registered as " + safeHandle.registeredFile
                 );
             }
-            ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, safeHandle.spec, normalized);
+            KineticModContextRuntime.registerConfig(ModConfig.Type.COMMON, safeHandle.spec, normalized);
             safeHandle.registeredFile = normalized;
         }
     }

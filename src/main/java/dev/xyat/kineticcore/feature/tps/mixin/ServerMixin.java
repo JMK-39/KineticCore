@@ -23,6 +23,10 @@ public abstract class ServerMixin implements KineticServerPerformance.Access {
     private void kineticcore$recordTickTime(CallbackInfo ci) {
         MinecraftServer server = (MinecraftServer) (Object) this;
         int lastIndex = (server.getTickCount() - 1 + 100) % 100;
+        //? if >=1.20.5 {
+        /*kineticcore$tpsTracker.addTick(server.getTickTimesNanos()[lastIndex]);
+        *///?} else {
         kineticcore$tpsTracker.addTick(server.tickTimes[lastIndex]);
+        //?}
     }
 }

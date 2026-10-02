@@ -17,11 +17,19 @@ public abstract class ClientAttributePacketMixin {
     @Shadow private ClientLevel level;
 
     @Inject(method = "handleUpdateAttributes", at = @At(value = "INVOKE",
+            //? if >=1.20.5 {
+            /*target = "Lnet/minecraft/world/entity/ai/attributes/AttributeMap;getInstance(Lnet/minecraft/core/Holder;)Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;"))
+            *///?} else {
             target = "Lnet/minecraft/world/entity/ai/attributes/AttributeMap;getInstance(Lnet/minecraft/world/entity/ai/attributes/Attribute;)Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;"))
+            //?}
     private void kineticcore$prepareDynamicAttributes(ClientboundUpdateAttributesPacket packet, CallbackInfo ci) {
         if (level == null || !(level.getEntity(packet.getEntityId()) instanceof LivingEntity living)) return;
         for (ClientboundUpdateAttributesPacket.AttributeSnapshot snapshot : packet.getValues()) {
+            //? if >=1.20.5 {
+            /*KineticEntityAttributes.ensureInstance(living, snapshot.attribute().value());
+            *///?} else {
             KineticEntityAttributes.ensureInstance(living, snapshot.getAttribute());
+            //?}
         }
     }
 }

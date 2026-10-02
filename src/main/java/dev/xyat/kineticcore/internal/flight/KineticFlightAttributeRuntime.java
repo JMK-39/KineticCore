@@ -1,31 +1,20 @@
 package dev.xyat.kineticcore.internal.flight;
 
+import dev.xyat.kineticcore.api.registry.KineticRegistryHandle;
+import dev.xyat.kineticcore.internal.registry.KineticAttributeHolders;
+import dev.xyat.kineticcore.internal.registry.KineticDeferredRegistryRuntime;
 import dev.xyat.kineticcore.internal.registry.KineticEntityAttributeRuntime;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
 
-/** Forge-backed registration/runtime for the public Kinetic flight attributes. */
+/** Registration/runtime for the public Kinetic flight attributes. */
 public final class KineticFlightAttributeRuntime {
-    private static final DeferredRegister<Attribute> ATTRIBUTES =
-            DeferredRegister.create(ForgeRegistries.ATTRIBUTES, "kineticcore");
-
-    private static final RegistryObject<Attribute> FLIGHT_SPEED = ATTRIBUTES.register(
-            "flight_speed",
-            () -> new RangedAttribute("attribute.name.kineticcore.flight_speed", 0.0D, 0.0D, 20.0D)
-                    .setSyncable(true)
-    );
-
-    private static final RegistryObject<Attribute> TURN_DAMPING = ATTRIBUTES.register(
-            "flight_turn_damping",
-            () -> new RangedAttribute("attribute.name.kineticcore.flight_turn_damping", 0.3D, 0.0D, 1.0D)
-                    .setSyncable(true)
-    );
+    private static KineticRegistryHandle<Attribute> flightSpeedHandle;
+    private static KineticRegistryHandle<Attribute> turnDampingHandle;
 
     private static boolean registered;
 
@@ -34,14 +23,21 @@ public final class KineticFlightAttributeRuntime {
 
     public static synchronized void register() {
         if (registered) return;
-        var context = FMLJavaModLoadingContext.get();
-        if (context == null) {
-            throw new IllegalStateException("Kinetic flight attributes must be registered during mod construction");
-        }
-        ATTRIBUTES.register(context.getModEventBus());
+        flightSpeedHandle = KineticDeferredRegistryRuntime.register(
+                Registries.ATTRIBUTE,
+                ResourceLocation.fromNamespaceAndPath("kineticcore", "flight_speed"),
+                () -> new RangedAttribute("attribute.name.kineticcore.flight_speed", 0.0D, 0.0D, 20.0D)
+                        .setSyncable(true)
+        );
+        turnDampingHandle = KineticDeferredRegistryRuntime.register(
+                Registries.ATTRIBUTE,
+                ResourceLocation.fromNamespaceAndPath("kineticcore", "flight_turn_damping"),
+                () -> new RangedAttribute("attribute.name.kineticcore.flight_turn_damping", 0.3D, 0.0D, 1.0D)
+                        .setSyncable(true)
+        );
         KineticEntityAttributeRuntime.registerModification(contextView -> {
-            Attribute speed = FLIGHT_SPEED.get();
-            Attribute damping = TURN_DAMPING.get();
+            Attribute speed = flightSpeedHandle.get();
+            Attribute damping = turnDampingHandle.get();
             if (!contextView.has(EntityType.PLAYER, speed)) contextView.add(EntityType.PLAYER, speed);
             if (!contextView.has(EntityType.PLAYER, damping)) contextView.add(EntityType.PLAYER, damping);
         });
@@ -49,20 +45,20 @@ public final class KineticFlightAttributeRuntime {
     }
 
     public static Attribute flightSpeed() {
-        return FLIGHT_SPEED.get();
+        return flightSpeedHandle.get();
     }
 
     public static Attribute turnDamping() {
-        return TURN_DAMPING.get();
+        return turnDampingHandle.get();
     }
 
     public static double flightSpeed(LivingEntity entity) {
-        if (entity == null || entity.getAttribute(flightSpeed()) == null) return 0.0D;
-        return Math.max(0.0D, entity.getAttributeValue(flightSpeed()));
+        if (entity == null || entity.getAttribute(KineticAttributeHolders.of(flightSpeed())) == null) return 0.0D;
+        return Math.max(0.0D, entity.getAttributeValue(KineticAttributeHolders.of(flightSpeed())));
     }
 
     public static double turnDamping(LivingEntity entity) {
-        if (entity == null || entity.getAttribute(turnDamping()) == null) return 0.3D;
-        return Math.max(0.0D, Math.min(1.0D, entity.getAttributeValue(turnDamping())));
+        if (entity == null || entity.getAttribute(KineticAttributeHolders.of(turnDamping())) == null) return 0.3D;
+        return Math.max(0.0D, Math.min(1.0D, entity.getAttributeValue(KineticAttributeHolders.of(turnDamping()))));
     }
 }

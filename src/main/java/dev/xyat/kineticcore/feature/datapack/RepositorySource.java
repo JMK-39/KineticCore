@@ -16,6 +16,17 @@ import net.minecraft.server.packs.repository.FolderRepositorySource;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.server.packs.resources.IoSupplier;
+import net.minecraft.SharedConstants;
+//? if >=1.20.5 {
+/*import net.minecraft.server.packs.FilePackResources;
+import net.minecraft.server.packs.PackLocationInfo;
+import net.minecraft.server.packs.PackSelectionConfig;
+import net.minecraft.server.packs.PathPackResources;
+import net.minecraft.world.level.validation.DirectoryValidator;
+
+import java.util.Optional;
+import java.util.function.Function;
+*///?}
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,7 +61,12 @@ public class RepositorySource extends FolderRepositorySource {
     );
 
     public RepositorySource(Path folderPath, PackType packType) {
+        //? if >=1.20.5 {
+        /*// loadPacks is replaced below, so the symlink validator of the vanilla folder scan is never used.
+        super(folderPath, packType, KT_SOURCE, new DirectoryValidator(path -> false));
+        *///?} else {
         super(folderPath, packType, KT_SOURCE);
+        //?}
         this.folderPath = folderPath;
         this.packType = packType;
         this.hiddenDataPack = packType == PackType.SERVER_DATA;
@@ -84,27 +100,27 @@ public class RepositorySource extends FolderRepositorySource {
 
                 if (file.isDirectory()) {
                     if (new File(file, "pack.mcmeta").exists()) {
-                        supplier = FolderRepositorySource.detectPackResources(packPath, false);
+                        supplier = detectPackResources(packPath);
                         supplier = wrapHiddenDataSupplier(supplier);
                     } else if (new File(file, "data").exists() || new File(file, "assets").exists()) {
-                        supplier = name -> new LooseFolderPackResources(
+                        supplier = resources(name -> new LooseFolderPackResources(
                                 name,
                                 packPath,
                                 this.packType,
                                 false,
                                 this.hiddenDataPack
-                        );
+                        ));
                     } else {
-                        supplier = name -> new LooseFolderPackResources(
+                        supplier = resources(name -> new LooseFolderPackResources(
                                 name,
                                 packPath,
                                 this.packType,
                                 true,
                                 this.hiddenDataPack
-                        );
+                        ));
                     }
                 } else {
-                    supplier = FolderRepositorySource.detectPackResources(packPath, false);
+                    supplier = detectPackResources(packPath);
                     supplier = wrapHiddenDataSupplier(supplier);
                 }
 
@@ -113,6 +129,14 @@ public class RepositorySource extends FolderRepositorySource {
                     continue;
                 }
 
+                //? if >=1.20.5 {
+                /*Pack pack = Pack.readMetaAndCreate(
+                        new PackLocationInfo(packName, Component.literal(packName), KT_SOURCE, Optional.empty()),
+                        supplier,
+                        this.packType,
+                        new PackSelectionConfig(true, Pack.Position.TOP, false)
+                );
+                *///?} else {
                 Pack pack = Pack.readMetaAndCreate(
                         packName,
                         Component.literal(packName),
@@ -122,6 +146,7 @@ public class RepositorySource extends FolderRepositorySource {
                         Pack.Position.TOP,
                         KT_SOURCE
                 );
+                //?}
 
                 if (pack != null) {
                     packAdder.accept(pack);
@@ -141,24 +166,73 @@ public class RepositorySource extends FolderRepositorySource {
     private Pack.ResourcesSupplier wrapHiddenDataSupplier(@Nullable Pack.ResourcesSupplier supplier) {
         if (supplier == null) return null;
         if (!this.hiddenDataPack) return supplier;
+        //? if >=1.20.5 {
+        /*return new Pack.ResourcesSupplier() {
+            @Override
+            public PackResources openPrimary(PackLocationInfo location) {
+                return new HiddenMetadataPackResources(location, supplier.openPrimary(location));
+            }
+
+            @Override
+            public PackResources openFull(PackLocationInfo location, Pack.Metadata metadata) {
+                return new HiddenMetadataPackResources(location, supplier.openFull(location, metadata));
+            }
+        };
+        *///?} else {
         return name -> new HiddenMetadataPackResources(name, supplier.open(name));
+        //?}
     }
+
+    //? if >=1.20.5 {
+    /*// Packs are opened from their location info since 1.20.5, with a separate full open after the metadata
+    // check; Kinetic packs open the same resources either way.
+    private static Pack.ResourcesSupplier resources(Function<PackLocationInfo, PackResources> open) {
+        return new Pack.ResourcesSupplier() {
+            @Override
+            public PackResources openPrimary(PackLocationInfo location) {
+                return open.apply(location);
+            }
+
+            @Override
+            public PackResources openFull(PackLocationInfo location, Pack.Metadata metadata) {
+                return open.apply(location);
+            }
+        };
+    }
+
+    @Nullable
+    private static Pack.ResourcesSupplier detectPackResources(Path packPath) {
+        if (Files.isDirectory(packPath)) return new PathPackResources.PathResourcesSupplier(packPath);
+        if (packPath.getFileName().toString().endsWith(".zip")) return new FilePackResources.FileResourcesSupplier(packPath);
+        return null;
+    }
+    *///?} else {
+    private static Pack.ResourcesSupplier resources(Pack.ResourcesSupplier supplier) {
+        return supplier;
+    }
+
+    @Nullable
+    private static Pack.ResourcesSupplier detectPackResources(Path packPath) {
+        return FolderRepositorySource.detectPackResources(packPath, false);
+    }
+    //?}
 
     private static IoSupplier<InputStream> createMetadataSupplier(
             @Nullable IoSupplier<InputStream> original,
-            boolean hidden
+            boolean hidden,
+            PackType packType
     ) {
         return () -> {
             JsonObject root;
 
             if (original == null) {
-                root = createDefaultMetadata();
+                root = createDefaultMetadata(packType);
             } else {
                 try (InputStream inputStream = original.get()) {
                     String text = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
                     root = JsonParser.parseString(text).getAsJsonObject();
                 } catch (Exception ignored) {
-                    root = createDefaultMetadata();
+                    root = createDefaultMetadata(packType);
                 }
             }
 
@@ -172,14 +246,14 @@ public class RepositorySource extends FolderRepositorySource {
         };
     }
 
-    private static JsonObject createDefaultMetadata() {
+    private static JsonObject createDefaultMetadata(PackType packType) {
         JsonObject root = new JsonObject();
         JsonObject pack = new JsonObject();
         JsonObject description = new JsonObject();
 
         description.addProperty("translate", "datapack.kineticcore.virtual_desc");
         pack.add("description", description);
-        pack.addProperty("pack_format", 15);
+        pack.addProperty("pack_format", SharedConstants.getCurrentVersion().getPackVersion(packType));
         root.add("pack", pack);
 
         return root;
@@ -188,9 +262,17 @@ public class RepositorySource extends FolderRepositorySource {
     private static class HiddenMetadataPackResources extends AbstractPackResources {
         private final PackResources delegate;
 
+        private final PackType packType;
+
+        //? if >=1.20.5 {
+        /*private HiddenMetadataPackResources(PackLocationInfo packId, PackResources delegate) {
+            super(packId);
+        *///?} else {
         private HiddenMetadataPackResources(String packId, PackResources delegate) {
             super(packId, false);
+        //?}
             this.delegate = delegate;
+            this.packType = PackType.SERVER_DATA;
         }
 
         @Nullable
@@ -199,7 +281,7 @@ public class RepositorySource extends FolderRepositorySource {
             IoSupplier<InputStream> original = delegate.getRootResource(paths);
 
             if (paths.length == 1 && paths[0].equals("pack.mcmeta")) {
-                return createMetadataSupplier(original, true);
+                return createMetadataSupplier(original, true, packType);
             }
 
             return original;
@@ -242,13 +324,21 @@ public class RepositorySource extends FolderRepositorySource {
         private final boolean hidden;
 
         private LooseFolderPackResources(
+                //? if >=1.20.5 {
+                /*PackLocationInfo packId,
+                *///?} else {
                 String packId,
+                //?}
                 Path folderPath,
                 PackType packType,
                 boolean namespaceRoot,
                 boolean hidden
         ) {
+            //? if >=1.20.5 {
+            /*super(packId);
+            *///?} else {
             super(packId, false);
+            //?}
             this.folderPath = folderPath;
             this.packType = packType;
             this.namespaceRoot = namespaceRoot;
@@ -259,7 +349,7 @@ public class RepositorySource extends FolderRepositorySource {
         @Override
         public IoSupplier<InputStream> getRootResource(String @NotNull ... paths) {
             if (paths.length == 1 && paths[0].equals("pack.mcmeta")) {
-                return createMetadataSupplier(null, hidden);
+                return createMetadataSupplier(null, hidden, packType);
             }
 
             return null;

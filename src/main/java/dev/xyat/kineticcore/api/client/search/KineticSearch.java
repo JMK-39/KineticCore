@@ -176,7 +176,13 @@ public final class KineticSearch {
             enchantmentDictionary = KineticRegistries.enchantments().values().stream().map(value -> {
                 ResourceLocation registryId = KineticRegistries.enchantments().id(value);
                 String id = registryId == null ? "" : registryId.toString();
+                //? if >=1.21 {
+                /*// Enchantments are data-driven since 1.21 and carry their name as a component.
+                String translated = resolveTranslation(value.description().getContents()
+                        instanceof net.minecraft.network.chat.contents.TranslatableContents contents ? contents.getKey() : null);
+                *///?} else {
                 String translated = resolveTranslation(value.getDescriptionId());
+                //?}
                 return new KineticSuggestion(id, translated == null ? Component.empty() : Component.literal(translated));
             }).toList();
         }

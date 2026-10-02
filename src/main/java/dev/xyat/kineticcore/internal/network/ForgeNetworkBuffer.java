@@ -9,6 +9,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+//? if >=1.20.5 {
+/*import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.ComponentSerialization;
+*///?}
 
 import java.util.ArrayList;
 import java.util.List;
@@ -195,6 +199,24 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
         return buffer.readVarIntArray(maxEntries);
     }
 
+    //? if >=1.20.5 {
+    /*// Components, item stacks and ingredients are encoded with registry-aware stream codecs since 1.20.5.
+    // Play payloads and menu extra data always carry a RegistryFriendlyByteBuf.
+    private RegistryFriendlyByteBuf registryBuffer() {
+        if (buffer instanceof RegistryFriendlyByteBuf registryBuffer) return registryBuffer;
+        throw new IllegalStateException("This network buffer has no registry access");
+    }
+
+    @Override
+    public void writeComponent(Component value) {
+        ComponentSerialization.STREAM_CODEC.encode(registryBuffer(), value == null ? Component.empty() : value);
+    }
+
+    @Override
+    public Component readComponent() {
+        return ComponentSerialization.STREAM_CODEC.decode(registryBuffer());
+    }
+    *///?} else {
     @Override
     public void writeComponent(Component value) {
         buffer.writeComponent(value == null ? Component.empty() : value);
@@ -204,6 +226,7 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
     public Component readComponent() {
         return buffer.readComponent();
     }
+    //?}
 
     @Override
     public void writeResourceLocation(ResourceLocation value) {
@@ -245,6 +268,28 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
         return buffer.readNbt();
     }
 
+    //? if >=1.20.5 {
+    /*@Override
+    public void writeItemStack(ItemStack value) {
+        ItemStack.OPTIONAL_STREAM_CODEC.encode(registryBuffer(), value);
+    }
+
+    @Override
+    public ItemStack readItemStack() {
+        return ItemStack.OPTIONAL_STREAM_CODEC.decode(registryBuffer());
+    }
+
+    @Override
+    public void writeIngredient(Ingredient value) {
+        if (value == null) throw new IllegalArgumentException("value");
+        Ingredient.CONTENTS_STREAM_CODEC.encode(registryBuffer(), value);
+    }
+
+    @Override
+    public Ingredient readIngredient() {
+        return Ingredient.CONTENTS_STREAM_CODEC.decode(registryBuffer());
+    }
+    *///?} else {
     @Override
     public void writeItemStack(ItemStack value) {
         buffer.writeItem(value);
@@ -265,6 +310,7 @@ final class ForgeNetworkBuffer implements NetworkBuffer {
     public Ingredient readIngredient() {
         return Ingredient.fromNetwork(buffer);
     }
+    //?}
 
     @Override
     public void writeStringList(List<String> values) {

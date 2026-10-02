@@ -20,7 +20,12 @@ public class WorldManagementMixins {
 
     @Mixin(LevelStorageSource.LevelStorageAccess.class)
     public static abstract class RecycleBin {
-        @Inject(method = {"deleteLevel", "m_78311_"}, at = @At("HEAD"), cancellable = true, remap = false)
+        @Inject(method = {
+                "deleteLevel",
+                // Forge runs on SRG names in production; NeoForge only has the Mojang name.
+                //? if forge
+                "m_78311_"
+        }, at = @At("HEAD"), cancellable = true, remap = false)
         private void kineticcore$deleteToRecycleBin(CallbackInfo ci) {
             Path worldPath = ((LevelStorageSource.LevelStorageAccess) (Object) this).getLevelPath(LevelResource.ROOT);
             if (!Files.exists(worldPath)) return;

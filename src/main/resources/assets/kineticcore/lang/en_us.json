@@ -67,7 +67,7 @@
   "cfg.kineticcore.logcleaner.enable": "Clean Old Logs on Exit",
   "cfg.kineticcore.logcleaner.enable.tooltip": "Clean old logs and crash reports in the background when the game exits.",
   "cfg.kineticcore.logcleaner.errors_only": "Errors Only",
-  "cfg.kineticcore.logcleaner.errors_only.tooltip": "When enabled, only ERROR/FATAL logs are output. Off by default on dedicated servers so the console still shows startup, player joins and command output.",
+  "cfg.kineticcore.logcleaner.errors_only.tooltip": "When enabled, only ERROR/FATAL logs are output and all other logs are dropped. Off by default.",
   "cfg.kineticcore.logcleaner.filtered_keywords": "Filtered Log Keywords",
   "cfg.kineticcore.logcleaner.filtered_keywords.tooltip": "Hide matching log lines from both the console and log files. Separate multiple keywords with ASCII commas (,).",
   "cfg.kineticcore.logcleaner.max_crash_reports": "Crash Reports to Keep",

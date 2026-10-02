@@ -63,6 +63,8 @@ final class KTLongTextEditorScreen extends KineticScreen {
 
     @Override
     protected void canvasTick() {
+        // Since 1.20.2 text fields blink their cursor by time and have no tick.
+        //? if <1.20.2
         if (editor != null) editor.tick();
     }
 

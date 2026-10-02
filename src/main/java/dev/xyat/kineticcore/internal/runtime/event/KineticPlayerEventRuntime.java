@@ -271,6 +271,7 @@ public final class KineticPlayerEventRuntime {
             return event.getHand();
         }
 
+        //? if forge {
         @Override
         public InteractionResult cancellationResult() {
             return event.getCancellationResult();
@@ -280,6 +281,17 @@ public final class KineticPlayerEventRuntime {
         public void cancellationResult(InteractionResult result) {
             event.setCancellationResult(result);
         }
+        //?} else {
+        /*// NeoForge's left-click event has no cancellation result; vanilla never reads one for left clicks.
+        @Override
+        public InteractionResult cancellationResult() {
+            return event.isCanceled() ? InteractionResult.FAIL : InteractionResult.PASS;
+        }
+
+        @Override
+        public void cancellationResult(InteractionResult result) {
+        }
+        *///?}
 
         @Override
         public boolean cancelled() {

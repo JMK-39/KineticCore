@@ -3,7 +3,6 @@ package dev.xyat.kineticcore.internal.runtime;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +56,7 @@ public final class KineticModLifecycleRuntime {
     }
 
     private static void ensureListener() {
-        var modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        var modEventBus = KineticModContextRuntime.modEventBus();
         if (!commonListenerRegistered) {
             modEventBus.addListener(KineticModLifecycleRuntime::onCommonSetupEvent);
             commonListenerRegistered = true;

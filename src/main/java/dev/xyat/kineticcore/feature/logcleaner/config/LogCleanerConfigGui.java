@@ -35,7 +35,7 @@ public final class LogCleanerConfigGui {
                         KineticI18n.translatable("cfg.kineticcore.logcleaner.errors_only"),
                         () -> LogCleanerConfig.errorsOnly,
                         value -> LogCleanerConfig.errorsOnly = value,
-                        true,
+                        false,
                         KineticI18n.translatable("cfg.kineticcore.logcleaner.errors_only.tooltip")
                 )
                 .booleanValue(

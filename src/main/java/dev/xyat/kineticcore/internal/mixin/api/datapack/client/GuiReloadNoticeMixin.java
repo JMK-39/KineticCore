@@ -12,7 +12,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class GuiReloadNoticeMixin {
 
     @Inject(method = "render", at = @At("TAIL"))
+    //? if >=1.21 {
+    /*private void kineticcore$datapack$renderReloadNotice(GuiGraphics guiGraphics, net.minecraft.client.DeltaTracker deltaTracker, CallbackInfo ci) {
+    *///?} else {
     private void kineticcore$datapack$renderReloadNotice(GuiGraphics guiGraphics, float partialTick, CallbackInfo ci) {
+    //?}
         KineticClientHookRuntime.renderResourceReloadUi(
                 guiGraphics,
                 guiGraphics.guiWidth(),

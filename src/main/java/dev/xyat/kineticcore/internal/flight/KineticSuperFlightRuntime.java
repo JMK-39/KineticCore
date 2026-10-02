@@ -2,14 +2,19 @@ package dev.xyat.kineticcore.internal.flight;
 
 import dev.xyat.kineticcore.internal.player.KineticCrawlingRuntime;
 import dev.xyat.kineticcore.internal.player.KineticPlayerPoseRuntime;
+import dev.xyat.kineticcore.internal.registry.KineticAttributeHolders;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Pose;
-
+//? if >=1.21 {
+/*import net.minecraft.resources.ResourceLocation;
+*///?} else {
 import java.util.UUID;
+//?}
+
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -17,8 +22,13 @@ import java.util.function.Consumer;
 public final class KineticSuperFlightRuntime {
     private static final String NBT_ACTIVE = "kinetic_super_flight_active";
     private static final String NBT_FALL_FLYING_POSE = "kinetic_super_flight_fall_flying_pose";
-    private static final UUID COMMAND_SPEED_UUID = UUID.fromString("6bb2f49e-4f79-4a4b-9bb0-2f3305a9e081");
+    // Attribute modifiers are identified by a resource id instead of a UUID and name since 1.21.
+    //? if >=1.21 {
+    /*private static final ResourceLocation COMMAND_SPEED_ID = ResourceLocation.fromNamespaceAndPath("kineticcore", "command_super_flight");
+    *///?} else {
+    private static final UUID COMMAND_SPEED_ID = UUID.fromString("6bb2f49e-4f79-4a4b-9bb0-2f3305a9e081");
     private static final String COMMAND_SPEED_NAME = "Kinetic command super flight";
+    //?}
     private static final double COMMAND_SPEED_VALUE = 20.0D;
     private static volatile BiConsumer<ServerPlayer, Boolean> stateSyncSender = (player, active) -> { };
     private static volatile BiConsumer<ServerPlayer, Float> rollSyncSender = (player, roll) -> { };
@@ -136,28 +146,39 @@ public final class KineticSuperFlightRuntime {
     }
 
     public static boolean commandEnabled(ServerPlayer player) {
-        AttributeInstance instance = player == null ? null : player.getAttribute(KineticFlightAttributeRuntime.flightSpeed());
-        return instance != null && instance.getModifier(COMMAND_SPEED_UUID) != null;
+        AttributeInstance instance = player == null ? null : player.getAttribute(KineticAttributeHolders.of(KineticFlightAttributeRuntime.flightSpeed()));
+        return instance != null && instance.getModifier(COMMAND_SPEED_ID) != null;
+    }
+
+    private static AttributeModifier commandSpeedModifier() {
+        //? if >=1.21 {
+        /*return new AttributeModifier(COMMAND_SPEED_ID, COMMAND_SPEED_VALUE, AttributeModifier.Operation.ADD_VALUE);
+        *///?} else {
+        return new AttributeModifier(COMMAND_SPEED_ID, COMMAND_SPEED_NAME, COMMAND_SPEED_VALUE, AttributeModifier.Operation.ADDITION);
+        //?}
+    }
+
+    private static double amount(AttributeModifier modifier) {
+        //? if >=1.21 {
+        /*return modifier.amount();
+        *///?} else {
+        return modifier.getAmount();
+        //?}
     }
 
     public static boolean setCommandEnabled(ServerPlayer player, boolean enabled) {
         if (player == null) return false;
-        AttributeInstance instance = player.getAttribute(KineticFlightAttributeRuntime.flightSpeed());
+        AttributeInstance instance = player.getAttribute(KineticAttributeHolders.of(KineticFlightAttributeRuntime.flightSpeed()));
         if (instance == null) return false;
 
-        AttributeModifier existing = instance.getModifier(COMMAND_SPEED_UUID);
+        AttributeModifier existing = instance.getModifier(COMMAND_SPEED_ID);
         if (enabled) {
-            if (existing == null || Double.compare(existing.getAmount(), COMMAND_SPEED_VALUE) != 0) {
-                if (existing != null) instance.removeModifier(COMMAND_SPEED_UUID);
-                instance.addPermanentModifier(new AttributeModifier(
-                        COMMAND_SPEED_UUID,
-                        COMMAND_SPEED_NAME,
-                        COMMAND_SPEED_VALUE,
-                        AttributeModifier.Operation.ADDITION
-                ));
+            if (existing == null || Double.compare(amount(existing), COMMAND_SPEED_VALUE) != 0) {
+                if (existing != null) instance.removeModifier(COMMAND_SPEED_ID);
+                instance.addPermanentModifier(commandSpeedModifier());
             }
         } else if (existing != null) {
-            instance.removeModifier(COMMAND_SPEED_UUID);
+            instance.removeModifier(COMMAND_SPEED_ID);
             if (!available(player)) setActive(player, false);
         }
         return commandEnabled(player);

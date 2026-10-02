@@ -143,8 +143,13 @@ public abstract class VerticalScrollListWidget extends AbstractWidget implements
         return scroll.release(button);
     }
 
+    //? if >=1.20.2 {
+    /*@Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
+    *///?} else {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    //?}
         if (!isMouseOver(mouseX, mouseY) || delta == 0D || !scroll.canScroll()) return false;
         boolean handled = scroll.scroll(delta, 1.0D);
         refreshLayout();

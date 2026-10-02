@@ -31,6 +31,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+//? if >=1.20.5 {
+/*import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
+*///?}
 
 public final class ThrowSpawnEgg extends ThrowableItemProjectile {
     public ThrowSpawnEgg(EntityType<? extends ThrowSpawnEgg> entityType, Level level) {
@@ -60,13 +64,21 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
         }
         if (level().isClientSide || !(level() instanceof ServerLevel serverLevel)) return;
 
+        //? if >=1.20.5 {
+        /*CompoundTag stackTag = entityDataAsStackTag(stack);
+        *///?} else {
         CompoundTag stackTag = stack.getTag();
-        if (result instanceof BlockHitResult blockHit && handleSpawnerHit(blockHit, spawnEgg, stackTag)) {
+        //?}
+        if (result instanceof BlockHitResult blockHit && handleSpawnerHit(blockHit, spawnEgg, stack, stackTag)) {
             discard();
             return;
         }
 
+        //? if >=1.20.5 {
+        /*EntityType<?> entityType = spawnEgg.getType(stack);
+        *///?} else {
         EntityType<?> entityType = spawnEgg.getType(stackTag);
+        //?}
         BlockPos spawnAnchor = result instanceof BlockHitResult blockHit
                 ? blockHit.getBlockPos().relative(blockHit.getDirection())
                 : BlockPos.containing(result.getLocation());
@@ -174,7 +186,7 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
         return level.noCollision(entity, entity.getBoundingBox());
     }
 
-    private boolean handleSpawnerHit(BlockHitResult hit, SpawnEggItem spawnEgg, CompoundTag stackTag) {
+    private boolean handleSpawnerHit(BlockHitResult hit, SpawnEggItem spawnEgg, ItemStack stack, CompoundTag stackTag) {
         BlockPos pos = hit.getBlockPos();
         BlockState state = level().getBlockState(pos);
         if (!state.is(Blocks.SPAWNER)) return false;
@@ -182,7 +194,11 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
         BlockEntity blockEntity = level().getBlockEntity(pos);
         if (!(blockEntity instanceof SpawnerBlockEntity spawner)) return false;
 
+        //? if >=1.20.5 {
+        /*EntityType<?> entityType = spawnEgg.getType(stack);
+        *///?} else {
         EntityType<?> entityType = spawnEgg.getType(stackTag);
+        //?}
         CompoundTag entityData = new CompoundTag();
         entityData.putString("id", EntityType.getKey(entityType).toString());
         if (stackTag != null && stackTag.contains("EntityTag", Tag.TAG_COMPOUND)) {
@@ -194,7 +210,11 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
         CompoundTag spawnerData = new CompoundTag();
         spawnerData.put("SpawnData", spawnData);
         spawnerData.putShort("Delay", (short) 20);
+        //? if >=1.20.5 {
+        /*spawner.loadWithComponents(spawnerData, level().registryAccess());
+        *///?} else {
         spawner.load(spawnerData);
+        //?}
         spawner.setChanged();
         level().sendBlockUpdated(pos, state, state, 3);
         return true;
@@ -208,7 +228,11 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
 
         if (entityTag.contains("CustomName", Tag.TAG_STRING)) {
             try {
+                //? if >=1.20.5 {
+                /*Component name = Component.Serializer.fromJson(entityTag.getString("CustomName"), entity.registryAccess());
+                *///?} else {
                 Component name = Component.Serializer.fromJson(entityTag.getString("CustomName"));
+                //?}
                 if (name != null) entity.setCustomName(name);
             } catch (Exception ignored) {
             }
@@ -228,18 +252,38 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
                     EquipmentSlot.HEAD
             };
             for (int index = 0; index < Math.min(slots.length, armor.size()); index++) {
-                mob.setItemSlot(slots[index], ItemStack.of(armor.getCompound(index)));
+                mob.setItemSlot(slots[index], equipmentItem(entity, armor.getCompound(index)));
             }
         }
 
         if (entityTag.contains("HandItems", Tag.TAG_LIST)) {
             ListTag hands = entityTag.getList("HandItems", Tag.TAG_COMPOUND);
             if (!hands.isEmpty()) {
-                mob.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.of(hands.getCompound(0)));
+                mob.setItemSlot(EquipmentSlot.MAINHAND, equipmentItem(entity, hands.getCompound(0)));
             }
             if (hands.size() > 1) {
-                mob.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.of(hands.getCompound(1)));
+                mob.setItemSlot(EquipmentSlot.OFFHAND, equipmentItem(entity, hands.getCompound(1)));
             }
         }
     }
+
+    private static ItemStack equipmentItem(Entity entity, CompoundTag tag) {
+        //? if >=1.20.5 {
+        /*return ItemStack.parseOptional(entity.registryAccess(), tag);
+        *///?} else {
+        return ItemStack.of(tag);
+        //?}
+    }
+
+    //? if >=1.20.5 {
+    /*// Since 1.20.5 a spawn egg keeps its entity data in the entity_data component; it is read here in the shape
+    // the item NBT had before: {EntityTag:{...}}.
+    private static CompoundTag entityDataAsStackTag(ItemStack stack) {
+        CustomData data = stack.get(DataComponents.ENTITY_DATA);
+        if (data == null || data.isEmpty()) return null;
+        CompoundTag stackTag = new CompoundTag();
+        stackTag.put("EntityTag", data.copyTag());
+        return stackTag;
+    }
+    *///?}
 }

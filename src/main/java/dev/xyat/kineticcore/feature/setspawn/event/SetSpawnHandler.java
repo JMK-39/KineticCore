@@ -29,7 +29,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.20.5 {
+/*import net.minecraft.world.level.chunk.status.ChunkStatus;
+*///?} else {
 import net.minecraft.world.level.chunk.ChunkStatus;
+//?}
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.storage.LevelResource;
@@ -184,7 +188,11 @@ public class SetSpawnHandler {
 
         debug("Created custom dimension player: dim=" + spawn.get().getFirst().dimension().location() + ", pos=" + posToString(spawn.get().getSecond()));
         FRESH_LOGIN_PLACEMENTS.put(uuid, spawn.get());
+        //? if >=1.20.2 {
+        /*return Optional.of(new ServerPlayer(server, spawn.get().getFirst(), profile, net.minecraft.server.level.ClientInformation.createDefault()));
+        *///?} else {
         return Optional.of(new ServerPlayer(server, spawn.get().getFirst(), profile));
+        //?}
     }
 
     public static boolean isFreshLoginPlayer(ServerPlayer player) {
@@ -685,7 +693,11 @@ public class SetSpawnHandler {
             }
 
             try (InputStream inputStream = Files.newInputStream(levelDat)) {
+                //? if >=1.20.3 {
+                /*CompoundTag root = NbtIo.readCompressed(inputStream, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+                *///?} else {
                 CompoundTag root = NbtIo.readCompressed(inputStream);
+                //?}
                 CompoundTag data = root.getCompound("Data");
                 return data.contains("Player", Tag.TAG_COMPOUND);
             }
@@ -816,7 +828,11 @@ public class SetSpawnHandler {
     }
 
     private static BlockPos getVanillaSharedSpawn(ServerLevel level) {
+        //? if >=1.20.5 {
+        /*return level.getLevelData().getSpawnPos();
+        *///?} else {
         return new BlockPos(level.getLevelData().getXSpawn(), level.getLevelData().getYSpawn(), level.getLevelData().getZSpawn());
+        //?}
     }
 
     private static BlockPos getDimensionFallbackCenter(ServerLevel level) {

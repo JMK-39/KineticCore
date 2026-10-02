@@ -1,8 +1,8 @@
 package dev.xyat.kineticcore.internal.config.client;
 
 import dev.xyat.kineticcore.api.config.client.KTClientConfigSpec;
+import dev.xyat.kineticcore.internal.runtime.KineticModContextRuntime;
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.config.ModConfig;
 
 import java.util.Collections;
@@ -48,7 +48,7 @@ public final class KineticClientConfigSpecRuntime {
                 }
                 return;
             }
-            ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, nativeSpec(spec), normalized);
+            KineticModContextRuntime.registerConfig(ModConfig.Type.CLIENT, nativeSpec(spec), normalized);
             REGISTERED_FILES.put(spec, normalized);
         }
     }

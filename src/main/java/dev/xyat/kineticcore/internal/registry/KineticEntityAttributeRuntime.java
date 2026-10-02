@@ -2,6 +2,7 @@ package dev.xyat.kineticcore.internal.registry;
 
 import dev.xyat.kineticcore.api.registry.KineticEntityAttributes;
 import dev.xyat.kineticcore.api.registry.KineticRegistryHandle;
+import dev.xyat.kineticcore.internal.runtime.KineticModContextRuntime;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -9,7 +10,6 @@ import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -56,7 +56,7 @@ public final class KineticEntityAttributeRuntime {
     }
 
     private static void initialize() {
-        var modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        var modEventBus = KineticModContextRuntime.modEventBus();
         if (!creationListenerRegistered) {
             modEventBus.addListener(KineticEntityAttributeRuntime::onCreateAttributes);
             creationListenerRegistered = true;
@@ -107,12 +107,12 @@ public final class KineticEntityAttributeRuntime {
     private record ModificationContextImpl(EntityAttributeModificationEvent event) implements KineticEntityAttributes.ModificationContext {
         @Override
         public boolean has(EntityType<? extends LivingEntity> entityType, Attribute attribute) {
-            return event.has(entityType, attribute);
+            return event.has(entityType, KineticAttributeHolders.of(attribute));
         }
 
         @Override
         public void add(EntityType<? extends LivingEntity> entityType, Attribute attribute) {
-            event.add(entityType, attribute);
+            event.add(entityType, KineticAttributeHolders.of(attribute));
         }
     }
 

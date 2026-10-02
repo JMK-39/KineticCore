@@ -1,6 +1,6 @@
 package dev.xyat.kineticcore.feature.firstjoin.config;
 
-
+import dev.xyat.kineticcore.api.inventory.KineticItemText;
 import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
@@ -9,7 +9,7 @@ import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
 import dev.xyat.kineticcore.api.runtime.KineticPlatform;
-import net.minecraft.nbt.TagParser;
+
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
@@ -22,10 +22,20 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class PlayerConfig {
+    // Item data follows /give: {NBT} on 1.20.1, [components] from 1.20.5 on.
+    //? if >=1.20.5 {
+    /*public static final String DEFAULT_HELMET = "1x minecraft:leather_helmet[enchantments={levels:{\"minecraft:unbreaking\":2,\"minecraft:protection\":2,\"minecraft:respiration\":1}}]";
+    public static final String DEFAULT_CHESTPLATE = "1x minecraft:leather_chestplate[enchantments={levels:{\"minecraft:unbreaking\":2,\"minecraft:protection\":2}}]";
+    public static final String DEFAULT_LEGGINGS = "1x minecraft:leather_leggings[enchantments={levels:{\"minecraft:unbreaking\":2,\"minecraft:protection\":2}}]";
+    public static final String DEFAULT_BOOTS = "1x minecraft:leather_boots[enchantments={levels:{\"minecraft:unbreaking\":2,\"minecraft:protection\":2}}]";
+    private static final String ITEM_DATA = "[components]";
+    *///?} else {
     public static final String DEFAULT_HELMET = "1x minecraft:leather_helmet{Enchantments:[{id:\"minecraft:unbreaking\",lvl:2s},{id:\"minecraft:protection\",lvl:2s},{id:\"minecraft:respiration\",lvl:1s}]}";
     public static final String DEFAULT_CHESTPLATE = "1x minecraft:leather_chestplate{Enchantments:[{id:\"minecraft:unbreaking\",lvl:2s},{id:\"minecraft:protection\",lvl:2s}]}";
     public static final String DEFAULT_LEGGINGS = "1x minecraft:leather_leggings{Enchantments:[{id:\"minecraft:unbreaking\",lvl:2s},{id:\"minecraft:protection\",lvl:2s}]}";
     public static final String DEFAULT_BOOTS = "1x minecraft:leather_boots{Enchantments:[{id:\"minecraft:unbreaking\",lvl:2s},{id:\"minecraft:protection\",lvl:2s}]}";
+    private static final String ITEM_DATA = "{NBT}";
+    //?}
     public static final String DEFAULT_OFFHAND = "1x minecraft:shield";
 
     private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/player.toml");
@@ -101,16 +111,16 @@ public class PlayerConfig {
                 "[1] 32x minecraft:bread",
                 "[2] 16x minecraft:apple"
         )), """
-     奖励物品列表 (支持 '[槽位] 数量x 物品ID{NBT}' 格式)
-     Reward item list (Supports '[Slot] Countx ItemID{NBT}' format)""");
+     奖励物品列表 (支持 '[槽位] 数量x 物品ID%s' 格式)
+     Reward item list (Supports '[Slot] Countx ItemID%s' format)""".formatted(ITEM_DATA, ITEM_DATA));
 
         define("first_join.commands", new ArrayList<>(List.of("say Welcome @s!")), """
      玩家首次加入时执行的指令列表
      List of commands to execute when a player first joins""");
 
         configData.setComment("first_join.armor", """
-     初始装备 (支持 NBT，每个部位可独立设定)
-     Starting Equipment (Supports NBT, each slot can be configured independently)""");
+     初始装备 (支持 %s，每个部位可独立设定)
+     Starting Equipment (Supports %s, each slot can be configured independently)""".formatted(ITEM_DATA, ITEM_DATA));
 
         define("first_join.armor.helmet", DEFAULT_HELMET,
                 " 头盔\n Helmet");
@@ -208,12 +218,13 @@ public class PlayerConfig {
                 itemPart = matcher.group(2).trim();
             }
 
+            // The item data follows the id: {NBT} on 1.20.1, [components] from 1.20.5 on, as in /give.
             String itemId;
-            String nbtStr = "";
-            if (itemPart.contains("{")) {
-                int nbtStart = itemPart.indexOf("{");
-                itemId = itemPart.substring(0, nbtStart).trim();
-                nbtStr = itemPart.substring(nbtStart).trim();
+            String dataStr = "";
+            int dataStart = firstIndexOf(itemPart, '{', '[');
+            if (dataStart >= 0) {
+                itemId = itemPart.substring(0, dataStart).trim();
+                dataStr = itemPart.substring(dataStart).trim();
             } else {
                 itemId = itemPart;
             }
@@ -225,10 +236,8 @@ public class PlayerConfig {
             if (loc != null) {
                 Item item = KineticRegistries.items().get(loc);
                 if (item != null && item != Items.AIR) {
-                    ItemStack stack = new ItemStack(item, count);
-                    if (!nbtStr.isEmpty()) {
-                        stack.setTag(TagParser.parseTag(nbtStr));
-                    }
+                    ItemStack stack = KineticItemText.parse(itemId + dataStr);
+                    stack.setCount(count);
                     return stack;
                 }
             }
@@ -246,11 +255,15 @@ public class PlayerConfig {
         ResourceLocation id = KineticRegistries.items().id(stack.getItem());
         if (id == null) return "";
 
-        String res = stack.getCount() + "x " + id;
-        if (stack.hasTag() && stack.getTag() != null) {
-            res += stack.getTag().toString();
-        }
-        return res;
+        return stack.getCount() + "x " + KineticItemText.format(stack);
+    }
+
+    private static int firstIndexOf(String text, char first, char second) {
+        int a = text.indexOf(first);
+        int b = text.indexOf(second);
+        if (a < 0) return b;
+        if (b < 0) return a;
+        return Math.min(a, b);
     }
 
     public static ItemStack parseItemStack(String input) {

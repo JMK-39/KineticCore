@@ -3,6 +3,7 @@ package dev.xyat.kineticcore.internal.mixin.api.despawn;
 import dev.xyat.kineticcore.internal.runtime.KineticCommonHookRuntime;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.item.ItemStack;
@@ -67,9 +68,17 @@ public class MobDespawnMixins {
             instance.discard();
         }
 
+    }
+
+    // Mob inherits remove from LivingEntity. Only discarded mobs drop their picked-up equipment: killed mobs drop it
+    // as loot, and unloaded or travelling mobs keep it.
+    @Mixin(LivingEntity.class)
+    public static abstract class LivingEntityTweaks {
         @Inject(method = "remove", at = @At("HEAD"))
         private void kineticcore$onRemove(Entity.RemovalReason reason, CallbackInfo ci) {
-            KineticCommonHookRuntime.dropPickedEquipment((Mob) (Object) this);
+            if (reason == Entity.RemovalReason.DISCARDED && (Object) this instanceof Mob mob && !mob.level().isClientSide) {
+                KineticCommonHookRuntime.dropPickedEquipment(mob);
+            }
         }
     }
 

@@ -700,7 +700,11 @@ public class NbtEditorScreen extends KineticScreen {
 
         public boolean charTyped(char codePoint) {
             if (!isFocused) return false;
+            //? if >=1.20.5 {
+            /*if (net.minecraft.util.StringUtil.isAllowedChatCharacter(codePoint)) { insertText(String.valueOf(codePoint)); return true; }
+            *///?} else {
             if (SharedConstants.isAllowedChatCharacter(codePoint)) { insertText(String.valueOf(codePoint)); return true; }
+            //?}
             return false;
         }
     }

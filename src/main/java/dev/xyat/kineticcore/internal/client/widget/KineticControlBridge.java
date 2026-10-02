@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.internal.client.widget;
 
 import dev.xyat.kineticcore.api.client.gui.widget.KineticControl;
+import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
 import dev.xyat.kineticcore.internal.client.screen.KineticScreenControls;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -88,7 +89,7 @@ public final class KineticControlBridge {
     }
 
     public static boolean mouseScrolled(KineticControl control, double mouseX, double mouseY, double delta) {
-        return widget(control).mouseScrolled(mouseX, mouseY, delta);
+        return GuiInputCompat.mouseScrolled(widget(control), mouseX, mouseY, delta);
     }
 
     public static void setEnabled(KineticControl control, boolean enabled) {

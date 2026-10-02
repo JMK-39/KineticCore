@@ -4,11 +4,15 @@ import dev.xyat.kineticcore.api.network.KineticNetwork;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.Varint21FrameDecoder;
+//? if forge
 import net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
+//? if forge
 import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
 import org.objectweb.asm.Opcodes;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
@@ -16,17 +20,16 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 
 public class NetworkLimitMixins {
 
-    private static String getErrorMsg() {
-        return "Packet limit exceeded. Modified by kineticcore (packetSize).";
-    }
-
+    // NeoForge splits oversized mod payloads itself, and their packet classes changed in 1.20.2; these two
+    // mixins are listed in unavailable_mixins of the NeoForge nodes.
+    //? if forge {
     @Mixin(ClientboundCustomPayloadPacket.class)
     public static class ClientPayloadTweaks {
         @ModifyConstant(method = {"<init>(Lnet/minecraft/network/FriendlyByteBuf;)V", "<init>(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraft/network/FriendlyByteBuf;)V"}, constant = @Constant(intValue = 1048576), require = 0)
         private int kineticcore$newSize(int value) { return KineticNetwork.transportLimits().customPayloadBytes(); }
 
         @ModifyConstant(method = {"<init>(Lnet/minecraft/network/FriendlyByteBuf;)V", "<init>(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraft/network/FriendlyByteBuf;)V"}, constant = @Constant(stringValue = "Payload may not be larger than 1048576 bytes"), require = 0)
-        private String kineticcore$newMessage(String value) { return getErrorMsg(); }
+        private String kineticcore$newMessage(String value) { return "Packet limit exceeded. Modified by kineticcore (packetSize)."; }
     }
 
     @Mixin(ServerboundCustomPayloadPacket.class)
@@ -34,6 +37,7 @@ public class NetworkLimitMixins {
         @ModifyConstant(method = "<init>(Lnet/minecraft/network/FriendlyByteBuf;)V", constant = @Constant(intValue = 32767), require = 0)
         private int kineticcore$newSize(int value) { return KineticNetwork.transportLimits().customPayloadBytes(); }
     }
+    //?}
 
     @Mixin(ClientboundLevelChunkPacketData.class)
     public static class ChunkPacketTweaks {
@@ -61,8 +65,14 @@ public class NetworkLimitMixins {
 
     @Mixin(NbtAccounter.class)
     public static class NbtAccounterTweaks {
+        @Shadow @Final private long quota;
+
+        // Since 1.20.2 NbtAccounter.unlimitedHeap() is a plain accounter with a Long.MAX_VALUE quota (used for structures,
+        // level and player data), so only bounded accounters get the configured limit.
         @Redirect(method = "accountBytes(J)V", at = @At(value = "FIELD", target = "Lnet/minecraft/nbt/NbtAccounter;quota:J", opcode = Opcodes.GETFIELD), require = 0)
-        private long kineticcore$newSize(NbtAccounter instance) { return KineticNetwork.transportLimits().nbtBytes(); }
+        private long kineticcore$newSize(NbtAccounter instance) {
+            return this.quota == Long.MAX_VALUE ? this.quota : KineticNetwork.transportLimits().nbtBytes();
+        }
     }
 
     @Mixin(value = Varint21FrameDecoder.class, priority = 1001)

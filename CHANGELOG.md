@@ -19,3 +19,65 @@
 - 修复 Forge 尚未加载客户端配置时提前读取设置，导致开发客户端启动崩溃的问题。
 - 配置加载前使用内存默认值或编辑值；加载完成后正常读写已加载的配置。
 - 新增回归测试，覆盖启动默认值、加载前编辑、加载后读取和原生写入。核心验证套件及最终 JAR API 检查全部通过。
+
+---
+
+2026年10月02日 23时00分
+
+- KineticCore now builds for Forge 1.20.1 and NeoForge 1.21.1 from one source tree. Jars are named `kineticcore-<loader>-<minecraft>-<version>.jar`, for example `kineticcore-forge-1.20.1-26.10.2.jar`. All versions are compiled with Java 21.
+- On 1.21.1, items written as text use the `/give` syntax: `1x minecraft:diamond_sword[enchantments={levels:{"minecraft:sharpness":5}}]` instead of `{NBT}`. This affects `config/kineticcore/player.toml` (`first_join.items` and `first_join.armor.*`); existing entries with `{...}` data need rewriting on 1.21.1. Copied items are also output in this syntax there.
+- Fixed four hooks that never took effect because they pointed at methods the target classes do not have:
+  - Bees placed by spawn egg or command, or spawned naturally, now get no gravity, the same as bred bees.
+  - Noclip in creative now keeps the standing eye height in any pose.
+  - Mobs removed without dying (despawned or discarded by another mod) now drop the equipment they picked up. Mobs that are killed, unloaded or change dimension are not affected.
+  - Once the server is running, the world spawn position reports the exact custom spawn.
+- Fixed vanilla structures such as trial chambers failing to load on 1.21.1 ("Tried to read NBT tag that was too big"): the network NBT limit no longer applies to unlimited reads such as structures, level and player data.
+- Removed log deduplication. The log cleaner now only filters logs (errors-only mode and keywords); the old `log_cleaner.deduplication` entry is removed from the config automatically. Note that errors-only mode is on by default on clients and hides all logs below ERROR.
+- The build now checks every mixin target, injection point and shadowed member against the game code and fails on any mismatch, so hooks that silently do nothing are caught before release.
+
+- KineticCore 现在由同一份源码构建 Forge 1.20.1 和 NeoForge 1.21.1 两个版本。文件名为 `kineticcore-<加载器>-<游戏版本>-<版本>.jar`，例如 `kineticcore-forge-1.20.1-26.10.2.jar`。所有版本均使用 Java 21 编译。
+- 1.21.1 中以文本表示的物品改用与 `/give` 一致的写法：`1x minecraft:diamond_sword[enchantments={levels:{"minecraft:sharpness":5}}]`，不再使用 `{NBT}`。涉及 `config/kineticcore/player.toml`（`first_join.items` 与 `first_join.armor.*`）；在 1.21.1 上，已有的带 `{...}` 数据的条目需要改写。复制物品功能在该版本也输出这种写法。
+- 修复四个因目标方法不在对应类中而一直未生效的钩子：
+  - 通过刷怪蛋、指令或自然生成的蜜蜂现在会和繁殖出的蜜蜂一样无重力。
+  - 创造模式穿墙时，任何姿态下都保持站立视角高度。
+  - 生物在非死亡情况下被移除（自然消失或被其他模组清除）时，会掉落其捡起的装备。被击杀、随区块卸载或切换维度的生物不受影响。
+  - 服务器启动完成后，世界出生点会返回精确的自定义出生点。
+- 修复 1.21.1 中试炼密室等原版结构加载失败（"Tried to read NBT tag that was too big"）的问题：网络 NBT 大小限制不再作用于结构、存档和玩家数据等不限大小的读取。
+- 移除日志去重功能。日志清理现在只保留过滤（仅错误日志模式和关键词屏蔽）；旧的 `log_cleaner.deduplication` 配置项会自动删除。注意：客户端默认开启仅错误日志模式，会隐藏 ERROR 以下的全部日志。
+- 构建时会对照游戏代码检查每个 mixin 的目标、注入点和影子成员，不匹配即构建失败，发布前就能发现静默失效的钩子。
+
+---
+
+2026年10月02日 23时58分
+
+- Fixed custom spawn on 1.21.1: new players and respawns now go to the configured spawn (for example a village) instead of the vanilla world spawn. Since 1.20.5 the game re-applies the world spawn on every start, which was mistaken for an admin `/setworldspawn` and saved the vanilla spawn as a fixed spawn. 1.21.1 worlds created with earlier builds keep that fixed spawn; use a new world.
+- Fixed a crash when entering a world on 1.21.1 (`IllegalClassLoadError` for `FlightServerMixins`): flight packet handling no longer calls into the mixin package.
+- Fixed joining a world failing with "Invalid player data" on 1.20.1: the noclip eye-height check no longer runs before the player is fully created.
+- Fixed oversized custom payloads on 1.20.1 failing with a class-loading error instead of the intended "Packet limit exceeded" message.
+- The KineticCore data pack is no longer listed as incompatible on 1.21.1.
+- The build now also fails when code refers to a class inside a mixin package, which Mixin cannot load at runtime.
+
+- 修复 1.21.1 自定义出生点无效：新玩家和重生现在会到配置的出生点（例如村庄），不再是原版世界出生点。1.20.5 起游戏每次启动都会重新设置一次世界出生点，此前被误认为管理员执行了 `/setworldspawn`，从而把原版出生点保存成了固定出生点。用之前版本创建的 1.21.1 世界会保留这个固定出生点，请新建世界。
+- 修复 1.21.1 进入世界时崩溃（`FlightServerMixins` 的 `IllegalClassLoadError`）：飞行数据包处理不再调用 mixin 包内的类。
+- 修复 1.20.1 进入世界时提示"无效的玩家数据"：穿墙视角高度的判断不再在玩家创建完成之前执行。
+- 修复 1.20.1 自定义数据包超出大小时报类加载错误，而不是预期的"Packet limit exceeded"提示。
+- 1.21.1 中 KineticCore 数据包不再显示为不兼容。
+- 构建时还会检查代码是否引用了 mixin 包内的类（Mixin 运行时无法加载这类引用），发现即构建失败。
+
+---
+
+2026年10月03日 00时14分
+
+- Fixed first-join equipment on 1.21.1 arriving without enchantments when the config still used the 1.20.1 `{NBT}` syntax. On 1.21.1, items written as `id{NBT}` are now upgraded to components the same way the game upgrades old worlds, so configs copied from 1.20.1 keep working; the `id[components]` syntax works as before. Text the game cannot read is now reported in the log instead of being ignored.
+
+- 修复 1.21.1 中首次加入发放的装备在配置仍使用 1.20.1 `{NBT}` 写法时不带附魔的问题。1.21.1 现在会把 `物品ID{NBT}` 按游戏升级旧存档的方式转换为组件，从 1.20.1 复制来的配置可直接使用；`物品ID[组件]` 写法照常可用。无法识别的物品文本现在会在日志中报错，不再被静默忽略。
+
+---
+
+2026年10月03日 00时21分
+
+- Log deduplication is back (`log_cleaner.deduplication`, on by default): consecutive identical logs are written once, followed by their repeat count before the next different log.
+- Errors-only mode (`log_cleaner.errors_only`) is now off by default on clients as well as servers, so normal logs are no longer hidden. Existing config files keep their value; set it to `false` to see all logs.
+
+- 恢复日志去重功能（`log_cleaner.deduplication`，默认开启）：连续相同的日志只输出一次，并在下一条不同日志前输出重复次数。
+- 仅错误日志模式（`log_cleaner.errors_only`）在客户端和服务端都改为默认关闭，正常日志不再被隐藏。已有配置文件会保留原值，需要看到全部日志时请设为 `false`。

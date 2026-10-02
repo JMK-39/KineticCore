@@ -47,7 +47,7 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
 
     /** Resolves a Kinetic texture to its vanilla resource location. */
     public static ResourceLocation location(KineticTexture texture) {
-        return TEXTURES.computeIfAbsent(texture, key -> new ResourceLocation(key.namespace(), key.path()));
+        return TEXTURES.computeIfAbsent(texture, key -> ResourceLocation.fromNamespaceAndPath(key.namespace(), key.path()));
     }
 
     private static Font font() {
@@ -175,7 +175,12 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
     @Override
     public void effectIcon(MobEffect effect, int x, int y, int size) {
         if (effect == null || size <= 0) return;
+        //? if >=1.20.5 {
+        /*TextureAtlasSprite sprite = KineticClientRuntimeImpl.client().getMobEffectTextures()
+                .get(net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect));
+        *///?} else {
         TextureAtlasSprite sprite = KineticClientRuntimeImpl.client().getMobEffectTextures().get(effect);
+        //?}
         graphics.blit(x, y, 0, size, size, sprite);
     }
 

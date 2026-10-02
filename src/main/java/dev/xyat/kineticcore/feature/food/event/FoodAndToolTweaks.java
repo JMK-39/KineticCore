@@ -19,7 +19,11 @@ public class FoodAndToolTweaks {
     public static void onRightClickItem(KineticPlayerEvents.RightClickItemContext context) {
         if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "always_edible", true)) return;
         ItemStack stack = context.stack();
+        //? if >=1.20.5 {
+        /*if (stack.getFoodProperties(context.player()) == null) return;
+        *///?} else {
         if (!stack.isEdible()) return;
+        //?}
 
         Player player = context.player();
         if (!player.canEat(false)) {

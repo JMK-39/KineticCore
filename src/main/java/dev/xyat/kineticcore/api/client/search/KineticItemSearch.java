@@ -174,9 +174,16 @@ public final class KineticItemSearch {
     }
 
     private static boolean hasAttackModifiers(ItemStack stack) {
+        //? if >=1.20.5 {
+        /*// Item attribute modifiers are a data component listing their slots since 1.20.5.
+        return stack.getAttributeModifiers().modifiers().stream()
+                .anyMatch(entry -> entry.slot().test(EquipmentSlot.MAINHAND)
+                        && (entry.attribute().is(Attributes.ATTACK_DAMAGE) || entry.attribute().is(Attributes.ATTACK_SPEED)));
+        *///?} else {
         var modifiers = stack.getAttributeModifiers(EquipmentSlot.MAINHAND);
         return !modifiers.get(Attributes.ATTACK_DAMAGE).isEmpty()
                 || !modifiers.get(Attributes.ATTACK_SPEED).isEmpty();
+        //?}
     }
 
     private static boolean isTool(Item item) {

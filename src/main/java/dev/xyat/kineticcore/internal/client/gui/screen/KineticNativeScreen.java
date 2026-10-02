@@ -119,6 +119,18 @@ public abstract class KineticNativeScreen extends Screen implements KineticScree
         runtime.render(graphics, mouseX, mouseY, partialTick, this::renderNativeFrame);
     }
 
+    //? if >=1.20.2 {
+    /*// Screen.render draws the background itself since 1.20.2; KineticScreenRuntime already drew it this frame.
+    @Override
+    public void renderBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    }
+
+    @Override
+    public void renderVanillaBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(graphics, mouseX, mouseY, partialTick);
+    }
+    *///?}
+
     private void renderNativeFrame(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderNativeBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
@@ -247,12 +259,21 @@ public abstract class KineticNativeScreen extends Screen implements KineticScree
     }
 
     /** {@inheritDoc} */
+    //? if >=1.20.2 {
+    /*@Override
+    public final boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
+    *///?} else {
     @Override
     public final boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    //?}
         return runtime.mouseScrolled(mouseX, mouseY, delta, (x, y, wheel) ->
                 nativeMouseScrolled(x, y, wheel)
                         || GuiSessionRuntime.routeSelectionListWheel(children(), x, y, wheel)
+                        //? if >=1.20.2 {
+                        /*|| super.mouseScrolled(x, y, scrollX, wheel)
+                        *///?} else {
                         || super.mouseScrolled(x, y, wheel)
+                        //?}
                         || afterMouseScrolled(x, y, wheel));
     }
 

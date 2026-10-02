@@ -25,8 +25,16 @@ public class FarmlandTooltipHandler {
 
         if (stack.isEmpty()) return;
 
+        //? if >=1.21 {
+        /*if (stack.getEnchantments().keySet().stream().anyMatch(enchantment -> enchantment.is(Enchantments.FEATHER_FALLING))) {
+        *///?} else {
         if (EnchantmentHelper.getEnchantments(stack).containsKey(Enchantments.FALL_PROTECTION)) {
+        //?}
+            //? if >=1.21 {
+            /*String targetName = KineticI18n.translatable("enchantment.minecraft.feather_falling").getString();
+            *///?} else {
             String targetName = KineticI18n.translatable(Enchantments.FALL_PROTECTION.getDescriptionId()).getString();
+            //?}
             boolean inserted = false;
 
             for (int i = 0; i < tooltip.size(); i++) {

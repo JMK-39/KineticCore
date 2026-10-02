@@ -40,8 +40,15 @@ public class SetSpawnMixins {
 
         @Redirect(
                 method = "placeNewPlayer",
+                // 1.20.1 reads Level.OVERWORLD once for missing player data and once for a missing dimension;
+                // 1.20.5+ reads it once for both.
+                //? if >=1.20.5 {
+                /*allow = 1,
+                require = 1,
+                *///?} else {
                 allow = 2,
                 require = 2,
+                //?}
                 at = @At(
                         value = "FIELD",
                         target = "Lnet/minecraft/world/level/Level;OVERWORLD:Lnet/minecraft/resources/ResourceKey;",
@@ -55,7 +62,11 @@ public class SetSpawnMixins {
         }
 
         @Inject(method = "getPlayerForLogin", at = @At("TAIL"), cancellable = true)
+        //? if >=1.20.2 {
+        /*private void kineticcore$createNewPlayerInCustomSpawnLevel(GameProfile profile, net.minecraft.server.level.ClientInformation clientInformation, CallbackInfoReturnable<ServerPlayer> cir) {
+        *///?} else {
         private void kineticcore$createNewPlayerInCustomSpawnLevel(GameProfile profile, CallbackInfoReturnable<ServerPlayer> cir) {
+        //?}
             KineticServerHookRuntime.createFreshLoginPlayer(this.kineticcore$getServer(), profile)
                     .ifPresent(cir::setReturnValue);
         }
@@ -79,6 +90,8 @@ public class SetSpawnMixins {
             level.addNewPlayer(player);
         }
 
+        // Since 1.21 KineticRespawnEventRuntime does this through NeoForge's respawn position event.
+        //? if <1.21 {
         @Redirect(
                 method = "respawn",
                 at = @At(
@@ -94,6 +107,7 @@ public class SetSpawnMixins {
 
             return KineticServerHookRuntime.selectRespawnLevel(server).orElseGet(server::overworld);
         }
+        //?}
 
         @Redirect(
                 method = "respawn",
@@ -108,7 +122,11 @@ public class SetSpawnMixins {
         }
 
         @Inject(method = "respawn", at = @At("RETURN"))
+        //? if >=1.21 {
+        /*private void kineticcore$syncRespawnReturn(ServerPlayer oldPlayer, boolean keepEverything, net.minecraft.world.entity.Entity.RemovalReason removalReason, CallbackInfoReturnable<ServerPlayer> cir) {
+        *///?} else {
         private void kineticcore$syncRespawnReturn(ServerPlayer oldPlayer, boolean keepEverything, CallbackInfoReturnable<ServerPlayer> cir) {
+        //?}
             ServerPlayer newPlayer = cir.getReturnValue();
             if (newPlayer != null) {
                 KineticServerHookRuntime.syncAppliedRespawnPlacement(newPlayer);
@@ -118,6 +136,17 @@ public class SetSpawnMixins {
 
     @Mixin(ServerPlayer.class)
     public static abstract class ServerPlayerMixin {
+        //? if >=1.21 {
+        /*// 1.21 replaced fudgeSpawnLocation with adjustSpawnLocation, whose result the constructor moves the player
+        // to; keeping the prepared position there has the effect cancelling the fudge had before.
+        @Inject(method = "adjustSpawnLocation", at = @At("HEAD"), cancellable = true)
+        private void kineticcore$cancelVanillaFudgeForFreshCustomSpawn(ServerLevel level, net.minecraft.core.BlockPos spawn, CallbackInfoReturnable<net.minecraft.core.BlockPos> cir) {
+            ServerPlayer player = (ServerPlayer) (Object) this;
+            if (KineticServerHookRuntime.prepareFreshLoginPlacement(level.getServer(), player)) {
+                cir.setReturnValue(player.blockPosition());
+            }
+        }
+        *///?} else {
         @Inject(method = "fudgeSpawnLocation(Lnet/minecraft/server/level/ServerLevel;)V", at = @At("HEAD"), cancellable = true)
         private void kineticcore$cancelVanillaFudgeForFreshCustomSpawn(ServerLevel level, CallbackInfo ci) {
             ServerPlayer player = (ServerPlayer) (Object) this;
@@ -125,6 +154,7 @@ public class SetSpawnMixins {
                 ci.cancel();
             }
         }
+        //?}
     }
 
     @Mixin(ServerLevel.class)
@@ -132,14 +162,23 @@ public class SetSpawnMixins {
         @Inject(method = "setDefaultSpawnPos", at = @At("HEAD"))
         private void kineticcore$catchCommandSetSpawn(BlockPos pos, float angle, CallbackInfo ci) {
             ServerLevel level = (ServerLevel) (Object) this;
+            // Since 1.20.5 prepareLevels sets the current spawn again on every start to place the spawn chunks;
+            // only an actual change (/setworldspawn, other mods) counts as a new spawn.
+            if (pos.equals(level.getSharedSpawnPos()) && angle == level.getSharedSpawnAngle()) return;
             KineticServerHookRuntime.onDefaultSpawnChanged(level, pos, angle);
         }
+    }
 
+    // ServerLevel inherits getSharedSpawnPos from Level. Only a running server is asked, on its own thread: during
+    // startup the custom spawn is not worked out yet.
+    @Mixin(Level.class)
+    public static abstract class LevelMixin {
         @Inject(method = "getSharedSpawnPos", at = @At("HEAD"), cancellable = true)
         private void kineticcore$useExactSavedCustomSharedSpawn(CallbackInfoReturnable<BlockPos> cir) {
-            ServerLevel level = (ServerLevel) (Object) this;
-            KineticServerHookRuntime.sharedSpawn(level.getServer(), level)
-                    .ifPresent(cir::setReturnValue);
+            if (!((Object) this instanceof ServerLevel level)) return;
+            MinecraftServer server = level.getServer();
+            if (!server.isReady() || !server.isSameThread()) return;
+            KineticServerHookRuntime.sharedSpawn(server, level).ifPresent(cir::setReturnValue);
         }
     }
 }

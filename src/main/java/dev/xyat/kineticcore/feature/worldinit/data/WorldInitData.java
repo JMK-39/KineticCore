@@ -13,7 +13,11 @@ public class WorldInitData extends SavedData {
     private boolean commandsExecuted = false;
 
     public static WorldInitData get(ServerLevel level) {
+        //? if >=1.20.5 {
+        /*return level.getDataStorage().computeIfAbsent(new SavedData.Factory<>(WorldInitData::new, (tag, registries) -> WorldInitData.load(tag)), DATA_NAME);
+        *///?} else {
         return level.getDataStorage().computeIfAbsent(WorldInitData::load, WorldInitData::new, DATA_NAME);
+        //?}
     }
 
     public static WorldInitData load(CompoundTag tag) {
@@ -23,7 +27,11 @@ public class WorldInitData extends SavedData {
     }
 
     @Override
+    //? if >=1.20.5 {
+    /*public @NotNull CompoundTag save(@Nonnull CompoundTag tag, @Nonnull net.minecraft.core.HolderLookup.Provider registries) {
+    *///?} else {
     public @NotNull CompoundTag save(@Nonnull CompoundTag tag) {
+    //?}
         tag.putBoolean("commandsExecuted", commandsExecuted);
         return tag;
     }

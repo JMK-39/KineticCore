@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.internal.client;
 
+import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
@@ -81,7 +82,7 @@ public final class ScreenOverlayControls {
         for (int index = list.size() - 1; index >= 0; index--) {
             AbstractWidget widget = list.get(index);
             if (widget.visible && widget.active && widget.isMouseOver(mouseX, mouseY)
-                    && widget.mouseScrolled(mouseX, mouseY, delta)) {
+                    && GuiInputCompat.mouseScrolled(widget, mouseX, mouseY, delta)) {
                 return true;
             }
         }

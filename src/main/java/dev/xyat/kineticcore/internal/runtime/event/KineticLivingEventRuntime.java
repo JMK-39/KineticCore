@@ -16,21 +16,30 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
-import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
-import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingExperienceDropEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.LivingHealEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.living.LivingKnockBackEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
-import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.EventPriority;
+//? if forge {
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.eventbus.api.Event;
+//?} else {
+/*import net.minecraft.core.registries.Registries;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
+*///?}
 
 import java.util.Collection;
 import java.util.EnumMap;
@@ -66,16 +75,29 @@ public final class KineticLivingEventRuntime {
         for (KineticEventPriority priority : KineticEventPriority.values()) {
             EventPriority forgePriority = toForge(priority);
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityEvent.Size event) -> onSize(priority, event)));
+            //? if forge {
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEvent.LivingTickEvent event) -> onTick(priority, event)));
+            //?} else {
+            /*attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityTickEvent.Pre event) -> onTick(priority, event)));
+            *///?}
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEntityUseItemEvent.Finish event) -> onUseItemFinish(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingKnockBackEvent event) -> onKnockback(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEquipmentChangeEvent event) -> onEquipmentChange(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDeathEvent event) -> onDeath(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, true, (LivingDeathEvent event) -> onDeathReceiveCancelled(priority, event)));
+            //? if forge {
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingHurtEvent event) -> onHurt(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDamageEvent event) -> onDamage(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingHealEvent event) -> onHeal(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingAttackEvent event) -> onAttack(priority, event)));
+            //?} else {
+            /*// NeoForge merged Forge's attack and hurt events into LivingIncomingDamageEvent. Attack handlers are
+            // registered first so that, as on Forge, hurt handlers do not run once an attack handler cancels.
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingIncomingDamageEvent event) -> onAttack(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingIncomingDamageEvent event) -> onHurt(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDamageEvent.Pre event) -> onDamage(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingHealEvent event) -> onHeal(priority, event)));
+            *///?}
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingChangeTargetEvent event) -> onTargetChange(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (MobEffectEvent.Applicable event) -> onPotionApplicable(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingExperienceDropEvent event) -> onExperienceDrop(priority, event)));
@@ -165,8 +187,14 @@ public final class KineticLivingEventRuntime {
         KineticCallbackBatch.runAll(SIZE.get(priority), handler -> handler.handle(context));
     }
 
+    //? if forge {
     private static void onTick(KineticEventPriority priority, LivingEvent.LivingTickEvent event) {
-        KineticCallbackBatch.runAll(TICK.get(priority), handler -> handler.handle(event.getEntity()));
+        LivingEntity living = event.getEntity();
+    //?} else {
+    /*private static void onTick(KineticEventPriority priority, EntityTickEvent.Pre event) {
+        if (!(event.getEntity() instanceof LivingEntity living)) return;
+    *///?}
+        KineticCallbackBatch.runAll(TICK.get(priority), handler -> handler.handle(living));
     }
 
     private static void onUseItemFinish(KineticEventPriority priority, LivingEntityUseItemEvent.Finish event) {
@@ -201,7 +229,11 @@ public final class KineticLivingEventRuntime {
         KineticCallbackBatch.runAll(DEATH_RECEIVE_CANCELLED.get(priority), handler -> handler.handle(context));
     }
 
+    //? if forge {
     private static void onHurt(KineticEventPriority priority, LivingHurtEvent event) {
+    //?} else {
+    /*private static void onHurt(KineticEventPriority priority, LivingIncomingDamageEvent event) {
+    *///?}
         HurtContextImpl context = new HurtContextImpl(event);
         KineticCallbackBatch.runUntilCancelled(
                 HURT.get(priority),
@@ -210,7 +242,11 @@ public final class KineticLivingEventRuntime {
         );
     }
 
+    //? if forge {
     private static void onDamage(KineticEventPriority priority, LivingDamageEvent event) {
+    //?} else {
+    /*private static void onDamage(KineticEventPriority priority, LivingDamageEvent.Pre event) {
+    *///?}
         DamageContextImpl context = new DamageContextImpl(event);
         KineticCallbackBatch.runAll(DAMAGE.get(priority), handler -> handler.handle(context));
     }
@@ -224,7 +260,11 @@ public final class KineticLivingEventRuntime {
         );
     }
 
+    //? if forge {
     private static void onAttack(KineticEventPriority priority, LivingAttackEvent event) {
+    //?} else {
+    /*private static void onAttack(KineticEventPriority priority, LivingIncomingDamageEvent event) {
+    *///?}
         AttackContextImpl context = new AttackContextImpl(event);
         KineticCallbackBatch.runUntilCancelled(
                 ATTACK.get(priority),
@@ -288,6 +328,7 @@ public final class KineticLivingEventRuntime {
         @Override
         public void newSize(EntityDimensions size) { event.setNewSize(size); }
 
+        //? if forge {
         @Override
         public float oldEyeHeight() { return event.getOldEyeHeight(); }
 
@@ -296,6 +337,17 @@ public final class KineticLivingEventRuntime {
 
         @Override
         public void newEyeHeight(float height) { event.setNewEyeHeight(height); }
+        //?} else {
+        /*// Since 1.20.5 the eye height is part of the entity dimensions.
+        @Override
+        public float oldEyeHeight() { return event.getOldSize().eyeHeight(); }
+
+        @Override
+        public float newEyeHeight() { return event.getNewSize().eyeHeight(); }
+
+        @Override
+        public void newEyeHeight(float height) { event.setNewSize(event.getNewSize().withEyeHeight(height)); }
+        *///?}
     }
 
     private record UseItemFinishContextImpl(LivingEntityUseItemEvent.Finish event) implements KineticLivingEvents.UseItemFinishContext {
@@ -363,7 +415,11 @@ public final class KineticLivingEventRuntime {
         }
     }
 
+    //? if forge {
     private record HurtContextImpl(LivingHurtEvent event) implements KineticLivingEvents.HurtContext {
+    //?} else {
+    /*private record HurtContextImpl(LivingIncomingDamageEvent event) implements KineticLivingEvents.HurtContext {
+    *///?}
         @Override
         public LivingEntity entity() {
             return event.getEntity();
@@ -422,6 +478,7 @@ public final class KineticLivingEventRuntime {
         }
     }
 
+    //? if forge {
     private record DamageContextImpl(LivingDamageEvent event) implements KineticLivingEvents.DamageContext {
         @Override
         public LivingEntity entity() {
@@ -443,8 +500,35 @@ public final class KineticLivingEventRuntime {
             event.setAmount(amount);
         }
     }
+    //?} else {
+    /*private record DamageContextImpl(LivingDamageEvent.Pre event) implements KineticLivingEvents.DamageContext {
+        @Override
+        public LivingEntity entity() {
+            return event.getEntity();
+        }
 
+        @Override
+        public DamageSource source() {
+            return event.getSource();
+        }
+
+        @Override
+        public float amount() {
+            return event.getNewDamage();
+        }
+
+        @Override
+        public void amount(float amount) {
+            event.setNewDamage(amount);
+        }
+    }
+    *///?}
+
+    //? if forge {
     private record AttackContextImpl(LivingAttackEvent event) implements KineticLivingEvents.AttackContext {
+    //?} else {
+    /*private record AttackContextImpl(LivingIncomingDamageEvent event) implements KineticLivingEvents.AttackContext {
+    *///?}
         @Override
         public LivingEntity entity() {
             return event.getEntity();
@@ -475,6 +559,7 @@ public final class KineticLivingEventRuntime {
         @Override
         public LivingEntity entity() { return event.getEntity(); }
 
+        //? if forge {
         @Override
         public LivingEntity originalTarget() { return event.getOriginalTarget(); }
 
@@ -483,6 +568,16 @@ public final class KineticLivingEventRuntime {
 
         @Override
         public void newTarget(LivingEntity target) { event.setNewTarget(target); }
+        //?} else {
+        /*@Override
+        public LivingEntity originalTarget() { return event.getOriginalAboutToBeSetTarget(); }
+
+        @Override
+        public LivingEntity newTarget() { return event.getNewAboutToBeSetTarget(); }
+
+        @Override
+        public void newTarget(LivingEntity target) { event.setNewAboutToBeSetTarget(target); }
+        *///?}
 
         @Override
         public boolean cancelled() { return event.isCanceled(); }
@@ -546,7 +641,16 @@ public final class KineticLivingEventRuntime {
 
         @Override
         public int lootingLevel() {
+            //? if forge {
             return event.getLootingLevel();
+            //?} else {
+            /*// Looting is a data-driven enchantment since 1.21 and the event no longer carries its level.
+            Entity attacker = event.getSource().getEntity();
+            if (!(attacker instanceof LivingEntity livingAttacker)) return 0;
+            var looting = livingAttacker.level().registryAccess().registryOrThrow(Registries.ENCHANTMENT)
+                    .getHolder(Enchantments.LOOTING);
+            return looting.map(holder -> EnchantmentHelper.getEnchantmentLevel(holder, livingAttacker)).orElse(0);
+            *///?}
         }
 
         @Override
@@ -571,6 +675,7 @@ public final class KineticLivingEventRuntime {
             return event.getEffectInstance();
         }
 
+        //? if forge {
         @Override
         public KineticLivingEvents.Applicability applicability() {
             return switch (event.getResult()) {
@@ -588,6 +693,25 @@ public final class KineticLivingEventRuntime {
                 case DEFAULT -> Event.Result.DEFAULT;
             });
         }
+        //?} else {
+        /*@Override
+        public KineticLivingEvents.Applicability applicability() {
+            return switch (event.getResult()) {
+                case APPLY -> KineticLivingEvents.Applicability.ALLOW;
+                case DO_NOT_APPLY -> KineticLivingEvents.Applicability.DENY;
+                case DEFAULT -> KineticLivingEvents.Applicability.DEFAULT;
+            };
+        }
+
+        @Override
+        public void applicability(KineticLivingEvents.Applicability applicability) {
+            event.setResult(switch (applicability) {
+                case ALLOW -> MobEffectEvent.Applicable.Result.APPLY;
+                case DENY -> MobEffectEvent.Applicable.Result.DO_NOT_APPLY;
+                case DEFAULT -> MobEffectEvent.Applicable.Result.DEFAULT;
+            });
+        }
+        *///?}
     }
 
     private static EnumMap<KineticEventPriority, CopyOnWriteArrayList<KineticLivingEvents.UseItemFinishHandler>> useItemFinishHandlers() {

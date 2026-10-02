@@ -1,11 +1,11 @@
 package dev.xyat.kineticcore.internal.resource;
 
 import dev.xyat.kineticcore.internal.runtime.KineticCallbackBatch;
+import dev.xyat.kineticcore.internal.runtime.KineticModContextRuntime;
 
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.repository.RepositorySource;
 import net.minecraftforge.event.AddPackFindersEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -41,7 +41,7 @@ public final class KineticPackSourceRuntime {
 
     private static void ensureListener() {
         if (listenerRegistered) return;
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticPackSourceRuntime::onAddPackFinders);
+        KineticModContextRuntime.modEventBus().addListener(KineticPackSourceRuntime::onAddPackFinders);
         listenerRegistered = true;
     }
 

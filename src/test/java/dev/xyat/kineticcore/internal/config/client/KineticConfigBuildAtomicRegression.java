@@ -25,7 +25,8 @@ public final class KineticConfigBuildAtomicRegression {
         String source = Files.readString(Path.of(
                 "src/main/java/dev/xyat/kineticcore/internal/config/client/KineticClientConfigSpecRuntime.java"));
         int pending = source.indexOf("pendingValues.put(entry.value(), nativeValue)");
-        int built = source.indexOf("ForgeConfigSpec built = builder.build()");
+        // Without the loader prefix, so it matches Forge's ForgeConfigSpec and NeoForge's ModConfigSpec.
+        int built = source.indexOf("ConfigSpec built = builder.build()");
         int publish = source.indexOf("VALUES.putAll(pendingValues)");
         check(pending >= 0, "native values must stage into pending bindings");
         check(built > pending, "Forge specification must finish building after all provisional bindings are staged");

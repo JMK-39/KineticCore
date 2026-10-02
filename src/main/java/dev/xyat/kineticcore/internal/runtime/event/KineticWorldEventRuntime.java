@@ -21,14 +21,24 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
-import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
 import net.minecraftforge.event.entity.living.MobSpawnEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.level.ChunkEvent;
 import net.minecraftforge.event.level.LevelEvent;
-import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.EventPriority;
+//? if forge {
+import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
+import net.minecraftforge.eventbus.api.Event;
+//?} else {
+/*import java.util.HashMap;
+import java.util.Map;
+import net.neoforged.neoforge.common.util.TriState;
+import net.neoforged.neoforge.event.level.BlockDropsEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
+import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
+*///?}
 
 import java.util.EnumMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -69,14 +79,50 @@ public final class KineticWorldEventRuntime {
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BlockEvent.BreakEvent event) -> onBlockBreak(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BlockEvent.EntityPlaceEvent event) -> onBlockPlace(priority, event)));
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BlockEvent.FarmlandTrampleEvent event) -> onFarmlandTrample(priority, event)));
+            //? if forge {
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityItemPickupEvent event) -> onItemPickup(priority, event)));
+            //?} else {
+            /*attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ItemEntityPickupEvent.Pre event) -> onItemPickup(priority, event)));
+            *///?}
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (MobSpawnEvent.SpawnPlacementCheck event) -> onMobSpawnPlacementCheck(priority, event)));
+            //? if forge {
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (MobSpawnEvent.FinalizeSpawn event) -> onMobFinalizeSpawn(priority, event)));
+            //?} else {
+            /*attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (FinalizeSpawnEvent event) -> onMobFinalizeSpawn(priority, event)));
+            *///?}
             attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BabyEntitySpawnEvent event) -> onBabySpawn(priority, event)));
         }
+        //? if neoforge {
+        /*attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, KineticWorldEventRuntime::applyBreakExperience));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener((ServerTickEvent.Post event) -> PENDING_BREAK_EXPERIENCE.clear()));
+        *///?}
         attempt.finish();
         initialized = true;
     }
+
+    //? if neoforge {
+    /*// NeoForge decides a broken block's experience in BlockDropsEvent, which fires after BreakEvent.
+    // Values set through BlockBreakContext wait here until the drops of the same block are spawned;
+    // entries of breaks that were cancelled are dropped at the end of the tick.
+    private static final Map<BreakKey, Integer> PENDING_BREAK_EXPERIENCE = new HashMap<>();
+
+    private record BreakKey(LevelAccessor level, BlockPos pos) {
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof BreakKey key && key.level == level && key.pos.equals(pos);
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(level) * 31 + pos.hashCode();
+        }
+    }
+
+    private static void applyBreakExperience(BlockDropsEvent event) {
+        Integer experience = PENDING_BREAK_EXPERIENCE.remove(new BreakKey(event.getLevel(), event.getPos()));
+        if (experience != null) event.setDroppedExperience(experience);
+    }
+    *///?}
 
     public static KineticEventSubscription registerLevelLoad(KineticEventPriority priority, KineticWorldEvents.LevelHandler handler) {
         initialize();
@@ -215,7 +261,11 @@ public final class KineticWorldEventRuntime {
         );
     }
 
+    //? if forge {
     private static void onItemPickup(KineticEventPriority priority, EntityItemPickupEvent event) {
+    //?} else {
+    /*private static void onItemPickup(KineticEventPriority priority, ItemEntityPickupEvent.Pre event) {
+    *///?}
         ItemPickupContextImpl context = new ItemPickupContextImpl(event);
         KineticCallbackBatch.runUntilCancelled(
                 ITEM_PICKUP.get(priority),
@@ -229,7 +279,11 @@ public final class KineticWorldEventRuntime {
         KineticCallbackBatch.runAll(MOB_SPAWN_PLACEMENT.get(priority), handler -> handler.handle(context));
     }
 
+    //? if forge {
     private static void onMobFinalizeSpawn(KineticEventPriority priority, MobSpawnEvent.FinalizeSpawn event) {
+    //?} else {
+    /*private static void onMobFinalizeSpawn(KineticEventPriority priority, FinalizeSpawnEvent event) {
+    *///?}
         MobFinalizeSpawnContextImpl context = new MobFinalizeSpawnContextImpl(event);
         KineticCallbackBatch.runUntilCancelled(
                 MOB_FINALIZE_SPAWN.get(priority),
@@ -257,6 +311,7 @@ public final class KineticWorldEventRuntime {
         };
     }
 
+    //? if forge {
     private static KineticWorldEvents.SpawnPlacementResult fromForgeResult(Event.Result result) {
         return switch (result) {
             case ALLOW -> KineticWorldEvents.SpawnPlacementResult.ALLOW;
@@ -272,6 +327,23 @@ public final class KineticWorldEventRuntime {
             case DEFAULT -> Event.Result.DEFAULT;
         };
     }
+    //?} else {
+    /*private static KineticWorldEvents.SpawnPlacementResult fromForgeResult(MobSpawnEvent.SpawnPlacementCheck.Result result) {
+        return switch (result) {
+            case SUCCEED -> KineticWorldEvents.SpawnPlacementResult.ALLOW;
+            case FAIL -> KineticWorldEvents.SpawnPlacementResult.DENY;
+            case DEFAULT -> KineticWorldEvents.SpawnPlacementResult.DEFAULT;
+        };
+    }
+
+    private static MobSpawnEvent.SpawnPlacementCheck.Result toForgeResult(KineticWorldEvents.SpawnPlacementResult result) {
+        return switch (result) {
+            case ALLOW -> MobSpawnEvent.SpawnPlacementCheck.Result.SUCCEED;
+            case DENY -> MobSpawnEvent.SpawnPlacementCheck.Result.FAIL;
+            case DEFAULT -> MobSpawnEvent.SpawnPlacementCheck.Result.DEFAULT;
+        };
+    }
+    *///?}
 
     private record EntityJoinContextImpl(EntityJoinLevelEvent event) implements KineticWorldEvents.EntityJoinContext {
         @Override
@@ -319,6 +391,7 @@ public final class KineticWorldEventRuntime {
             return event.getPlayer();
         }
 
+        //? if forge {
         @Override
         public int experienceToDrop() {
             return event.getExpToDrop();
@@ -328,6 +401,21 @@ public final class KineticWorldEventRuntime {
         public void experienceToDrop(int experience) {
             event.setExpToDrop(experience);
         }
+        //?} else {
+        /*@Override
+        public int experienceToDrop() {
+            Integer pending = PENDING_BREAK_EXPERIENCE.get(new BreakKey(event.getLevel(), event.getPos()));
+            if (pending != null) return pending;
+            Player player = event.getPlayer();
+            return event.getState().getExpDrop(event.getLevel(), event.getPos(),
+                    event.getLevel().getBlockEntity(event.getPos()), player, player.getMainHandItem());
+        }
+
+        @Override
+        public void experienceToDrop(int experience) {
+            PENDING_BREAK_EXPERIENCE.put(new BreakKey(event.getLevel(), event.getPos()), Math.max(0, experience));
+        }
+        *///?}
 
         @Override
         public boolean cancelled() {
@@ -409,6 +497,7 @@ public final class KineticWorldEventRuntime {
         }
     }
 
+    //? if forge {
     private record ItemPickupContextImpl(EntityItemPickupEvent event) implements KineticWorldEvents.ItemPickupContext {
         @Override
         public Player player() {
@@ -435,6 +524,35 @@ public final class KineticWorldEventRuntime {
             event.setCanceled(true);
         }
     }
+    //?} else {
+    /*// NeoForge's pickup event is not cancellable; denying the pickup is its equivalent of cancelling.
+    private record ItemPickupContextImpl(ItemEntityPickupEvent.Pre event) implements KineticWorldEvents.ItemPickupContext {
+        @Override
+        public Player player() {
+            return event.getPlayer();
+        }
+
+        @Override
+        public ItemEntity item() {
+            return event.getItemEntity();
+        }
+
+        @Override
+        public ItemStack stack() {
+            return event.getItemEntity().getItem();
+        }
+
+        @Override
+        public boolean cancelled() {
+            return event.canPickup() == TriState.FALSE;
+        }
+
+        @Override
+        public void cancel() {
+            event.setCanPickup(TriState.FALSE);
+        }
+    }
+    *///?}
 
     private record MobSpawnPlacementContextImpl(MobSpawnEvent.SpawnPlacementCheck event) implements KineticWorldEvents.MobSpawnPlacementContext {
         @Override
@@ -468,7 +586,11 @@ public final class KineticWorldEventRuntime {
         }
     }
 
+    //? if forge {
     private record MobFinalizeSpawnContextImpl(MobSpawnEvent.FinalizeSpawn event) implements KineticWorldEvents.MobFinalizeSpawnContext {
+    //?} else {
+    /*private record MobFinalizeSpawnContextImpl(FinalizeSpawnEvent event) implements KineticWorldEvents.MobFinalizeSpawnContext {
+    *///?}
         @Override
         public LivingEntity entity() {
             return event.getEntity();

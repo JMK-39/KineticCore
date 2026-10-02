@@ -1,6 +1,6 @@
 import java.util.regex.Pattern
 
-def kineticApiRoot = file('src/main/java/dev/xyat/kineticcore/api')
+def kineticApiRoot = rootProject.file('src/main/java/dev/xyat/kineticcore/api')
 def kineticFeaturePackage = 'dev.xyat.kineticcore.feature'
 
 def kineticLineNumber = { String source, int index ->
@@ -177,7 +177,7 @@ tasks.register('checkKineticApiSurface') {
         }.files.sort { it.absolutePath }.each { File javaFile ->
             String source = javaFile.getText('UTF-8')
             String normalized = javaFile.absolutePath.replace('\\', '/')
-            String relative = project.relativePath(javaFile)
+            String relative = rootProject.relativePath(javaFile)
             List<String> lines = source.readLines()
 
             if (source.contains(kineticFeaturePackage)) {
@@ -368,7 +368,8 @@ tasks.register('checkKineticWidgetState', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = files(sourceSets.test.output, sourceSets.main.output)
     mainClass.set('dev.xyat.kineticcore.internal.client.gui.widget.WidgetStateRegression')
-    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+    workingDir = rootDir
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(kineticJavaVersion) }
 }
 
 tasks.register('checkKineticPinyin', JavaExec) {
@@ -377,7 +378,8 @@ tasks.register('checkKineticPinyin', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = files(sourceSets.test.output, sourceSets.main.output)
     mainClass.set('dev.xyat.kineticcore.internal.client.search.PinyinTransliterationRegression')
-    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+    workingDir = rootDir
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(kineticJavaVersion) }
 }
 
 tasks.register('checkKineticScreenParity', JavaExec) {
@@ -386,8 +388,8 @@ tasks.register('checkKineticScreenParity', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = files(sourceSets.test.output, sourceSets.main.output)
     mainClass.set('dev.xyat.kineticcore.internal.client.gui.screen.ScreenApiParityRegression')
-    workingDir = projectDir
-    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+    workingDir = rootDir
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(kineticJavaVersion) }
 }
 
 tasks.register('checkKineticScrollFrame', JavaExec) {
@@ -396,7 +398,8 @@ tasks.register('checkKineticScrollFrame', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = files(sourceSets.test.output, sourceSets.main.output) + sourceSets.test.compileClasspath
     mainClass.set('dev.xyat.kineticcore.internal.client.widget.ScrollFrameDispatchRegression')
-    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+    workingDir = rootDir
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(kineticJavaVersion) }
 }
 
 tasks.register('checkKineticHeadlessRegressions', JavaExec) {
@@ -405,8 +408,8 @@ tasks.register('checkKineticHeadlessRegressions', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = files(sourceSets.test.output, sourceSets.main.output)
     mainClass.set('dev.xyat.kineticcore.HeadlessRegressionSuite')
-    workingDir = projectDir
-    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+    workingDir = rootDir
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(kineticJavaVersion) }
 }
 
 tasks.register('checkKineticMinecraftRegressions', JavaExec) {
@@ -415,11 +418,11 @@ tasks.register('checkKineticMinecraftRegressions', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
     mainClass.set('dev.xyat.kineticcore.MinecraftRegressionSuite')
-    // Source-reading checks resolve src/ against the project; isolated JVMs that write config/ and logs/
-    // get their own directory under build/ instead of the project root.
-    workingDir = projectDir
+    // Source-reading checks resolve src/ against the repository root; isolated JVMs that write config/ and logs/
+    // get their own directory under this node's build/ instead of the repository root.
+    workingDir = rootDir
     systemProperty 'kinetic.regression.workDir', layout.buildDirectory.dir('tmp/kineticMinecraftRegressions').get().asFile.absolutePath
-    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(kineticJavaVersion) }
 }
 
 tasks.named('check').configure {

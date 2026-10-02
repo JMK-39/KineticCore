@@ -1,8 +1,7 @@
 package dev.xyat.kineticcore.internal.config;
 
 import dev.xyat.kineticcore.internal.client.config.ServerConfigClientRuntime;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
+import dev.xyat.kineticcore.internal.runtime.KineticEnvironmentRuntime;
 
 public final class ServerConfigClientDispatch {
     private ServerConfigClientDispatch() {
@@ -16,7 +15,7 @@ public final class ServerConfigClientDispatch {
             String messageKey,
             byte[] payload
     ) {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
+        KineticEnvironmentRuntime.runOnClient(() -> () ->
                 ServerConfigClientRuntime.handleSync(
                         pageId,
                         editable,

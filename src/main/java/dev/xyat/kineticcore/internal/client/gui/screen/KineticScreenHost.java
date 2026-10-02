@@ -49,6 +49,12 @@ public interface KineticScreenHost {
     /** Returns the shared runtime behind this host. */
     KineticScreenRuntime kineticRuntime();
 
+    //? if >=1.20.2 {
+    /*// Draws the vanilla screen background once per frame, outside the canvas transform. Screen.render draws it
+    // itself since 1.20.2, so host screens turn that call off and KineticScreenRuntime calls this instead.
+    void renderVanillaBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick);
+    *///?}
+
     /** Width of the host's page coordinate space. */
     int pageWidth();
 

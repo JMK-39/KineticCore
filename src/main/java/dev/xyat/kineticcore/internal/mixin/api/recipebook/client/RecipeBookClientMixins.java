@@ -27,7 +27,7 @@ public class RecipeBookClientMixins {
     @Mixin(Screen.class)
     public static class Gui {
         @Unique
-        private static final ResourceLocation kineticcore$RECIPE_ICON = new ResourceLocation("textures/gui/recipe_button.png");
+        private static final ResourceLocation kineticcore$RECIPE_ICON = ResourceLocation.withDefaultNamespace("textures/gui/recipe_button.png");
 
         @Inject(
                 method = "addRenderableWidget(Lnet/minecraft/client/gui/components/events/GuiEventListener;)Lnet/minecraft/client/gui/components/events/GuiEventListener;",
@@ -36,10 +36,16 @@ public class RecipeBookClientMixins {
         )
         private void kineticcore$removeRecipeButton(GuiEventListener widget, CallbackInfoReturnable<GuiEventListener> cir) {
             if (KineticCommonHookRuntime.recipeBookRemovalEnabled() && widget instanceof ImageButton image) {
+                //? if >=1.20.2 {
+                /*if (((ButtonAccess) image).getBtnSprites() == net.minecraft.client.gui.screens.recipebook.RecipeBookComponent.RECIPE_BUTTON_SPRITES) {
+                    cir.setReturnValue(null);
+                }
+                *///?} else {
                 ResourceLocation loc = ((ButtonAccess) image).getBtnTexture();
                 if (loc != null && loc.equals(kineticcore$RECIPE_ICON)) {
                     cir.setReturnValue(null);
                 }
+                //?}
             }
         }
     }

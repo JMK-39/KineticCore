@@ -593,7 +593,12 @@ public final class KineticScroll {
                 int y1,
                 int itemHeight
         ) {
+            //? if >=1.20.3 {
+            /*// 1.20.3 lists take their viewport height and top edge instead of the top and bottom edges.
+            super(KineticClientRuntimeImpl.client(), width, y1 - y0, y0, itemHeight);
+            *///?} else {
             super(KineticClientRuntimeImpl.client(), width, height, y0, y1, itemHeight);
+            //?}
             this.kineticListTop = y0;
             this.kineticListBottom = y1;
             this.kineticItemHeight = Math.max(1, itemHeight);
@@ -626,13 +631,21 @@ public final class KineticScroll {
             return targetScrollAmount;
         }
 
+        private int listLeft() {
+            //? if >=1.20.3 {
+            /*return this.getX();
+            *///?} else {
+            return this.getLeft();
+            //?}
+        }
+
         private int scrollbarX() {
-            return this.getLeft() + this.width - 6;
+            return listLeft() + this.width - 6;
         }
 
         @Override
         protected int getScrollbarPosition() {
-            return this.getLeft() + this.width + 2;
+            return listLeft() + this.width + 2;
         }
 
         private int scrollbarTrackHeight() {
@@ -703,7 +716,11 @@ public final class KineticScroll {
 
         /** Renders the list inside its clipped viewport and draws the API-themed scrollbar when scrolling is available. */
         @Override
+        //? if >=1.20.3 {
+        /*public void renderWidget(
+        *///?} else {
         public void render(
+        //?}
                 @Nonnull GuiGraphics graphics,
                 int mouseX,
                 int mouseY,
@@ -735,13 +752,17 @@ public final class KineticScroll {
             );
             KineticRenderRuntime.enableScissor(
                     graphics,
-                    this.getLeft(),
+                    listLeft(),
                     kineticListTop,
-                    this.getLeft() + this.width,
+                    listLeft() + this.width,
                     kineticListBottom
             );
             try {
+                //? if >=1.20.3 {
+                /*super.renderWidget(
+                *///?} else {
                 super.render(
+                //?}
                         graphics,
                         mouseX,
                         mouseY,
@@ -793,8 +814,13 @@ public final class KineticScroll {
             return handled;
         }
 
+        //? if >=1.20.2 {
+        /*@Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
+        *///?} else {
         @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        //?}
             if (!Double.isFinite(mouseX) || !Double.isFinite(mouseY)
                     || !Double.isFinite(delta) || delta == 0D
                     || !this.isMouseOver(mouseX, mouseY)) return false;
