@@ -59,16 +59,31 @@ AdventureSystems、CombatSystems、ContentStudio、EnchantWorks、EntityControl�
 - 输出：`gradle.properties` 设 `output_mods_dir=D:/NEWMODS` 时直接输出到该目录（相对路径按仓库根目录解析），未设置时输出到根目录的 `build/libs`。
 - 版本号沿用现有的 `use_auto_version` 规则（`yy.M.d`）。
 
-## 6. KineticCore 依赖解析（必须修改，否则会构建失败）
+## 6. 依赖解析：优先使用本地库（必须修改，否则会构建失败）
+
+### 6.1 规则：本地优先，官方有新版才下载
+
+所有第三方模组依赖（Curios、Refined Storage、FTB、Architectury、JEI 等）和 KineticCore 都要**优先使用本地库 `D:\IDEA_Caches\libs`**，只有官方来源有更新的版本时才下载。
+
+- 本地库的位置是 Gradle 用户目录的上一级加 `libs`（附属现有代码 `new File(gradle.gradleUserHomeDir.canonicalFile.parentFile, 'libs')` 就是这个目录，保留这种写法，不要写死盘符）。
+- 本地库中的文件按 `<artifact>-<version>.jar` 命名，与依赖坐标对应。例如 `maven.modrinth:curios:IPQlZkz1` 对应 `curios-IPQlZkz1.jar`，`dev.ftb.mods:ftb-library-forge:2001.2.12` 对应 `ftb-library-forge-2001.2.12.jar`。
+- **第三方模组**：坐标都固定了版本（Modrinth 的版本 ID、Maven 的版本号），不存在"官方新版"的判断。把本地库声明为第一个仓库（`flatDir`，不加 `content` 过滤），本地有对应文件就用本地文件，没有才去 Modrinth、FTB、Architectury 等远程仓库下载。`flatDir` 不带依赖元数据，所以这些依赖不会传递引入其他依赖；这和现在 `fg.deobf` 模组依赖的用法一致。如果某个依赖确实需要传递依赖，把它单独列出来汇报。
+- **KineticCore**：版本不固定，保留现有的比较逻辑。比较本地库（以及第 2 点列出的其他本地目录）中最高的本地版本与 GitHub `releases/latest`：本地版本不低于官方版本时用本地；官方版本更新时下载官方版本；无法联网时用本地版本。`-Pkineticcore_version=<版本>` 仍可强制指定版本。
+
+### 6.2 KineticCore 解析需要的具体修改
 
 核心已改为新命名，旧的解析逻辑会失效。以 AdventureSystems 的 `build.gradle` 为例（其余附属相同），涉及以下几处：
 
 1. **本地 JAR 正则**：`^kineticcore-(\d+(?:\.\d+){2,})\.jar$` 匹配不到新文件名。改为同时识别新旧两种命名，例如 `^kineticcore-(?:(forge|neoforge)-([\d.]+)-)?(\d+(?:\.\d+){2,})\.jar$`；在新命名中，只接受与当前节点 `loader` 和 `minecraft_version` 相同的 JAR。
-2. **本地目录**：核心现在输出到 `D:/NEWMODS`（核心 `gradle.properties` 中的 `output_mods_dir`），不再输出到 `../KineticCore/build/libs`。本地搜索目录要加上核心的 `output_mods_dir`，可以读取 `../KineticCore/gradle.properties`，或者给附属配置同名属性；`../KineticCore/build/libs` 作为备选保留。
+2. **本地目录**（按顺序搜索）：本地库 `D:\IDEA_Caches\libs`（目前里面是旧命名的 `kineticcore-26.10.2.jar`），然后是核心的输出目录 `D:/NEWMODS`（核心 `gradle.properties` 中的 `output_mods_dir`；可以读取 `../KineticCore/gradle.properties`，或者给附属配置同名属性），最后是 `../KineticCore/build/libs`（核心不再输出到这里，仅作备选保留）。
 3. **GitHub Release 资源检查**：`asset.name == "kineticcore-${version}.jar"` 改为优先匹配 `kineticcore-<loader>-<mc>-${version}.jar`，旧命名作为兼容回退（旧版本的 Release 仍是旧命名）。
 4. **Ivy 下载模式**：`'v[revision]/[artifact]-[revision].[ext]'` 改为可以带上 loader 和 MC 版本，例如 `'v[revision]/[artifact]-[classifier]-[revision].[ext]'`，classifier 设为 `forge-1.20.1`；或者为两种命名各声明一个 ivy 仓库。
 5. **依赖声明**：`fg.deobf("dev.xyat.kineticcore:kineticcore:${v}")` 改为 MDG Legacy 的 `modImplementation`，`kineticCoreReobf` 配置也要相应调整（它供 reobf 校验使用，见第 7 节）。
-6. **注意发布顺序**：核心带新命名的 Release 发布后，`releases/latest` 就不再有旧命名的资源。至少 AdventureSystems 的新解析逻辑要先完成，用户才会推送核心。如果附属在这之前构建，只能依赖本地 JAR 或 `-Pkineticcore_version=<旧版本>`。
+6. **发布顺序**：核心已推送到 master，带新命名的 Release（`kineticcore-forge-1.20.1-<版本>.jar`、`kineticcore-neoforge-1.21.1-<版本>.jar`）会由下一次成功的自动构建发布。之后 `releases/latest` 不再有旧命名的资源，旧的解析逻辑会报 "has no matching JAR asset"。在新解析逻辑完成之前，附属只能使用本地 JAR，或用 `-Pkineticcore_version=26.10.2` 构建。
+
+### 6.3 核心自带的 JEI 适配
+
+核心内置了一项第三方适配：安装 JEI 时，核心会把紧凑状态效果的区域告知 JEI，让物品列表避开这块区域（`MiniEffectsMixins$InventoryEffectRendererGuiHandlerMixin`，带 `@Pseudo`，未安装 JEI 时跳过）。这是有意保留的功能。附属不要重复实现，也不要因为"核心不做第三方联动"的原则去掉它。
 
 ## 7. 检查任务
 
@@ -78,7 +93,7 @@ AdventureSystems、CombatSystems、ContentStudio、EnchantWorks、EntityControl�
 
 ## 8. 每个附属的验收清单
 
-1. `gradlew :1.20.1-forge:build` 通过，包括架构检查、reobf 校验，以及 Mixin 目标检查（如已加入）。
+1. `gradlew :1.20.1-forge:build` 通过，包括架构检查、reobf 校验，以及 Mixin 目标检查（如已加入）。在 `D:\IDEA_Caches\libs` 已有全部依赖的前提下，`--offline` 构建也必须通过，说明依赖确实来自本地库。
 2. 产物文件名符合第 5 节，并出现在预期目录中。
 3. JAR 内容：
    - class 版本为 65（`javap -v` 中 `major version: 65`）；

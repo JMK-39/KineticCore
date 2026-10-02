@@ -71,7 +71,7 @@ Before adding API: first try a new parameter on an existing builder or interface
 - Gradle 9.8.0 (pinned by the wrapper), running on Java 21. Gradle picks or downloads a Java 21 for itself (`gradle/gradle-daemon-jvm.properties`). Every Minecraft version compiles with at least JDK 21; `--release` sets each version's bytecode and Java API to the Java its game runs on (`java_version` in `versions/<node>/gradle.properties`).
 - One JAR per Minecraft version, named `kineticcore-<loader>-<minecraft>-<version>.jar`, for example `kineticcore-forge-1.20.1-26.10.2.jar`.
 - A push to `master` that changes source or build files builds every enabled version and publishes the JARs as GitHub Release `v<yy.M.d>` (`.github/workflows/auto-release.yml`); `manual-release.yml` does the same on demand. Local builds never create, upload or publish a release.
-- No third-party mod integrations in the core. Curios, JEI and similar integrations belong in optional compat addons, which plug in through `KineticSelectors.registerInventorySource` and `KineticHoveredItems.register`.
+- One built-in third-party adaptation: when JEI is installed, the core reports the area of its compact status effects to JEI, so JEI's item list stays clear of them (an optional Mixin on JEI's `InventoryEffectRendererGuiHandler`, checked against JEI for 1.20.1 and 1.21.1, skipped when JEI is absent). Any other integration with Curios, JEI and similar mods belongs in optional compat addons, which plug in through `KineticSelectors.registerInventorySource` and `KineticHoveredItems.register`.
 
 ### Multi-version build
 
@@ -491,7 +491,7 @@ KineticCore 是面向 **Minecraft 1.20.1 / Forge 47.4.x / Java 17** 的核心基
 - Gradle 9.8.0（由 wrapper 固定），运行在 Java 21 上。Gradle 会自行选用或下载 Java 21（`gradle/gradle-daemon-jvm.properties`）。所有 Minecraft 版本至少用 JDK 21 编译，`--release` 把每个版本的字节码与 Java API 定为其游戏运行时的 Java（`versions/<节点>/gradle.properties` 中的 `java_version`）。
 - 每个 Minecraft 版本一个 JAR，命名为 `kineticcore-<加载器>-<MC版本>-<版本号>.jar`，例如 `kineticcore-forge-1.20.1-26.10.2.jar`。
 - 向 `master` 推送源码或构建文件的改动时，会构建所有启用的版本，并把 JAR 发布为 GitHub Release `v<yy.M.d>`（`.github/workflows/auto-release.yml`）；`manual-release.yml` 可按需手动执行同样流程。本地构建不会创建、上传或发布 Release
-- 核心不内置任何第三方模组联动。Curios、JEI 等联动放在可选兼容附属中，通过 `KineticSelectors.registerInventorySource` 与 `KineticHoveredItems.register` 接入。
+- 核心只内置一项第三方适配：安装了 JEI 时，核心会把紧凑状态效果的区域告知 JEI，让 JEI 的物品列表自动避开（对 JEI `InventoryEffectRendererGuiHandler` 的可选 Mixin，已对照 1.20.1 与 1.21.1 的 JEI 检查；未安装 JEI 时自动跳过）。与 Curios、JEI 等模组的其他联动放在可选兼容附属中，通过 `KineticSelectors.registerInventorySource` 与 `KineticHoveredItems.register` 接入。
 
 ### 多版本构建
 

@@ -412,11 +412,46 @@ tasks.register('checkKineticHeadlessRegressions', JavaExec) {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(kineticJavaVersion) }
 }
 
+// The Forge JAR that ModDevGradle builds holds remapped Forge classes. Where it also keeps Forge's signature
+// (as on the CI runner), loading one of those classes fails with "SHA-384 digest error". The regression JVMs
+// need no signatures, so they run from copies of the signed JARs without the signature files.
+def unsignedRegressionJars = layout.buildDirectory.dir('tmp/unsignedRegressionClasspath')
+def jarSignatureFile = ~/META-INF\/[^\/]+\.(SF|RSA|DSA|EC)/
+
+tasks.register('unsignKineticRegressionClasspath') {
+    inputs.files(sourceSets.test.runtimeClasspath)
+    outputs.dir(unsignedRegressionJars)
+    doLast {
+        File directory = unsignedRegressionJars.get().asFile
+        project.delete(directory)
+        directory.mkdirs()
+        sourceSets.test.runtimeClasspath.files.findAll { it.isFile() && it.name.endsWith('.jar') }.each { File jar ->
+            new java.util.zip.ZipFile(jar).withCloseable { zip ->
+                if (!zip.entries().toList().any { it.name ==~ jarSignatureFile }) return
+                new java.util.zip.ZipOutputStream(new FileOutputStream(new File(directory, jar.name))).withCloseable { out ->
+                    zip.entries().each { entry ->
+                        if (entry.name ==~ jarSignatureFile) return
+                        out.putNextEntry(new java.util.zip.ZipEntry(entry.name))
+                        zip.getInputStream(entry).withCloseable { out << it }
+                        out.closeEntry()
+                    }
+                }
+            }
+        }
+    }
+}
+
 tasks.register('checkKineticMinecraftRegressions', JavaExec) {
     group = 'verification'
     description = 'Runs the regression checks that need Minecraft classes but no bootstrap or mod loading (see MinecraftRegressionSuite).'
-    dependsOn tasks.named('testClasses')
-    classpath = sourceSets.test.runtimeClasspath
+    dependsOn tasks.named('testClasses'), tasks.named('unsignKineticRegressionClasspath')
+    classpath = files({
+        File directory = unsignedRegressionJars.get().asFile
+        sourceSets.test.runtimeClasspath.files.collect { File file ->
+            File unsigned = new File(directory, file.name)
+            unsigned.isFile() ? unsigned : file
+        }
+    })
     mainClass.set('dev.xyat.kineticcore.MinecraftRegressionSuite')
     // Source-reading checks resolve src/ against the repository root; isolated JVMs that write config/ and logs/
     // get their own directory under this node's build/ instead of the repository root.
