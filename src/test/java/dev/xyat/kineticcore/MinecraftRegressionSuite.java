@@ -32,6 +32,7 @@ import dev.xyat.kineticcore.internal.client.screen.GuiWheelDispatchRegression;
 import dev.xyat.kineticcore.internal.client.screen.GuiWheelGenericOcclusionRegression;
 import dev.xyat.kineticcore.internal.client.screen.GuiWheelOcclusionRegression;
 import dev.xyat.kineticcore.internal.config.client.KineticConfigBuildAtomicRegression;
+import dev.xyat.kineticcore.internal.config.client.KineticConfigStartupRegression;
 import dev.xyat.kineticcore.internal.config.client.KineticNativeSetRollbackRegression;
 import dev.xyat.kineticcore.internal.network.ForgeNetworkUtf8Regression;
 import dev.xyat.kineticcore.internal.runtime.FeatureSwitchPersistenceRegression;
@@ -96,6 +97,7 @@ public final class MinecraftRegressionSuite {
         run("GuiWheelGenericOcclusionRegression", () -> GuiWheelGenericOcclusionRegression.main(NO_ARGS));
         run("GuiWheelOcclusionRegression", () -> GuiWheelOcclusionRegression.main(NO_ARGS));
         run("KineticConfigBuildAtomicRegression", () -> KineticConfigBuildAtomicRegression.main(NO_ARGS));
+        run("KineticConfigStartupRegression", () -> KineticConfigStartupRegression.main(NO_ARGS));
         run("KineticNativeSetRollbackRegression", () -> KineticNativeSetRollbackRegression.main(NO_ARGS));
         run("ForgeNetworkUtf8Regression", () -> ForgeNetworkUtf8Regression.main(NO_ARGS));
         runIsolated(FeatureSwitchPersistenceRegression.class, "invalid");

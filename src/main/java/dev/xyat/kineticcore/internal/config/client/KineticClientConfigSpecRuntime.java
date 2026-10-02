@@ -15,6 +15,8 @@ public final class KineticClientConfigSpecRuntime {
             Collections.synchronizedMap(new IdentityHashMap<>());
     private static final Map<KTClientConfigSpec.Value<?>, ForgeConfigSpec.ConfigValue<?>> VALUES =
             Collections.synchronizedMap(new IdentityHashMap<>());
+    private static final Map<KTClientConfigSpec.Value<?>, ForgeConfigSpec> VALUE_SPECS =
+            Collections.synchronizedMap(new IdentityHashMap<>());
     private static final Map<KTClientConfigSpec, String> REGISTERED_FILES =
             Collections.synchronizedMap(new IdentityHashMap<>());
 
@@ -53,12 +55,16 @@ public final class KineticClientConfigSpecRuntime {
 
     @SuppressWarnings("unchecked")
     public static <T> T get(KTClientConfigSpec.Value<T> value, T fallback) {
+        ForgeConfigSpec spec = VALUE_SPECS.get(value);
+        if (spec == null || !spec.isLoaded()) return fallback;
         ForgeConfigSpec.ConfigValue<?> nativeValue = VALUES.get(value);
         return nativeValue == null ? fallback : (T) nativeValue.get();
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     public static <T> void set(KTClientConfigSpec.Value<T> value, T next) {
+        ForgeConfigSpec spec = VALUE_SPECS.get(value);
+        if (spec == null || !spec.isLoaded()) return;
         ForgeConfigSpec.ConfigValue nativeValue = VALUES.get(value);
         if (nativeValue == null) return;
         Object previous = nativeValue.get();
@@ -105,6 +111,7 @@ public final class KineticClientConfigSpecRuntime {
         ForgeConfigSpec built = builder.build();
         synchronized (VALUES) {
             VALUES.putAll(pendingValues);
+            pendingValues.keySet().forEach(value -> VALUE_SPECS.put(value, built));
         }
         return built;
     }

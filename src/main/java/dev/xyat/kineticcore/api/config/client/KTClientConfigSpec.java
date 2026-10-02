@@ -143,7 +143,7 @@ public final class KTClientConfigSpec {
      * Typed handle to one declared client setting.
      *
      * <p>Handles are created only by {@link Builder} and stay valid for the lifetime of the game. Before the spec
-     * is registered, reads and writes use an in-memory copy that starts at the default value.
+     * is loaded by Forge, reads and writes use an in-memory copy that starts at the default value.
      *
      * @param <T> stored value type
      */
@@ -160,7 +160,7 @@ public final class KTClientConfigSpec {
         /**
          * Returns the current value.
          *
-         * @return the value from the loaded config file, or the in-memory value while the spec is not registered
+         * @return the value from the loaded config file, or the in-memory value while the spec is not loaded
          *   yet; never {@code null}
          */
         public final T get() {
