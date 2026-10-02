@@ -445,13 +445,16 @@ tasks.register('checkKineticMinecraftRegressions', JavaExec) {
     group = 'verification'
     description = 'Runs the regression checks that need Minecraft classes but no bootstrap or mod loading (see MinecraftRegressionSuite).'
     dependsOn tasks.named('testClasses'), tasks.named('unsignKineticRegressionClasspath')
-    classpath = files({
+    // The real classpath carries the task dependencies (the Minecraft artifacts are built first); the unsigned
+    // copies only replace its JARs once those exist, right before the JVM starts.
+    classpath = sourceSets.test.runtimeClasspath
+    doFirst {
         File directory = unsignedRegressionJars.get().asFile
-        sourceSets.test.runtimeClasspath.files.collect { File file ->
+        classpath = files(classpath.files.collect { File file ->
             File unsigned = new File(directory, file.name)
             unsigned.isFile() ? unsigned : file
-        }
-    })
+        })
+    }
     mainClass.set('dev.xyat.kineticcore.MinecraftRegressionSuite')
     // Source-reading checks resolve src/ against the repository root; isolated JVMs that write config/ and logs/
     // get their own directory under this node's build/ instead of the repository root.
