@@ -49,8 +49,7 @@ public final class MinecraftKeysImpl {
     }
 
     public static List<KeyMapping> currentMappings() {
-        var options = Minecraft.getInstance().options;
-        return options == null ? List.of() : snapshotMappings(options.keyMappings);
+        return snapshotMappings(Minecraft.getInstance().options.keyMappings);
     }
 
     public static boolean inventoryUses(KineticKeyBindings.Key key) {

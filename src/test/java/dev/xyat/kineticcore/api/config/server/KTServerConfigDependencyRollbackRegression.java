@@ -7,7 +7,7 @@ import java.util.Map;
 public final class KTServerConfigDependencyRollbackRegression {
     private static int checks;
 
-    public static void main(String[] args) throws Throwable {
+    public static void main(String[] args) {
         checkApply();
         checkApplyAndSave();
         System.out.println("PASS: " + checks + " dependent config rollback checks");
@@ -26,7 +26,7 @@ public final class KTServerConfigDependencyRollbackRegression {
         check(fixture.restoreLog.toString().equals("BA"), "apply rollback must run B before A");
     }
 
-    private static void checkApplyAndSave() throws Throwable {
+    private static void checkApplyAndSave() {
         Fixture fixture = new Fixture();
         try {
             fixture.spec.applyAndSave(null, fixture.changes());

@@ -11,7 +11,7 @@ import dev.xyat.kineticcore.internal.client.gui.widget.InternalControl;
 import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.StateButton;
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticNumericFields.NumericEditBox;
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticAutoComplete.NumericAutoCompleteBox;
-import dev.xyat.kineticcore.internal.client.gui.widget.selection.TabBarButtons;
+import dev.xyat.kineticcore.internal.client.gui.widget.tab.TabBarButtons;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -47,7 +47,6 @@ public final class PageUi implements KineticUi {
         customs.clear();
     }
 
-    /** Ticks registered custom controls. */
     /**
      * 把松开事件补发给按下后被拖出范围的自绘控件 / Delivers a release to custom controls that were pressed and then
      * dragged outside their bounds (vanilla only notifies the child under the pointer).
@@ -506,7 +505,7 @@ public final class PageUi implements KineticUi {
         if (control == null) return;
         InternalControl internal = CustomControlSupport.widget(control);
         host.removeKineticControl(internal);
-        customs.remove(internal);
+        if (internal instanceof CustomControlSupport.Widget widget) customs.remove(widget);
     }
 
     @Override

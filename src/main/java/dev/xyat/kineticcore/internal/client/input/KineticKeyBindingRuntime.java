@@ -36,14 +36,11 @@ public final class KineticKeyBindingRuntime {
 
     public static synchronized void initialize() {
         if (initialized) return;
-        
-
         var attempt = LISTENER_REGISTRATIONS.begin();
-        int slot = 0;
-        attempt.install(slot++, () -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticKeyBindingRuntime::onRegisterKeyMappings));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticKeyBindingRuntime::onClientTick));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticKeyBindingRuntime::onScreenKeyPressed));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticKeyBindingRuntime::onScreenMousePressed));
+        attempt.install(() -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticKeyBindingRuntime::onRegisterKeyMappings));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticKeyBindingRuntime::onClientTick));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticKeyBindingRuntime::onScreenKeyPressed));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticKeyBindingRuntime::onScreenMousePressed));
         attempt.finish();
         initialized = true;
     }
@@ -250,6 +247,7 @@ public final class KineticKeyBindingRuntime {
 
     private static void drainClicks(KeyMapping mapping) {
         while (mapping.consumeClick()) {
+            // 丢弃积压的点击 / discard queued presses
         }
     }
 

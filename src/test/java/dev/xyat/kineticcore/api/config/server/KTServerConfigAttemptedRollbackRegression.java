@@ -5,7 +5,7 @@ import java.util.Map;
 
 /** Tests that a failed transaction restores only fields whose writers were attempted. */
 public final class KTServerConfigAttemptedRollbackRegression {
-    public static void main(String[] args) throws Throwable {
+    public static void main(String[] args) {
         applyDoesNotWriteUnattemptedField();
         applyAndSaveDoesNotWriteUnattemptedField();
         applyAndSaveRestoresAllAttemptedFields();

@@ -50,26 +50,6 @@ public class StructureUtils {
         return structureIds;
     }
 
-    public static boolean isInStructure(Entity entity, String structureId) {
-        if (entity == null || structureId == null || structureId.isBlank()) {
-            return false;
-        }
-        if (entity.level().isClientSide) {
-            return false;
-        }
-        if (!(entity.level() instanceof ServerLevel serverLevel)) {
-            return false;
-        }
-
-        List<String> currentStructures = getStructuresAt(serverLevel, entity.blockPosition());
-        for (String currentStructure : currentStructures) {
-            if (currentStructure.equals(structureId)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public static String getDimension(Level level) {
         return level == null ? "unknown" : level.dimension().location().toString();
     }
@@ -78,11 +58,4 @@ public class StructureUtils {
         return entity == null ? "unknown" : getDimension(entity.level());
     }
 
-    public static boolean isDimension(Level level, String dimensionId) {
-        return getDimension(level).equals(dimensionId);
-    }
-
-    public static boolean isDimension(Entity entity, String dimensionId) {
-        return getDimension(entity).equals(dimensionId);
-    }
 }

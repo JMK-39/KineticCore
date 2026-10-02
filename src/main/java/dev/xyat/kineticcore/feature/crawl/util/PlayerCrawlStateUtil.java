@@ -4,7 +4,6 @@ import dev.xyat.kineticcore.api.player.KineticCrawling;
 import net.minecraft.world.entity.LivingEntity;
 
 public final class PlayerCrawlStateUtil {
-    public static final String CRAWLING_TAG = "IsCrawling";
 
     private PlayerCrawlStateUtil() {
     }

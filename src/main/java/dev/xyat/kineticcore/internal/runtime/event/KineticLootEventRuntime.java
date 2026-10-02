@@ -31,9 +31,8 @@ public final class KineticLootEventRuntime {
     private static synchronized void initialize() {
         if (initialized) return;
         var attempt = LISTENER_REGISTRATIONS.begin();
-        int slot = 0;
         for (KineticEventPriority priority : KineticEventPriority.values()) {
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(toForge(priority), (LootTableLoadEvent event) -> dispatch(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(toForge(priority), (LootTableLoadEvent event) -> dispatch(priority, event)));
         }
         attempt.finish();
         initialized = true;

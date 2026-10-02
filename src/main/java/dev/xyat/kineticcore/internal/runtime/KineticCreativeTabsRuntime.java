@@ -39,7 +39,7 @@ public final class KineticCreativeTabsRuntime {
             return created;
         });
 
-        RegistryObject<CreativeModeTab> object = registry.register(id.getPath(), factory::get);
+        RegistryObject<CreativeModeTab> object = registry.register(id.getPath(), factory);
         return new Handle(id, object);
     }
 

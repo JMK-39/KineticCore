@@ -29,7 +29,7 @@ public final class KineticRecipeSerializerRegistryRuntime {
             return created;
         });
 
-        RegistryObject<T> object = registry.register(id.getPath(), factory::get);
+        RegistryObject<T> object = registry.register(id.getPath(), factory);
         return new Handle<>(id, object);
     }
 

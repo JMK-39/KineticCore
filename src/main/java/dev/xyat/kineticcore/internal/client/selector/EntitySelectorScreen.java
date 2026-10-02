@@ -63,7 +63,6 @@ public final class EntitySelectorScreen extends KineticScreen {
     private final Set<String> selectedMods = new TreeSet<>();
     private final List<String> availableMods = new ArrayList<>();
     private final Map<String, CategoryFilter> entityCategoryCache = new HashMap<>();
-    private final Screen parent;
     private final Consumer<List<String>> onApply;
     private final List<String> allEntityIds = new ArrayList<>();
     private final List<String> filteredEntityIds = new ArrayList<>();
@@ -77,7 +76,6 @@ public final class EntitySelectorScreen extends KineticScreen {
             EntityPreviewRenderer.DEFAULT_MAX_AUTO_SCALE_FACTOR
     );
 
-    private KineticEditBox searchBox;
     private String searchQuery = "";
     private List<Component> deferredTooltip;
 
@@ -93,7 +91,6 @@ public final class EntitySelectorScreen extends KineticScreen {
             Collection<String> allowedEntityIds, Consumer<List<String>> onApply
     ) {
         super(title);
-        this.parent = parent;
         setParentScreen(parent);
         this.onApply = onApply;
         Set<String> allowed = allowedEntityIds == null ? null : new LinkedHashSet<>(allowedEntityIds);
@@ -103,7 +100,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                 .sorted(String::compareToIgnoreCase)
                 .forEach(allEntityIds::add);
         allEntityIds.stream()
-                .map(id -> KineticResourceIds.tryParse(id))
+                .map(KineticResourceIds::tryParse)
                 .filter(java.util.Objects::nonNull)
                 .map(ResourceLocation::getNamespace)
                 .distinct()
@@ -120,7 +117,7 @@ public final class EntitySelectorScreen extends KineticScreen {
 
     @Override
     protected void buildUi() {
-        searchBox = addTextField(
+        KineticEditBox searchBox = addTextField(
                 GRID_X, 38, Math.min(GRID_W, 430),
                 KineticText.translatable("gui.kineticcore.entity_selector.search_hint"),
                 KineticText.translatable("gui.kineticcore.entity_selector.search_hint"),

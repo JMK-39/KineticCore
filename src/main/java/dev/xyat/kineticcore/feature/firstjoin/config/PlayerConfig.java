@@ -257,43 +257,6 @@ public class PlayerConfig {
         return parseItemStackInternal(input);
     }
 
-    public static List<JoinItemEntry> getJoinItemEntries() {
-        List<JoinItemEntry> result = new ArrayList<>();
-        int defaultSlot = 0;
-        for (String raw : firstJoinItemsRaw) {
-            int slot = defaultSlot;
-            String itemText = raw == null ? "" : raw.trim();
-            if (itemText.startsWith("[")) {
-                int end = itemText.indexOf(']');
-                if (end > 1) {
-                    try {
-                        slot = Integer.parseInt(itemText.substring(1, end));
-                        itemText = itemText.substring(end + 1).trim();
-                    } catch (NumberFormatException ignored) {
-                    }
-                }
-            }
-            ItemStack stack = parseItemStackInternal(itemText);
-            if (!stack.isEmpty()) {
-                result.add(new JoinItemEntry(slot, stack.copy()));
-            }
-            defaultSlot++;
-        }
-        return result;
-    }
-
-    public static void setJoinItemEntries(List<JoinItemEntry> entries) {
-        List<String> serialized = new ArrayList<>();
-        if (entries != null) {
-            for (JoinItemEntry entry : entries) {
-                if (entry == null || entry.stack() == null || entry.stack().isEmpty()) continue;
-                serialized.add("[" + entry.slot() + "] " + serializeItemStack(entry.stack()));
-            }
-        }
-        firstJoinItemsRaw = serialized;
-        isCacheInitialized = false;
-    }
-
     public record JoinItemEntry(int slot, ItemStack stack) {
     }
 

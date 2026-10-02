@@ -42,13 +42,6 @@ public final class KineticModLifecycleRuntime {
         CLIENT_SETUP_ACTIONS.add(action);
     }
 
-    public static synchronized void requireClientSetupRegistrationOpen(String capability) {
-        ensureListener();
-        if (clientSetupRegistrationClosed) {
-            throw new IllegalStateException("Client setup registration window has already closed: " + Objects.requireNonNull(capability, "capability"));
-        }
-    }
-
     public static void onLoadComplete(Runnable action) {
         Objects.requireNonNull(action, "action");
         synchronized (KineticModLifecycleRuntime.class) {

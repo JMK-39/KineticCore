@@ -32,9 +32,6 @@ public interface PageHost {
     /** Runs the standard close path (close hook, then back navigation). */
     void close();
 
-    /** Navigates back to the parent screen. */
-    void navigateBack();
-
     /** Opens a child page whose parent is this host. */
     void openChild(KineticPage child);
 

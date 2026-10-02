@@ -54,12 +54,11 @@ public final class KineticClientRuntimeImpl {
 
     private static void installRuntimeListeners() {
         var attempt = LISTENER_REGISTRATIONS.begin();
-        int slot = 0;
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(GuiOverlayBridge::onRenderGui));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, GuiOverlayBridge::onRenderScreenPre));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GuiOverlayBridge::onRenderScreenPost));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(GuiSessionBridge::onScreenOpening));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(GuiSessionBridge::onPlainScreenEscape));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(GuiOverlayBridge::onRenderGui));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, GuiOverlayBridge::onRenderScreenPre));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GuiOverlayBridge::onRenderScreenPost));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(GuiSessionBridge::onScreenOpening));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(GuiSessionBridge::onPlainScreenEscape));
         attempt.finish();
     }
 

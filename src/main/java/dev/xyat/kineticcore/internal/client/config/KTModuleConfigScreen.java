@@ -14,12 +14,11 @@ import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
+import dev.xyat.kineticcore.internal.client.gui.widget.InternalControl;
+import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.StateButton;
 import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticNumericFields.NumericEditBox;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
@@ -77,7 +76,6 @@ final class KTModuleConfigScreen extends KineticScreen {
     private static final int SCROLL_X = 615;
     private static final int SCROLL_WIDTH = 4;
 
-    private final Screen parent;
     private final List<KTConfigPage> pages;
     private final Map<String, Object> pendingValues = new HashMap<>();
     private final Map<String, Object> originalValues = new HashMap<>();
@@ -95,12 +93,10 @@ final class KTModuleConfigScreen extends KineticScreen {
     private boolean lastSaveSentServerRequest;
 
     KTModuleConfigScreen(
-            Screen parent,
             Component moduleTitle,
             List<KTConfigPage> pages
     ) {
         super(Objects.requireNonNull(moduleTitle, "moduleTitle"));
-        this.parent = parent;
         this.pages = pages.stream()
                 .sorted(Comparator.comparingInt((KTConfigPage page) -> scopeOrder(page.scope()))
                         .thenComparing(KTConfigPage::id))
@@ -221,10 +217,7 @@ final class KTModuleConfigScreen extends KineticScreen {
         return rowScroll.smoothOffset() * ROW_HEIGHT;
     }
 
-    private <T extends AbstractWidget> T addRowScrollableWidget(T widget) {
-        if (!(widget instanceof dev.xyat.kineticcore.internal.client.gui.widget.InternalControl control)) {
-            throw new IllegalArgumentException("Scrollable widget must be an API-created control");
-        }
+    private void addRowScrollableWidget(InternalControl control) {
         addScrollableWidget(control,
                 28,
                 ROW_TOP,
@@ -232,7 +225,6 @@ final class KTModuleConfigScreen extends KineticScreen {
                 ROW_TOP + LIST_HEIGHT,
                 this::rowPixelOffset
         );
-        return widget;
     }
 
     private void addValueWidgets(KTConfigPage page, KTConfigEntry<?> entry, int y) {
@@ -244,7 +236,7 @@ final class KTModuleConfigScreen extends KineticScreen {
         );
         final int editorX = KTConfigControlMetrics.editorX(editorWidth);
         final boolean editable = KTConfigApi.canEdit(page);
-        AbstractWidget editor;
+        InternalControl editor;
 
         switch (entry.type()) {
             case BOOLEAN -> {
@@ -252,7 +244,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                 editor = addToggleButton(
                         editorX, y, editorWidth, value,
                         booleanText(true), booleanText(false), null,
-                        next -> entry.accepts(next),
+                        entry::accepts,
                         next -> updateValidation(key, entry, next)
                 );
             }
@@ -315,7 +307,7 @@ final class KTModuleConfigScreen extends KineticScreen {
             case STRING -> {
                 KineticEditBox box = addTextField(
                         editorX, y, editorWidth, entry.label(), null,
-                        value -> entry.accepts(value), null
+                        entry::accepts, null
                 );
                 box.setMaxLength(32767);
                 box.setValue(String.valueOf(pendingValues.get(key)));
@@ -336,7 +328,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                 String current = String.valueOf(pendingValues.get(key));
                 editor = addDropdown(
                         editorX, y, editorWidth,
-                        choiceOptions.stream().map(option -> new dev.xyat.kineticcore.api.client.gui.widget.KineticDropdown.Option(
+                        choiceOptions.stream().map(option -> new KineticDropdown.Option(
                                 option.value(), option.translation(), option.tooltip()
                         )).toList(),
                         current, null,
@@ -387,16 +379,14 @@ final class KTModuleConfigScreen extends KineticScreen {
         } else {
             editorTooltip = entry.tooltip();
         }
-        editor.active = editable;
-        if (editor instanceof dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.StateButton stateButton) {
+        editor.setEnabled(editable);
+        if (editor instanceof StateButton stateButton) {
             stateButton.setError(invalidEntries.contains(key));
         }
-        if (editor instanceof dev.xyat.kineticcore.internal.client.gui.widget.InternalControl control) {
-            registerWidgetTooltip(control, editorTooltip);
-        }
+        registerWidgetTooltip(editor, editorTooltip);
         addRowScrollableWidget(editor);
 
-        Button reset = addButton(
+        StateButton reset = addButton(
                 resetX, y, resetWidth,
                 KineticText.translatable("gui.kineticcore.config.reset"),
                 editable
@@ -417,7 +407,7 @@ final class KTModuleConfigScreen extends KineticScreen {
     private void addActionWidget(KTConfigPage page, KTConfigEntry<?> entry, int y) {
         boolean editable = KTConfigApi.canEdit(page);
         Component tooltip = editable ? entry.tooltip() : KTConfigApi.unavailableReason(page);
-        Button button = addButton(
+        StateButton button = addButton(
                 KTConfigControlMetrics.actionX(), y, KTConfigControlMetrics.ACTION_WIDTH,
                 KineticText.translatable("gui.kineticcore.config.open"),
                 tooltip,
@@ -483,7 +473,6 @@ final class KTModuleConfigScreen extends KineticScreen {
         if (KineticClientRuntime.currentScreen() != this || rejectUneditablePage(page)) return;
         String current = String.valueOf(pendingValues.getOrDefault(key, ""));
         KineticClientRuntime.openScreen(new KTLongTextEditorScreen(
-                this,
                 entry.label(),
                 current,
                 value -> {
@@ -531,7 +520,6 @@ final class KTModuleConfigScreen extends KineticScreen {
 
         boolean integerList = entry.type() == KTConfigEntry.Type.INTEGER_LIST;
         KineticClientRuntime.openScreen(new KTConfigListScreen(
-                this,
                 entry.label(),
                 entry.tooltip(),
                 integerList,
@@ -960,7 +948,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                     if (shouldShowImmediateSavedToast(outcome)) showSavedToast();
                     navigateBack();
                 },
-                () -> navigateBack()
+                this::navigateBack
         );
         return true;
     }

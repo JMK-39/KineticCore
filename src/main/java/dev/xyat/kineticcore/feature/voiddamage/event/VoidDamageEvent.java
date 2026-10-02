@@ -47,7 +47,8 @@ public class VoidDamageEvent {
     }
 
     private static boolean isWhiteListed(LivingEntity entity) {
-        if (KTServerConfigApi.getStringList("kineticcore:general_mechanics", "void_damage_whitelist", List.of()) == null || KTServerConfigApi.getStringList("kineticcore:general_mechanics", "void_damage_whitelist", List.of()).isEmpty()) {
+        List<String> whitelist = KTServerConfigApi.getStringList("kineticcore:general_mechanics", "void_damage_whitelist", List.of());
+        if (whitelist.isEmpty()) {
             return false;
         }
 
@@ -59,7 +60,7 @@ public class VoidDamageEvent {
         String idString = entityId.toString();
         String namespace = "@" + entityId.getNamespace();
 
-        for (String rule : KTServerConfigApi.getStringList("kineticcore:general_mechanics", "void_damage_whitelist", List.of())) {
+        for (String rule : whitelist) {
             if (rule == null || rule.isEmpty()) {
                 continue;
             }

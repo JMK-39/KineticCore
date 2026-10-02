@@ -61,12 +61,12 @@ public final class KineticTextFields {
         }
 
         @Override
-        public int drawString(Font font, String text, int x, int y, int color) {
+        public int drawString(@NotNull Font font, @NotNull String text, int x, int y, int color) {
             return super.drawString(font, text, x, y, textColor(color), false);
         }
 
         @Override
-        public int drawString(Font font, FormattedCharSequence text, int x, int y, int color) {
+        public int drawString(@NotNull Font font, @NotNull FormattedCharSequence text, int x, int y, int color) {
             return super.drawString(font, text, x, y, textColor(color), false);
         }
 

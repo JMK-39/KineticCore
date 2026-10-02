@@ -13,6 +13,7 @@ import net.minecraft.SharedConstants;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -64,17 +65,14 @@ public class NbtEditorScreen extends KineticScreen {
                 try {
                     TagParser.parseTag(val);
                     onSave.accept(val);
-                } catch (Exception e) {
+                } catch (CommandSyntaxException e) {
                     nbtEditor.setError(KineticText.translatable("gui.kineticcore.nbt.editor.invalid").getString());
-                    return;
                 }
             }
         });
 
         addButton(clearX, 10, btnW, KineticText.translatable("gui.kineticcore.nbt.clear"), null, () -> nbtEditor.setValue(""));
-        addButton(closeX, 10, btnW, KineticText.translatable("gui.kineticcore.nbt.close"), null, () -> {
-            navigateBack();
-        });
+        addButton(closeX, 10, btnW, KineticText.translatable("gui.kineticcore.nbt.close"), null, this::navigateBack);
 
         int editorX = 20;
         int editorY = 40;
@@ -88,7 +86,7 @@ public class NbtEditorScreen extends KineticScreen {
                 if (val.trim().isEmpty() || val.trim().equals("{}")) { nbtEditor.setError(""); return; }
                 TagParser.parseTag(val);
                 nbtEditor.setError("");
-            } catch (Exception e) {
+            } catch (CommandSyntaxException e) {
                 nbtEditor.setError(e.getMessage());
             }
         });
@@ -170,7 +168,7 @@ public class NbtEditorScreen extends KineticScreen {
     }
 
     private static final class NbtEditorWidget {
-        public int x, y, width, height;
+        private final int x, y, width, height;
         private String value = "";
         private int cursorPos = 0;
         private int selectPos = 0;

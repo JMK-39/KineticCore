@@ -49,7 +49,7 @@ public final class KineticExternalEventRuntime {
             boolean receiveCancelled,
             Consumer<Event> listener
     ) {
-        MinecraftForge.EVENT_BUS.addListener(priority, receiveCancelled, (Class) eventType, (Consumer) listener);
+        MinecraftForge.EVENT_BUS.addListener(priority, receiveCancelled, (Class) eventType, listener);
     }
 
     private static EventPriority toForge(KineticEventPriority priority) {

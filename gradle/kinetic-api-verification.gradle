@@ -1,8 +1,6 @@
 import java.util.regex.Pattern
 
 def kineticApiRoot = file('src/main/java/dev/xyat/kineticcore/api')
-def kineticApiPackage = 'dev.xyat.kineticcore.api'
-def kineticInternalPackage = 'dev.xyat.kineticcore.internal'
 def kineticFeaturePackage = 'dev.xyat.kineticcore.feature'
 
 def kineticLineNumber = { String source, int index ->
@@ -417,7 +415,10 @@ tasks.register('checkKineticMinecraftRegressions', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
     mainClass.set('dev.xyat.kineticcore.MinecraftRegressionSuite')
+    // Source-reading checks resolve src/ against the project; isolated JVMs that write config/ and logs/
+    // get their own directory under build/ instead of the project root.
     workingDir = projectDir
+    systemProperty 'kinetic.regression.workDir', layout.buildDirectory.dir('tmp/kineticMinecraftRegressions').get().asFile.absolutePath
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
 }
 
@@ -428,4 +429,5 @@ tasks.named('check').configure {
     dependsOn tasks.named('checkKineticWidgetState')
     dependsOn tasks.named('checkKineticPinyin')
     dependsOn tasks.named('checkKineticHeadlessRegressions')
+    dependsOn tasks.named('checkKineticMinecraftRegressions')
 }

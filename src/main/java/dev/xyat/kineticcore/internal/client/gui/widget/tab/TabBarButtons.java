@@ -1,4 +1,4 @@
-package dev.xyat.kineticcore.internal.client.gui.widget.selection;
+package dev.xyat.kineticcore.internal.client.gui.widget.tab;
 
 import dev.xyat.kineticcore.api.client.gui.widget.KineticTabBar;
 import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.StateButton;

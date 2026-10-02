@@ -48,8 +48,7 @@ public final class KineticSuperFlightRuntime {
     }
 
     public static boolean fallFlyingPose(Player player) {
-        return player != null
-                && active(player)
+        return active(player)
                 && player.getPersistentData().getBoolean(NBT_FALL_FLYING_POSE);
     }
 
@@ -105,7 +104,7 @@ public final class KineticSuperFlightRuntime {
     }
 
     public static void tick(ServerPlayer player) {
-        if (player == null || !active(player)) return;
+        if (!active(player)) return;
         if (!available(player) || !compatible(player)) {
             setActive(player, false);
             return;

@@ -25,7 +25,7 @@ public final class GuiTheme {
 
 
 
-    private static volatile Palette current = KineticTheme.DEFAULT;
+    private static final Palette PALETTE = KineticTheme.DEFAULT;
 
     private static final int BORDER_NORMAL = 0xFFFFFFFF;
     private static final int BORDER_HOVER = 0xFF4DA6FF;
@@ -50,7 +50,7 @@ public final class GuiTheme {
 
     /** Returns the active immutable Kinetic palette for theme-consistent custom rendering. */
     public static Palette current() {
-        return current;
+        return PALETTE;
     }
 
     /** Returns the standard cyan text color used on the light input surface. */
@@ -94,7 +94,7 @@ public final class GuiTheme {
     /** Draws the standard full-canvas background using the active theme. */
     public static void canvasBackground(GuiGraphics graphics, int width, int height) {
         if (graphics == null || width <= 0 || height <= 0) return;
-        graphics.fill(0, 0, width, height, current.background());
+        graphics.fill(0, 0, width, height, PALETTE.background());
     }
 
     /** Draws one standard themed surface without adding an outline. */
@@ -186,7 +186,7 @@ public final class GuiTheme {
                         y + yy,
                         x + xx + drawWidth,
                         y + yy + drawHeight,
-                        primary ? current.panel() : current.panelAlt()
+                        primary ? PALETTE.panel() : PALETTE.panelAlt()
                 );
             }
         }
@@ -210,29 +210,29 @@ public final class GuiTheme {
     /** Draws a one-pixel horizontal separator using the active theme border color. */
     public static void separator(GuiGraphics graphics, int x, int y, int width) {
         if (graphics == null || width <= 0) return;
-        graphics.fill(x, y, x + width, y + 1, current.border());
+        graphics.fill(x, y, x + width, y + 1, PALETTE.border());
     }
 
     /** Draws a one-pixel vertical separator using the active theme border color. */
     public static void verticalSeparator(GuiGraphics graphics, int x, int y, int height) {
         if (graphics == null || height <= 0) return;
-        graphics.fill(x, y, x + 1, y + height, current.border());
+        graphics.fill(x, y, x + 1, y + height, PALETTE.border());
     }
 
     /** Draws the standard outer frame used by item and rule grids without adding per-cell backgrounds. */
     public static void gridFrame(GuiGraphics graphics, int x, int y, int width, int height) {
         if (graphics == null || width <= 0 || height <= 0) return;
-        graphics.fill(x, y, x + width, y + height, current.background());
+        graphics.fill(x, y, x + width, y + height, PALETTE.background());
         if (width > 2 && height > 2) {
-            graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, current.panelAlt());
+            graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, PALETTE.panelAlt());
         }
     }
 
     private static int surfaceColor(Surface surface) {
         return switch (Objects.requireNonNull(surface, "surface")) {
-            case PANEL -> current.panel();
-            case PANEL_ALT -> current.panelAlt();
-            case FIELD -> current.field();
+            case PANEL -> PALETTE.panel();
+            case PANEL_ALT -> PALETTE.panelAlt();
+            case FIELD -> PALETTE.field();
         };
     }
 
@@ -335,27 +335,27 @@ public final class GuiTheme {
             case SUCCESS -> 0xFF55DD88;
             case WARNING -> BORDER_SELECTED;
             case DANGER -> BORDER_ERROR;
-            case MUTED -> current.border();
+            case MUTED -> PALETTE.border();
         };
     }
 
     /** Draws a panel using the alternate panel background and standard border. */
     public static void panelAlt(GuiGraphics graphics, int x, int y, int width, int height) {
         if (graphics == null || width <= 0 || height <= 0) return;
-        graphics.fill(x, y, x + width, y + height, current.panelAlt());
-        graphics.renderOutline(x, y, width, height, current.border());
+        graphics.fill(x, y, x + width, y + height, PALETTE.panelAlt());
+        graphics.renderOutline(x, y, width, height, PALETTE.border());
     }
 
     /** Draws the standard Kinetic panel using the active theme's panel background and border. */
     public static void panel(GuiGraphics graphics, int x, int y, int width, int height) {
         if (graphics == null || width <= 0 || height <= 0) return;
-        graphics.fill(x, y, x + width, y + height, current.panel());
-        graphics.renderOutline(x, y, width, height, current.border());
+        graphics.fill(x, y, x + width, y + height, PALETTE.panel());
+        graphics.renderOutline(x, y, width, height, PALETTE.border());
     }
 
     /** Draws the standard full-surface Kinetic shadow. */
     public static void shadow(GuiGraphics graphics, int width, int height) {
-        graphics.fill(0, 0, width, height, current.shadow());
+        graphics.fill(0, 0, width, height, PALETTE.shadow());
     }
 
     /** Draws theme text with the requested opacity while the API owns blend-state handling. */
@@ -371,67 +371,16 @@ public final class GuiTheme {
         float clampedAlpha = Math.max(0.0F, Math.min(1.0F, alpha));
         if (clampedAlpha <= 0.0F) return;
         int alphaByte = Math.round(clampedAlpha * 255.0F);
-        int color = (alphaByte << 24) | (current.text() & 0x00FFFFFF);
+        int color = (alphaByte << 24) | (PALETTE.text() & 0x00FFFFFF);
         KineticRenderRuntime.enableBlend();
         graphics.drawString(font, text, x, y, color);
         KineticRenderRuntime.disableBlend();
     }
 
 
-    /** Runs one GUI rendering action with depth testing disabled, then restores the standard enabled state. */
-    public static void runWithoutDepthTest(Runnable action) {
-        Objects.requireNonNull(action, "action");
-        KineticRenderRuntime.runWithoutDepthTest(action);
-    }
-
-    /** Restores the standard opaque-white GUI shader color before textured rendering. */
-    public static void resetShaderColor() {
-        KineticRenderRuntime.resetShaderColor();
-    }
-
-    /** Trims plain text to the requested pixel width using the supplied font. */
-    public static String trim(Font font, String text, int width) {
-        if (font == null || text == null || text.isEmpty()) return "";
-        if (font.width(text) <= width) return text;
-        int ellipsis = font.width("...");
-        return font.plainSubstrByWidth(text, Math.max(0, width - ellipsis)) + "...";
-    }
-
     /** Returns whether the supplied GUI-space point lies inside the rectangular bounds. */
     public static boolean hovering(double mouseX, double mouseY, int x, int y, int width, int height) {
         return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
-    }
-
-    /** Draws a themed horizontal scrollbar for the supplied viewport and scroll state. */
-    public static void horizontalScrollbar(
-            GuiGraphics graphics,
-            double mouseX,
-            double mouseY,
-            int x,
-            int y,
-            int width,
-            int height,
-            int thumbWidth,
-            int maxOffset,
-            double offset,
-            boolean dragging
-    ) {
-        if (graphics == null || maxOffset <= 0 || width <= 0 || height <= 0) return;
-        int safeThumb = Mth.clamp(thumbWidth, 1, width);
-        double safeOffset = Math.max(0D, Math.min(offset, maxOffset));
-        int thumbX = x + (int) Math.round((width - safeThumb) * (safeOffset / maxOffset));
-        boolean hovered = hovering(mouseX, mouseY, thumbX, y, safeThumb, height);
-        graphics.fill(x, y, x + width, y + height, current.border());
-        if (width > 2 && height > 2) {
-            graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, current.scrollTrack());
-        }
-        graphics.fill(
-                thumbX,
-                y,
-                thumbX + safeThumb,
-                y + height,
-                dragging || hovered ? current.scrollThumbHover() : current.scrollThumb()
-        );
     }
 
     /** Draws a themed scrollbar for the supplied viewport and scroll state. */
@@ -495,16 +444,16 @@ public final class GuiTheme {
         double safeOffset = Math.max(0D, Math.min(offset, maxOffset));
         int thumbY = y + (int) Math.round((height - safeThumb) * (safeOffset / maxOffset));
         boolean hovered = hovering(mouseX, mouseY, x, thumbY, width, safeThumb);
-        graphics.fill(x, y, x + width, y + height, current.border());
+        graphics.fill(x, y, x + width, y + height, PALETTE.border());
         if (width > 2 && height > 2) {
-            graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, current.scrollTrack());
+            graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, PALETTE.scrollTrack());
         }
         graphics.fill(
                 x,
                 thumbY,
                 x + width,
                 thumbY + safeThumb,
-                dragging || hovered ? current.scrollThumbHover() : current.scrollThumb()
+                dragging || hovered ? PALETTE.scrollThumbHover() : PALETTE.scrollThumb()
         );
     }
 

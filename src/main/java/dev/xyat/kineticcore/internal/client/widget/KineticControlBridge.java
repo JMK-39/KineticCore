@@ -143,7 +143,7 @@ public final class KineticControlBridge {
     public static void markScreenTooltipWidget(AbstractWidget widget, KineticScreenControls owner) {
         if (widget == null) return;
         SCREEN_TOOLTIP_WIDGETS.put(widget, new WeakReference<>(owner));
-        widget.setTooltip((Tooltip) null);
+        widget.setTooltip(null);
     }
 
     public static void unmarkScreenTooltipWidget(AbstractWidget widget) {
@@ -164,7 +164,7 @@ public final class KineticControlBridge {
     public static void setHoverTooltip(KineticControl control, Component tooltip) {
         AbstractWidget widget = widget(control);
         if (SCREEN_TOOLTIP_WIDGETS.containsKey(widget)) {
-            widget.setTooltip((Tooltip) null);
+            widget.setTooltip(null);
             return;
         }
         setVanillaTooltip(widget, tooltip);

@@ -45,18 +45,17 @@ public final class KineticPlayerEventRuntime {
     public static synchronized void initialize() {
         if (initialized) return;
         var attempt = LISTENER_REGISTRATIONS.begin();
-        int slot = 0;
         for (KineticEventPriority priority : KineticEventPriority.values()) {
             EventPriority forgePriority = toForge(priority);
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (AttackEntityEvent event) -> onAttackEntity(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerInteractEvent.LeftClickBlock event) -> onLeftClickBlock(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerInteractEvent.RightClickBlock event) -> onRightClickBlock(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerInteractEvent.RightClickItem event) -> onRightClickItem(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerWakeUpEvent event) -> onWakeUp(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.StartTracking event) -> onStartTracking(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerContainerEvent.Open event) -> onContainerOpen(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.BreakSpeed event) -> onBreakSpeed(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.HarvestCheck event) -> onHarvestCheck(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (AttackEntityEvent event) -> onAttackEntity(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerInteractEvent.LeftClickBlock event) -> onLeftClickBlock(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerInteractEvent.RightClickBlock event) -> onRightClickBlock(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerInteractEvent.RightClickItem event) -> onRightClickItem(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerWakeUpEvent event) -> onWakeUp(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.StartTracking event) -> onStartTracking(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerContainerEvent.Open event) -> onContainerOpen(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.BreakSpeed event) -> onBreakSpeed(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.HarvestCheck event) -> onHarvestCheck(priority, event)));
         }
         attempt.finish();
         initialized = true;

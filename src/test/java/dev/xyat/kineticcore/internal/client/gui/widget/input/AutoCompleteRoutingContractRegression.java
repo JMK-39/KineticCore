@@ -18,10 +18,13 @@ public final class AutoCompleteRoutingContractRegression {
         check(controls.contains("handleAutoCompleteKey(int keyCode, int scanCode, int modifiers)"), "controls loses keyboard metadata");
         check(controls.contains("autoCompleteGroup.handleKeyPressed(keyCode, scanCode, modifiers)"), "controls not forwarding keyboard metadata");
         check(!autocomplete.contains("super.keyPressed(keyCode, 0, 0)"), "old shortcut-breaking keyboard forwarding remains");
+        check(source("internal/client/gui/screen/KineticScreenRuntime.java")
+                        .contains("controls.handleAutoCompleteKey(keyCode, scanCode, modifiers)"),
+                "shared screen runtime does not forward keyboard metadata");
         for (String screen : new String[] {"KineticScreen", "KineticNativeScreen", "KineticContainerScreen"}) {
             check(source("internal/client/gui/screen/" + screen + ".java")
-                    .contains("controls.handleAutoCompleteKey(keyCode, scanCode, modifiers)"),
-                    screen + " does not forward keyboard metadata");
+                    .contains("runtime.keyPressed(keyCode, scanCode, modifiers,"),
+                    screen + " does not route key presses through the shared runtime");
         }
         // Last popup is drawn on top: mouse input must use reverse order, not first-registered order.
         String start = autocomplete.substring(autocomplete.indexOf("public static class AutoCompleteBoxGroup"));

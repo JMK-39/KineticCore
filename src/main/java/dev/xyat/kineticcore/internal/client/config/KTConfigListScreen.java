@@ -2,7 +2,6 @@ package dev.xyat.kineticcore.internal.client.config;
 
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 
-import dev.xyat.kineticcore.api.config.client.*;
 
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
@@ -12,7 +11,6 @@ import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.Grid
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +32,6 @@ final class KTConfigListScreen extends KineticScreen {
     private static final int ROW_RIGHT = 580;
     private static final long DRAG_SCROLL_INTERVAL_NANOS = 120_000_000L;
 
-    private final Screen parent;
     private final Component description;
     private final boolean integerList;
     private final Consumer<List<?>> resultConsumer;
@@ -52,7 +49,6 @@ final class KTConfigListScreen extends KineticScreen {
     private long lastDragScrollNanos;
 
     KTConfigListScreen(
-            Screen parent,
             Component title,
             Component description,
             boolean integerList,
@@ -60,7 +56,6 @@ final class KTConfigListScreen extends KineticScreen {
             Consumer<List<?>> resultConsumer
     ) {
         super(title);
-        this.parent = parent;
         this.description = description;
         this.integerList = integerList;
         this.resultConsumer = resultConsumer;
@@ -120,7 +115,7 @@ final class KTConfigListScreen extends KineticScreen {
         return listScroll.smoothOffset() * ROW_HEIGHT;
     }
 
-    private <T extends AbstractWidget> T addListScrollableWidget(T widget) {
+    private void addListScrollableWidget(AbstractWidget widget) {
         listWidgets.add(widget);
         if (!(widget instanceof dev.xyat.kineticcore.internal.client.gui.widget.InternalControl control)) {
             throw new IllegalArgumentException("Scrollable widget must be an API-created control");
@@ -132,7 +127,6 @@ final class KTConfigListScreen extends KineticScreen {
                 LIST_Y + LIST_HEIGHT,
                 this::listPixelOffset
         );
-        return widget;
     }
 
     private void setListWidgetsVisible(boolean visible) {
@@ -491,7 +485,7 @@ final class KTConfigListScreen extends KineticScreen {
                 KineticText.translatable("gui.yes"),
                 KineticText.translatable("gui.no"),
                 this::finish,
-                () -> navigateBack()
+                this::navigateBack
         );
         return true;
     }

@@ -291,7 +291,7 @@ public final class KineticClientRuntime {
     /** Returns whether the active Minecraft language belongs to the English language family. */
     public static boolean isEnglishLanguage() {
         String language = selectedLanguage();
-        return language != null && !language.isBlank() && language.toLowerCase(java.util.Locale.ROOT).startsWith("en_");
+        return language.toLowerCase(java.util.Locale.ROOT).startsWith("en_");
     }
 
     /** Immutable cursor coordinates returned by the client-runtime facade. */

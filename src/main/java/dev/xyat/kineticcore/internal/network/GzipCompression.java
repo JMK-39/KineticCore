@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.internal.network;
 
+import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -66,7 +67,7 @@ public final class GzipCompression {
         }
 
         @Override
-        public void write(byte[] bytes, int offset, int length) throws IOException {
+        public void write(@Nonnull byte[] bytes, int offset, int length) throws IOException {
             ensureCapacity(length);
             delegate.write(bytes, offset, length);
             count += length;

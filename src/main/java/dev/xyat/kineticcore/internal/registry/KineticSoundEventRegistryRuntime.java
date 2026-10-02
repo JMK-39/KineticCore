@@ -28,7 +28,7 @@ public final class KineticSoundEventRegistryRuntime {
             return created;
         });
 
-        RegistryObject<SoundEvent> object = registry.register(id.getPath(), factory::get);
+        RegistryObject<SoundEvent> object = registry.register(id.getPath(), factory);
         return new Handle(id, object);
     }
 

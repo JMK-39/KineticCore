@@ -53,7 +53,7 @@ public final class PlayerNetwork {
                                 (buffer, message) -> buffer.writeBoolean(message.isCrawling()),
                                 buffer -> new SyncCrawl(buffer.readBoolean())
                         ),
-                        () -> message -> PlayerNetworkClient.handleSync(message)
+                        () -> PlayerNetworkClient::handleSync
                 );
 
                 syncPacketRegistered = true;

@@ -66,31 +66,30 @@ public final class KineticClientEventRuntime {
     public static synchronized void initialize() {
         if (initialized) return;
         var attempt = LISTENER_REGISTRATIONS.begin();
-        int slot = 0;
 
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onClientTick));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogin));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogout));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onItemTooltip));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenInitBefore));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenInitAfter));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenRenderBefore));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenRenderAfter));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMousePressedBefore));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMouseReleasedBefore));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMouseDraggedBefore));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMouseScrolledBefore));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onHudOverlayRender));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onHudRenderEnd));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onMouseButtonBefore));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onInteractionKey));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onPlayerRenderBefore));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onPlayerRenderAfter));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLevelRender));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onCameraAngles));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onBlockScreenEffect));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onInventoryEffectLayout));
-        attempt.install(slot++, () -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticClientEventRuntime::onRegisterClientReloadListeners));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onClientTick));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogin));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogout));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onItemTooltip));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenInitBefore));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenInitAfter));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenRenderBefore));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenRenderAfter));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMousePressedBefore));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMouseReleasedBefore));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMouseDraggedBefore));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMouseScrolledBefore));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onHudOverlayRender));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onHudRenderEnd));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onMouseButtonBefore));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onInteractionKey));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onPlayerRenderBefore));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onPlayerRenderAfter));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLevelRender));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onCameraAngles));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onBlockScreenEffect));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onInventoryEffectLayout));
+        attempt.install(() -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticClientEventRuntime::onRegisterClientReloadListeners));
         attempt.finish();
         initialized = true;
     }
@@ -403,13 +402,8 @@ public final class KineticClientEventRuntime {
         if (failure != null) throw failure;
     }
 
-    private static final class BlockScreenEffectContextImpl implements KineticClientEvents.BlockScreenEffectContext {
-        private final RenderBlockScreenEffectEvent event;
-
-        private BlockScreenEffectContextImpl(RenderBlockScreenEffectEvent event) {
-            this.event = event;
-        }
-
+    private record BlockScreenEffectContextImpl(RenderBlockScreenEffectEvent event)
+            implements KineticClientEvents.BlockScreenEffectContext {
         @Override
         public boolean cancelled() {
             return event.isCanceled();

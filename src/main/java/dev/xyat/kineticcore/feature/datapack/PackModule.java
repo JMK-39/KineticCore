@@ -201,15 +201,6 @@ public class PackModule {
         Files.writeString(CONFIG_TOML.toPath(), builder.toString(), StandardCharsets.UTF_8);
     }
 
-    public static synchronized void savePackOrder() {
-        initializePaths();
-        try {
-            writeStandardToml();
-        } catch (Exception exception) {
-            throw new IllegalStateException("Failed to save pack order", exception);
-        }
-    }
-
     public static synchronized void saveDatapackOrder() {
         initializePaths();
         try {

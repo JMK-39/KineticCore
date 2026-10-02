@@ -1087,11 +1087,6 @@ public final class KineticScroll {
             this.offset = clamp((int) Math.round(targetOffset));
         }
 
-        /** Restores a previously persisted logical offset immediately. */
-        public void restoreOffset(int offset) {
-            setOffset(offset);
-        }
-
         /** Resets this grid scroll controller to its initial position and drag state. */
         public void reset() {
             offset = 0;

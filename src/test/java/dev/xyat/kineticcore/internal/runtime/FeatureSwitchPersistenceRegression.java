@@ -20,9 +20,11 @@ public final class FeatureSwitchPersistenceRegression {
 
     private static void invalidBooleanMustKeepDefault() throws Exception {
         Files.createDirectories(CONFIG.getParent());
-        Files.writeString(CONFIG, "movement.flight_server = typo\n"
-                + "movement.flight_client = FALSE\n"
-                + "player.crawling = true # user comment\n", StandardCharsets.UTF_8);
+        Files.writeString(CONFIG, """
+                movement.flight_server = typo
+                movement.flight_client = FALSE
+                player.crawling = true # user comment
+                """, StandardCharsets.UTF_8);
         FeatureSwitchRuntime.initialize();
         check(FeatureSwitchRuntime.isEnabled("movement.flight_server"),
                 "malformed boolean must not disable a default-enabled startup feature");

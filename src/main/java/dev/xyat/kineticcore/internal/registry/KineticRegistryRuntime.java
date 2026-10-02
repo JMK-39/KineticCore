@@ -82,13 +82,7 @@ public final class KineticRegistryRuntime {
         return Optional.of(new View<>((IForgeRegistry<T>) registry));
     }
 
-    private static final class View<T> implements KineticRegistryView<T> {
-        private final IForgeRegistry<T> registry;
-
-        private View(IForgeRegistry<T> registry) {
-            this.registry = registry;
-        }
-
+    private record View<T>(IForgeRegistry<T> registry) implements KineticRegistryView<T> {
         @Override
         public T get(ResourceLocation id) {
             return registry.getValue(id);

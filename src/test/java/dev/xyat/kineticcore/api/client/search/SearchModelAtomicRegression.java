@@ -53,7 +53,7 @@ public final class SearchModelAtomicRegression {
     }
 
     private static void successfulRefreshStillUpdatesLiveView() {
-        var model = new KineticSearch.Model<>(List.of("a", "b"), (text, query) -> text.contains(query));
+        var model = new KineticSearch.Model<>(List.of("a", "b"), String::contains);
         model.refresh("");
         List<String> view = model.items();
         model.refresh("b");

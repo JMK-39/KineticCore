@@ -385,7 +385,7 @@ public abstract class KineticPage {
 
     /** 直接返回父界面（不经过关闭钩子）/ Returns to the parent screen without the close hook. */
     public final void navigateBack() {
-        requireHost().navigateBack();
+        requireHost().screenHost().navigateBack();
     }
 
     /** 以本页为父页面打开子页面 / Opens a child page whose parent is this page. */

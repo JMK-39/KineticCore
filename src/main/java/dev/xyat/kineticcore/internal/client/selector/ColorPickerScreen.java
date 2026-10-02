@@ -9,7 +9,6 @@ import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
@@ -20,9 +19,6 @@ import java.util.Locale;
 import java.util.function.Consumer;
 
 public final class ColorPickerScreen extends KineticScreen {
-    public static final int DEFAULT_MAX_PALETTE_COLORS = 24;
-    private static final int CANVAS_W = 640;
-    private static final int CANVAS_H = 360;
     private static final int PANEL_X = 120;
     private static final int PANEL_Y = 45;
     private static final int PANEL_W = 400;
@@ -39,7 +35,6 @@ public final class ColorPickerScreen extends KineticScreen {
     private static final int SWATCH_CELL = 16;
     private static final int SWATCH_GAP = 3;
     private static final int SWATCH_COLS = 12;
-    private final Screen parent;
     private final boolean paletteMode;
     private final int maxColors;
     private final Consumer<Integer> colorConsumer;
@@ -59,16 +54,14 @@ public final class ColorPickerScreen extends KineticScreen {
     private boolean syncingFields;
 
     public static ColorPickerScreen single(
-            Screen parent,
             Component title,
             int initialRgb,
             Consumer<Integer> onApply
     ) {
-        return new ColorPickerScreen(parent, title, false, initialRgb, List.of(), 1, onApply, null);
+        return new ColorPickerScreen(title, false, initialRgb, List.of(), 1, onApply, null);
     }
 
     public static ColorPickerScreen palette(
-            Screen parent,
             Component title,
             List<Integer> initialColors,
             int maxColors,
@@ -76,11 +69,10 @@ public final class ColorPickerScreen extends KineticScreen {
     ) {
         List<Integer> safeColors = initialColors == null ? List.of() : new ArrayList<>(initialColors);
         int initialRgb = safeColors.isEmpty() ? 0xFF00FF : safeColors.get(0);
-        return new ColorPickerScreen(parent, title, true, initialRgb, safeColors, maxColors, null, onApply);
+        return new ColorPickerScreen(title, true, initialRgb, safeColors, maxColors, null, onApply);
     }
 
     private ColorPickerScreen(
-            Screen parent,
             Component title,
             boolean paletteMode,
             int initialRgb,
@@ -90,7 +82,6 @@ public final class ColorPickerScreen extends KineticScreen {
             Consumer<List<Integer>> paletteConsumer
     ) {
         super(title);
-        this.parent = parent;
         this.paletteMode = paletteMode;
         this.maxColors = Math.max(1, maxColors);
         this.colorConsumer = colorConsumer;

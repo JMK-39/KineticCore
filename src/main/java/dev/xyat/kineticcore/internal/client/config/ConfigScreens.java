@@ -9,17 +9,17 @@ public final class ConfigScreens {
     private ConfigScreens() {
     }
 
-    public static Screen createIndex(Screen parent) {
-        return new KTConfigIndexScreen(parent);
+    public static Screen createIndex() {
+        return new KTConfigIndexScreen();
     }
 
-    public static Screen createPage(Screen parent, KTConfigPage page) {
-        return new KTConfigScreen(parent, page);
+    public static Screen createPage(KTConfigPage page) {
+        return new KTConfigScreen(page);
     }
 
-    public static Screen createOwner(Screen parent, String ownerId, List<KTConfigPage> pages) {
-        if (pages.isEmpty()) return createIndex(parent);
-        return new KTModuleConfigScreen(parent, KTConfigIndexScreen.moduleTitle(ownerId), pages);
+    public static Screen createOwner(String ownerId, List<KTConfigPage> pages) {
+        if (pages.isEmpty()) return createIndex();
+        return new KTModuleConfigScreen(KTConfigIndexScreen.moduleTitle(ownerId), pages);
     }
 
     public static void refreshFromSource(Screen screen) {
@@ -49,12 +49,12 @@ public final class ConfigScreens {
     }
 
     /** Creates the owner-scoped hub containing registered pages whose ids use the owner namespace. */
-    public static Screen createOwnerFor(Screen parent, String ownerModId) {
+    public static Screen createOwnerFor(String ownerModId) {
         String prefix = java.util.Objects.requireNonNull(ownerModId, "ownerModId") + ":";
         java.util.List<dev.xyat.kineticcore.api.config.client.KTConfigPage> owned =
                 dev.xyat.kineticcore.api.config.client.KTConfigApi.pages().stream()
                         .filter(page -> page.id().startsWith(prefix))
                         .toList();
-        return createOwner(parent, ownerModId, owned);
+        return createOwner(ownerModId, owned);
     }
 }

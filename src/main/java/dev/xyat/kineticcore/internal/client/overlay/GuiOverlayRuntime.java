@@ -104,11 +104,6 @@ public final class GuiOverlayRuntime {
         tooltip = null;
     }
 
-    public void tooltip(Component line) {
-        if (line == null) return;
-        tooltip = new TextTooltip(List.of(line));
-    }
-
     public void tooltip(List<? extends Component> lines) {
         if (lines == null || lines.isEmpty()) return;
         List<Component> clean = lines.stream().filter(Objects::nonNull).map(Component.class::cast).toList();
@@ -663,15 +658,6 @@ public final class GuiOverlayRuntime {
     ) {
     }
 
-    public static void toast(Component message) {
-        if (message == null) return;
-        toast(message.getString(), message, Position.BOTTOM_CENTER, 5000, 0, -30);
-    }
-
-    public static void toast(String id, Component message) {
-        toast(id, message, Position.BOTTOM_CENTER, 5000, 0, -30);
-    }
-
     public static void toast(
             String id,
             Component message,
@@ -695,10 +681,6 @@ public final class GuiOverlayRuntime {
 
     public static void clearToasts() {
         ACTIVE_TOASTS.clear();
-    }
-
-    public static void clearAllToasts() {
-        clearToasts();
     }
 
     private static void renderToasts(GuiGraphics graphics, Font font, int screenWidth, int screenHeight) {
@@ -753,7 +735,7 @@ public final class GuiOverlayRuntime {
                     targetY = currentTopY;
                     currentTopY += height + 4;
                 }
-                default -> throw new IllegalStateException();
+                default -> throw new IllegalStateException("Unknown toast position: " + toast.position);
             }
 
             targetX += toast.offsetX;

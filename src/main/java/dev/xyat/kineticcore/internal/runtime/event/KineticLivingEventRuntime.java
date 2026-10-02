@@ -62,25 +62,24 @@ public final class KineticLivingEventRuntime {
     public static synchronized void initialize() {
         if (initialized) return;
         var attempt = LISTENER_REGISTRATIONS.begin();
-        int slot = 0;
 
         for (KineticEventPriority priority : KineticEventPriority.values()) {
             EventPriority forgePriority = toForge(priority);
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityEvent.Size event) -> onSize(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEvent.LivingTickEvent event) -> onTick(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEntityUseItemEvent.Finish event) -> onUseItemFinish(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingKnockBackEvent event) -> onKnockback(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEquipmentChangeEvent event) -> onEquipmentChange(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDeathEvent event) -> onDeath(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, true, (LivingDeathEvent event) -> onDeathReceiveCancelled(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingHurtEvent event) -> onHurt(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDamageEvent event) -> onDamage(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingHealEvent event) -> onHeal(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingAttackEvent event) -> onAttack(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingChangeTargetEvent event) -> onTargetChange(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (MobEffectEvent.Applicable event) -> onPotionApplicable(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingExperienceDropEvent event) -> onExperienceDrop(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDropsEvent event) -> onDrops(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityEvent.Size event) -> onSize(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEvent.LivingTickEvent event) -> onTick(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEntityUseItemEvent.Finish event) -> onUseItemFinish(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingKnockBackEvent event) -> onKnockback(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingEquipmentChangeEvent event) -> onEquipmentChange(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDeathEvent event) -> onDeath(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, true, (LivingDeathEvent event) -> onDeathReceiveCancelled(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingHurtEvent event) -> onHurt(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDamageEvent event) -> onDamage(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingHealEvent event) -> onHeal(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingAttackEvent event) -> onAttack(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingChangeTargetEvent event) -> onTargetChange(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (MobEffectEvent.Applicable event) -> onPotionApplicable(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingExperienceDropEvent event) -> onExperienceDrop(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LivingDropsEvent event) -> onDrops(priority, event)));
         }
         attempt.finish();
         initialized = true;

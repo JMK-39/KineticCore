@@ -16,7 +16,17 @@ public final class KineticForgeListenerRegistrations {
 
     public final class Attempt {
         private RuntimeException failure;
+        private int nextSlot;
 
+        /**
+         * Installs the next listener of this attempt. The n-th call of every attempt uses slot n, so a retry skips
+         * the listeners that an earlier attempt already installed. Do not mix with explicit slots on one registration.
+         */
+        public void install(Runnable registration) {
+            install(nextSlot++, registration);
+        }
+
+        /** Installs the listener for an explicit slot, for registrations keyed by something other than call order. */
         public void install(int slot, Runnable registration) {
             if (slot < 0) throw new IllegalArgumentException("Listener slot cannot be negative");
             Objects.requireNonNull(registration, "registration");

@@ -15,6 +15,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
+import javax.annotation.Nonnull;
 
 /** Hosts a {@link KineticContainerPage} in the internal Kinetic container screen. */
 public final class PageContainerScreen<M extends AbstractContainerMenu> extends KineticContainerScreen<M>
@@ -47,7 +48,7 @@ public final class PageContainerScreen<M extends AbstractContainerMenu> extends 
     }
 
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+    protected void renderBg(@Nonnull GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         access.renderContainerBackground(page, GuiGraphicsAdapter.wrap(graphics), mouseX, mouseY, partialTick);
     }
 

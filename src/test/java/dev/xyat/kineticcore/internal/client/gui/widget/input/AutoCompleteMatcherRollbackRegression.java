@@ -1,6 +1,5 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.input;
 
-import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

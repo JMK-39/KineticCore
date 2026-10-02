@@ -62,7 +62,7 @@ public final class GuiSessionRuntime {
 
         // Opening directly from a null screen starts a new navigation root unless
         // the child explicitly declared its parent before being opened.
-        if (current == null && next != null && explicitBinding == null) {
+        if (current == null && explicitBinding == null) {
             synchronized (PARENTS) {
                 PARENTS.remove(next);
             }

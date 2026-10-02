@@ -31,13 +31,6 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 
 public class ItemSelectorScreen extends KineticScreen {
-    public int getCachedVisibleCols() {
-        return cachedVisibleCols;
-    }
-
-    public int getCachedVisibleRows() {
-        return cachedVisibleRows;
-    }
 
     public enum SelectionType {
         ITEM,
@@ -150,10 +143,6 @@ public class ItemSelectorScreen extends KineticScreen {
             };
     private final List<VisibleSlot> visibleSlotCache = new ArrayList<>();
     private int displayVersion = 0;
-    private int cachedVisibleDisplayVersion = -1;
-    private int cachedVisibleScroll = -1;
-    private int cachedVisibleCols = -1;
-    private int cachedVisibleRows = -1;
 
     private final List<String> allMods = new ArrayList<>();
     private final List<String> allTags = new ArrayList<>();
@@ -958,16 +947,9 @@ public class ItemSelectorScreen extends KineticScreen {
             ItemStack stack = displayList.get(index).stack();
             visibleSlotCache.add(new VisibleSlot(index, stack, x, y));
         }
-
-        cachedVisibleDisplayVersion = displayVersion;
-        cachedVisibleScroll = mainScroll.offset();
-        cachedVisibleCols = gridCols;
-        cachedVisibleRows = gridRowsVisible;
     }
 
     private void invalidateVisibleSlotCache() {
-        cachedVisibleDisplayVersion = -1;
-        cachedVisibleScroll = -1;
         visibleSlotCache.clear();
     }
 

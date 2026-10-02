@@ -34,7 +34,6 @@ public final class KineticResourceIds {
      * @param value complete resource identifier text
      * @return parsed resource identifier
      */
-    @SuppressWarnings({"deprecation", "removal"})
     public static ResourceLocation parse(String value) {
         return new ResourceLocation(value);
     }

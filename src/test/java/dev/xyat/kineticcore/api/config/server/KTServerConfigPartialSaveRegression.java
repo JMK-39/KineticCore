@@ -4,14 +4,14 @@ import java.util.Map;
 
 /** Headless regression for partial server-config transactions. Run main with Java 17. */
 public final class KTServerConfigPartialSaveRegression {
-    public static void main(String[] args) throws Throwable {
+    public static void main(String[] args) {
         partialSaveIgnoresUnrelatedReader();
         failedPartialSaveDoesNotRewriteUnrelatedEntry();
         rejectedUpdateDoesNotReadUnrelatedEntries();
         System.out.println("PASS: 3 partial server-config save regression cases");
     }
 
-    private static void partialSaveIgnoresUnrelatedReader() throws Throwable {
+    private static void partialSaveIgnoresUnrelatedReader() {
         int[] changed = { 10 };
         int[] unrelatedReads = { 0 };
         KTServerConfigSpec spec = KTServerConfigSpec.builder("test:partial")

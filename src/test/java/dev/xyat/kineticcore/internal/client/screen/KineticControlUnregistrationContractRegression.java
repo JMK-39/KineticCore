@@ -9,7 +9,7 @@ public final class KineticControlUnregistrationContractRegression {
     public static void main(String[] args) throws Exception {
         String source = Files.readString(Path.of(
                 "src/main/java/dev/xyat/kineticcore/internal/client/screen/KineticScreenControls.java"));
-        int start = source.indexOf("public final void unregisterWidget(AbstractWidget widget)");
+        int start = source.indexOf("public void unregisterWidget(AbstractWidget widget)");
         int end = source.indexOf("/** Registers one Kinetic smooth selection list", start);
         check(start >= 0 && end > start, "missing unregister method");
         String method = source.substring(start, end);

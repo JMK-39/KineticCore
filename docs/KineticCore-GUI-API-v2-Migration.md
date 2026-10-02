@@ -67,7 +67,7 @@ This file is the only migration reference. Older KineticCore notes and patches (
 4. Before touching any file, run the whole-project scan in §11 and port **every** hit, not just the files that fail to compile first.
 5. Finish each file with the checklist in §11 and the verification in §12.
 
-**Hard rules for the port.** These are non-negotiable, and KineticCore's own build enforces the same rules:
+**Hard rules for the port.** These are non-negotiable. KineticCore's own build enforces the same rules, and an addon build enforces them with `gradle/kinetic-addon-architecture.gradle` (§12):
 
 - Never import `dev.xyat.kineticcore.internal.*`. Internal classes are not part of the contract and will change without notice.
 - GUI classes do not extend `Screen`, `AbstractContainerScreen` or any vanilla widget. They extend `KineticPage`, `KineticContainerPage`, `KineticHudEditorPage`, `KineticCustomControl` or `KineticRowList`.
@@ -914,6 +914,7 @@ rg -n --type java -e 'dev\.xyat\.kineticcore\.internal' \
 ```
 
 - Hits inside `mixin` packages that use vanilla `GuiGraphics` are allowed (see the hard rules). Everything else is migration work.
+- The scan is wider than the build check on purpose: `checkKineticAddonArchitecture` (§12) fails the build on the hard-rule hits, while this scan also lists old API names that only the compiler would report.
 - `\bFont\b` and `\bSlider\b` can also match unrelated names; confirm each hit.
 
 Then, per file:
@@ -960,6 +961,8 @@ Division of work:
 
    **Do not run Gradle, `build` or `compileJava`.**
 2. **The project owner** compiles locally and sends the compiler errors back. The migrator fixes them and returns updated sources. Repeat until the build is clean.
+   - **Architecture check (mandatory).** Copy `gradle/kinetic-addon-architecture.gradle` from the core and add `apply from: 'gradle/kinetic-addon-architecture.gradle'` to the addon's `build.gradle`. `compileJava` then first runs `checkKineticAddonArchitecture`, which fails on every hard-rule violation outside mixins: `internal`/`feature` imports, `extends Screen`/`AbstractContainerScreen`/vanilla widgets, `Button.builder`, `new EditBox`, `new ConfirmScreen`, `Tooltip.create`, `addRenderableWidget`/`clearWidgets`/`this.init()`, `setScreen`/`MenuScreens.register`/`NetworkHooks.openScreen`, `net.minecraft.client.gui.*` imports, `Component.translatable` and texture `ResourceLocation`s. Each failure names the file, line, rule id and the API to use instead; treat them like compiler errors. Mixins (`@Mixin` classes and `mixin` packages) may still use vanilla GUI types but not `internal` or `Component.translatable`.
+   - A genuine exception, such as a JEI category that has to draw with `GuiGraphics`, is listed per file and rule in `build.gradle`, after the `apply from` line: `ext.kineticArchitectureAllow = ['src/main/java/.../ExampleCategory.java': ['vanilla-gui-import']]`. An entry that no longer matches anything fails the check, so the list cannot go stale.
 3. **Final-JAR check (mandatory).** `compileJava` passing is not enough: ForgeGradle renames vanilla-colliding methods during `reobfJar`.
    - Core: `gradlew build` runs `checkKineticReobfApi`, which compares every public/protected method of `dev.xyat.kineticcore.api` in the compiled classes with the reobf JAR and fails if any was renamed (for example to `m_252754_`).
    - Addons: copy `gradle/KineticReobfCheck.java` and `gradle/kinetic-addon-reobf-verification.gradle` from the core, add `apply from: 'gradle/kinetic-addon-reobf-verification.gradle'` **before** the `dependencies` block and `kineticCoreReobf "dev.xyat.kineticcore:kineticcore:${kineticCoreVersion}"` next to the `fg.deobf(...)` core line. `gradlew build` then runs `checkKineticReobfRefs`: every method reference from the addon JAR into `dev/xyat/kineticcore` must resolve by name and descriptor in the released core JAR (`-Pkineticcore_jar=<path>` tests against a local core build). It also reports references to `internal` packages.

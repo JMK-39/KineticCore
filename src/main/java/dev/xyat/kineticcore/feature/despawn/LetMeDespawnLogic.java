@@ -53,17 +53,15 @@ public class LetMeDespawnLogic {
 
     private static void updateCacheIfNeeded() {
         List<String> currentList = KTServerConfigApi.getStringList("kineticcore:general_mechanics", "despawn_whitelist", List.of());
-        int currentHash = currentList != null ? currentList.hashCode() : 0;
+        int currentHash = currentList.hashCode();
         if (currentHash != lastConfigHash) {
             lastConfigHash = currentHash;
             WHITELIST_CACHE.clear();
             whitelistIds.clear();
             whitelistMods.clear();
-            if (currentList != null) {
-                for (String s : currentList) {
-                    if (s.startsWith("@")) whitelistMods.add(s.substring(1));
-                    else whitelistIds.add(s);
-                }
+            for (String s : currentList) {
+                if (s.startsWith("@")) whitelistMods.add(s.substring(1));
+                else whitelistIds.add(s);
             }
         }
     }

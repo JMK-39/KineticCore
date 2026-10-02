@@ -1,6 +1,5 @@
 package dev.xyat.kineticcore.internal.client.config;
 
-import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import net.minecraftforge.client.ConfigScreenHandler;
 import net.minecraftforge.fml.ModContainer;
 import net.minecraftforge.fml.ModList;
@@ -17,17 +16,7 @@ public final class ForgeConfigScreenIntegration {
         owner.registerExtensionPoint(
                 ConfigScreenHandler.ConfigScreenFactory.class,
                 () -> new ConfigScreenHandler.ConfigScreenFactory(
-                        (minecraft, parent) -> ConfigScreens.createIndex(parent)
-                )
-        );
-    }
-
-    public static void installOwnerScreen(String ownerModId) {
-        ModContainer owner = requireContainer(ownerModId);
-        owner.registerExtensionPoint(
-                ConfigScreenHandler.ConfigScreenFactory.class,
-                () -> new ConfigScreenHandler.ConfigScreenFactory(
-                        (minecraft, parent) -> ConfigScreens.createOwnerFor(parent, ownerModId)
+                        (minecraft, parent) -> ConfigScreens.createIndex()
                 )
         );
     }

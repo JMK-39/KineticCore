@@ -32,3 +32,7 @@ run
 forge*changelog.txt
 
 /CF_UPDATE_LOG.md
+
+# Files that tests or IDE runs with the project root as working directory may create
+/config/
+/logs/

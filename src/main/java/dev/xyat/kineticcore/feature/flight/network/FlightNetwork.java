@@ -106,7 +106,7 @@ public final class FlightNetwork {
                         ),
                         (message, context) -> {
                             ServerPlayer player = context.sender();
-                            if (player == null || !KineticSuperFlight.active(player)) {
+                            if (!KineticSuperFlight.active(player)) {
                                 broadcastSuperFlightRoll(player, 0.0F);
                                 return;
                             }

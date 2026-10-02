@@ -41,7 +41,7 @@ public final class TpsHudEditorPage extends KineticHudEditorPage {
 
     @Override
     protected HudLayout defaultLayout(int screenWidth, int screenHeight) {
-        return new HudLayout(screenWidth - elementWidth() - 2, screenHeight - elementHeight() - 2 - 0, 1.0D);
+        return new HudLayout(screenWidth - elementWidth() - 2, screenHeight - elementHeight() - 2, 1.0D);
     }
 
     @Override

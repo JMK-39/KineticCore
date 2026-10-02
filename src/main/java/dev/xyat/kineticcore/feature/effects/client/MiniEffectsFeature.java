@@ -59,9 +59,7 @@ public class MiniEffectsFeature {
                         CLIENT_SPEC,
                         KineticRuntime.MOD_ID + "/mini_effects_client.toml"
                 ),
-                () -> {
-                    hasEffectsLeft = KineticPlatform.isModLoaded("effectsleft");
-                },
+                () -> hasEffectsLeft = KineticPlatform.isModLoaded("effectsleft"),
                 () -> KineticEffectDisplay.configure(
                         MiniEffectsFeature::isLeftSide,
                         MiniEffectsFeature::requiresHoldingTab,
@@ -75,32 +73,12 @@ public class MiniEffectsFeature {
         init();
     }
 
-    public static boolean effectsOnLeft() {
-        return CLIENT.effectsOnLeft.get();
-    }
-
-    public static void setEffectsOnLeft(boolean value) {
-        CLIENT.effectsOnLeft.set(value);
-    }
-
     public static boolean requiresHoldingTab() {
         return CLIENT.requiresHoldingTab.get();
     }
 
-    public static void setRequiresHoldingTab(boolean value) {
-        CLIENT.requiresHoldingTab.set(value);
-    }
-
     public static boolean potionItemIcon() {
         return CLIENT.potionItemIcon.get();
-    }
-
-    public static void setPotionItemIcon(boolean value) {
-        CLIENT.potionItemIcon.set(value);
-    }
-
-    public static void save() {
-        CLIENT_SPEC.save();
     }
 
     public static boolean isLeftSide() {

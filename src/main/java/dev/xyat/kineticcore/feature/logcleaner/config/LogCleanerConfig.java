@@ -23,7 +23,7 @@ public class LogCleanerConfig {
     public static int maxDebugLogs = 3;
 
     public static String rawFilteredKeywords = "Tried to load a block entity for block";
-    public static List<String> filteredKeywords = new ArrayList<>();
+    public static final List<String> filteredKeywords = new ArrayList<>();
 
     public static void load() {
         try {

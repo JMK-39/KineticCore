@@ -1,3 +1,7 @@
+import org.gradle.util.GradleVersion
+
+import java.text.SimpleDateFormat
+
 buildscript {
     repositories {
         mavenCentral()
@@ -15,9 +19,9 @@ plugins {
     id 'idea'
 }
 
-def requiredGradleVersion = org.gradle.util.GradleVersion.version('8.8')
-if (org.gradle.util.GradleVersion.current() != requiredGradleVersion) {
-    throw new GradleException("KineticCore requires Gradle 8.8 exactly. Current Gradle: ${org.gradle.util.GradleVersion.current().version}")
+def requiredGradleVersion = GradleVersion.version('8.8')
+if (GradleVersion.current() != requiredGradleVersion) {
+    throw new GradleException("KineticCore requires Gradle 8.8 exactly. Current Gradle: ${GradleVersion.current().version}")
 }
 
 apply plugin: 'net.minecraftforge.gradle'
@@ -31,7 +35,7 @@ configurations.configureEach {
 def getDynamicVersion() {
     def useAuto = project.findProperty('use_auto_version')?.toString() ?: 'false'
     if (useAuto.toBoolean()) {
-        return new java.text.SimpleDateFormat("yy.M.d").format(new Date())
+        return new SimpleDateFormat("yy.M.d").format(new Date())
     } else {
         return project.findProperty('mod_version')?.toString() ?: "0.0.0"
     }
@@ -161,8 +165,8 @@ tasks.named('jar', Jar).configure {
         def outputPath = customOutputDir.toString()
         def windowsAbsolutePath = outputPath.length() >= 3
                 && Character.isLetter(outputPath.charAt(0))
-                && outputPath.charAt(1) == ':'
-                && (outputPath.charAt(2) == '/' || outputPath.charAt(2) == '\\')
+                && outputPath.charAt(1) == (':' as char)
+                && (outputPath.charAt(2) == ('/' as char) || outputPath.charAt(2) == ('\\' as char))
         def runningOnWindows = System.getProperty('os.name').toLowerCase().contains('windows')
 
         // The shared Windows output directory is not a valid path on Linux CI runners.

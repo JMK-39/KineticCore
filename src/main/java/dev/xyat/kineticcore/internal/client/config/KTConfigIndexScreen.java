@@ -12,7 +12,6 @@ import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
 import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
@@ -52,41 +51,27 @@ final class KTConfigIndexScreen extends KineticScreen {
         }
     }
 
-    private final Screen parent;
-    private final String ownerNamespace;
     private final KineticSearch.Model<ModuleGroup> moduleModel =
             new KineticSearch.Model<>(List.of(), (entry, query) -> KineticSearch.match(buildModuleSearchData(entry), query));
     private final GridScrollController listScroll = new GridScrollController();
 
     private List<ModuleGroup> registeredModules = List.of();
-    private KineticEditBox searchBox;
     private String searchQuery = "";
     private ModuleGroup hoveredModule;
 
-    KTConfigIndexScreen(Screen parent) {
-        this(parent, null);
-    }
-
-    KTConfigIndexScreen(Screen parent, String ownerNamespace) {
+    KTConfigIndexScreen() {
         super(KineticText.translatable("gui.kineticcore.config.installed_plugins"));
-        this.parent = parent;
-        this.ownerNamespace = ownerNamespace;
         moduleModel.setComparator(Comparator.comparing(ModuleGroup::namespace));
     }
 
     @Override
     protected void buildUi() {
-        List<KTConfigPage> pages = KTConfigApi.pages();
-        if (ownerNamespace != null && !ownerNamespace.isBlank()) {
-            String prefix = ownerNamespace + ":";
-            pages = pages.stream().filter(page -> page.id().startsWith(prefix)).toList();
-        }
-        registeredModules = groupPages(pages);
+        registeredModules = groupPages(KTConfigApi.pages());
         moduleModel.setSource(registeredModules);
         moduleModel.refresh(searchQuery);
         updateScrollRange();
 
-        searchBox = addTextField(
+        KineticEditBox searchBox = addTextField(
                 LIST_X,
                 48,
                 430,
@@ -272,7 +257,6 @@ final class KTConfigIndexScreen extends KineticScreen {
             ModuleGroup selected = moduleAt(mouseX, mouseY);
             if (selected != null) {
                 KineticClientRuntime.openScreen(new KTModuleConfigScreen(
-                        this,
                         selected.title(),
                         selected.pages()
                 ));
@@ -385,8 +369,7 @@ final class KTConfigIndexScreen extends KineticScreen {
                 if (entry.tooltip() != null) data.append(' ').append(entry.tooltip().getString());
             }
         }
-        String raw = data.toString();
-        return raw;
+        return data.toString();
     }
 
     @Override

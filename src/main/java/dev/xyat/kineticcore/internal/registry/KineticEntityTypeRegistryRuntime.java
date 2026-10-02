@@ -29,7 +29,7 @@ public final class KineticEntityTypeRegistryRuntime {
             return created;
         });
 
-        RegistryObject<EntityType<T>> object = registry.register(id.getPath(), factory::get);
+        RegistryObject<EntityType<T>> object = registry.register(id.getPath(), factory);
         return new Handle<>(id, object);
     }
 

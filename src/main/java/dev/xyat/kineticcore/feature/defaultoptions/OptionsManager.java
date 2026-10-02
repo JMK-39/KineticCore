@@ -22,9 +22,8 @@ public class OptionsManager {
 
     public static synchronized void registerHook() {
         if (!KineticFeatureSwitches.isEnabled("client.default_options")) return;
-        HOOK_REGISTRATION.run(() -> ClientHooks.onOptionsLoading(options -> {
-            applyCustomKeyDefaults(MinecraftKeys.snapshotMappings(options.keyMappings));
-        }));
+        HOOK_REGISTRATION.run(() -> ClientHooks.onOptionsLoading(options ->
+                applyCustomKeyDefaults(MinecraftKeys.snapshotMappings(options.keyMappings))));
     }
 
     public static class KeyData {
@@ -102,10 +101,10 @@ public class OptionsManager {
         KineticClientRuntime.saveOptions();
 
         File gameOptionsFile = KineticPlatform.gameDirectory().resolve("options.txt").toFile();
-        if (!gameOptionsFile.exists()) throw new FileNotFoundException();
+        if (!gameOptionsFile.exists()) throw new FileNotFoundException(gameOptionsFile.getPath());
 
         if (!CUSTOM_DEFAULTS_FILE.getParentFile().exists() && !CUSTOM_DEFAULTS_FILE.getParentFile().mkdirs()) {
-            throw new IOException();
+            throw new IOException("Cannot create " + CUSTOM_DEFAULTS_FILE.getParentFile());
         }
 
         Files.copy(gameOptionsFile.toPath(), CUSTOM_DEFAULTS_FILE.toPath(), StandardCopyOption.REPLACE_EXISTING);

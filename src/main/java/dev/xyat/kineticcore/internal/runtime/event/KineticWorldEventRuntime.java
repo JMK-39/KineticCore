@@ -58,22 +58,21 @@ public final class KineticWorldEventRuntime {
     public static synchronized void initialize() {
         if (initialized) return;
         var attempt = LISTENER_REGISTRATIONS.begin();
-        int slot = 0;
 
         for (KineticEventPriority priority : KineticEventPriority.values()) {
             EventPriority forgePriority = toForge(priority);
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LevelEvent.Load event) -> onLevelLoad(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LevelEvent.Unload event) -> onLevelUnload(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityLeaveLevelEvent event) -> onEntityLeave(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ChunkEvent.Load event) -> onChunkLoad(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ChunkEvent.Unload event) -> onChunkUnload(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BlockEvent.BreakEvent event) -> onBlockBreak(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BlockEvent.EntityPlaceEvent event) -> onBlockPlace(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BlockEvent.FarmlandTrampleEvent event) -> onFarmlandTrample(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityItemPickupEvent event) -> onItemPickup(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (MobSpawnEvent.SpawnPlacementCheck event) -> onMobSpawnPlacementCheck(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (MobSpawnEvent.FinalizeSpawn event) -> onMobFinalizeSpawn(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BabyEntitySpawnEvent event) -> onBabySpawn(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LevelEvent.Load event) -> onLevelLoad(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (LevelEvent.Unload event) -> onLevelUnload(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityLeaveLevelEvent event) -> onEntityLeave(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ChunkEvent.Load event) -> onChunkLoad(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ChunkEvent.Unload event) -> onChunkUnload(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BlockEvent.BreakEvent event) -> onBlockBreak(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BlockEvent.EntityPlaceEvent event) -> onBlockPlace(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BlockEvent.FarmlandTrampleEvent event) -> onFarmlandTrample(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (EntityItemPickupEvent event) -> onItemPickup(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (MobSpawnEvent.SpawnPlacementCheck event) -> onMobSpawnPlacementCheck(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (MobSpawnEvent.FinalizeSpawn event) -> onMobFinalizeSpawn(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (BabyEntitySpawnEvent event) -> onBabySpawn(priority, event)));
         }
         attempt.finish();
         initialized = true;

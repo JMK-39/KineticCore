@@ -381,14 +381,6 @@ public final class KineticSuperFlightClientRuntime {
         return currentSpeed;
     }
 
-    public static float flightYaw() {
-        return flightYaw;
-    }
-
-    public static float flightPitch() {
-        return flightPitch;
-    }
-
     private static void startManeuver(Player player) {
         KineticCrawlingRuntime.clearCrawling(player);
         maneuvering = true;
@@ -625,13 +617,6 @@ public final class KineticSuperFlightClientRuntime {
         float delta = Mth.wrapDegrees(target - current);
         float step = Mth.clamp(delta * response, -maxStep, maxStep);
         return current + step;
-    }
-
-    private static double approach(double current, double target, double step) {
-        if (step <= 0.0D) return target;
-        if (current < target) return Math.min(target, current + step);
-        if (current > target) return Math.max(target, current - step);
-        return current;
     }
 
     private static float approach(float current, float target, float response) {

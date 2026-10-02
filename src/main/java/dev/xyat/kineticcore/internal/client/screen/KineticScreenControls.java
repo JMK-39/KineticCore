@@ -18,7 +18,7 @@ import dev.xyat.kineticcore.api.client.gui.widget.list.KineticToggleList;
 import dev.xyat.kineticcore.api.client.gui.widget.list.MultiActionItem;
 import dev.xyat.kineticcore.api.client.gui.widget.list.MultiToggleItem;
 import dev.xyat.kineticcore.api.client.gui.widget.list.SelectionItem;
-import dev.xyat.kineticcore.internal.client.gui.widget.selection.TabBarButtons;
+import dev.xyat.kineticcore.internal.client.gui.widget.tab.TabBarButtons;
 import dev.xyat.kineticcore.api.client.gui.widget.TabStripItem;
 import dev.xyat.kineticcore.api.client.gui.widget.list.ToggleActionItem;
 import dev.xyat.kineticcore.api.client.gui.widget.list.ToggleHit;
@@ -160,7 +160,7 @@ public final class KineticScreenControls {
 
 
     /** Adds text field. */
-    public final KineticEditBox addTextField(
+    public KineticEditBox addTextField(
             int x, int y, int width, Component message, Component placeholder,
             Predicate<String> validator, Component tooltip
     ) {
@@ -173,7 +173,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds multi line text field. */
-    public final KineticMultiLineEditBox addMultiLineTextField(
+    public KineticMultiLineEditBox addMultiLineTextField(
             int x,
             int y,
             int width,
@@ -192,7 +192,7 @@ public final class KineticScreenControls {
 
 
     /** Adds auto complete field. */
-    public final AutoCompleteBox addAutoCompleteField(
+    public AutoCompleteBox addAutoCompleteField(
             int x, int y, int width, Component message, Component placeholder,
             Supplier<java.util.List<KineticSuggestion>> dictionarySupplier, Component tooltip
     ) {
@@ -206,7 +206,7 @@ public final class KineticScreenControls {
 
 
     /** Adds integer auto complete field. */
-    public final NumericAutoCompleteBox addIntegerAutoCompleteField(
+    public NumericAutoCompleteBox addIntegerAutoCompleteField(
             int x,
             int y,
             int width,
@@ -229,7 +229,7 @@ public final class KineticScreenControls {
 
 
     /** Adds long auto complete field. */
-    public final NumericAutoCompleteBox addLongAutoCompleteField(
+    public NumericAutoCompleteBox addLongAutoCompleteField(
             int x,
             int y,
             int width,
@@ -252,7 +252,7 @@ public final class KineticScreenControls {
 
 
     /** Adds decimal auto complete field. */
-    public final NumericAutoCompleteBox addDecimalAutoCompleteField(
+    public NumericAutoCompleteBox addDecimalAutoCompleteField(
             int x,
             int y,
             int width,
@@ -275,7 +275,7 @@ public final class KineticScreenControls {
 
 
     /** Adds integer field. */
-    public final NumericEditBox addIntegerField(
+    public NumericEditBox addIntegerField(
             int x,
             int y,
             int width,
@@ -297,7 +297,7 @@ public final class KineticScreenControls {
 
 
     /** Adds long field. */
-    public final NumericEditBox addLongField(
+    public NumericEditBox addLongField(
             int x,
             int y,
             int width,
@@ -319,7 +319,7 @@ public final class KineticScreenControls {
 
 
     /** Adds decimal field. */
-    public final NumericEditBox addDecimalField(
+    public NumericEditBox addDecimalField(
             int x,
             int y,
             int width,
@@ -343,7 +343,7 @@ public final class KineticScreenControls {
 
 
     /** Adds a smooth vertical single-selection list using standard Kinetic row controls. */
-    public final KineticSelectionList addScrollableSelectionList(
+    public KineticSelectionList addScrollableSelectionList(
             int x,
             int y,
             int width,
@@ -362,7 +362,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical single-selection list rendered at the supplied Z depth. */
-    public final KineticSelectionList addHighZScrollableSelectionList(
+    public KineticSelectionList addHighZScrollableSelectionList(
             int x,
             int y,
             int width,
@@ -382,7 +382,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical item-backed single-selection list. */
-    public final KineticItemSelectionList addScrollableItemSelectionList(
+    public KineticItemSelectionList addScrollableItemSelectionList(
             int x,
             int y,
             int width,
@@ -401,7 +401,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical item-backed single-selection list rendered at the supplied Z depth. */
-    public final KineticItemSelectionList addHighZScrollableItemSelectionList(
+    public KineticItemSelectionList addHighZScrollableItemSelectionList(
             int x,
             int y,
             int width,
@@ -421,7 +421,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth scrollable item-slot grid. */
-    public final KineticItemGrid addScrollableItemGrid(
+    public KineticItemGrid addScrollableItemGrid(
             int x, int y, int width, int height,
             ItemGridDensity density, List<? extends ItemGridItem> items,
             int initialScrollOffset, Consumer<Integer> responder
@@ -435,7 +435,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth scrollable item-slot grid rendered at the supplied Z depth. */
-    public final KineticItemGrid addHighZScrollableItemGrid(
+    public KineticItemGrid addHighZScrollableItemGrid(
             int x, int y, int width, int height,
             ItemGridDensity density, List<? extends ItemGridItem> items,
             int initialScrollOffset, Consumer<Integer> responder, int zLevel
@@ -449,7 +449,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical single-selection list with one trailing row action. */
-    public final KineticActionList addScrollableActionList(
+    public KineticActionList addScrollableActionList(
             int x,
             int y,
             int width,
@@ -471,7 +471,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical single-selection list with one trailing row action at the supplied Z depth. */
-    public final KineticActionList addHighZScrollableActionList(
+    public KineticActionList addHighZScrollableActionList(
             int x,
             int y,
             int width,
@@ -494,7 +494,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical single-selection list with multiple trailing row actions. */
-    public final KineticMultiActionList addScrollableMultiActionList(
+    public KineticMultiActionList addScrollableMultiActionList(
             int x,
             int y,
             int width,
@@ -515,7 +515,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical single-selection list with multiple trailing row actions at the supplied Z depth. */
-    public final KineticMultiActionList addHighZScrollableMultiActionList(
+    public KineticMultiActionList addHighZScrollableMultiActionList(
             int x,
             int y,
             int width,
@@ -537,7 +537,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical single-selection list with one real toggle and one trailing row action. */
-    public final KineticToggleActionList addScrollableToggleActionList(
+    public KineticToggleActionList addScrollableToggleActionList(
             int x, int y, int width, int height,
             List<? extends ToggleActionItem> items,
             int selectedIndex, int initialScrollOffset,
@@ -556,7 +556,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical single-selection list with one real toggle and one trailing row action at the supplied Z depth. */
-    public final KineticToggleActionList addHighZScrollableToggleActionList(
+    public KineticToggleActionList addHighZScrollableToggleActionList(
             int x, int y, int width, int height,
             List<? extends ToggleActionItem> items,
             int selectedIndex, int initialScrollOffset,
@@ -576,7 +576,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical item-backed single-selection list with one trailing row action. */
-    public final KineticItemActionList addScrollableItemActionList(
+    public KineticItemActionList addScrollableItemActionList(
             int x,
             int y,
             int width,
@@ -598,7 +598,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical item-backed single-selection list with one trailing row action at the supplied Z depth. */
-    public final KineticItemActionList addHighZScrollableItemActionList(
+    public KineticItemActionList addHighZScrollableItemActionList(
             int x,
             int y,
             int width,
@@ -621,7 +621,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical single-selection list with any number of real toggles per row. */
-    public final KineticMultiToggleList addScrollableMultiToggleList(
+    public KineticMultiToggleList addScrollableMultiToggleList(
             int x, int y, int width, int height,
             List<? extends MultiToggleItem> items,
             int selectedIndex, int initialScrollOffset,
@@ -637,7 +637,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical single-selection list with any number of real toggles per row at the supplied Z depth. */
-    public final KineticMultiToggleList addHighZScrollableMultiToggleList(
+    public KineticMultiToggleList addHighZScrollableMultiToggleList(
             int x, int y, int width, int height,
             List<? extends MultiToggleItem> items,
             int selectedIndex, int initialScrollOffset,
@@ -654,7 +654,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical multi-toggle list using standard Kinetic row controls. */
-    public final KineticToggleList addScrollableToggleList(
+    public KineticToggleList addScrollableToggleList(
             int x,
             int y,
             int width,
@@ -672,7 +672,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a smooth vertical multi-toggle list rendered at the supplied Z depth. */
-    public final KineticToggleList addHighZScrollableToggleList(
+    public KineticToggleList addHighZScrollableToggleList(
             int x,
             int y,
             int width,
@@ -691,7 +691,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a compact variable-width tab strip with API-managed horizontal scrolling. */
-    public final KineticTabStrip addScrollableTabStrip(
+    public KineticTabStrip addScrollableTabStrip(
             int x,
             int y,
             int width,
@@ -714,7 +714,7 @@ public final class KineticScreenControls {
 
 
     /** Adds tab bar. */
-    public final TabBarButtons addTabBar(
+    public TabBarButtons addTabBar(
             int x,
             int y,
             int totalWidth,
@@ -739,7 +739,7 @@ public final class KineticScreenControls {
 
 
     /** Adds a tab bar rendered at an elevated Z depth. */
-    public final TabBarButtons addHighZTabBar(
+    public TabBarButtons addHighZTabBar(
             int x,
             int y,
             int totalWidth,
@@ -764,7 +764,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a vertical tab bar rendered at an elevated Z depth. */
-    public final TabBarButtons addVerticalHighZTabBar(
+    public TabBarButtons addVerticalHighZTabBar(
             int x,
             int y,
             int width,
@@ -791,7 +791,7 @@ public final class KineticScreenControls {
 
 
     /** Adds button. */
-    public final StateButton addButton(int x, int y, int width, Component text, Component tooltip, Runnable action) {
+    public StateButton addButton(int x, int y, int width, Component text, Component tooltip, Runnable action) {
         StateButton button = KineticWidgets.createButton(x, y, width, text, null, action);
         registerRenderable(button);
         registerWidgetTooltip(button, tooltip);
@@ -800,7 +800,7 @@ public final class KineticScreenControls {
 
 
     /** Adds an API-managed content card button with standard card height and tooltip routing. */
-    public final StateButton addCardButton(
+    public StateButton addCardButton(
             int x, int y, int width, Component narration, Component tooltip, Runnable action
     ) {
         StateButton button = KineticWidgets.createCardButton(x, y, width, narration, null, action);
@@ -810,7 +810,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds an API-managed item button with the standard item-card height and tooltip routing. */
-    public final ItemButton addItemButton(
+    public ItemButton addItemButton(
             int x, int y, int width, ItemStack icon, Component text, Component tooltip, Runnable action
     ) {
         ItemButton button = KineticWidgets.createItemButton(x, y, width, icon, text, null, action);
@@ -820,7 +820,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a state button whose callback needs the managed button instance. */
-    public final StateButton addButtonWithHandler(
+    public StateButton addButtonWithHandler(
             int x, int y, int width, Component text, Component tooltip, Consumer<StateButton> action
     ) {
         StateButton button = KineticWidgets.createButtonWithHandler(x, y, width, text, null, action);
@@ -831,7 +831,7 @@ public final class KineticScreenControls {
 
 
     /** Adds a standard slider whose range, step, validation, and responder remain caller-defined. */
-    public final Slider addSlider(
+    public Slider addSlider(
             int x,
             int y,
             int width,
@@ -853,7 +853,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds compact button. */
-    public final StateButton addCompactButton(
+    public StateButton addCompactButton(
             int x, int y, int width, Component text, Component tooltip, Runnable action
     ) {
         StateButton button = KineticWidgets.createCompactButton(x, y, width, text, null, action);
@@ -863,7 +863,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds color swatch button. */
-    public final ColorSwatchButton addColorSwatchButton(
+    public ColorSwatchButton addColorSwatchButton(
             int x, int y, int rgb, Component tooltip, Runnable action
     ) {
         ColorSwatchButton button = KineticWidgets.createColorSwatchButton(
@@ -875,7 +875,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds high z button. */
-    public final HighZButton addHighZButton(
+    public HighZButton addHighZButton(
             int x, int y, int width, Component text, Component tooltip, int zLevel, Runnable action
     ) {
         HighZButton button = KineticWidgets.createHighZButton(
@@ -888,7 +888,7 @@ public final class KineticScreenControls {
 
 
     /** Adds compact high z button. */
-    public final HighZButton addCompactHighZButton(
+    public HighZButton addCompactHighZButton(
             int x, int y, int width, Component text, Component tooltip, int zLevel, Runnable action
     ) {
         HighZButton button = KineticWidgets.createCompactHighZButton(
@@ -901,7 +901,7 @@ public final class KineticScreenControls {
 
 
     /** Adds toggle button. */
-    public final ToggleButton addToggleButton(
+    public ToggleButton addToggleButton(
             int x,
             int y,
             int width,
@@ -921,7 +921,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a compact-height toggle button. */
-    public final ToggleButton addCompactToggleButton(
+    public ToggleButton addCompactToggleButton(
             int x,
             int y,
             int width,
@@ -941,7 +941,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds a multi-state cycle button. */
-    public final CycleButton addCycleButton(
+    public CycleButton addCycleButton(
             int x,
             int y,
             int width,
@@ -960,7 +960,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds high-z toggle button. */
-    public final HighZToggleButton addHighZToggleButton(
+    public HighZToggleButton addHighZToggleButton(
             int x,
             int y,
             int width,
@@ -981,7 +981,7 @@ public final class KineticScreenControls {
     }
 
     /** Adds color preview button. */
-    public final ColorPreviewButton addColorPreviewButton(
+    public ColorPreviewButton addColorPreviewButton(
             int x,
             int y,
             int width,
@@ -999,7 +999,7 @@ public final class KineticScreenControls {
     }
 
     /** Registers one raw host widget for rendering and input. */
-    public final <T extends AbstractWidget> T registerWidget(T widget, Component tooltip) {
+    public <T extends AbstractWidget> T registerWidget(T widget, Component tooltip) {
         if (widget == null) return null;
         registerRenderable(widget);
         // Passing null means no tooltip, including when an existing widget is registered again.
@@ -1008,7 +1008,7 @@ public final class KineticScreenControls {
     }
 
     /** Unregisters one raw host widget from rendering and input. */
-    public final void unregisterWidget(AbstractWidget widget) {
+    public void unregisterWidget(AbstractWidget widget) {
         if (widget == null) return;
         // The host must actually release the widget before we forget its input,
         // tooltip and autocomplete registrations. A failed host removal can retry.
@@ -1023,13 +1023,13 @@ public final class KineticScreenControls {
     }
 
     /** Registers one Kinetic smooth selection list for input events. */
-    public final <T extends ObjectSelectionList<?>> T addSmoothSelectionList(T list) {
+    public <T extends ObjectSelectionList<?>> T addSmoothSelectionList(T list) {
         registerEvent(list);
         return list;
     }
 
     /** Registers widget tooltip. */
-    public final <T extends AbstractWidget> T registerWidgetTooltip(T widget, Component tooltip) {
+    public <T extends AbstractWidget> T registerWidgetTooltip(T widget, Component tooltip) {
         if (widget == null) return null;
         trackTooltipWidget(widget);
         if (tooltip == null || tooltip.getString().isBlank()) widgetTooltips.remove(widget);
@@ -1038,7 +1038,7 @@ public final class KineticScreenControls {
     }
 
     /** Registers a tooltip supplier evaluated only when the widget is actually hovered. */
-    public final <T extends AbstractWidget> T registerDynamicWidgetTooltip(T widget, Supplier<Component> tooltipSupplier) {
+    public <T extends AbstractWidget> T registerDynamicWidgetTooltip(T widget, Supplier<Component> tooltipSupplier) {
         if (widget == null) return null;
         trackTooltipWidget(widget);
         if (tooltipSupplier == null) widgetTooltips.remove(widget);
@@ -1056,7 +1056,7 @@ public final class KineticScreenControls {
     }
 
     /** Shows unwrapped lines when maxWidth is null, otherwise uses the requested wrapping width. */
-    public final void showTooltip(List<? extends Component> lines, Integer maxWidth) {
+    public void showTooltip(List<? extends Component> lines, Integer maxWidth) {
         if (maxWidth == null) {
             overlays.tooltip(lines);
         } else {
@@ -1065,22 +1065,22 @@ public final class KineticScreenControls {
     }
 
     /** Provides the show formatted tooltip operation exposed by this API. */
-    public final void showFormattedTooltip(List<FormattedCharSequence> lines) {
+    public void showFormattedTooltip(List<FormattedCharSequence> lines) {
         overlays.formattedTooltip(lines);
     }
 
     /** Provides the show item tooltip operation exposed by this API. */
-    public final void showItemTooltip(ItemStack stack) {
+    public void showItemTooltip(ItemStack stack) {
         overlays.itemTooltip(stack);
     }
 
     /** Closes context menu. */
-    public final void closeContextMenu() {
+    public void closeContextMenu() {
         overlays.closeMenu();
     }
 
     /** Opens dialog. */
-    public final void openDialog(
+    public void openDialog(
             Component title,
             Component message,
             Component confirmText,
@@ -1095,7 +1095,7 @@ public final class KineticScreenControls {
 
 
     /** Adds one dropdown whose callbacks receive only raw option values. */
-    public final Dropdown addDropdown(
+    public Dropdown addDropdown(
             int x,
             int y,
             int width,

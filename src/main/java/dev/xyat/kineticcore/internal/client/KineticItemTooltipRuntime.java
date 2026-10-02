@@ -21,6 +21,7 @@ import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
+import javax.annotation.Nonnull;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,11 +43,10 @@ public final class KineticItemTooltipRuntime {
     public static synchronized void initialize() {
         if (initialized) return;
         var attempt = LISTENER_REGISTRATIONS.begin();
-        int slot = 0;
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticItemTooltipRuntime::onBuildTooltip));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, true, KineticItemTooltipRuntime::onRenderTooltip));
-        attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(KineticItemTooltipRuntime::onGatherTooltip));
-        attempt.install(slot++, () -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticItemTooltipRuntime::onRegisterTooltipComponentFactories));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticItemTooltipRuntime::onBuildTooltip));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, true, KineticItemTooltipRuntime::onRenderTooltip));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticItemTooltipRuntime::onGatherTooltip));
+        attempt.install(() -> FMLJavaModLoadingContext.get().getModEventBus().addListener(KineticItemTooltipRuntime::onRegisterTooltipComponentFactories));
         attempt.finish();
         initialized = true;
     }
@@ -113,12 +113,12 @@ public final class KineticItemTooltipRuntime {
         }
 
         @Override
-        public int getWidth(Font font) {
+        public int getWidth(@Nonnull Font font) {
             return component.width();
         }
 
         @Override
-        public void renderImage(Font font, int x, int y, GuiGraphics graphics) {
+        public void renderImage(@Nonnull Font font, int x, int y, @Nonnull GuiGraphics graphics) {
             component.render(GuiGraphicsAdapter.wrap(graphics), x, y);
         }
     }

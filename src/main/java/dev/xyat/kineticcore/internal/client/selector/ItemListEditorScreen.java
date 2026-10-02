@@ -11,7 +11,6 @@ import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
 import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -50,7 +49,6 @@ public final class ItemListEditorScreen extends KineticScreen {
     private static final int GRID_HEIGHT = ROWS_VISIBLE * CELL_SIZE - SLOT_GAP;
     private static final int SCROLL_X = GRID_X + GRID_WIDTH + 6;
 
-    private final Screen parent;
     private final SelectionMode selectionMode;
     private final Consumer<List<String>> onSave;
     private final List<String> rules = new ArrayList<>();
@@ -60,14 +58,12 @@ public final class ItemListEditorScreen extends KineticScreen {
     private int hoveredIndex = -1;
 
     public ItemListEditorScreen(
-            Screen parent,
             Component title,
             List<String> initialRules,
             SelectionMode selectionMode,
             Consumer<List<String>> onSave
     ) {
         super(Objects.requireNonNull(title, "title"));
-        this.parent = parent;
         this.selectionMode = Objects.requireNonNull(selectionMode, "selectionMode");
         this.onSave = Objects.requireNonNull(onSave, "onSave");
         if (initialRules != null) {

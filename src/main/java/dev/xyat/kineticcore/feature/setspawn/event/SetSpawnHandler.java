@@ -464,12 +464,7 @@ public class SetSpawnHandler {
     }
 
     public static Optional<Pair<ServerLevel, BlockPos>> getOrCreateRespawnSpawn(MinecraftServer server) {
-        Optional<Pair<ServerLevel, BlockPos>> spawn = getOrCreateGlobalSpawn(server);
-        if (spawn.isEmpty()) {
-            return Optional.empty();
-        }
-
-        return spawn;
+        return getOrCreateGlobalSpawn(server);
     }
 
     private static BlockPos ensureFinalSafeSpawn(MinecraftServer server, ServerLevel level, BlockPos pos, boolean adminSpawn) {

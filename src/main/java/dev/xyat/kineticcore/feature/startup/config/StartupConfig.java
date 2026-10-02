@@ -63,7 +63,4 @@ public final class StartupConfig {
         return ANCHOR_Y.get();
     }
 
-    public static void save() {
-        SPEC.save();
-    }
 }

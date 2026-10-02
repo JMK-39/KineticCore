@@ -264,20 +264,6 @@ public class AttributeConfig {
         configData.set(Arrays.asList(id.toString(), "enabled"), enabled);
     }
 
-    public static synchronized void setAttributeMinimum(ResourceLocation id, double minimum) {
-        requireLoaded();
-        requireRangedAttribute(id);
-        requireFinite(minimum, "minimum", id);
-        configData.set(Arrays.asList(id.toString(), "min"), minimum);
-    }
-
-    public static synchronized void setAttributeMaximum(ResourceLocation id, double maximum) {
-        requireLoaded();
-        requireRangedAttribute(id);
-        requireFinite(maximum, "maximum", id);
-        configData.set(Arrays.asList(id.toString(), "max"), maximum);
-    }
-
     static synchronized void setAttributeMinimumText(ResourceLocation id, String rawValue) {
         setAttributeBoundary(id, "min", parseEditableBoundary(rawValue));
     }

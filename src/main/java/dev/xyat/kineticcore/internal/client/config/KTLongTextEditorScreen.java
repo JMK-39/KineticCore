@@ -1,13 +1,10 @@
 package dev.xyat.kineticcore.internal.client.config;
 
-import dev.xyat.kineticcore.api.config.client.*;
-
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
 import net.minecraft.client.gui.GuiGraphics;
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticMultiLineEditBox;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
@@ -28,14 +25,12 @@ final class KTLongTextEditorScreen extends KineticScreen {
     private static final int EDIT_W = 416;
     private static final int EDIT_H = 156;
 
-    private final Screen parent;
     private final Consumer<String> onApply;
     private String draftValue;
     private KineticMultiLineEditBox editor;
 
-    KTLongTextEditorScreen(Screen parent, Component title, String initialValue, Consumer<String> onApply) {
+    KTLongTextEditorScreen(Component title, String initialValue, Consumer<String> onApply) {
         super(Objects.requireNonNull(title, "title"));
-        this.parent = parent;
         this.draftValue = initialValue == null ? "" : initialValue;
         this.onApply = Objects.requireNonNull(onApply, "onApply");
     }

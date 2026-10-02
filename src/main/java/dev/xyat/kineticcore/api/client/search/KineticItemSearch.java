@@ -6,7 +6,6 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.DiggerItem;
 import net.minecraft.world.item.FishingRodItem;
 import net.minecraft.world.item.FlintAndSteelItem;
 import net.minecraft.world.item.Item;
@@ -181,8 +180,7 @@ public final class KineticItemSearch {
     }
 
     private static boolean isTool(Item item) {
-        return item instanceof DiggerItem
-                || item instanceof TieredItem && !(item instanceof SwordItem)
+        return item instanceof TieredItem && !(item instanceof SwordItem)
                 || item instanceof ShearsItem
                 || item instanceof FishingRodItem
                 || item instanceof FlintAndSteelItem;

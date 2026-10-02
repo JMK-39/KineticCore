@@ -42,11 +42,10 @@ public final class KineticVillagerEventRuntime {
     private static synchronized void initialize() {
         if (initialized) return;
         var attempt = LISTENER_REGISTRATIONS.begin();
-        int slot = 0;
         for (KineticEventPriority priority : KineticEventPriority.values()) {
             EventPriority forgePriority = toForge(priority);
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (VillagerTradesEvent event) -> dispatchVillager(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (WandererTradesEvent event) -> dispatchWanderer(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (VillagerTradesEvent event) -> dispatchVillager(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (WandererTradesEvent event) -> dispatchWanderer(priority, event)));
         }
         attempt.finish();
         initialized = true;

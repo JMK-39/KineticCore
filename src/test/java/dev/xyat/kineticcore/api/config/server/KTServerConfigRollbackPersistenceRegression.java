@@ -4,13 +4,13 @@ import java.util.Map;
 
 /** Rollback callbacks must only run after the restored state has been persisted. */
 public final class KTServerConfigRollbackPersistenceRegression {
-    public static void main(String[] args) throws Throwable {
+    public static void main(String[] args) {
         failedRollbackPersistenceSkipsApplyCallback();
         successfulRollbackPersistenceRunsApplyCallback();
         System.out.println("PASS: 2 rollback persistence regression cases");
     }
 
-    private static void failedRollbackPersistenceSkipsApplyCallback() throws Throwable {
+    private static void failedRollbackPersistenceSkipsApplyCallback() {
         int[] value = { 10 };
         int[] saveCalls = { 0 };
         int[] applyCalls = { 0 };
@@ -40,7 +40,7 @@ public final class KTServerConfigRollbackPersistenceRegression {
         check(applyCalls[0] == 0, "must not announce successful rollback when disk persistence fails");
     }
 
-    private static void successfulRollbackPersistenceRunsApplyCallback() throws Throwable {
+    private static void successfulRollbackPersistenceRunsApplyCallback() {
         int[] value = { 10 };
         int[] saveCalls = { 0 };
         int[] applyCalls = { 0 };

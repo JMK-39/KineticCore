@@ -111,7 +111,7 @@ public final class KineticI18n {
 
         for (int i = 0; i < template.length(); i++) {
             char current = template.charAt(i);
-            if (current == '\u00A7' && i + 1 < template.length()) {
+            if (current == '§' && i + 1 < template.length()) {
                 ChatFormatting formatting = ChatFormatting.getByCode(template.charAt(i + 1));
                 if (formatting != null) {
                     applyFormat(activeFormats, formatting);
@@ -146,7 +146,7 @@ public final class KineticI18n {
                     try {
                         argIndex = Integer.parseInt(template.substring(digitsStart, cursor)) - 1;
                     } catch (NumberFormatException ignored) {
-                        argIndex = -1;
+                        // argIndex stays -1: no argument receives the style
                     }
                     tokenEnd = cursor + 1;
                 }
@@ -207,7 +207,7 @@ public final class KineticI18n {
         }
         for (int i = 0; i < template.length() - 1; i++) {
             char current = template.charAt(i);
-            if (current == '\u00A7') {
+            if (current == '§') {
                 ChatFormatting formatting = ChatFormatting.getByCode(template.charAt(i + 1));
                 if (formatting != null) {
                     applyFormat(activeFormats, formatting);

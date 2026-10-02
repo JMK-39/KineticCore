@@ -1,5 +1,5 @@
 /**
- * Kinetic GUI framework. Open pages with {@link KineticGui}; build pages by extending {@code KineticPage} (package
+ * Kinetic GUI framework. Open pages with {@link dev.xyat.kineticcore.api.client.gui.KineticGui KineticGui}; build pages by extending {@code KineticPage} (package
  * {@code page}) and creating controls through {@code KineticUi} (package {@code ui}).
  *
  * <p>Sub-packages: {@code page} page base classes, {@code ui} control builders, {@code widget} control handles,

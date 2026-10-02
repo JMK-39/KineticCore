@@ -143,7 +143,7 @@ public final class KineticText {
         double seconds = Util.getMillis() / 1000.0D;
         double duration = Math.max(overflow * 0.5D, 3.0D);
         double phase = Math.sin((Math.PI / 2.0D) * Math.cos((Math.PI * 2.0D) * seconds / duration)) / 2.0D + 0.5D;
-        return (int) Math.round(Mth.lerp(phase, 0.0D, (double) overflow));
+        return (int) Math.round(Mth.lerp(phase, 0.0D, overflow));
     }
 
 }

@@ -16,6 +16,7 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.network.chat.Component;
 
+import javax.annotation.Nonnull;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -170,13 +171,13 @@ public final class CustomControlSupport {
         }
 
         @Override
-        public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        public void render(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             sync();
             super.render(graphics, mouseX, mouseY, partialTick);
         }
 
         @Override
-        protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        protected void renderWidget(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             access().render(control, GuiGraphicsAdapter.wrap(graphics), mouseX, mouseY, partialTick);
         }
 
@@ -248,7 +249,7 @@ public final class CustomControlSupport {
         }
 
         @Override
-        protected void updateWidgetNarration(NarrationElementOutput output) {
+        protected void updateWidgetNarration(@Nonnull NarrationElementOutput output) {
             Component narration = access().narration(control);
             if (narration != null && !narration.getString().isBlank()) {
                 output.add(NarratedElementType.TITLE, narration);

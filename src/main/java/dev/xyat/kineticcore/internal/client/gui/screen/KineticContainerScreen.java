@@ -1,86 +1,44 @@
 package dev.xyat.kineticcore.internal.client.gui.screen;
 
-import dev.xyat.kineticcore.api.client.gui.widget.list.ActionItem;
-import dev.xyat.kineticcore.api.client.gui.widget.list.ItemActionItem;
-import dev.xyat.kineticcore.api.client.gui.widget.list.ItemGridDensity;
-import dev.xyat.kineticcore.api.client.gui.widget.list.ItemGridItem;
-import dev.xyat.kineticcore.api.client.gui.widget.list.ItemSelectionItem;
-import dev.xyat.kineticcore.api.client.gui.widget.list.KineticActionList;
-import dev.xyat.kineticcore.api.client.gui.widget.list.KineticItemActionList;
-import dev.xyat.kineticcore.api.client.gui.widget.list.KineticItemGrid;
-import dev.xyat.kineticcore.api.client.gui.widget.list.KineticItemSelectionList;
-import dev.xyat.kineticcore.api.client.gui.widget.list.KineticMultiActionList;
-import dev.xyat.kineticcore.api.client.gui.widget.list.KineticMultiToggleList;
-import dev.xyat.kineticcore.api.client.gui.widget.list.KineticSelectionList;
-import dev.xyat.kineticcore.api.client.gui.widget.KineticTabStrip;
-import dev.xyat.kineticcore.api.client.gui.widget.list.KineticToggleActionList;
-import dev.xyat.kineticcore.api.client.gui.widget.list.KineticToggleList;
-import dev.xyat.kineticcore.api.client.gui.widget.list.MultiActionItem;
-import dev.xyat.kineticcore.api.client.gui.widget.list.MultiToggleItem;
-import dev.xyat.kineticcore.api.client.gui.widget.list.SelectionItem;
-import dev.xyat.kineticcore.internal.client.gui.widget.selection.TabBarButtons;
-import dev.xyat.kineticcore.api.client.gui.widget.TabStripItem;
-import dev.xyat.kineticcore.api.client.gui.widget.list.ToggleActionItem;
-import dev.xyat.kineticcore.api.client.gui.widget.list.ToggleHit;
-import dev.xyat.kineticcore.api.client.gui.widget.list.ToggleItem;
-
-import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
-
-import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
-import dev.xyat.kineticcore.internal.client.widget.KineticControlBridge;
-import dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime;
-import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
 import dev.xyat.kineticcore.internal.client.screen.GuiSessionRuntime;
-import dev.xyat.kineticcore.internal.client.screen.KineticScreenControls;
-import dev.xyat.kineticcore.internal.client.screen.KineticScreenFocus;
-import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.SmoothSelectionList;
-import dev.xyat.kineticcore.internal.client.gui.widget.selection.KineticDropdowns.Dropdown;
-import dev.xyat.kineticcore.api.client.gui.widget.KineticDropdown.Option;
-import dev.xyat.kineticcore.internal.client.gui.widget.slider.KineticSliders.Slider;
-import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.ToggleButton;
-import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.CycleButton;
-import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.HighZButton;
-import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.HighZToggleButton;
-import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.ColorPreviewButton;
-import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.ColorSwatchButton;
-import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.StateButton;
-import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.ItemButton;
-import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticAutoComplete.NumericAutoCompleteBox;
-import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticAutoComplete.AutoCompleteBox;
-import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticNumericFields.NumericEditBox;
-import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
-import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticMultiLineEditBox;
-import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticAutoComplete;
-import dev.xyat.kineticcore.api.client.gui.layout.KineticLayout;
-import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
-import dev.xyat.kineticcore.internal.client.gui.widget.InternalControl;
-import dev.xyat.kineticcore.internal.client.overlay.GuiOverlayRuntime;
-import dev.xyat.kineticcore.internal.client.widget.KineticScrollFrameRuntime;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /**
  * Base container screen for Kinetic interfaces using the fixed 640x360 virtual canvas.
+ * <p>
+ * The shared control, overlay, focus and draft API comes from {@link KineticScreenHost}; this class only adapts the
+ * vanilla container screen (slots, hovered-slot tooltips, container tick) to the scaled canvas.
  */
 public abstract class KineticContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements KineticScreenHost {
+    private final KineticScreenRuntime runtime = new KineticScreenRuntime(
+            this,
+            KineticCanvasTransform.canvas(1, 1),
+            () -> font,
+            () -> minecraft,
+            this::addRenderableWidget,
+            this::addWidget,
+            this::removeWidget
+    );
+
+    /** Creates a new {@code KineticContainerScreen}. */
+    protected KineticContainerScreen(T menu, Inventory inventory, Component title) {
+        super(menu, inventory, title);
+    }
+
     @Override
     public final Screen screen() {
         return this;
+    }
+
+    @Override
+    public final KineticScreenRuntime kineticRuntime() {
+        return runtime;
     }
 
     @Override
@@ -93,1034 +51,43 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
         return uiHeight();
     }
 
-    private float uiScale = 1f;
-    private int uiX;
-    private int uiY;
-    private int uiWidth = 1;
-    private int uiHeight = 1;
-    private final GuiOverlayRuntime overlays = new GuiOverlayRuntime();
-    private final KineticScrollFrameRuntime.Frame scrollFrame = new KineticScrollFrameRuntime.Frame();
-    private final KineticScreenControls controls = new KineticScreenControls(
-            () -> font, overlays, this::addRenderableWidget, this::addWidget,
-            this::removeWidget, this::openContextMenu
-    );
-    private final KineticScreenFocus focus = new KineticScreenFocus(this);
-
-    /** Creates a new {@code KineticContainerScreen}. */
-    protected KineticContainerScreen(T menu, Inventory inventory, Component title) {
-        super(menu, inventory, title);
-        KineticClientRuntimeImpl.initialize();
-    }
-
     /** Returns ui width. */
     public final int uiWidth() {
-        return uiWidth;
+        return runtime.canvas().width();
     }
 
     /** Returns ui height. */
     public final int uiHeight() {
-        return uiHeight;
+        return runtime.canvas().height();
     }
 
     /** Returns ui scale. */
     public final float uiScale() {
-        return uiScale;
+        return runtime.canvas().scale();
     }
 
     /** Reports whether screen-space coordinates are inside the fixed container UI canvas. */
     public final boolean isInsideUi(double screenX, double screenY) {
-        double x = toVirtualX(screenX);
-        double y = toVirtualY(screenY);
-        return x >= 0 && x < uiWidth && y >= 0 && y < uiHeight;
+        return runtime.canvas().contains(screenX, screenY);
     }
 
-    /** Converts the supplied value to virtual x. */
-    public final double toVirtualX(double screenX) {
-        return (screenX - uiX) / uiScale;
-    }
-
-    /** Converts the supplied value to virtual y. */
-    public final double toVirtualY(double screenY) {
-        return (screenY - uiY) / uiScale;
-    }
-
-    /** Converts the supplied value to screen x. */
-    public final int toScreenX(double virtualX) {
-        return uiX + (int) Math.floor(virtualX * uiScale);
-    }
-
-    /** Converts the supplied value to screen y. */
-    public final int toScreenY(double virtualY) {
-        return uiY + (int) Math.floor(virtualY * uiScale);
-    }
-
-    /** Converts the supplied value to screen right. */
-    public final int toScreenRight(double virtualX) {
-        return uiX + (int) Math.ceil(virtualX * uiScale);
-    }
-
-    /** Converts the supplied value to screen bottom. */
-    public final int toScreenBottom(double virtualY) {
-        return uiY + (int) Math.ceil(virtualY * uiScale);
-    }
-
-    /** 按当前 Screen 的 UI 坐标启用裁剪；与 disableUiScissor 配对使用。 */
-    public final void enableUiScissor(GuiGraphics graphics, int left, int top, int right, int bottom) {
-        if (graphics instanceof UiCanvasGraphics) {
-            KineticRenderRuntime.enableScissor(graphics, left, top, right, bottom);
-            return;
-        }
-        KineticRenderRuntime.enableScissor(graphics, toScreenX(left), toScreenY(top), toScreenRight(right), toScreenBottom(bottom));
-    }
-
-    /** 结束通过 enableUiScissor 开启的裁剪，建议放在 finally 中。 */
-    public final void disableUiScissor(GuiGraphics graphics) {
-        KineticRenderRuntime.disableScissor(graphics);
-    }
-
-    
-    
-    
-    /** Creates a standard text field with no placeholder, validator, or tooltip. */
-    public final KineticEditBox addTextField(int x, int y, int width, Component message) {
-        return addTextField(x, y, width, message, null, null, null);
-    }
-
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final KineticEditBox addTextField(
-            int x, int y, int width, Component message, Component placeholder,
-            Predicate<String> validator, Component tooltip
-    ) {
-        return controls.addTextField(x, y, width, message, placeholder, validator, tooltip);
-    }
-
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final KineticMultiLineEditBox addMultiLineTextField(
-            int x,
-            int y,
-            int width,
-            int height,
-            Component message,
-            Component placeholder,
-            Component tooltip
-    ) {
-        return controls.addMultiLineTextField(x, y, width, height, message, placeholder, tooltip);
-    }
-
-    
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final AutoCompleteBox addAutoCompleteField(
-            int x, int y, int width, Component message, Component placeholder,
-            Supplier<List<KineticSuggestion>> dictionarySupplier, Component tooltip
-    ) {
-        return controls.addAutoCompleteField(x, y, width, message, placeholder, dictionarySupplier, tooltip);
-    }
-
-    
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final NumericAutoCompleteBox addIntegerAutoCompleteField(
-            int x,
-            int y,
-            int width,
-            Component message,
-            Supplier<List<KineticSuggestion>> dictionarySupplier,
-            boolean allowNegative,
-            Integer minValue,
-            Integer maxValue,
-            Predicate<Number> validator,
-            Component tooltip
-    ) {
-        return controls.addIntegerAutoCompleteField(x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, validator, tooltip);
-    }
-
-    
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final NumericAutoCompleteBox addLongAutoCompleteField(
-            int x,
-            int y,
-            int width,
-            Component message,
-            Supplier<List<KineticSuggestion>> dictionarySupplier,
-            boolean allowNegative,
-            Long minValue,
-            Long maxValue,
-            Predicate<Number> validator,
-            Component tooltip
-    ) {
-        return controls.addLongAutoCompleteField(x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, validator, tooltip);
-    }
-
-    
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final NumericAutoCompleteBox addDecimalAutoCompleteField(
-            int x,
-            int y,
-            int width,
-            Component message,
-            Supplier<List<KineticSuggestion>> dictionarySupplier,
-            boolean allowNegative,
-            Double minValue,
-            Double maxValue,
-            Predicate<Number> validator,
-            Component tooltip
-    ) {
-        return controls.addDecimalAutoCompleteField(x, y, width, message, dictionarySupplier, allowNegative, minValue, maxValue, validator, tooltip);
-    }
-
-    
-    /**
-     * 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。
-     * Creates a numeric field without an attached tooltip.
-     */
-    public final NumericEditBox addIntegerField(
-            int x,
-            int y,
-            int width,
-            Component message,
-            boolean allowNegative,
-            Integer minValue,
-            Integer maxValue,
-            Predicate<Number> validator
-    ) {
-        return addIntegerField(x, y, width, message, allowNegative, minValue, maxValue, validator, null);
-    }
-
-    /** Adds an integer input using Kinetic validation, bounds, and standard styling. */
-    public final NumericEditBox addIntegerField(
-            int x,
-            int y,
-            int width,
-            Component message,
-            boolean allowNegative,
-            Integer minValue,
-            Integer maxValue,
-            Predicate<Number> validator,
-            Component tooltip
-    ) {
-        return controls.addIntegerField(x, y, width, message, allowNegative, minValue, maxValue, validator, tooltip);
-    }
-
-    
-    /**
-     * 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。
-     * Creates a numeric field without an attached tooltip.
-     */
-    public final NumericEditBox addLongField(
-            int x,
-            int y,
-            int width,
-            Component message,
-            boolean allowNegative,
-            Long minValue,
-            Long maxValue,
-            Predicate<Number> validator
-    ) {
-        return addLongField(x, y, width, message, allowNegative, minValue, maxValue, validator, null);
-    }
-
-    /** Adds a long-integer input using Kinetic validation, bounds, and standard styling. */
-    public final NumericEditBox addLongField(
-            int x,
-            int y,
-            int width,
-            Component message,
-            boolean allowNegative,
-            Long minValue,
-            Long maxValue,
-            Predicate<Number> validator,
-            Component tooltip
-    ) {
-        return controls.addLongField(x, y, width, message, allowNegative, minValue, maxValue, validator, tooltip);
-    }
-
-    
-    /**
-     * 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。
-     * Creates a numeric field without an attached tooltip.
-     */
-    public final NumericEditBox addDecimalField(
-            int x,
-            int y,
-            int width,
-            Component message,
-            boolean allowNegative,
-            Double minValue,
-            Double maxValue,
-            Predicate<Number> validator
-    ) {
-        return addDecimalField(x, y, width, message, allowNegative, minValue, maxValue, validator, null);
-    }
-
-    /** Adds a decimal input using Kinetic validation, bounds, and standard styling. */
-    public final NumericEditBox addDecimalField(
-            int x,
-            int y,
-            int width,
-            Component message,
-            boolean allowNegative,
-            Double minValue,
-            Double maxValue,
-            Predicate<Number> validator,
-            Component tooltip
-    ) {
-        return controls.addDecimalField(x, y, width, message, allowNegative, minValue, maxValue, validator, tooltip);
-    }
-
-    
-
-
-    /** Creates and registers a smooth vertical single-selection list using standard Kinetic row controls. */
-    public final KineticSelectionList addScrollableSelectionList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends SelectionItem> items,
-            int selectedIndex,
-            int initialScrollOffset,
-            Consumer<Integer> responder
-    ) {
-        return controls.addScrollableSelectionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset, responder
-        );
-    }
-
-    /** Creates and registers a smooth vertical single-selection list rendered at the supplied Z depth. */
-    public final KineticSelectionList addHighZScrollableSelectionList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends SelectionItem> items,
-            int selectedIndex,
-            int initialScrollOffset,
-            Consumer<Integer> responder,
-            int zLevel
-    ) {
-        return controls.addHighZScrollableSelectionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset, responder, zLevel
-        );
-    }
-
-    /** Adds a smooth vertical item-backed single-selection list. */
-    public final KineticItemSelectionList addScrollableItemSelectionList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends ItemSelectionItem> items,
-            int selectedIndex,
-            int initialScrollOffset,
-            Consumer<Integer> responder
-    ) {
-        return controls.addScrollableItemSelectionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset, responder
-        );
-    }
-
-    /** Adds a smooth vertical item-backed single-selection list rendered at the supplied Z depth. */
-    public final KineticItemSelectionList addHighZScrollableItemSelectionList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends ItemSelectionItem> items,
-            int selectedIndex,
-            int initialScrollOffset,
-            Consumer<Integer> responder,
-            int zLevel
-    ) {
-        return controls.addHighZScrollableItemSelectionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset, responder, zLevel
-        );
-    }
-
-    /** Creates and registers a smooth scrollable item-slot grid. */
-    public final KineticItemGrid addScrollableItemGrid(
-            int x, int y, int width, int height,
-            ItemGridDensity density, List<? extends ItemGridItem> items,
-            int initialScrollOffset, Consumer<Integer> responder
-    ) {
-        return controls.addScrollableItemGrid(
-                x, y, width, height, density, items, initialScrollOffset, responder
-        );
-    }
-
-    /** Creates and registers a smooth scrollable item-slot grid rendered at the supplied Z depth. */
-    public final KineticItemGrid addHighZScrollableItemGrid(
-            int x, int y, int width, int height,
-            ItemGridDensity density, List<? extends ItemGridItem> items,
-            int initialScrollOffset, Consumer<Integer> responder, int zLevel
-    ) {
-        return controls.addHighZScrollableItemGrid(
-                x, y, width, height, density, items, initialScrollOffset, responder, zLevel
-        );
-    }
-
-    /** Creates and registers a smooth vertical single-selection list with one trailing row action. */
-    public final KineticActionList addScrollableActionList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends ActionItem> items,
-            int selectedIndex,
-            int initialScrollOffset,
-            int actionWidth,
-            Consumer<Integer> responder,
-            Consumer<Integer> actionResponder
-    ) {
-        return controls.addScrollableActionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset,
-                actionWidth, responder, actionResponder
-        );
-    }
-
-    /** Creates and registers a smooth vertical single-selection list with one trailing row action at the supplied Z depth. */
-    public final KineticActionList addHighZScrollableActionList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends ActionItem> items,
-            int selectedIndex,
-            int initialScrollOffset,
-            int actionWidth,
-            Consumer<Integer> responder,
-            Consumer<Integer> actionResponder,
-            int zLevel
-    ) {
-        return controls.addHighZScrollableActionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset,
-                actionWidth, responder, actionResponder, zLevel
-        );
-    }
-
-    /** Creates and registers a smooth vertical single-selection list with multiple trailing row actions. */
-    public final KineticMultiActionList addScrollableMultiActionList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends MultiActionItem> items,
-            int selectedIndex,
-            int initialScrollOffset,
-            Consumer<Integer> responder,
-            BiConsumer<Integer, Integer> actionResponder
-    ) {
-        return controls.addScrollableMultiActionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset,
-                responder, actionResponder
-        );
-    }
-
-    /** Creates and registers a smooth vertical single-selection list with multiple trailing row actions at the supplied Z depth. */
-    public final KineticMultiActionList addHighZScrollableMultiActionList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends MultiActionItem> items,
-            int selectedIndex,
-            int initialScrollOffset,
-            Consumer<Integer> responder,
-            BiConsumer<Integer, Integer> actionResponder,
-            int zLevel
-    ) {
-        return controls.addHighZScrollableMultiActionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset,
-                responder, actionResponder, zLevel
-        );
-    }
-
-    /** Creates and registers a smooth vertical single-selection list with one real toggle and one trailing row action. */
-    public final KineticToggleActionList addScrollableToggleActionList(
-            int x, int y, int width, int height,
-            List<? extends ToggleActionItem> items,
-            int selectedIndex, int initialScrollOffset,
-            int toggleWidth, int actionWidth,
-            Consumer<Integer> responder,
-            BiConsumer<Integer, Boolean> toggleResponder,
-            Consumer<Integer> actionResponder
-    ) {
-        return controls.addScrollableToggleActionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset,
-                toggleWidth, actionWidth, responder, toggleResponder, actionResponder
-        );
-    }
-
-    /** Creates and registers a smooth vertical single-selection list with one real toggle and one trailing row action at the supplied Z depth. */
-    public final KineticToggleActionList addHighZScrollableToggleActionList(
-            int x, int y, int width, int height,
-            List<? extends ToggleActionItem> items,
-            int selectedIndex, int initialScrollOffset,
-            int toggleWidth, int actionWidth,
-            Consumer<Integer> responder,
-            BiConsumer<Integer, Boolean> toggleResponder,
-            Consumer<Integer> actionResponder,
-            int zLevel
-    ) {
-        return controls.addHighZScrollableToggleActionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset,
-                toggleWidth, actionWidth, responder, toggleResponder, actionResponder, zLevel
-        );
-    }
-
-    /** Creates and registers a smooth vertical item-backed single-selection list with one trailing row action. */
-    public final KineticItemActionList addScrollableItemActionList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends ItemActionItem> items,
-            int selectedIndex,
-            int initialScrollOffset,
-            int actionWidth,
-            Consumer<Integer> responder,
-            Consumer<Integer> actionResponder
-    ) {
-        return controls.addScrollableItemActionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset,
-                actionWidth, responder, actionResponder
-        );
-    }
-
-    /** Creates and registers a smooth vertical item-backed single-selection list with one trailing row action at the supplied Z depth. */
-    public final KineticItemActionList addHighZScrollableItemActionList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends ItemActionItem> items,
-            int selectedIndex,
-            int initialScrollOffset,
-            int actionWidth,
-            Consumer<Integer> responder,
-            Consumer<Integer> actionResponder,
-            int zLevel
-    ) {
-        return controls.addHighZScrollableItemActionList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset,
-                actionWidth, responder, actionResponder, zLevel
-        );
-    }
-
-    /** Creates and registers a smooth vertical single-selection list with any number of real toggles per row. */
-    public final KineticMultiToggleList addScrollableMultiToggleList(
-            int x, int y, int width, int height,
-            List<? extends MultiToggleItem> items,
-            int selectedIndex, int initialScrollOffset,
-            Consumer<Integer> responder,
-            BiConsumer<ToggleHit, Boolean> toggleResponder
-    ) {
-        return controls.addScrollableMultiToggleList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset, responder, toggleResponder
-        );
-    }
-
-    /** Creates and registers a smooth vertical single-selection list with any number of real toggles per row at the supplied Z depth. */
-    public final KineticMultiToggleList addHighZScrollableMultiToggleList(
-            int x, int y, int width, int height,
-            List<? extends MultiToggleItem> items,
-            int selectedIndex, int initialScrollOffset,
-            Consumer<Integer> responder,
-            BiConsumer<ToggleHit, Boolean> toggleResponder,
-            int zLevel
-    ) {
-        return controls.addHighZScrollableMultiToggleList(
-                x, y, width, height, items, selectedIndex, initialScrollOffset,
-                responder, toggleResponder, zLevel
-        );
-    }
-
-    /** Creates and registers a smooth vertical multi-toggle list using standard Kinetic row controls. */
-    public final KineticToggleList addScrollableToggleList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends ToggleItem> items,
-            int initialScrollOffset,
-            BiConsumer<Integer, Boolean> responder
-    ) {
-        return controls.addScrollableToggleList(
-                x, y, width, height, items, initialScrollOffset, responder
-        );
-    }
-
-    /** Creates and registers a smooth vertical multi-toggle list rendered at the supplied Z depth. */
-    public final KineticToggleList addHighZScrollableToggleList(
-            int x,
-            int y,
-            int width,
-            int height,
-            List<? extends ToggleItem> items,
-            int initialScrollOffset,
-            BiConsumer<Integer, Boolean> responder,
-            int zLevel
-    ) {
-        return controls.addHighZScrollableToggleList(
-                x, y, width, height, items, initialScrollOffset, responder, zLevel
-        );
-    }
-
-    /** Creates and registers a compact variable-width tab strip with API-managed horizontal scrolling. */
-    public final KineticTabStrip addScrollableTabStrip(
-            int x,
-            int y,
-            int width,
-            List<? extends TabStripItem> tabs,
-            int pinnedLeadingTabs,
-            int selectedIndex,
-            int initialScrollOffset,
-            Component previousText,
-            Component nextText,
-            Consumer<Integer> responder
-    ) {
-        return controls.addScrollableTabStrip(
-                x, y, width, tabs, pinnedLeadingTabs, selectedIndex, initialScrollOffset,
-                previousText, nextText, responder
-        );
-    }
-
-
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final TabBarButtons addTabBar(
-            int x,
-            int y,
-            int totalWidth,
-            List<? extends Component> labels,
-            List<? extends Component> tooltips,
-            int selectedIndex,
-            Consumer<Integer> responder
-    ) {
-        return controls.addTabBar(x, y, totalWidth, labels, tooltips, selectedIndex, responder);
-    }
-
-    
-    /** Creates and registers a tab bar rendered at an elevated Z depth. */
-    public final TabBarButtons addHighZTabBar(
-            int x,
-            int y,
-            int totalWidth,
-            List<? extends Component> labels,
-            List<? extends Component> tooltips,
-            int selectedIndex,
-            Consumer<Integer> responder,
-            int zLevel
-    ) {
-        return controls.addHighZTabBar(x, y, totalWidth, labels, tooltips, selectedIndex, responder, zLevel);
-    }
-
-    
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final StateButton addButton(int x, int y, int width, Component text, Component tooltip, Runnable action) {
-        return controls.addButton(x, y, width, text, tooltip, action);
-    }
-
-    /** Creates and registers a content-rich card button using the API-defined card height. */
-    public final StateButton addCardButton(int x, int y, int width, Component narration, Component tooltip, Runnable action) {
-        return controls.addCardButton(x, y, width, narration, tooltip, action);
-    }
-
-    /** Creates and registers a standard item-backed button with API-managed height, rendering, and tooltip. */
-    public final ItemButton addItemButton(
-            int x, int y, int width, ItemStack icon, Component text, Component tooltip, Runnable action
-    ) {
-        return controls.addItemButton(x, y, width, icon, text, tooltip, action);
-    }
-
-    
-    /** Creates and registers a managed state button whose callback needs that button instance. */
-    public final StateButton addButtonWithHandler(
-            int x, int y, int width, Component text, Component tooltip, Consumer<StateButton> action
-    ) {
-        return controls.addButtonWithHandler(x, y, width, text, tooltip, action);
-    }
-
-    /** Creates and registers a vertical tab bar rendered at an elevated Z depth. */
-    public final TabBarButtons addVerticalHighZTabBar(
-            int x,
-            int y,
-            int width,
-            List<? extends Component> labels,
-            List<? extends Component> tooltips,
-            int selectedIndex,
-            Consumer<Integer> responder,
-            int zLevel
-    ) {
-        return controls.addVerticalHighZTabBar(x, y, width, labels, tooltips, selectedIndex, responder, zLevel);
-    }
-
-
-
-    /** Creates and registers a standard Kinetic slider with caller-defined business rules. */
-    public final Slider addSlider(
-            int x,
-            int y,
-            int width,
-            Component message,
-            double minValue,
-            double maxValue,
-            double step,
-            double value,
-            Predicate<Double> validator,
-            DoubleConsumer responder,
-            Component tooltip
-    ) {
-        return controls.addSlider(
-                x, y, width, message, minValue, maxValue, step, value, validator, responder, tooltip
-        );
-    }
-
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final StateButton addCompactButton( int x, int y, int width, Component text, Component tooltip, Runnable action ) {
-        return controls.addCompactButton(x, y, width, text, tooltip, action);
-    }
-
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final HighZButton addHighZButton(
-            int x, int y, int width, Component text, Component tooltip, int zLevel, Runnable action
-    ) {
-        return controls.addHighZButton(x, y, width, text, tooltip, zLevel, action);
-    }
-
-    
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final HighZButton addCompactHighZButton(
-            int x, int y, int width, Component text, Component tooltip, int zLevel, Runnable action
-    ) {
-        return controls.addCompactHighZButton(x, y, width, text, tooltip, zLevel, action);
-    }
-
-    
-    /** Creates and registers a toggle control without a custom validator. */
-    public final ToggleButton addToggleButton(
-            int x,
-            int y,
-            int width,
-            boolean value,
-            Component onText,
-            Component offText,
-            Component tooltip,
-            Consumer<Boolean> responder
-    ) {
-        return addToggleButton(x, y, width, value, onText, offText, tooltip, null, responder);
-    }
-
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final ToggleButton addToggleButton(
-            int x,
-            int y,
-            int width,
-            boolean value,
-            Component onText,
-            Component offText,
-            Component tooltip,
-            Predicate<Boolean> validator,
-            Consumer<Boolean> responder
-    ) {
-        return controls.addToggleButton(x, y, width, value, onText, offText, tooltip, validator, responder);
-    }
-
-    /**
-     * Creates and registers a compact-height Kinetic toggle control.
-     * Creates and registers a compact toggle control without a custom validator.
-     */
-    public final ToggleButton addCompactToggleButton(
-            int x,
-            int y,
-            int width,
-            boolean value,
-            Component onText,
-            Component offText,
-            Component tooltip,
-            Consumer<Boolean> responder
-    ) {
-        return addCompactToggleButton(x, y, width, value, onText, offText, tooltip, null, responder);
-    }
-
-    /** Adds a compact themed toggle button using the standard Kinetic control height. */
-    public final ToggleButton addCompactToggleButton(
-            int x,
-            int y,
-            int width,
-            boolean value,
-            Component onText,
-            Component offText,
-            Component tooltip,
-            Predicate<Boolean> validator,
-            Consumer<Boolean> responder
-    ) {
-        return controls.addCompactToggleButton(x, y, width, value, onText, offText, tooltip, validator, responder);
-    }
-
-    /** Creates and registers a standard Kinetic multi-state cycle control. */
-    public final CycleButton addCycleButton(
-            int x,
-            int y,
-            int width,
-            int index,
-            List<Component> options,
-            Component tooltip,
-            Predicate<Integer> validator,
-            Consumer<Integer> responder
-    ) {
-        return controls.addCycleButton(x, y, width, index, options, tooltip, validator, responder);
-    }
-
-    /** 创建并注册高层 Kinetic Toggle，统一处理模态层级、状态和 Tooltip。 */
-    public final HighZToggleButton addHighZToggleButton(
-            int x,
-            int y,
-            int width,
-            boolean value,
-            Component onText,
-            Component offText,
-            Component tooltip,
-            Predicate<Boolean> validator,
-            Consumer<Boolean> responder,
-            int zLevel
-    ) {
-        return controls.addHighZToggleButton(
-                x, y, width, value, onText, offText, tooltip, validator, responder, zLevel
-        );
-    }
-
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final ColorSwatchButton addColorSwatchButton( int x, int y, int rgb, Component tooltip, Runnable action ) {
-        return controls.addColorSwatchButton(x, y, rgb, tooltip, action);
-    }
-
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final ColorPreviewButton addColorPreviewButton(
-            int x,
-            int y,
-            int width,
-            int color,
-            Component text,
-            Component tooltip,
-            Runnable action
-    ) {
-        return controls.addColorPreviewButton(x, y, width, color, text, tooltip, action);
-    }
-
-    /** Registers an API-created control for rendering, input, and a single screen-managed tooltip. */
-    public final <T extends InternalControl> T addControl(T control, Component tooltip) {
-        if (control == null) return null;
-        controls.registerWidget(KineticControlBridge.widget(control), tooltip);
-        return control;
-    }
-
-    /** Registers one business-specific or vanilla-special external widget that has no standard Kinetic control equivalent. */
-    public final <W extends AbstractWidget> W addExternalWidget(W widget, Component tooltip) {
-        return controls.registerWidget(widget, tooltip);
-    }
-
-    /** Removes one widget previously registered through {@link #addExternalWidget(AbstractWidget, Component)}. */
-    public final void removeExternalWidget(AbstractWidget widget) {
-        focus.blurControl(widget);
-        controls.unregisterWidget(widget);
-    }
-
-    /** Removes one standard Kinetic control without exposing Minecraft widget types to addons. */
-    public final void removeKineticControl(InternalControl control) {
-        if (control == null) return;
-        AbstractWidget widget = KineticControlBridge.widget(control);
-        blurControl(control);
-        controls.unregisterWidget(widget);
-    }
-
-    /**
-     * 在容器 UI 坐标系中绘制已注册的平滑列表；已处于 UI 画布内时直接绘制。
-     * Renders a registered smooth selection list in this container's UI coordinates.
-     */
-    public final void renderSmoothSelectionList(
-            SmoothSelectionList<?> list,
-            GuiGraphics graphics,
-            int mouseX,
-            int mouseY,
-            float partialTick
-    ) {
-        if (list == null || graphics == null || minecraft == null) return;
-        if (graphics instanceof UiCanvasGraphics) {
-            list.render(graphics, mouseX, mouseY, partialTick);
-            return;
-        }
-        GuiGraphics proxy = new ContainerGuiGraphics(graphics);
-        proxy.pose().pushPose();
-        proxy.pose().translate(uiX, uiY, 0);
-        proxy.pose().scale(uiScale, uiScale, 1f);
-        try {
-            list.render(proxy, mouseX, mouseY, partialTick);
-        } finally {
-            proxy.pose().popPose();
-        }
-    }
-
-    /** 仅注册列表的输入事件；调用方负责通过对应 Screen 的列表渲染 API 绘制。 */
-    public final <W extends SmoothSelectionList<?>> W addSmoothSelectionList(W list) {
-        return controls.addSmoothSelectionList(list);
-    }
-
-    /** Registers Screen Overlay Tooltip state for one standard Kinetic control. */
-    public final <W extends InternalControl> W registerWidgetTooltip(W control, Component tooltip) {
-        if (control == null) return null;
-        controls.registerWidgetTooltip(KineticControlBridge.widget(control), tooltip);
-        return control;
-    }
-
-    /** Registers a dynamic Screen Overlay Tooltip evaluated at hover time for one standard Kinetic control. */
-    public final <W extends InternalControl> W registerDynamicWidgetTooltip(W control, Supplier<Component> tooltipSupplier) {
-        if (control == null) return null;
-        controls.registerDynamicWidgetTooltip(KineticControlBridge.widget(control), tooltipSupplier);
-        return control;
-    }
-
+    /** Requests the tooltip of the hovered registered control; returns whether one was shown. */
     protected final boolean requestWidgetTooltip(double mouseX, double mouseY) {
-        return controls.requestWidgetTooltip(mouseX, mouseY, widget -> true);
+        return runtime.requestWidgetTooltip(mouseX, mouseY, widget -> true);
     }
 
-    /**
-     * 请求本帧的统一 Tooltip；在渲染阶段调用，无须自行创建原版 Tooltip。
-     * Requests this frame's standard one-line tooltip without restoring a same-name overload.
-     */
-    public final void showTooltipLine(Component component) {
-        controls.showTooltip(List.of(component == null ? Component.empty() : component), null);
-    }
-
-    /** Requests this frame's standard tooltip. Null maxWidth keeps text unwrapped. */
-    public final void showTooltip(List<? extends Component> lines, Integer maxWidth) {
-        controls.showTooltip(lines, maxWidth);
-    }
-
-    /** Shows formatted tooltip lines through the screen overlay layer. */
-    public final void showFormattedTooltip(List<FormattedCharSequence> lines) {
-        controls.showFormattedTooltip(lines);
-    }
-
-    /** 请求本帧的物品 Tooltip，由统一 Overlay 渲染。 */
-    public final void showItemTooltip(ItemStack stack) {
-        controls.showItemTooltip(stack);
-    }
-
-    /** Returns whether a menu or modal dialog currently blocks this screen's underlying input and hover content. */
-    public final boolean overlayBlocksInput() {
-        return overlays.blocksInput();
-    }
-
-    /** Closes the active standard context menu, if one is open. */
-    public final void closeContextMenu() {
-        controls.closeContextMenu();
-    }
-
-    /** 转移焦点并清除旧控件的焦点状态；传 null 等同 clearControlFocus。 */
-    public final void focusControl(InternalControl control) {
-        focus.focusControl(control == null ? null : KineticControlBridge.widget(control));
-    }
-
-    /** 清除指定 Kinetic 控件的焦点；仅当它是当前焦点时解除 Screen 焦点。 */
-    public final void blurControl(InternalControl control) {
-        if (control == null) return;
-        focus.blurControl(KineticControlBridge.widget(control));
-    }
-
-    /** 同时清除 Screen 当前焦点和该控件的焦点状态。 */
-    public final void clearControlFocus() {
-        focus.clearControlFocus();
-    }
-
-    /** 判断 Screen 当前焦点和 Kinetic 控件自身焦点是否一致。 */
-    public final boolean isControlFocused(InternalControl control) {
-        return control != null && focus.isControlFocused(KineticControlBridge.widget(control));
-    }
-
-    /** Returns the currently focused standard Kinetic control, or {@code null} when focus belongs elsewhere. */
-    public final InternalControl focusedControl() {
-        return getFocused() instanceof InternalControl control ? control : null;
-    }
-
-    /** 在当前 Screen 的 UI 坐标处打开统一菜单；Screen 负责坐标转换。 */
-    public final void openContextMenu(double virtualX, double virtualY, List<KineticOverlays.MenuItem> items) {
-        overlays.openMenu(toScreenX(virtualX), toScreenY(virtualY), items);
-    }
-
-    /** Opens the standard context menu at a fixed logical width; long labels scroll within the row. */
-    public final void openContextMenu(double virtualX, double virtualY,
-                                      List<KineticOverlays.MenuItem> items, int virtualWidth) {
-        overlays.openMenu(toScreenX(virtualX), toScreenY(virtualY), items,
-                Math.max(1, Math.round(virtualWidth * uiScale)));
-    }
-
-    /** 打开统一模态确认框；保存或回滚动作由 onConfirm/onCancel 回调决定。 */
-    public final void openDialog(
-            Component title,
-            Component message,
-            Component confirmText,
-            Component cancelText,
-            Runnable onConfirm,
-            Runnable onCancel
-    ) {
-        controls.openDialog(title, message, confirmText, cancelText, onConfirm, onCancel);
-    }
-
-    
-    
-    
-    /** 创建并注册标准 Kinetic 控件，统一处理 Screen Tooltip；Screen 子类优先使用此方法。 */
-    public final Dropdown addDropdown(
-            int x,
-            int y,
-            int width,
-            List<? extends Option> options,
-            String selectedValue,
-            Component tooltip,
-            Predicate<String> validator,
-            Consumer<String> responder
-    ) {
-        return controls.addDropdown(x, y, width, options, selectedValue, tooltip, validator, responder);
-    }
-
-    /** 在打开前预留独立草稿边界，避免继承父界面的草稿会话。 */
-    public final void reserveStandaloneDraft() {
-        GuiSessionRuntime.reserveStandaloneOwner(this);
-    }
-
-    /** 设置草稿快照与恢复函数。离开共享草稿会话时回滚；capture 应返回独立且可按 equals 比较的快照。 */
-    public final <S> void configureDraft(java.util.function.Supplier<S> capture, java.util.function.Consumer<S> restore) {
-        GuiSessionRuntime.configureDraft(this, capture, restore, false);
-    }
-
-    /** 建立独立草稿保存边界，不继承父界面草稿；离开该边界时回滚未提交修改。 */
-    public final <S> void configureStandaloneDraft(java.util.function.Supplier<S> capture, java.util.function.Consumer<S> restore) {
-        GuiSessionRuntime.configureDraft(this, capture, restore, true);
-    }
-
-    /** 仅草稿所有者可更新已保存基线；先完成业务持久化，再调用本方法。本方法不写入配置。 */
-    public final void commitDraft() {
-        GuiSessionRuntime.commitDraft(this);
-    }
-
-    /** 恢复最近保存的草稿基线；不负责关闭界面。 */
-    public final void discardDraft() {
-        GuiSessionRuntime.discardDraft(this);
-    }
-
-    /** 比较当前快照与保存基线，判断是否有未提交修改。 */
-    public final boolean hasUnsavedEdits() {
-        return GuiSessionRuntime.hasUnsavedEdits(this);
-    }
+    // ---- lifecycle ---------------------------------------------------------------------------------------------
 
     @Override
     protected final void init() {
         updateMetrics();
         int screenWidth = this.width;
         int screenHeight = this.height;
-        this.width = uiWidth;
-        this.height = uiHeight;
+        this.width = uiWidth();
+        this.height = uiHeight();
         try {
             super.init();
-            controls.clear();
+            runtime.controls().clear();
             buildUi();
         } finally {
             this.width = screenWidth;
@@ -1132,17 +99,18 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     protected abstract void buildUi();
 
     /** 通过 buildUi 重建并重新注册控件，清理旧 Tooltip 和视口绑定；不要直接调用 this.init() 或 clearWidgets。 */
+    @Override
     public final void rebuildUi() {
         clearControlFocus();
         closeContextMenu();
         updateMetrics();
         int screenWidth = this.width;
         int screenHeight = this.height;
-        this.width = uiWidth;
-        this.height = uiHeight;
+        this.width = uiWidth();
+        this.height = uiHeight();
         try {
             clearWidgets();
-            controls.clear();
+            runtime.controls().clear();
             super.init();
             buildUi();
         } finally {
@@ -1152,25 +120,12 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     }
 
     private void updateMetrics() {
-        KineticLayout.SafeArea safeArea = KineticLayout.SafeArea.of(
+        runtime.canvas().fit(
                 width,
                 height,
-                KineticScreen.STANDARD_SAFE_MARGIN
-        );
-        KineticLayout.Metrics metrics = KineticLayout.measure(
-                safeArea.width(),
-                safeArea.height(),
                 KineticScreen.STANDARD_CANVAS_WIDTH,
-                KineticScreen.STANDARD_CANVAS_HEIGHT
-        );
-        uiScale = Math.max(0.0001f, metrics.fitScale());
-        uiWidth = KineticScreen.STANDARD_CANVAS_WIDTH;
-        uiHeight = KineticScreen.STANDARD_CANVAS_HEIGHT;
-        uiX = safeArea.left() + Math.round(
-                (safeArea.width() - uiWidth * uiScale) / 2f
-        );
-        uiY = safeArea.top() + Math.round(
-                (safeArea.height() - uiHeight * uiScale) / 2f
+                KineticScreen.STANDARD_CANVAS_HEIGHT,
+                KineticScreen.STANDARD_SAFE_MARGIN
         );
     }
 
@@ -1178,83 +133,63 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     @Override
     protected final void containerTick() {
         super.containerTick();
-        controls.tickManagedControls();
-        containerUiTick();
-        focus.synchronizeControlState();
+        runtime.tick(this::containerUiTick);
     }
 
     /** Handles business per-tick work after standard registered controls have ticked. */
     protected void containerUiTick() {
     }
 
+    /** Runs business-specific cleanup when this Screen is removed. */
+    protected void screenRemoved() {
+    }
+
+    /** Guarantees vanilla removal cleanup while allowing business cleanup through {@link #screenRemoved()}. */
+    @Override
+    public final void removed() {
+        try {
+            screenRemoved();
+        } finally {
+            super.removed();
+        }
+    }
+
+    /**
+     * Handles a business-specific close request before the standard parent navigation runs.
+     * Return {@code true} when the request was fully handled or intentionally deferred; return {@code false} to continue with {@link #navigateBack()}.
+     */
+    protected boolean handleCloseRequest() {
+        return false;
+    }
+
+    /** Routes every close request through the Kinetic close hook before standard parent navigation. */
+    @Override
+    public final void onClose() {
+        if (!handleCloseRequest()) {
+            navigateBack();
+        }
+    }
+
+    // ---- rendering ---------------------------------------------------------------------------------------------
+
     /** {@inheritDoc} */
     @Override
     public final void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        KineticScrollFrameRuntime.enter(scrollFrame);
-        try {
-            renderKineticFrame(graphics, mouseX, mouseY, partialTick);
-        } finally {
-            KineticScrollFrameRuntime.exit(scrollFrame);
-        }
+        runtime.render(graphics, mouseX, mouseY, partialTick, this::renderContainerFrame);
     }
 
-    /** 显示已绑定选中项的滚动条悬停提示 / Shows the hover hint of a bound scrollbar. */
-    private boolean requestScrollbarHint() {
-        Component hint = scrollFrame.hint();
-        if (hint == null || hint.getString().isBlank()) return false;
-        overlays.tooltip(hint, 320);
-        return true;
-    }
-
-    private void renderKineticFrame(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        focus.synchronizeControlState();
-        renderBackground(graphics);
-        overlays.beginFrame();
-        int virtualMouseX = (int) Math.floor(toVirtualX(mouseX));
-        int virtualMouseY = (int) Math.floor(toVirtualY(mouseY));
-
-        GuiGraphics uiGraphics = new ContainerGuiGraphics(graphics);
-        uiGraphics.pose().pushPose();
-        uiGraphics.pose().translate(uiX, uiY, 0);
-        uiGraphics.pose().scale(uiScale, uiScale, 1f);
-        uiGraphics.enableScissor(0, 0, uiWidth, uiHeight);
-        try {
-            super.render(uiGraphics, virtualMouseX, virtualMouseY, partialTick);
-            renderUiForeground(uiGraphics, virtualMouseX, virtualMouseY, partialTick);
-            controls.renderAutoCompleteSuggestions(uiGraphics, virtualMouseX, virtualMouseY);
-            if (isInsideUi(mouseX, mouseY) && !overlays.blocksInput() && !controls.hasOpenAutoCompletePopup()
-                    && !requestScrollbarHint()) {
+    private void renderContainerFrame(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        runtime.renderInCanvas(graphics, mouseX, mouseY, partialTick, (uiGraphics, virtualMouseX, virtualMouseY, tick) -> {
+            super.render(uiGraphics, virtualMouseX, virtualMouseY, tick);
+            renderUiForeground(uiGraphics, virtualMouseX, virtualMouseY, tick);
+            runtime.controls().renderAutoCompleteSuggestions(uiGraphics, virtualMouseX, virtualMouseY);
+            if (runtime.businessTooltipsAllowed(isInsideUi(mouseX, mouseY))) {
                 requestContainerTooltips(uiGraphics, virtualMouseX, virtualMouseY, mouseX, mouseY);
             }
-        } finally {
-            try {
-                uiGraphics.disableScissor();
-            } finally {
-                uiGraphics.pose().popPose();
-            }
-        }
-
+        });
+        int virtualMouseX = (int) Math.floor(toVirtualX(mouseX));
+        int virtualMouseY = (int) Math.floor(toVirtualY(mouseY));
         renderScreenOverlay(graphics, virtualMouseX, virtualMouseY, mouseX, mouseY, partialTick);
-        overlays.render(graphics, font, width, height, mouseX, mouseY);
-    }
-
-    private interface UiCanvasGraphics {
-    }
-
-    private final class ContainerGuiGraphics extends GuiGraphics implements UiCanvasGraphics {
-        private ContainerGuiGraphics(GuiGraphics source) {
-            super(KineticContainerScreen.this.minecraft, source.bufferSource());
-        }
-
-        @Override
-        public void enableScissor(int left, int top, int right, int bottom) {
-            super.enableScissor(
-                    toScreenX(left),
-                    toScreenY(top),
-                    toScreenRight(right),
-                    toScreenBottom(bottom)
-            );
-        }
     }
 
     /** Requests container tooltips. */
@@ -1285,6 +220,8 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
             float partialTick
     ) {
     }
+
+    // ---- input -------------------------------------------------------------------------------------------------
 
     /** Handles business mouse clicks in virtual canvas coordinates after Overlay and autocomplete routing. */
     protected boolean containerMouseClicked(double mouseX, double mouseY, int button) {
@@ -1331,168 +268,6 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
         return false;
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public final boolean mouseClicked(double mouseX, double mouseY, int button) {
-        double virtualMouseX = toVirtualX(mouseX);
-        double virtualMouseY = toVirtualY(mouseY);
-        if (overlays.mouseClicked(mouseX, mouseY, button, width, height, font)) {
-            return true;
-        }
-        if (!isInsideUi(mouseX, mouseY)) {
-            controls.clearAutoCompleteFocusOutside(virtualMouseX, virtualMouseY);
-            clearControlFocus();
-            return false;
-        }
-        controls.clearAutoCompleteFocusOutside(virtualMouseX, virtualMouseY);
-        if (controls.handleAutoCompleteClick(virtualMouseX, virtualMouseY, button)) return true;
-        if (scrollFrame.middleClick(button)) return true;
-        if (containerMouseClicked(virtualMouseX, virtualMouseY, button)) return true;
-        boolean handled = super.mouseClicked(virtualMouseX, virtualMouseY, button)
-                || afterMouseClicked(virtualMouseX, virtualMouseY, button);
-        if (!handled) clearControlFocus();
-        return handled;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public final boolean mouseReleased(double mouseX, double mouseY, int button) {
-        overlays.mouseReleased();
-        if (overlays.blocksInput()) {
-            return true;
-        }
-        if (controls.handleAutoCompleteReleased(button)) return true;
-        double virtualMouseX = toVirtualX(mouseX);
-        double virtualMouseY = toVirtualY(mouseY);
-        if (containerMouseReleased(virtualMouseX, virtualMouseY, button)) return true;
-        return super.mouseReleased(virtualMouseX, virtualMouseY, button)
-                || afterMouseReleased(virtualMouseX, virtualMouseY, button);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public final boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (overlays.mouseDragged(mouseX, mouseY, width, height, font)) return true;
-        if (overlays.blocksInput()) return true;
-        double virtualMouseX = toVirtualX(mouseX);
-        double virtualMouseY = toVirtualY(mouseY);
-        if (controls.handleAutoCompleteDragged(virtualMouseX, virtualMouseY)) return true;
-        double virtualDragX = dragX / uiScale;
-        double virtualDragY = dragY / uiScale;
-        if (containerMouseDragged(virtualMouseX, virtualMouseY, button, virtualDragX, virtualDragY)) return true;
-        return super.mouseDragged(
-                virtualMouseX,
-                virtualMouseY,
-                button,
-                virtualDragX,
-                virtualDragY
-        )
-                || afterMouseDragged(
-                virtualMouseX,
-                virtualMouseY,
-                button,
-                virtualDragX,
-                virtualDragY
-        );
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public final boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        if (overlays.mouseScrolled(mouseX, mouseY, delta, width, height, font)) return true;
-        if (overlays.blocksInput()) return true;
-        double virtualMouseX = toVirtualX(mouseX);
-        double virtualMouseY = toVirtualY(mouseY);
-        if (controls.handleAutoCompleteScroll(virtualMouseX, virtualMouseY, delta)) return true;
-        if (containerMouseScrolled(virtualMouseX, virtualMouseY, delta)) return true;
-        if (GuiSessionRuntime.routeSelectionListWheel(children(), virtualMouseX, virtualMouseY, delta)) return true;
-        return super.mouseScrolled(virtualMouseX, virtualMouseY, delta)
-                || afterMouseScrolled(virtualMouseX, virtualMouseY, delta);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public final void mouseMoved(double mouseX, double mouseY) {
-        if (overlays.blocksInput()) return;
-        double virtualMouseX = toVirtualX(mouseX);
-        double virtualMouseY = toVirtualY(mouseY);
-        containerMouseMoved(virtualMouseX, virtualMouseY);
-        super.mouseMoved(virtualMouseX, virtualMouseY);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public final boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        focus.synchronizeControlState();
-        if (overlays.keyPressed(keyCode)) return true;
-        if (controls.handleAutoCompleteKey(keyCode, scanCode, modifiers)) return true;
-        if (containerKeyPressed(keyCode, scanCode, modifiers)) return true;
-        if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.ESCAPE, keyCode)) {
-            onClose();
-            return true;
-        }
-        boolean handled = super.keyPressed(keyCode, scanCode, modifiers);
-        return handled;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public final boolean keyReleased(int keyCode, int scanCode, int modifiers) {
-        focus.synchronizeControlState();
-        if (overlays.blocksInput()) return true;
-        if (containerKeyReleased(keyCode, scanCode, modifiers)) return true;
-        return super.keyReleased(keyCode, scanCode, modifiers);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public final boolean charTyped(char codePoint, int modifiers) {
-        focus.synchronizeControlState();
-        if (overlays.blocksInput()) return true;
-        if (containerCharTyped(codePoint, modifiers)) return true;
-        return super.charTyped(codePoint, modifiers);
-    }
-
-    /** Explicitly declares the parent used by standard Kinetic back navigation. */
-    public final void setParentScreen(Screen parent) {
-        GuiSessionRuntime.setExplicitParent(this, parent);
-    }
-
-    /** 返回父界面；离开共享草稿会话时回滚未提交修改，容器界面同时关闭容器。 */
-    public final void navigateBack() {
-        GuiSessionRuntime.back(this);
-    }
-
-    /** Runs business-specific cleanup when this Screen is removed. */
-    protected void screenRemoved() {
-    }
-
-    /** Guarantees vanilla removal cleanup while allowing business cleanup through {@link #screenRemoved()}. */
-    @Override
-    public final void removed() {
-        try {
-            screenRemoved();
-        } finally {
-            super.removed();
-        }
-    }
-
-    /**
-     * Handles a business-specific close request before the standard parent navigation runs.
-     * Return {@code true} when the request was fully handled or intentionally deferred; return {@code false} to continue with {@link #navigateBack()}.
-     */
-    protected boolean handleCloseRequest() {
-        return false;
-    }
-
-    /** Routes every close request through the Kinetic close hook before standard parent navigation. */
-    @Override
-    public final void onClose() {
-        if (!handleCloseRequest()) {
-            navigateBack();
-        }
-    }
-
     /** Page-host hook: a press no registered control consumed. */
     protected boolean afterMouseClicked(double mouseX, double mouseY, int button) {
         return false;
@@ -1513,4 +288,69 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
         return false;
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public final boolean mouseClicked(double mouseX, double mouseY, int button) {
+        return runtime.mouseClicked(mouseX, mouseY, button, (x, y, pressed) ->
+                containerMouseClicked(x, y, pressed)
+                        || super.mouseClicked(x, y, pressed)
+                        || afterMouseClicked(x, y, pressed));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final boolean mouseReleased(double mouseX, double mouseY, int button) {
+        return runtime.mouseReleased(mouseX, mouseY, button, (x, y, released) ->
+                containerMouseReleased(x, y, released)
+                        || super.mouseReleased(x, y, released)
+                        || afterMouseReleased(x, y, released));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        return runtime.mouseDragged(mouseX, mouseY, button, dragX, dragY, (x, y, dragged, dx, dy) ->
+                containerMouseDragged(x, y, dragged, dx, dy)
+                        || super.mouseDragged(x, y, dragged, dx, dy)
+                        || afterMouseDragged(x, y, dragged, dx, dy));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        return runtime.mouseScrolled(mouseX, mouseY, delta, (x, y, wheel) ->
+                containerMouseScrolled(x, y, wheel)
+                        || GuiSessionRuntime.routeSelectionListWheel(children(), x, y, wheel)
+                        || super.mouseScrolled(x, y, wheel)
+                        || afterMouseScrolled(x, y, wheel));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final void mouseMoved(double mouseX, double mouseY) {
+        runtime.mouseMoved(mouseX, mouseY, (x, y) -> {
+            containerMouseMoved(x, y);
+            super.mouseMoved(x, y);
+        });
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        return runtime.keyPressed(keyCode, scanCode, modifiers, this::containerKeyPressed, super::keyPressed);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        return runtime.keyReleased(keyCode, scanCode, modifiers,
+                (key, scan, mods) -> containerKeyReleased(key, scan, mods) || super.keyReleased(key, scan, mods));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final boolean charTyped(char codePoint, int modifiers) {
+        return runtime.charTyped(codePoint, modifiers,
+                (character, mods) -> containerCharTyped(character, mods) || super.charTyped(character, mods));
+    }
 }

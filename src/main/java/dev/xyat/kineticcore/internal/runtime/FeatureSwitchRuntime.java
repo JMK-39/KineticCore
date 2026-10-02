@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public final class FeatureSwitchRuntime {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -225,8 +226,8 @@ public final class FeatureSwitchRuntime {
         nextLoadedValues.putAll(values);
         Path temporaryFile = null;
         try {
-            Path parent = CONFIG_PATH.getParent();
-            if (parent != null) Files.createDirectories(parent);
+            Path parent = Objects.requireNonNull(CONFIG_PATH.toAbsolutePath().getParent(), "config directory");
+            Files.createDirectories(parent);
             temporaryFile = Files.createTempFile(parent, "startup_features-", ".tmp");
 
             try (BufferedWriter writer = Files.newBufferedWriter(temporaryFile, StandardCharsets.UTF_8)) {

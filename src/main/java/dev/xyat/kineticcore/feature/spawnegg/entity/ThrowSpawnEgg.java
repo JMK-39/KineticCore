@@ -44,6 +44,7 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
     }
 
     @Override
+    @Nonnull
     protected Item getDefaultItem() {
         return Items.EGG;
     }

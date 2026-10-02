@@ -51,6 +51,7 @@ public final class ThrowSpawnEggRenderer extends EntityRenderer<ThrowSpawnEgg> {
     }
 
     @Override
+    @Nonnull
     public ResourceLocation getTextureLocation(@Nonnull ThrowSpawnEgg entity) {
         return TextureAtlas.LOCATION_BLOCKS;
     }

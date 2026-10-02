@@ -41,7 +41,9 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Runs the regression checks that need Minecraft and Forge classes on the classpath but no bootstrap and no mod
@@ -126,7 +128,7 @@ public final class MinecraftRegressionSuite {
                         "@" + argumentFile,
                         mainClass.getName(),
                         caseName
-                ).inheritIO().start();
+                ).directory(isolatedWorkDirectory(mainClass, caseName).toFile()).inheritIO().start();
                 int exitCode = process.waitFor();
                 if (exitCode != 0) {
                     throw new AssertionError(mainClass.getSimpleName() + " " + caseName + " exited with " + exitCode);
@@ -135,6 +137,24 @@ public final class MinecraftRegressionSuite {
                 deleteQuietly(argumentFile);
             }
         });
+    }
+
+    /**
+     * Fresh working directory for one isolated case. Those cases write config/ and logs/ relative to their working
+     * directory, which must never be the project root. Gradle passes {@code kinetic.regression.workDir}.
+     */
+    private static Path isolatedWorkDirectory(Class<?> mainClass, String caseName) throws IOException {
+        String configured = System.getProperty("kinetic.regression.workDir");
+        Path base = configured == null || configured.isBlank()
+                ? Files.createTempDirectory("kinetic-regression")
+                : Path.of(configured).toAbsolutePath();
+        Path directory = base.resolve(mainClass.getSimpleName() + "-" + caseName);
+        if (Files.exists(directory)) {
+            try (Stream<Path> stale = Files.walk(directory)) {
+                for (Path path : stale.sorted(Comparator.reverseOrder()).toList()) Files.delete(path);
+            }
+        }
+        return Files.createDirectories(directory);
     }
 
     private static void deleteQuietly(Path file) {

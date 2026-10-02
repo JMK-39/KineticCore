@@ -37,20 +37,16 @@ public final class FlightClient {
                         .keyboard(KineticKeyBindings.Key.K)
                         .onPressed(FlightClient::handleNoclipKey)
                         .register(),
-                () -> {
-                    superFlightFreeLookKey = KineticKeyBindings.builder("key.kineticcore.flying.super.freelook")
-                            .category("key.categories.movement")
-                            .context(KineticKeyBindings.Context.IN_GAME)
-                            .keyboard(KineticKeyBindings.Key.LEFT_ALT)
-                            .register();
-                },
-                () -> {
-                    speedModifierKey = KineticKeyBindings.builder("key.kineticcore.flying.speed.modifier")
-                            .category("key.categories.movement")
-                            .context(KineticKeyBindings.Context.IN_GAME)
-                            .keyboard(KineticKeyBindings.Key.LEFT_SHIFT)
-                            .register();
-                },
+                () -> superFlightFreeLookKey = KineticKeyBindings.builder("key.kineticcore.flying.super.freelook")
+                        .category("key.categories.movement")
+                        .context(KineticKeyBindings.Context.IN_GAME)
+                        .keyboard(KineticKeyBindings.Key.LEFT_ALT)
+                        .register(),
+                () -> speedModifierKey = KineticKeyBindings.builder("key.kineticcore.flying.speed.modifier")
+                        .category("key.categories.movement")
+                        .context(KineticKeyBindings.Context.IN_GAME)
+                        .keyboard(KineticKeyBindings.Key.LEFT_SHIFT)
+                        .register(),
                 () -> KineticKeyBindings.builder("key.kineticcore.flying.inertia")
                         .category("key.kineticcore.category")
                         .context(KineticKeyBindings.Context.IN_GAME)
@@ -75,10 +71,6 @@ public final class FlightClient {
                 () -> KineticClientEvents.onBlockScreenEffect(FlightClient::onBlockOverlay),
                 () -> CommonHooks.onPlayerPoseUpdate(FlightClient::applySuperFlightPose)
         );
-    }
-
-    public static void applyServerNoclip(boolean state) {
-        KineticFlightClient.applyServerNoclip(state);
     }
 
     public static void setNoclip(boolean state) {

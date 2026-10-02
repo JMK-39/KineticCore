@@ -1,6 +1,5 @@
 package dev.xyat.kineticcore.feature.attribute.config;
 
-import java.math.BigDecimal;
 
 /** Text codec used for attribute bounds that do not fit a compact decimal editor. */
 final class AttributeBoundaryCodec {
@@ -13,19 +12,6 @@ final class AttributeBoundaryCodec {
     private static final int MAX_COMPACT_PLAIN_LENGTH = 32;
 
     private AttributeBoundaryCodec() {
-    }
-
-    static boolean needsTextEditor(double value) {
-        if (!Double.isFinite(value)) return true;
-        // BigDecimal intentionally normalizes negative zero. Keep this rare
-        // value on the lossless text path as well.
-        if (Double.doubleToRawLongBits(value) == Double.doubleToRawLongBits(-0.0D)) return true;
-        String plain = BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
-        return plain.length() > MAX_COMPACT_PLAIN_LENGTH;
-    }
-
-    static boolean needsTextEditor(double defaultValue, double currentValue) {
-        return needsTextEditor(defaultValue) || needsTextEditor(currentValue);
     }
 
     static String format(double value) {

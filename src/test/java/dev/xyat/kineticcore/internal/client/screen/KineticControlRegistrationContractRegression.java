@@ -33,8 +33,8 @@ public final class KineticControlRegistrationContractRegression {
         check(event.contains("registeredEventLists.remove(widget);"),
                 "A failed event list must be eligible for retry");
 
-        String generic = body(source, "public final <T extends AbstractWidget> T registerWidget(T widget, Component tooltip)",
-                "public final void unregisterWidget(AbstractWidget widget)");
+        String generic = body(source, "public <T extends AbstractWidget> T registerWidget(T widget, Component tooltip)",
+                "public void unregisterWidget(AbstractWidget widget)");
         check(generic.contains("registerWidgetTooltip(widget, tooltip);"),
                 "Explicit null or blank tooltip must clear a previous tooltip on re-registration");
         check(!generic.contains("if (tooltip != null && !tooltip.getString().isBlank())"),

@@ -378,12 +378,12 @@ The project provides the static `checkKineticArchitecture` task to prevent:
 - API from exposing Forge Event implementation types.
 - Business code from bypassing existing shared GUI, input, lifecycle, networking, tooltip, or command capabilities.
 
-Architecture rules run automatically during the build through `gradle/kinetic-architecture.gradle` and `gradle/kinetic-api-verification.gradle`.
+Architecture rules run automatically during the build through `gradle/kinetic-architecture.gradle` and `gradle/kinetic-api-verification.gradle`. Addons get the same hard rules from `gradle/kinetic-addon-architecture.gradle`: copy it into the addon and `apply from` it, and `compileJava` fails when addon code bypasses the GUI API (details in `docs/KineticCore-GUI-API-v2-Migration.md`, section 12).
 
 Regression checks come in four groups:
 
 - No Minecraft needed: `checkKineticHeadlessRegressions`, runs in every build.
-- Minecraft and Forge classes, no bootstrap: `checkKineticMinecraftRegressions`. Checks that keep static startup state run in their own JVM. Not part of `build` yet; run it with `gradlew checkKineticMinecraftRegressions`.
+- Minecraft and Forge classes, no bootstrap: `checkKineticMinecraftRegressions`. Checks that keep static startup state run in their own JVM, in a working directory under `build/tmp`. Part of `check`, so it runs in every build.
 - Minecraft bootstrap needed: `KineticScrollStateRegression`, `SmoothSelectionListLifecycleRegression`.
 - Forge mod loading context needed: `SearchEnglishDisplayRegression`, `KTServerConfigGetterRegression`, `ServerConfigDecimalWireRegression`, `HookRegistrationIntegrationRegression`, `GuiDraftConfigureFailureRegression`, `GuiRootNavigationRegression`, `GuiSessionLifecycleRegression`, `GuiSessionNavigationRegression`.
 
@@ -766,12 +766,12 @@ ServerTickTracker
 - API 暴露 Forge Event 实现类型。
 - 业务绕过已有统一 GUI、输入、生命周期、网络、Tooltip、命令能力。
 
-架构规则由 `gradle/kinetic-architecture.gradle` 和 `gradle/kinetic-api-verification.gradle` 在构建阶段自动检查。
+架构规则由 `gradle/kinetic-architecture.gradle` 和 `gradle/kinetic-api-verification.gradle` 在构建阶段自动检查。附属使用 `gradle/kinetic-addon-architecture.gradle` 获得同样的硬性规则：把它复制到附属并 `apply from`，附属代码绕过 GUI API 时 `compileJava` 直接失败（详见 `docs/KineticCore-GUI-API-v2-Migration.md` 第 12 节）。
 
 回归检查分四组：
 
 - 不需要 Minecraft：`checkKineticHeadlessRegressions`，每次构建都会运行。
-- 需要 Minecraft 和 Forge 类，但不需要 bootstrap：`checkKineticMinecraftRegressions`。会保留静态启动状态的检查在独立 JVM 中运行。暂时不在 `build` 里，需要手动运行 `gradlew checkKineticMinecraftRegressions`。
+- 需要 Minecraft 和 Forge 类，但不需要 bootstrap：`checkKineticMinecraftRegressions`。会保留静态启动状态的检查在独立 JVM 中运行，工作目录位于 `build/tmp` 下。已接入 `check`，每次构建都会运行。
 - 需要 Minecraft bootstrap：`KineticScrollStateRegression`、`SmoothSelectionListLifecycleRegression`。
 - 需要 Forge 模组加载环境：`SearchEnglishDisplayRegression`、`KTServerConfigGetterRegression`、`ServerConfigDecimalWireRegression`、`HookRegistrationIntegrationRegression`、`GuiDraftConfigureFailureRegression`、`GuiRootNavigationRegression`、`GuiSessionLifecycleRegression`、`GuiSessionNavigationRegression`。
 

@@ -75,7 +75,7 @@ public final class SetSpawnNetwork {
                                         buffer.readStringList(MAX_LIST_ENTRIES, MAX_STRING_LENGTH)
                                 )
                         ),
-                        () -> packet -> SetSpawnNetworkClient.handleOpenGui(packet)
+                        () -> SetSpawnNetworkClient::handleOpenGui
                 );
 
                 openGuiRegistered = true;

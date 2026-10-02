@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -130,23 +129,22 @@ public final class KTConfigApi {
 
     /** 以当前界面为父打开配置索引 / Opens the config index as a child of the current screen. */
     public static void openIndex() {
-        KineticClientRuntime.openScreen(ConfigScreens.createIndex(KineticClientRuntime.currentScreen()));
+        KineticClientRuntime.openScreen(ConfigScreens.createIndex());
     }
 
     /** 打开已注册的配置页 / Opens a registered config page. */
     public static void openPage(String pageId) {
-        KineticClientRuntime.openScreen(createRegisteredPageScreen(KineticClientRuntime.currentScreen(), pageId));
+        KineticClientRuntime.openScreen(createRegisteredPageScreen(pageId));
     }
 
     /** 打开配置页定义（可为未注册的临时页）/ Opens a config page definition, including transient unregistered pages. */
     public static void openPage(KTConfigPage page) {
-        KineticClientRuntime.openScreen(ConfigScreens.createPage(KineticClientRuntime.currentScreen(),
-                Objects.requireNonNull(page, "page")));
+        KineticClientRuntime.openScreen(ConfigScreens.createPage(Objects.requireNonNull(page, "page")));
     }
 
     /** 打开某模组的配置中心 / Opens the owner-scoped config hub of a mod. */
     public static void openOwner(String ownerModId) {
-        KineticClientRuntime.openScreen(createOwnerScreen(KineticClientRuntime.currentScreen(), ownerModId));
+        KineticClientRuntime.openScreen(createOwnerScreen(ownerModId));
     }
 
     /**
@@ -182,18 +180,18 @@ public final class KTConfigApi {
         return () -> openPage(Objects.requireNonNull(pageFactory.get(), "pageFactory returned null"));
     }
 
-    private static Screen createRegisteredPageScreen(Screen parent, String pageId) {
+    private static Screen createRegisteredPageScreen(String pageId) {
         KTConfigPage page = find(pageId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown config page: " + pageId));
         if (page.scope() == KTConfigScope.SERVER_AUTHORITATIVE && !page.serverManaged()) {
             showUnavailable(page);
-            return ConfigScreens.createIndex(parent);
+            return ConfigScreens.createIndex();
         }
-        return ConfigScreens.createPage(parent, page);
+        return ConfigScreens.createPage(page);
     }
 
-    private static Screen createOwnerScreen(Screen parent, String ownerModId) {
-        return ConfigScreens.createOwnerFor(parent, ownerModId);
+    private static Screen createOwnerScreen(String ownerModId) {
+        return ConfigScreens.createOwnerFor(ownerModId);
     }
 
     private static void showUnavailable(KTConfigPage page) {

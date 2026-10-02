@@ -301,7 +301,7 @@ public final class KineticSelectors {
         ItemListEditorScreen.SelectionMode internalMode = mode == ItemListMode.ITEMS_ONLY
                 ? ItemListEditorScreen.SelectionMode.ITEMS_ONLY
                 : ItemListEditorScreen.SelectionMode.ITEMS_TAGS_MODS;
-        KineticClientRuntime.openScreen(new ItemListEditorScreen(KineticClientRuntimeImpl.currentScreen(), title, initialRules, internalMode, onSave));
+        KineticClientRuntime.openScreen(new ItemListEditorScreen(title, initialRules, internalMode, onSave));
     }
 
     /** Opens the standard NBT text editor with the supplied initial serialized value. */
@@ -311,7 +311,7 @@ public final class KineticSelectors {
 
     /** Opens the standard single-color picker with the supplied initial RGB value. */
     public static void openColorPicker(Component title, int initialRgb, Consumer<Integer> onApply) {
-        KineticClientRuntime.openScreen(ColorPickerScreen.single(KineticClientRuntimeImpl.currentScreen(), title, initialRgb, onApply));
+        KineticClientRuntime.openScreen(ColorPickerScreen.single(title, initialRgb, onApply));
     }
 
     /** Opens the palette editor with an explicit maximum color count. */
@@ -322,7 +322,7 @@ public final class KineticSelectors {
     ) {
         List<Integer> safeColors = initialColors == null ? List.of() : List.copyOf(initialColors);
         int safeMax = Math.max(1, Math.min(DEFAULT_MAX_PALETTE_COLORS, maxColors));
-        KineticClientRuntime.openScreen(ColorPickerScreen.palette(KineticClientRuntimeImpl.currentScreen(), title, safeColors, safeMax, onApply));
+        KineticClientRuntime.openScreen(ColorPickerScreen.palette(title, safeColors, safeMax, onApply));
     }
 
 }

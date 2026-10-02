@@ -55,26 +55,25 @@ public final class KineticServerEventRuntime {
     public static synchronized void initialize() {
         if (initialized) return;
         var attempt = LISTENER_REGISTRATIONS.begin();
-        int slot = 0;
 
         for (KineticEventPriority priority : KineticEventPriority.values()) {
             EventPriority forgePriority = toForge(priority);
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (TickEvent.ServerTickEvent event) -> onServerTick(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (TickEvent.PlayerTickEvent event) -> onPlayerTick(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerAboutToStartEvent event) -> onServerAboutToStart(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerStartingEvent event) -> onServerStarting(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerStartedEvent event) -> onServerStarted(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerStoppingEvent event) -> onServerStopping(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerStoppedEvent event) -> onServerStopped(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.PlayerLoggedInEvent event) -> onPlayerLogin(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.PlayerLoggedOutEvent event) -> onPlayerLogout(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.Clone event) -> onPlayerClone(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.PlayerRespawnEvent event) -> onPlayerRespawn(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.PlayerChangedDimensionEvent event) -> onPlayerChangedDimension(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.PlayerChangeGameModeEvent event) -> onPlayerGameModeChange(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (CommandEvent event) -> onCommand(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (OnDatapackSyncEvent event) -> onDatapackSync(priority, event)));
-            attempt.install(slot++, () -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerChatEvent event) -> onChat(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (TickEvent.ServerTickEvent event) -> onServerTick(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (TickEvent.PlayerTickEvent event) -> onPlayerTick(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerAboutToStartEvent event) -> onServerAboutToStart(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerStartingEvent event) -> onServerStarting(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerStartedEvent event) -> onServerStarted(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerStoppingEvent event) -> onServerStopping(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerStoppedEvent event) -> onServerStopped(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.PlayerLoggedInEvent event) -> onPlayerLogin(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.PlayerLoggedOutEvent event) -> onPlayerLogout(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.Clone event) -> onPlayerClone(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.PlayerRespawnEvent event) -> onPlayerRespawn(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.PlayerChangedDimensionEvent event) -> onPlayerChangedDimension(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (PlayerEvent.PlayerChangeGameModeEvent event) -> onPlayerGameModeChange(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (CommandEvent event) -> onCommand(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (OnDatapackSyncEvent event) -> onDatapackSync(priority, event)));
+            attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(forgePriority, (ServerChatEvent event) -> onChat(priority, event)));
         }
         attempt.finish();
         initialized = true;
