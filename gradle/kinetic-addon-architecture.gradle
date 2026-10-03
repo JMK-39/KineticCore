@@ -3,7 +3,7 @@
 // a capability the KineticCore API already provides (internal packages, raw vanilla screens and widgets, vanilla
 // GUI types that have a Kinetic replacement, vanilla navigation, raw translations). Where the API has no
 // equivalent, the addon may build its own, declared in build.gradle (see below). This turns the hard rules of
-// the GUI API v2 migration guide (https://github.com/JMK-39/KineticCore/wiki/GUI-API-v2-%E8%BF%81%E7%A7%BB%E6%8C%87%E5%8D%97) into a build error instead of a review checklist.
+// the rules of the GUI API Guide (https://github.com/JMK-39/KineticCore/wiki/GUI-API-Guide) into a build error instead of a review checklist.
 //
 // 用法 / Usage: copy this file to the addon's gradle/ directory and add to build.gradle
 //     apply from: 'gradle/kinetic-addon-architecture.gradle'
@@ -132,7 +132,7 @@ def kineticAddonAllowances = { ->
 
 def kineticAddonCheck = tasks.register('checkKineticAddonArchitecture') {
     group = 'verification'
-    description = 'Fails when addon sources bypass KineticCore GUI APIs (see the GUI API v2 migration guide (https://github.com/JMK-39/KineticCore/wiki/GUI-API-v2-%E8%BF%81%E7%A7%BB%E6%8C%87%E5%8D%97)).'
+    description = 'Fails when addon sources bypass KineticCore GUI APIs (see the GUI API Guide: https://github.com/JMK-39/KineticCore/wiki/GUI-API-Guide).'
 
     def javaSources = sourceSets.main.java
     inputs.files(javaSources).withPropertyName('addonJavaSources')
@@ -196,7 +196,7 @@ def kineticAddonCheck = tasks.register('checkKineticAddonArchitecture') {
             throw new GradleException(
                     "Kinetic addon architecture check failed (${violations.size()}):\n - " + violations.join('\n - ')
                             + "\n\nThe KineticCore API already provides these capabilities; addons must use it."
-                            + "\nSee the GUI API v2 migration guide (https://github.com/JMK-39/KineticCore/wiki/GUI-API-v2-%E8%BF%81%E7%A7%BB%E6%8C%87%E5%8D%97) (hard rules, sections 11 and 14)."
+                            + "\nSee the GUI API Guide, sections 1 and 17 (https://github.com/JMK-39/KineticCore/wiki/GUI-API-Guide)."
                             + "\nA real exception goes in build.gradle: ext.kineticArchitectureAllow = ['<path>': ['<rule id>']]"
             )
         }
