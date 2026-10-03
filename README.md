@@ -6,7 +6,7 @@
 
 ## English
 
-KineticCore is the shared base mod and public development API for **Minecraft 1.20.1 / Forge 47.4.x / Java 17**. It gives the Kinetic mod family and other addons common GUI, configuration, networking, compression, input, lifecycle, hook, command-extension, selector, registry-access, Minecraft-helper, and runtime infrastructure.
+KineticCore is the shared base mod and public development API for **Minecraft 1.20.1 (Forge 47.4.x) and Minecraft 1.21.1 (NeoForge 21.1.x), Java 21**. It gives the Kinetic mod family and other addons common GUI, configuration, networking, compression, input, lifecycle, hook, command-extension, selector, registry-access, Minecraft-helper, and runtime infrastructure.
 
 Core rule: **feature code calls only the public `dev.xyat.kineticcore.api.*` API.** `internal/` contains implementation details and is not an addon-facing API.
 
@@ -426,7 +426,7 @@ The project provides `apiSourceZip`, containing the public `api/` source, this `
 
 ## 简体中文
 
-KineticCore 是面向 **Minecraft 1.20.1 / Forge 47.4.x / Java 17** 的核心基础模组与公共开发 API。它为 Kinetic 系列及其他附属提供统一的 GUI、配置、网络、压缩、输入、生命周期、Hook、命令扩展、选择器、注册表访问、Minecraft 辅助能力与运行时基础设施。
+KineticCore 是面向 **Minecraft 1.20.1（Forge 47.4.x）与 Minecraft 1.21.1（NeoForge 21.1.x）、Java 21** 的核心基础模组与公共开发 API。它为 Kinetic 系列及其他附属提供统一的 GUI、配置、网络、压缩、输入、生命周期、Hook、命令扩展、选择器、注册表访问、Minecraft 辅助能力与运行时基础设施。
 
 核心约束：**业务代码只调用公开 `dev.xyat.kineticcore.api.*`。** `internal/` 只负责实现，不属于附属调用面。
 

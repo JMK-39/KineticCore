@@ -2,7 +2,7 @@
 
 Audience: an engineer or coding model who ports a KineticCore addon (ContentStudio, AdventureSystems, CombatSystems, EntityControl, ItemControl, KineticArmory, MobAscension, ModRefinery, RealmControl, TACZWorkshop, TextStudio, EnchantWorks, …) to the rebuilt client GUI API.
 
-Target: Minecraft 1.20.1, Forge 47.4.2, Java 17. The new API is shaped so that the later move to MC 26.1 (Java 25, `GuiGraphics` → `GuiGraphicsExtractor`, `ResourceLocation` → `Identifier`, new input events) happens inside KineticCore, and addon GUI code should need little or no change.
+Target: Minecraft 1.20.1 (Forge 47.4.x) and Minecraft 1.21.1 (NeoForge 21.1.x), Java 21. The new API is shaped so that the later move to MC 26.1 (Java 25, `GuiGraphics` → `GuiGraphicsExtractor`, `ResourceLocation` → `Identifier`, new input events) happens inside KineticCore, and addon GUI code should need little or no change.
 
 This is a **breaking** release. Every old client-GUI type under `dev.xyat.kineticcore.api.client.{screen, widget, theme, text, layout, overlay, selector, editor, command}` is gone. There are no deprecated bridges. An addon compiles again only once each of its GUI files has been ported.
 
