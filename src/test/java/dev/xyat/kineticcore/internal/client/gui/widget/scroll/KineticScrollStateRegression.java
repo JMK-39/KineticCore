@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.scroll;
 
+//? if <26.1
 import net.minecraft.client.renderer.MultiBufferSource;
 
 /** Tests the production smooth and grid scroll state without running the Minecraft client. */
@@ -44,7 +45,11 @@ public final class KineticScrollStateRegression {
                 "minimum thumb must be capped by track height");
         KineticScroll.GridScrollController horizontal = new KineticScroll.GridScrollController();
         horizontal.updateRange(5, 2, 6);
+        //? if >=26.1 {
+        /*net.minecraft.client.gui.GuiGraphics graphics = new net.minecraft.client.gui.GuiGraphics(null, new net.minecraft.client.renderer.state.gui.GuiRenderState(), 0, 0) {
+        *///?} else {
         net.minecraft.client.gui.GuiGraphics graphics = new net.minecraft.client.gui.GuiGraphics(null, (MultiBufferSource.BufferSource) null) {
+        //?}
             @Override public void fill(int x1, int y1, int x2, int y2, int color) {
                 check(x1 >= 4 && x2 <= 24 && x2 >= x1, "horizontal thumb escaped 20-pixel track");
             }

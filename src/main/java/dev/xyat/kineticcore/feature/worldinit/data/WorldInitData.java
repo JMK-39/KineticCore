@@ -13,7 +13,11 @@ public class WorldInitData extends SavedData {
     private boolean commandsExecuted = false;
 
     public static WorldInitData get(ServerLevel level) {
-        //? if >=1.20.5 {
+        //? if >=26.1 {
+        /*return level.getDataStorage().computeIfAbsent(new net.minecraft.world.level.saveddata.SavedDataType<>(
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("kineticcore", DATA_NAME), WorldInitData::new,
+                CompoundTag.CODEC.xmap(WorldInitData::load, data -> data.save(new CompoundTag()))));
+        *///?} else if >=1.20.5 {
         /*return level.getDataStorage().computeIfAbsent(new SavedData.Factory<>(WorldInitData::new, (tag, registries) -> WorldInitData.load(tag)), DATA_NAME);
         *///?} else {
         return level.getDataStorage().computeIfAbsent(WorldInitData::load, WorldInitData::new, DATA_NAME);
@@ -26,8 +30,10 @@ public class WorldInitData extends SavedData {
         return data;
     }
 
+
+    //? if <26.1
     @Override
-    //? if >=1.20.5 {
+    //? if >=1.20.5 <26.1 {
     /*public @NotNull CompoundTag save(@Nonnull CompoundTag tag, @Nonnull net.minecraft.core.HolderLookup.Provider registries) {
     *///?} else {
     public @NotNull CompoundTag save(@Nonnull CompoundTag tag) {

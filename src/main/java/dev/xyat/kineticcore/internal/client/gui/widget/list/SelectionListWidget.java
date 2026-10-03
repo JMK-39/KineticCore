@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.list;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.widget.list.KineticSelectionList;
 import dev.xyat.kineticcore.api.client.gui.widget.list.SelectionItem;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
@@ -140,8 +142,8 @@ public final class SelectionListWidget extends VerticalScrollListWidget implemen
     protected void renderWidget(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         refreshRange();
         refreshLayout();
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, zLevel);
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, 0, 0, zLevel);
         try {
             KineticRenderRuntime.enableScissor(graphics, getX(), getY(), getX() + contentWidth(), getY() + getHeight());
             try {
@@ -154,14 +156,14 @@ public final class SelectionListWidget extends VerticalScrollListWidget implemen
                             ? mouseX
                             : Integer.MIN_VALUE;
                     button.setInvertedFlash(scroll.isSelectionFlashInverted(index));
-                    button.render(graphics, clippedMouseX, mouseY, partialTick);
+                    VanillaGuiDraw.render(button, graphics, clippedMouseX, mouseY, partialTick);
                 }
             } finally {
                 KineticRenderRuntime.disableScissor(graphics);
             }
             renderScrollbar(graphics, mouseX, mouseY);
         } finally {
-            graphics.pose().popPose();
+            VanillaGuiDraw.pop(graphics);
         }
         hoveredIndex = itemAt(mouseX, mouseY);
         KineticControlBridge.setHoverTooltip(this, hoveredTooltip());

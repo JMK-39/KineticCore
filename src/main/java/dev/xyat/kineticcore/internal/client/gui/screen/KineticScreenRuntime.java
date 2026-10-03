@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.screen;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
 import dev.xyat.kineticcore.internal.client.gui.widget.render.KineticEntityPreview.EntityPreviewRenderer;
@@ -181,10 +183,36 @@ public final class KineticScreenRuntime {
     public void renderInCanvas(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, FrameRenderer content) {
         int virtualMouseX = (int) Math.floor(canvas.toVirtualX(mouseX));
         int virtualMouseY = (int) Math.floor(canvas.toVirtualY(mouseY));
+        //? if >=26.1 {
+        /*// 26.1 maps scissor rectangles through the pose, so page coordinates work as they are.
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, canvas.x(), canvas.y(), 0);
+        VanillaGuiDraw.scale(graphics, canvas.scale(), canvas.scale(), 1f);
+        graphics.enableScissor(0, 0, canvas.width(), canvas.height());
+        canvasDepth++;
+        try {
+            content.render(graphics, virtualMouseX, virtualMouseY, partialTick);
+        } finally {
+            canvasDepth--;
+            try {
+                graphics.disableScissor();
+            } finally {
+                VanillaGuiDraw.pop(graphics);
+            }
+        }
+    }
+
+    // Number of renderInCanvas calls on the stack; drawing inside them is in page coordinates.
+    private int canvasDepth;
+
+    private boolean drawsInPageSpace(GuiGraphics graphics) {
+        return canvasDepth > 0;
+    }
+    *///?} else {
         GuiGraphics canvasGraphics = new CanvasGuiGraphics(minecraft.get(), graphics, canvas);
-        canvasGraphics.pose().pushPose();
-        canvasGraphics.pose().translate(canvas.x(), canvas.y(), 0);
-        canvasGraphics.pose().scale(canvas.scale(), canvas.scale(), 1f);
+        VanillaGuiDraw.push(canvasGraphics);
+        VanillaGuiDraw.translate(canvasGraphics, canvas.x(), canvas.y(), 0);
+        VanillaGuiDraw.scale(canvasGraphics, canvas.scale(), canvas.scale(), 1f);
         canvasGraphics.enableScissor(0, 0, canvas.width(), canvas.height());
         try {
             content.render(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
@@ -192,10 +220,15 @@ public final class KineticScreenRuntime {
             try {
                 canvasGraphics.disableScissor();
             } finally {
-                canvasGraphics.pose().popPose();
+                VanillaGuiDraw.pop(canvasGraphics);
             }
         }
     }
+
+    private boolean drawsInPageSpace(GuiGraphics graphics) {
+        return graphics instanceof CanvasGuiGraphics;
+    }
+    //?}
 
     /**
      * Returns whether business tooltips may be requested this frame. A hovered scrollbar hint wins over everything
@@ -224,27 +257,35 @@ public final class KineticScreenRuntime {
     /** Renders a smooth selection list with this host's page transform. */
     public void renderSmoothSelectionList(SmoothSelectionList<?> list, GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (list == null || graphics == null) return;
-        if (canvas.isNative() || graphics instanceof CanvasGuiGraphics) {
-            list.render(graphics, mouseX, mouseY, partialTick);
+        if (canvas.isNative() || drawsInPageSpace(graphics)) {
+            VanillaGuiDraw.render(list, graphics, mouseX, mouseY, partialTick);
             return;
         }
         Minecraft client = minecraft.get();
         if (client == null) return;
+        //? if >=26.1 {
+        /*GuiGraphics proxy = graphics;
+        *///?} else {
         GuiGraphics proxy = new CanvasGuiGraphics(client, graphics, canvas);
-        proxy.pose().pushPose();
-        proxy.pose().translate(canvas.x(), canvas.y(), 0);
-        proxy.pose().scale(canvas.scale(), canvas.scale(), 1f);
+        //?}
+        VanillaGuiDraw.push(proxy);
+        VanillaGuiDraw.translate(proxy, canvas.x(), canvas.y(), 0);
+        VanillaGuiDraw.scale(proxy, canvas.scale(), canvas.scale(), 1f);
+        //? if >=26.1
+        /*canvasDepth++;*/
         try {
-            list.render(proxy, mouseX, mouseY, partialTick);
+            VanillaGuiDraw.render(list, proxy, mouseX, mouseY, partialTick);
         } finally {
-            proxy.pose().popPose();
+            //? if >=26.1
+            /*canvasDepth--;*/
+            VanillaGuiDraw.pop(proxy);
         }
     }
 
     /** Enables a scissor rectangle given in page coordinates. */
     public void enableUiScissor(GuiGraphics graphics, int left, int top, int right, int bottom) {
         if (graphics == null) return;
-        if (canvas.isNative() || graphics instanceof CanvasGuiGraphics) {
+        if (canvas.isNative() || drawsInPageSpace(graphics)) {
             KineticRenderRuntime.enableScissor(graphics, left, top, right, bottom);
             return;
         }

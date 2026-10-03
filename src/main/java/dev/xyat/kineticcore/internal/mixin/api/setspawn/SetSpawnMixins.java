@@ -7,6 +7,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+//? if <26.1
 import net.minecraft.server.level.progress.ChunkProgressListener;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.level.Level;
@@ -25,51 +26,94 @@ public class SetSpawnMixins {
 
     @Mixin(MinecraftServer.class)
     public static abstract class MinecraftServerMixin {
+        //? if >=26.1 {
+        /*@Inject(method = "prepareLevels()V", at = @At("HEAD"))
+        private void kineticcore$applyCachedOverworldSpawnBeforeVanillaSpawnChunks(CallbackInfo ci) {
+        *///?} else {
         @Inject(method = "prepareLevels(Lnet/minecraft/server/level/progress/ChunkProgressListener;)V", at = @At("HEAD"))
         private void kineticcore$applyCachedOverworldSpawnBeforeVanillaSpawnChunks(ChunkProgressListener progressListener, CallbackInfo ci) {
+        //?}
             MinecraftServer server = (MinecraftServer) (Object) this;
             KineticServerHookRuntime.beforePrepareLevels(server);
         }
+
+        //? if >=26.1 {
+        /*// 26.1 keeps the world spawn, including its dimension, on the server. Setting the same spawn again changes
+        // nothing; any other spawn is a new one (/setworldspawn, other mods).
+        @Inject(method = "setRespawnData", at = @At("HEAD"))
+        private void kineticcore$catchCommandSetSpawn(net.minecraft.world.level.storage.LevelData.RespawnData respawnData, CallbackInfo ci) {
+            MinecraftServer server = (MinecraftServer) (Object) this;
+            if (respawnData.equals(server.getRespawnData())) return;
+            ServerLevel level = server.getLevel(respawnData.dimension());
+            if (level != null) KineticServerHookRuntime.onDefaultSpawnChanged(level, respawnData.pos(), respawnData.yaw());
+        }
+        *///?}
     }
 
+    //? if >=26.1 {
+    /*// 26.1 decides a joining player's level and position in PrepareSpawnTask, before the player exists. A player that
+    // never joined gets its custom placement reserved here; it is applied when placeNewPlayer adds the player.
+    @Mixin(net.minecraft.server.network.config.PrepareSpawnTask.class)
+    public static abstract class PrepareSpawnTaskMixin {
+        @org.spongepowered.asm.mixin.Shadow @org.spongepowered.asm.mixin.Final private MinecraftServer server;
+        @org.spongepowered.asm.mixin.Shadow @org.spongepowered.asm.mixin.Final private net.minecraft.server.players.NameAndId nameAndId;
+
+        @Inject(method = "start", at = @At("HEAD"))
+        private void kineticcore$reserveFreshLoginPlacement(java.util.function.Consumer<?> connection, CallbackInfo ci) {
+            KineticServerHookRuntime.prepareFreshLogin(this.server, this.nameAndId.id(), this.nameAndId.name());
+        }
+    }
+
+    *///?}
     @Mixin(PlayerList.class)
     public static abstract class PlayerListMixin {
 
         @Accessor("server")
         public abstract MinecraftServer kineticcore$getServer();
 
+        // 26.1 creates the player in PrepareSpawnTask, in the dimension of the world spawn data that SetSpawnHandler
+        // sets, so only the exact placement below is needed there.
+        //? if <1.20.5 {
+        // 1.20.1 reads Level.OVERWORLD once for missing player data and once for a missing dimension.
         @Redirect(
                 method = "placeNewPlayer",
-                // 1.20.1 reads Level.OVERWORLD once for missing player data and once for a missing dimension;
-                // 1.20.5+ reads it once for both.
-                //? if >=1.20.5 {
-                /*allow = 1,
-                require = 1,
-                *///?} else {
                 allow = 2,
                 require = 2,
-                //?}
-                at = @At(
-                        value = "FIELD",
-                        target = "Lnet/minecraft/world/level/Level;OVERWORLD:Lnet/minecraft/resources/ResourceKey;",
-                        opcode = Opcodes.GETSTATIC
-                )
+                at = @At(value = "FIELD", target = "Lnet/minecraft/world/level/Level;OVERWORLD:Lnet/minecraft/resources/ResourceKey;", opcode = Opcodes.GETSTATIC)
         )
         private ResourceKey<Level> kineticcore$redirectPlaceNewPlayerOverworldKey() {
             return KineticServerHookRuntime.globalSpawn(this.kineticcore$getServer())
                     .map(spawn -> spawn.getFirst().dimension())
                     .orElse(Level.OVERWORLD);
         }
+        //?} else if <26.1 {
+        /*// 1.20.5+ reads Level.OVERWORLD once for both.
+        @Redirect(
+                method = "placeNewPlayer",
+                allow = 1,
+                require = 1,
+                at = @At(value = "FIELD", target = "Lnet/minecraft/world/level/Level;OVERWORLD:Lnet/minecraft/resources/ResourceKey;", opcode = Opcodes.GETSTATIC)
+        )
+        private ResourceKey<Level> kineticcore$redirectPlaceNewPlayerOverworldKey() {
+            return KineticServerHookRuntime.globalSpawn(this.kineticcore$getServer())
+                    .map(spawn -> spawn.getFirst().dimension())
+                    .orElse(Level.OVERWORLD);
+        }
+        *///?}
 
+        //? if <1.20.2 {
         @Inject(method = "getPlayerForLogin", at = @At("TAIL"), cancellable = true)
-        //? if >=1.20.2 {
-        /*private void kineticcore$createNewPlayerInCustomSpawnLevel(GameProfile profile, net.minecraft.server.level.ClientInformation clientInformation, CallbackInfoReturnable<ServerPlayer> cir) {
-        *///?} else {
         private void kineticcore$createNewPlayerInCustomSpawnLevel(GameProfile profile, CallbackInfoReturnable<ServerPlayer> cir) {
-        //?}
             KineticServerHookRuntime.createFreshLoginPlayer(this.kineticcore$getServer(), profile)
                     .ifPresent(cir::setReturnValue);
         }
+        //?} else if <26.1 {
+        /*@Inject(method = "getPlayerForLogin", at = @At("TAIL"), cancellable = true)
+        private void kineticcore$createNewPlayerInCustomSpawnLevel(GameProfile profile, net.minecraft.server.level.ClientInformation clientInformation, CallbackInfoReturnable<ServerPlayer> cir) {
+            KineticServerHookRuntime.createFreshLoginPlayer(this.kineticcore$getServer(), profile)
+                    .ifPresent(cir::setReturnValue);
+        }
+        *///?}
 
         @Redirect(
                 method = "placeNewPlayer",
@@ -157,6 +201,8 @@ public class SetSpawnMixins {
         //?}
     }
 
+    // 26.1: spawn changes are caught in MinecraftServerMixin, and the world spawn carries its own dimension.
+    //? if <26.1 {
     @Mixin(ServerLevel.class)
     public static abstract class ServerLevelMixin {
         @Inject(method = "setDefaultSpawnPos", at = @At("HEAD"))
@@ -168,7 +214,9 @@ public class SetSpawnMixins {
             KineticServerHookRuntime.onDefaultSpawnChanged(level, pos, angle);
         }
     }
+    //?}
 
+    //? if <26.1 {
     // ServerLevel inherits getSharedSpawnPos from Level. Only a running server is asked, on its own thread: during
     // startup the custom spawn is not worked out yet.
     @Mixin(Level.class)
@@ -181,4 +229,5 @@ public class SetSpawnMixins {
             KineticServerHookRuntime.sharedSpawn(server, level).ifPresent(cir::setReturnValue);
         }
     }
+    //?}
 }

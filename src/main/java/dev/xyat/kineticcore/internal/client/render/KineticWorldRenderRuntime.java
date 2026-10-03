@@ -26,7 +26,12 @@ import org.joml.Matrix4f;
 /** Internal Minecraft rendering bridge used by the public Kinetic world-render API. */
 public final class KineticWorldRenderRuntime {
     private static final double CHUNK_CAGE_THICKNESS = 0.04D;
-    private static final RenderType THICK_WORLD_LINES = ThickWorldLineType.createType();
+    private static final RenderType THICK_WORLD_LINES =
+            //? if >=26.1 {
+            /*net.minecraft.client.renderer.rendertype.RenderTypes.debugQuads();
+            *///?} else {
+            ThickWorldLineType.createType();
+            //?}
     //? if >=1.21 {
     /*// Reused by every screen overlay; it grows to the largest overlay drawn so far.
     private static final ByteBufferBuilder OVERLAY_BUFFER = new ByteBufferBuilder(256);
@@ -40,6 +45,10 @@ public final class KineticWorldRenderRuntime {
      * and returns a graphics surface drawing into a fresh immediate buffer.
      */
     public static KineticGraphics beginScreenOverlay(int width, int height) {
+        //? if >=26.1 {
+        /*throw new UnsupportedOperationException(
+                "Screen overlays during level rendering are not available on Minecraft 26.1; draw through the HUD render events instead");
+        *///?} else {
         RenderSystem.backupProjectionMatrix();
         RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0, width, height, 0, -1000, 1000), RenderSystem.getVertexSorting());
         //? if >=1.20.5 {
@@ -61,10 +70,12 @@ public final class KineticWorldRenderRuntime {
         MultiBufferSource.BufferSource bufferSource = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
         //?}
         return GuiGraphicsAdapter.wrap(new GuiGraphics(Minecraft.getInstance(), bufferSource));
+        //?}
     }
 
     /** Flushes a surface from {@link #beginScreenOverlay(int, int)} and restores the world render state. */
     public static void endScreenOverlay(KineticGraphics graphics) {
+        //? if <26.1 {
         GuiGraphicsAdapter.unwrap(graphics).flush();
         RenderSystem.enableDepthTest();
         RenderSystem.disableBlend();
@@ -75,6 +86,7 @@ public final class KineticWorldRenderRuntime {
         //?}
         RenderSystem.applyModelViewMatrix();
         RenderSystem.restoreProjectionMatrix();
+        //?}
     }
 
     /** Draws one camera-relative line box into the shared line buffer. */
@@ -88,6 +100,13 @@ public final class KineticWorldRenderRuntime {
         if (poseStack == null || camera == null || bufferSource == null || worldBox == null) {
             return;
         }
+        //? if >=26.1 {
+        /*Vec3 cameraPosition = camera.position();
+        net.minecraft.client.renderer.ShapeRenderer.renderShape(poseStack,
+                bufferSource.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.lines()),
+                net.minecraft.world.phys.shapes.Shapes.create(worldBox),
+                -cameraPosition.x, -cameraPosition.y, -cameraPosition.z, argb, 1.0F);
+        *///?} else {
         Vec3 cameraPosition = camera.getPosition();
         AABB relativeBox = worldBox.move(-cameraPosition.x, -cameraPosition.y, -cameraPosition.z);
         VertexConsumer consumer = bufferSource.getBuffer(RenderType.lines());
@@ -96,6 +115,7 @@ public final class KineticWorldRenderRuntime {
         float green = ((argb >>> 8) & 0xFF) / 255.0F;
         float blue = (argb & 0xFF) / 255.0F;
         LevelRenderer.renderLineBox(poseStack, consumer, relativeBox, red, green, blue, alpha);
+        //?}
     }
 
     /** Draws one camera-relative chunk cage with internal 16-block grid lines. */
@@ -165,7 +185,11 @@ public final class KineticWorldRenderRuntime {
     /** Flushes all shared world-line render types after one public batch finishes. */
     public static void endLineBatch(MultiBufferSource.BufferSource bufferSource) {
         if (bufferSource != null) {
+            //? if >=26.1 {
+            /*bufferSource.endBatch(net.minecraft.client.renderer.rendertype.RenderTypes.lines());
+            *///?} else {
             bufferSource.endBatch(RenderType.lines());
+            //?}
             bufferSource.endBatch(THICK_WORLD_LINES);
         }
     }
@@ -235,6 +259,7 @@ public final class KineticWorldRenderRuntime {
         //?}
     }
 
+    //? if <26.1 {
     private static final class ThickWorldLineType extends RenderType {
         private ThickWorldLineType(
                 String name,
@@ -267,4 +292,5 @@ public final class KineticWorldRenderRuntime {
             );
         }
     }
+    //?}
 }

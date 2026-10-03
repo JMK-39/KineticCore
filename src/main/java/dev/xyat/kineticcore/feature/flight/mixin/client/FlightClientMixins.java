@@ -18,7 +18,13 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.player.KeyboardInput;
 import net.minecraft.client.renderer.LevelRenderer;
+//? if >=26.1 {
+/*import net.minecraft.client.renderer.entity.player.AvatarRenderer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.world.entity.player.Input;
+*///?} else {
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+//?}
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
@@ -97,12 +103,22 @@ public class FlightClientMixins {
 
     @Mixin(KeyboardInput.class)
     public static class KeyboardInputTweaks {
+        //? if >=26.1 {
+        /*@Inject(method = "tick()V", at = @At("TAIL"))
+        private void kineticcore$consumeSneakWhileSuperFlightActive(CallbackInfo ci) {
+            if (!KineticFlightClient.superFlightActive()) return;
+            KeyboardInput input = (KeyboardInput) (Object) this;
+            Input keys = input.keyPresses;
+            input.keyPresses = new Input(keys.forward(), keys.backward(), keys.left(), keys.right(), keys.jump(), false, keys.sprint());
+        }
+        *///?} else {
         @Inject(method = "tick", at = @At("TAIL"))
         private void kineticcore$consumeSneakWhileSuperFlightActive(boolean slowDown, float slowDownFactor, CallbackInfo ci) {
             if (KineticFlightClient.superFlightActive()) {
                 ((KeyboardInput) (Object) this).shiftKeyDown = false;
             }
         }
+        //?}
     }
 
     // ==========================================
@@ -116,14 +132,14 @@ public class FlightClientMixins {
         private void kineticcore$advancedZeroInertiaFlight(Vec3 travelVector, CallbackInfo ci) {
             Player self = (Player) (Object) this;
 
-            if (self.level().isClientSide && KineticFlightClient.appliesSuperFlightTo(self) && !self.isPassenger()) {
+            if (self.level().isClientSide() && KineticFlightClient.appliesSuperFlightTo(self) && !self.isPassenger()) {
                 KineticFlightClient.applySuperFlightTravel(self);
                 ci.cancel();
                 return;
             }
 
             // 仅在客户端生效，关闭了惯性，正在飞行，且不是骑乘状态
-            if (self.level().isClientSide && !KineticFlightClient.inertiaEnabled() && self.getAbilities().flying && !self.isPassenger()) {
+            if (self.level().isClientSide() && !KineticFlightClient.inertiaEnabled() && self.getAbilities().flying && !self.isPassenger()) {
 
                 float baseSpeed = self.getAbilities().getFlyingSpeed();
                 float sprintMod = self.isSprinting() ? 2.0F : 1.0F;
@@ -221,7 +237,7 @@ public class FlightClientMixins {
                 if (Double.compare(newMult, currentMult) != 0) {
                     KineticFlightClient.setSuperFlightSelectedSpeedMultiplier(newMult);
                     SuperFlightClientConfig.setSelectedSpeed(newMult);
-                    player.displayClientMessage(KineticI18n.translatable(
+                    KineticClientRuntime.displayClientMessage(KineticI18n.translatable(
                             "msg.kineticcore.superflight.speed",
                             Component.literal(String.valueOf((int) newMult))
                     ), true);
@@ -242,7 +258,7 @@ public class FlightClientMixins {
                     player.onUpdateAbilities();
 
                     String displayVal = (newMult == (int)newMult) ? String.valueOf((int)newMult) : String.format("%.1f", newMult);
-                    player.displayClientMessage(KineticI18n.translatable("gui.kineticcore.flying.speed", Component.literal(displayVal)), true);
+                    KineticClientRuntime.displayClientMessage(KineticI18n.translatable("gui.kineticcore.flying.speed", Component.literal(displayVal)), true);
                 }
                 ci.cancel();
             }
@@ -307,6 +323,20 @@ public class FlightClientMixins {
 
 
 
+    //? if >=26.1 {
+    /*@Mixin(AvatarRenderer.class)
+    public static abstract class PlayerRendererTweaks {
+        // Render states carry no entity, only its id.
+        @Inject(method = "setupRotations(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;FF)V", at = @At("TAIL"))
+        private void kineticcore$applyPhysicalSuperFlightRoll(AvatarRenderState state, PoseStack poseStack, float bodyRot, float entityScale, CallbackInfo ci) {
+            ClientLevel level = Minecraft.getInstance().level;
+            if (level == null || !(level.getEntity(state.id) instanceof AbstractClientPlayer player)) return;
+            float roll = KineticFlightClient.superFlightPlayerRoll(player, state.partialTick);
+            if (Math.abs(roll) < 0.001F || !player.isFallFlying()) return;
+            poseStack.mulPose(Axis.YP.rotationDegrees(roll));
+        }
+    }
+    *///?} else {
     @Mixin(PlayerRenderer.class)
     public static abstract class PlayerRendererTweaks {
         @Inject(method = "setupRotations", at = @At("TAIL"))
@@ -325,7 +355,20 @@ public class FlightClientMixins {
             poseStack.mulPose(Axis.YP.rotationDegrees(roll));
         }
     }
+    //?}
 
+    //? if >=26.1 {
+    /*// 26.1 works out the field of view in the camera.
+    @Mixin(Camera.class)
+    public static class GameRendererTweaks {
+        @Inject(method = "calculateFov", at = @At("RETURN"), cancellable = true)
+        private void kineticcore$superFlightFov(float partialTick, CallbackInfoReturnable<Float> cir) {
+            if (!KineticFlightClient.superFlightActive()) return;
+            double boost = KineticFlightClient.superFlightFovBoost(partialTick);
+            if (boost > 0.001D) cir.setReturnValue((float) (cir.getReturnValue() + boost));
+        }
+    }
+    *///?} else {
     @Mixin(GameRenderer.class)
     public static class GameRendererTweaks {
         @Inject(method = "getFov", at = @At("RETURN"), cancellable = true)
@@ -335,15 +378,20 @@ public class FlightClientMixins {
             if (boost > 0.001D) cir.setReturnValue(cir.getReturnValue() + boost);
         }
     }
+    //?}
 
     @Mixin(LevelRenderer.class)
     public static class LevelRendererTweaks {
+        //? if >=26.1 {
+        /*@ModifyVariable(method = "cullTerrain", at = @At("HEAD"), ordinal = 0, argsOnly = true)
+        *///?} else {
         @ModifyVariable(
                 method = "setupRender",
                 at = @At("HEAD"),
                 ordinal = 1,
                 argsOnly = true
         )
+        //?}
         private boolean kineticcore$bypassOcclusionForNoclip(boolean originalIsSpectator) {
             return originalIsSpectator || KineticFlightClient.noclipEnabled();
         }

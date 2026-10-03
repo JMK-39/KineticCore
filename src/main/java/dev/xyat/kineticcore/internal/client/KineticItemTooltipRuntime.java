@@ -107,6 +107,22 @@ public final class KineticItemTooltipRuntime {
     }
 
     private record TooltipComponentAdapter(KineticTooltipComponent component) implements ClientTooltipComponent {
+        //? if >=26.1 {
+        /*@Override
+        public int getHeight(@Nonnull Font font) {
+            return component.height();
+        }
+
+        @Override
+        public int getWidth(@Nonnull Font font) {
+            return component.width();
+        }
+
+        @Override
+        public void extractImage(@Nonnull Font font, int x, int y, int w, int h, @Nonnull GuiGraphics graphics) {
+            component.render(GuiGraphicsAdapter.wrap(graphics), x, y);
+        }
+        *///?} else {
         @Override
         public int getHeight() {
             return component.height();
@@ -121,6 +137,7 @@ public final class KineticItemTooltipRuntime {
         public void renderImage(@Nonnull Font font, int x, int y, @Nonnull GuiGraphics graphics) {
             component.render(GuiGraphicsAdapter.wrap(graphics), x, y);
         }
+        //?}
     }
 
     private static void onBuildTooltip(ItemTooltipEvent event) {

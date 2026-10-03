@@ -16,6 +16,7 @@ import dev.xyat.kineticcore.api.config.client.KTServerConfigClient;
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfig;
 import dev.xyat.kineticcore.feature.firstjoin.config.PlayerConfigGui;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -115,11 +116,11 @@ public final class FirstJoinRewardItemsPage extends KineticPage {
             ItemStack stack = player.getInventory().items.get(i);
             if (!stack.isEmpty()) inventory.put(i, stack.copy());
         }
-        equipment.put("helmet", player.getInventory().armor.get(3).copy());
-        equipment.put("chestplate", player.getInventory().armor.get(2).copy());
-        equipment.put("leggings", player.getInventory().armor.get(1).copy());
-        equipment.put("boots", player.getInventory().armor.get(0).copy());
-        equipment.put("offhand", player.getInventory().offhand.get(0).copy());
+        equipment.put("helmet", player.getItemBySlot(EquipmentSlot.HEAD).copy());
+        equipment.put("chestplate", player.getItemBySlot(EquipmentSlot.CHEST).copy());
+        equipment.put("leggings", player.getItemBySlot(EquipmentSlot.LEGS).copy());
+        equipment.put("boots", player.getItemBySlot(EquipmentSlot.FEET).copy());
+        equipment.put("offhand", player.getItemBySlot(EquipmentSlot.OFFHAND).copy());
         save();
     }
 

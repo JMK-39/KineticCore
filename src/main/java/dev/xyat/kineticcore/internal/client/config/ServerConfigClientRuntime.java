@@ -13,7 +13,9 @@ import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+//? if <26.1
 import net.minecraftforge.api.distmarker.Dist;
+//? if <26.1
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
@@ -23,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+// NeoForge 26.1 no longer strips @OnlyIn members; client-only code is kept off the server by where it is called from.
+//? if <26.1
 @OnlyIn(Dist.CLIENT)
 public final class ServerConfigClientRuntime {
     private static boolean initialized;

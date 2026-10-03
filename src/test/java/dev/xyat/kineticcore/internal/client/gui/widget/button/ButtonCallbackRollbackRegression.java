@@ -14,43 +14,50 @@ public final class ButtonCallbackRollbackRegression {
         AtomicInteger toggleWrites = new AtomicInteger();
         ToggleButton rejected = KineticWidgets.createToggleButton(0, 0, 80, false,
                 label, label, null, value -> !value, value -> toggleWrites.incrementAndGet());
-        rejected.onPress();
+        press(rejected);
         check(!rejected.value() && toggleWrites.get() == 0, "rejected toggle reached business callback");
         ToggleButton failing = KineticWidgets.createToggleButton(0, 0, 80, false,
                 label, label, null, value -> true, value -> { throw new IllegalStateException("write failed"); });
-        reject(failing::onPress);
+        reject(() -> press(failing));
         check(!failing.value(), "failed toggle write left false configuration displayed as true");
         ToggleButton success = KineticWidgets.createToggleButton(0, 0, 80, false,
                 label, label, null, value -> true, value -> toggleWrites.incrementAndGet());
-        success.onPress();
+        press(success);
         check(success.value() && toggleWrites.get() == 1, "valid toggle must persist");
         AtomicInteger cycleWrites = new AtomicInteger();
         List<Component> options = List.of(Component.literal("zero"), Component.literal("one"));
         CycleButton rejectedCycle = KineticWidgets.createCycleButton(0, 0, 80, 0,
                 options, null, index -> index == 0, index -> cycleWrites.incrementAndGet());
-        rejectedCycle.onPress();
+        press(rejectedCycle);
         check(rejectedCycle.index() == 0 && cycleWrites.get() == 0, "rejected cycle reached business callback");
         CycleButton failingCycle = KineticWidgets.createCycleButton(0, 0, 80, 0,
                 options, null, index -> true, index -> { throw new IllegalStateException("write failed"); });
-        reject(failingCycle::onPress);
+        reject(() -> press(failingCycle));
         check(failingCycle.index() == 0, "failed cycle write left new index selected");
         CycleButton successCycle = KineticWidgets.createCycleButton(0, 0, 80, 0,
                 options, null, index -> true, index -> cycleWrites.incrementAndGet());
-        successCycle.onPress();
+        press(successCycle);
         check(successCycle.index() == 1 && cycleWrites.get() == 1, "valid cycle must persist");
         AtomicInteger toggleValidationCalls = new AtomicInteger();
         ToggleButton onceToggle = KineticWidgets.createToggleButton(0, 0, 80, false,
                 label, label, null, value -> { toggleValidationCalls.incrementAndGet(); return true; }, value -> { });
         toggleValidationCalls.set(0);
-        onceToggle.onPress();
+        press(onceToggle);
         check(toggleValidationCalls.get() == 1, "one toggle click must not validate twice");
         AtomicInteger cycleValidationCalls = new AtomicInteger();
         CycleButton onceCycle = KineticWidgets.createCycleButton(0, 0, 80, 0,
                 options, null, index -> { cycleValidationCalls.incrementAndGet(); return true; }, index -> { });
         cycleValidationCalls.set(0);
-        onceCycle.onPress();
+        press(onceCycle);
         check(cycleValidationCalls.get() == 1, "one cycle click must not validate twice");
         System.out.println("PASS: 8 toggle/cycle callback checks");
+    }
+    private static void press(net.minecraft.client.gui.components.AbstractButton button) {
+        //? if >=26.1 {
+        /*button.onPress(new net.minecraft.client.input.KeyEvent(0, 0, 0));
+        *///?} else {
+        button.onPress();
+        //?}
     }
     private static void reject(Runnable work) {
         try { work.run(); throw new AssertionError("writer exception swallowed"); }

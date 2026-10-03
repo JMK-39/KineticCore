@@ -21,7 +21,7 @@ public class XPDropHandler {
 
     public static void onPlayerDeath(KineticLivingEvents.DeathContext context) {
         if (!(context.entity() instanceof Player player)) return;
-        if (player.level().isClientSide) return;
+        if (player.level().isClientSide()) return;
 
         ServerLevel level = (ServerLevel) player.level();
 

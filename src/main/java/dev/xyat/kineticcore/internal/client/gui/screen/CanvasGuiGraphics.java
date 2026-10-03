@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.internal.client.gui.screen;
 
+//? if <26.1 {
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -25,3 +26,4 @@ final class CanvasGuiGraphics extends GuiGraphics {
         );
     }
 }
+//?}

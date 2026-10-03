@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.render;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.internal.client.gui.widget.KineticWidgets.FactoryAccess;
 import dev.xyat.kineticcore.api.registry.KineticRegistries;
 import dev.xyat.kineticcore.api.resource.KineticResourceIds;
@@ -262,6 +264,13 @@ public final class KineticEntityPreview {
             int renderY = Math.round(boxY + boxH / 2f + fitHeight * scale / 2f);
             float angle = state.updateRotation(hovered, DEFAULT_BASE_ROTATION_SPEED, rotationSpeedPercent, clockwise, DEFAULT_FRAME_LIMIT_NANOS);
 
+            //? if >=26.1 {
+            /*// 26.1 maps scissor rectangles through the pose, so the box is given as it is.
+            int scissorX1 = (int) Math.ceil(boxX + 0.5f);
+            int scissorY1 = (int) Math.ceil(boxY + 0.5f);
+            int scissorX2 = (int) Math.floor(boxX + boxW - 0.5f);
+            int scissorY2 = (int) Math.floor(boxY + boxH - 0.5f);
+            *///?} else {
             int scissorX1 = canvasCoordinates
                     ? (int) Math.ceil(boxX + 0.5f)
                     : offsetX + (int) Math.ceil((boxX + 0.5f) * guiScale);
@@ -274,9 +283,10 @@ public final class KineticEntityPreview {
             int scissorY2 = canvasCoordinates
                     ? (int) Math.floor(boxY + boxH - 0.5f)
                     : offsetY + (int) Math.floor((boxY + boxH - 0.5f) * guiScale);
+            //?}
             if (scissorX2 <= scissorX1 || scissorY2 <= scissorY1) return false;
             KineticRenderRuntime.enableScissor(graphics, scissorX1, scissorY1, scissorX2, scissorY2);
-            graphics.pose().pushPose();
+            VanillaGuiDraw.push(graphics);
 
             float oldYRot = entity.getYRot();
             float oldYRotO = entity.yRotO;
@@ -288,11 +298,13 @@ public final class KineticEntityPreview {
             float oldHeadO = 0f;
 
             try {
-                graphics.pose().translate(renderX, renderY, 50D);
-                graphics.pose().scale(scale, scale, -scale);
+                //? if <26.1 {
+                VanillaGuiDraw.translate(graphics, renderX, renderY, 50D);
+                VanillaGuiDraw.scale(graphics, scale, scale, -scale);
                 graphics.pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees(180f));
                 graphics.pose().mulPose(com.mojang.math.Axis.XP.rotationDegrees(-10f));
                 graphics.pose().mulPose(com.mojang.math.Axis.YP.rotationDegrees(180f - angle));
+                //?}
 
                 if (entity instanceof LivingEntity living) {
                     oldBody = living.yBodyRot;
@@ -310,7 +322,11 @@ public final class KineticEntityPreview {
                 entity.setXRot(0f);
                 entity.xRotO = 0f;
 
+                //? if >=26.1 {
+                /*KineticEntityPreviewRuntime.render(entity, graphics, boxX, boxY, boxX + boxW, boxY + boxH, scale, fitHeight, angle);
+                *///?} else {
                 KineticEntityPreviewRuntime.render(entity, graphics);
+                //?}
                 return true;
             } catch (Throwable ignored) {
                 ResourceLocation failedId = KineticRegistries.entityTypes().id(entity.getType());
@@ -331,7 +347,7 @@ public final class KineticEntityPreview {
                     living.yHeadRot = oldHead;
                     living.yHeadRotO = oldHeadO;
                 }
-                graphics.pose().popPose();
+                VanillaGuiDraw.pop(graphics);
                 KineticRenderRuntime.disableScissor(graphics);
             }
         }

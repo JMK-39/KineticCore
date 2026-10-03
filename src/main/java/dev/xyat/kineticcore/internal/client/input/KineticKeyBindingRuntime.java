@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.input;
 
+import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
+
 import dev.xyat.kineticcore.internal.runtime.KineticForgeListenerRegistrations;
 import dev.xyat.kineticcore.internal.runtime.KineticCallbackQueries;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -9,6 +11,8 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+//? if >=26.1
+/*import net.minecraft.resources.ResourceLocation;*/
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.settings.KeyConflictContext;
@@ -51,7 +55,11 @@ public final class KineticKeyBindingRuntime {
 
     public static synchronized long register(
             String translationKey,
-            String categoryTranslationKey,
+            //? if >=26.1 {
+            /*ResourceLocation category,
+            *///?} else {
+            String category,
+            //?}
             KineticKeyBindings.Context context,
             KineticKeyBindings.Modifier modifier,
             boolean mouseInput,
@@ -62,7 +70,7 @@ public final class KineticKeyBindingRuntime {
             boolean exactModifiers
     ) {
         Objects.requireNonNull(translationKey, "translationKey");
-        Objects.requireNonNull(categoryTranslationKey, "categoryTranslationKey");
+        Objects.requireNonNull(category, "category");
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(modifier, "modifier");
         Objects.requireNonNull(registerWhen, "registerWhen");
@@ -77,7 +85,7 @@ public final class KineticKeyBindingRuntime {
 
         Definition definition = new Definition(
                 translationKey,
-                categoryTranslationKey,
+                category,
                 context,
                 modifier,
                 mouseInput,
@@ -123,6 +131,8 @@ public final class KineticKeyBindingRuntime {
             if (entry.mapping != null) continue;
             try {
                 if (!entry.definition.registerWhen().getAsBoolean()) continue;
+                //? if >=26.1
+                /*registerCategory(event, entry.definition.category());*/
                 KeyMapping mapping = createMapping(entry.definition);
                 event.register(mapping);
                 entry.mapping = mapping;
@@ -134,6 +144,16 @@ public final class KineticKeyBindingRuntime {
         if (failure != null) throw failure;
         registrationFinished = true;
     }
+
+    //? if >=26.1 {
+    /*private static final java.util.Set<ResourceLocation> REGISTERED_CATEGORIES = new java.util.HashSet<>();
+
+    // Vanilla categories exist already; every other one is registered once.
+    private static void registerCategory(RegisterKeyMappingsEvent event, ResourceLocation category) {
+        if (category.getNamespace().equals("minecraft") || !REGISTERED_CATEGORIES.add(category)) return;
+        event.registerCategory(new KeyMapping.Category(category));
+    }
+    *///?}
 
     //? if forge {
     private static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -157,7 +177,11 @@ public final class KineticKeyBindingRuntime {
     }
 
     private static void onScreenKeyPressed(ScreenEvent.KeyPressed.Pre event) {
+        //? if >=26.1 {
+        /*InputConstants.Key input = InputConstants.getKey(event.getKeyEvent());
+        *///?} else {
         InputConstants.Key input = InputConstants.getKey(event.getKeyCode(), event.getScanCode());
+        //?}
         handleScreenPress(input, event::setCanceled);
     }
 
@@ -191,7 +215,11 @@ public final class KineticKeyBindingRuntime {
                 keyModifier(definition.modifier()),
                 inputType(definition.mouseInput()),
                 definition.keyCode(),
-                definition.categoryTranslationKey()
+                //? if >=26.1 {
+                /*new KeyMapping.Category(definition.category())
+                *///?} else {
+                definition.category()
+                //?}
         );
     }
 
@@ -237,9 +265,9 @@ public final class KineticKeyBindingRuntime {
     private static boolean modifiersMismatch(Definition definition) {
         if (!definition.exactModifiers()) return false;
 
-        boolean shift = Screen.hasShiftDown();
-        boolean control = Screen.hasControlDown();
-        boolean alt = Screen.hasAltDown();
+        boolean shift = GuiInputCompat.shiftDown();
+        boolean control = GuiInputCompat.controlDown();
+        boolean alt = GuiInputCompat.altDown();
 
         return switch (definition.modifier()) {
             case NONE -> shift || control || alt;
@@ -265,7 +293,11 @@ public final class KineticKeyBindingRuntime {
 
     private record Definition(
             String translationKey,
-            String categoryTranslationKey,
+            //? if >=26.1 {
+            /*ResourceLocation category,
+            *///?} else {
+            String category,
+            //?}
             KineticKeyBindings.Context context,
             KineticKeyBindings.Modifier modifier,
             boolean mouseInput,

@@ -215,7 +215,7 @@ public final class ServerConfigNetwork {
 
         try {
             Map<String, Object> values = decodeValues(packet.payload());
-            spec.applyAndSave(player.server, values);
+            spec.applyAndSave(player.level().getServer(), values);
             sendSnapshot(player, packet.pageId(), true, true, "gui.kineticcore.config.server.saved");
         } catch (Throwable throwable) {
             KineticRuntime.logger().error("Failed to save server config page {}", packet.pageId(), throwable);

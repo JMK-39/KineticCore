@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.setspawn.network;
 
+import net.minecraft.server.level.ServerLevel;
+
 import dev.xyat.kineticcore.api.network.PacketChannel;
 import dev.xyat.kineticcore.api.network.NetworkVersionPolicy;
 import dev.xyat.kineticcore.api.network.NetworkCodec;
@@ -160,12 +162,12 @@ public final class SetSpawnNetwork {
     public static void openEditorForPlayer(ServerPlayer player) {
         if (player == null || !player.hasPermissions(2)) return;
         SetSpawnConfig.load();
-        MinecraftServer server = player.server;
+        MinecraftServer server = player.level().getServer();
         String dim = player.level().dimension().location().toString();
         String biome = player.level().getBiome(player.blockPosition()).unwrapKey()
                 .map(key -> key.location().toString())
                 .orElse("unknown");
-        List<String> structures = StructureUtils.getStructuresAt(player.serverLevel(), player.blockPosition());
+        List<String> structures = StructureUtils.getStructuresAt(((ServerLevel) player.level()), player.blockPosition());
         String structure = structures.isEmpty() ? "none" : structures.get(0);
 
         List<String> allDims = server.levelKeys().stream()
@@ -209,17 +211,17 @@ public final class SetSpawnNetwork {
             return;
         }
 
-        Set<String> allowedDimensions = player.server.levelKeys().stream()
+        Set<String> allowedDimensions = player.level().getServer().levelKeys().stream()
                 .map(key -> key.location().toString())
                 .collect(Collectors.toSet());
         // The editor displays the overworld. Accept it as an input choice, then
         // normalize it away as documented by the SetSpawn configuration.
         Set<String> selectableDimensions = new HashSet<>(allowedDimensions);
         allowedDimensions.remove("minecraft:overworld");
-        Set<String> allowedBiomes = player.server.registryAccess().registryOrThrow(Registries.BIOME).keySet().stream()
+        Set<String> allowedBiomes = player.level().getServer().registryAccess().registryOrThrow(Registries.BIOME).keySet().stream()
                 .map(ResourceLocation::toString)
                 .collect(Collectors.toSet());
-        Set<String> allowedStructures = player.server.registryAccess().registryOrThrow(Registries.STRUCTURE).keySet().stream()
+        Set<String> allowedStructures = player.level().getServer().registryAccess().registryOrThrow(Registries.STRUCTURE).keySet().stream()
                 .map(ResourceLocation::toString)
                 .collect(Collectors.toSet());
 

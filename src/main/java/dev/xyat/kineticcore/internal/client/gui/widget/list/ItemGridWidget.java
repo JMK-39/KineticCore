@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.list;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import dev.xyat.kineticcore.api.client.gui.widget.list.ItemGridDensity;
 import dev.xyat.kineticcore.api.client.gui.widget.list.ItemGridItem;
@@ -119,8 +121,8 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
     @Override
     protected void renderWidget(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         refreshRange();
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, zLevel);
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, 0, 0, zLevel);
         try {
             KineticRenderRuntime.enableScissor(graphics, getX(), getY(), getX() + contentWidth(), getY() + getHeight());
             try {
@@ -169,7 +171,7 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
             }
             renderScrollbar(graphics, mouseX, mouseY);
         } finally {
-            graphics.pose().popPose();
+            VanillaGuiDraw.pop(graphics);
         }
         hoveredIndex = itemAt(mouseX, mouseY);
         hoveredStack = stackAt(mouseX, mouseY);

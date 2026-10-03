@@ -483,7 +483,7 @@ public final class KineticWorldEventRuntime {
 
         @Override
         public float fallDistance() {
-            return event.getFallDistance();
+            return (float) event.getFallDistance();
         }
 
         @Override

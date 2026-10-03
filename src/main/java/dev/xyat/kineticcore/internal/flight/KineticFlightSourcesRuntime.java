@@ -47,7 +47,7 @@ public final class KineticFlightSourcesRuntime {
     }
 
     public static void refresh(Player player) {
-        if (player.level().isClientSide) return;
+        if (player.level().isClientSide()) return;
 
         if (allowsFlight(player)) {
             player.getAbilities().mayfly = true;

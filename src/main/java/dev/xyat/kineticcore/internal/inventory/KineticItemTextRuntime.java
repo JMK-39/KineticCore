@@ -7,20 +7,14 @@ import net.minecraft.world.item.ItemStack;
 /*import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.Dynamic;
 import dev.xyat.kineticcore.internal.registry.KineticRegistryAccessRuntime;
-import net.minecraft.SharedConstants;
 import net.minecraft.commands.arguments.item.ItemParser;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentType;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.RegistryOps;
-import net.minecraft.util.datafix.DataFixers;
-import net.minecraft.util.datafix.fixes.References;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,50 +29,39 @@ import net.minecraft.world.item.Items;
 
 /**
  * Item stacks as text, in the syntax of the running Minecraft version's commands: {@code id{nbt}} before 1.20.5,
- * {@code id[components]} since. The count is not part of the text. Since 1.20.5 the 1.20.1 form {@code id{nbt}} is still
- * read, and upgraded to components.
+ * {@code id[components]} since. The count is not part of the text.
  */
 public final class KineticItemTextRuntime {
     private KineticItemTextRuntime() {
     }
 
-    //? if >=1.20.5 {
-    /*// Data version of 1.20.1, whose id{nbt} text configs written before the upgrade still use.
-    private static final int LEGACY_DATA_VERSION = 3465;
-
-    public static ItemStack parse(String text) {
-        String trimmed = text.trim();
-        int components = trimmed.indexOf('[');
-        int legacyNbt = trimmed.indexOf('{');
-        if (legacyNbt >= 0 && (components < 0 || legacyNbt < components)) {
-            return parseLegacy(trimmed.substring(0, legacyNbt), trimmed.substring(legacyNbt));
+    //? if >=26.1 {
+    /*private static ItemStack parseItem(StringReader reader) throws CommandSyntaxException {
+        net.minecraft.commands.arguments.item.ItemInput result = new ItemParser(KineticRegistryAccessRuntime.currentOrBuiltIn()).parse(reader);
+        if (reader.canRead()) {
+            throw new IllegalArgumentException("Unexpected text after the item: " + reader.getRemaining());
         }
-        try {
-            StringReader reader = new StringReader(trimmed);
-            ItemParser.ItemResult result = new ItemParser(KineticRegistryAccessRuntime.currentOrBuiltIn()).parse(reader);
-            if (reader.canRead()) {
-                throw new IllegalArgumentException("Unexpected text after the item: " + reader.getRemaining());
-            }
-            return new ItemStack(result.item(), 1, result.components());
-        } catch (CommandSyntaxException exception) {
-            throw new IllegalArgumentException(exception.getMessage(), exception);
-        }
+        return result.createItemStack(1);
     }
+    *///?} else if >=1.20.5 {
+    /*private static ItemStack parseItem(StringReader reader) throws CommandSyntaxException {
+        ItemParser.ItemResult result = new ItemParser(KineticRegistryAccessRuntime.currentOrBuiltIn()).parse(reader);
+        if (reader.canRead()) {
+            throw new IllegalArgumentException("Unexpected text after the item: " + reader.getRemaining());
+        }
+        return new ItemStack(result.item(), 1, result.components());
+    }
+    *///?}
 
-    // id{nbt} from 1.20.1 is upgraded the way the game upgrades old worlds, so its item data turns into components.
-    private static ItemStack parseLegacy(String id, String nbt) {
-        CompoundTag stack = new CompoundTag();
-        stack.putString("id", id.trim());
-        stack.putByte("Count", (byte) 1);
+    //? if >=1.20.5 {
+    /*// Only the syntax of this version's commands is accepted; text the parser does not consume is an error, so
+    // 1.20.1 item data such as {Enchantments:[...]} is reported instead of silently dropped.
+    public static ItemStack parse(String text) {
         try {
-            stack.put("tag", TagParser.parseTag(nbt));
+            return parseItem(new StringReader(text.trim()));
         } catch (CommandSyntaxException exception) {
             throw new IllegalArgumentException(exception.getMessage(), exception);
         }
-        Tag upgraded = DataFixers.getDataFixer().update(References.ITEM_STACK, new Dynamic<>(NbtOps.INSTANCE, stack),
-                LEGACY_DATA_VERSION, SharedConstants.getCurrentVersion().getDataVersion().getVersion()).getValue();
-        return ItemStack.parse(KineticRegistryAccessRuntime.currentOrBuiltIn(), upgraded)
-                .orElseThrow(() -> new IllegalArgumentException("Cannot read item " + id + nbt));
     }
 
     public static String format(ItemStack stack) {

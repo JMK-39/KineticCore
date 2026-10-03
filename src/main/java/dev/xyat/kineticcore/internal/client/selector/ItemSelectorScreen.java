@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.search.KineticSuggestion;
 
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
@@ -211,7 +213,13 @@ public class ItemSelectorScreen extends KineticScreen {
         if (player == null) return;
 
         player.getInventory().items.forEach(this::addInventoryStack);
+        //? if >=26.1 {
+        /*for (net.minecraft.world.entity.EquipmentSlot slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+            if (slot.getType() == net.minecraft.world.entity.EquipmentSlot.Type.HUMANOID_ARMOR) addInventoryStack(player.getItemBySlot(slot));
+        }
+        *///?} else {
         player.getArmorSlots().forEach(this::addInventoryStack);
+        //?}
         addInventoryStack(player.getOffhandItem());
 
         ItemSelectorInventorySources.collect(player, this::addInventoryStack);
@@ -526,7 +534,14 @@ public class ItemSelectorScreen extends KineticScreen {
     }
 
     private boolean isToolItem(Item item, String path) {
-        return item instanceof DiggerItem
+        //? if >=26.1 {
+        /*var holder = item.builtInRegistryHolder();
+        boolean digger = holder.is(net.minecraft.tags.ItemTags.PICKAXES) || holder.is(net.minecraft.tags.ItemTags.AXES)
+                || holder.is(net.minecraft.tags.ItemTags.SHOVELS) || holder.is(net.minecraft.tags.ItemTags.HOES);
+        *///?} else {
+        boolean digger = item instanceof DiggerItem;
+        //?}
+        return digger
                 || item instanceof ShearsItem
                 || item instanceof FishingRodItem
                 || item instanceof FlintAndSteelItem
@@ -537,8 +552,17 @@ public class ItemSelectorScreen extends KineticScreen {
     }
 
     private boolean isCombatItem(Item item, String path) {
-        return item instanceof SwordItem
-                || item instanceof ArmorItem
+        //? if >=26.1 {
+        /*var holder = item.builtInRegistryHolder();
+        boolean sword = holder.is(net.minecraft.tags.ItemTags.SWORDS);
+        boolean armor = holder.is(net.minecraft.tags.ItemTags.HEAD_ARMOR) || holder.is(net.minecraft.tags.ItemTags.CHEST_ARMOR)
+                || holder.is(net.minecraft.tags.ItemTags.LEG_ARMOR) || holder.is(net.minecraft.tags.ItemTags.FOOT_ARMOR);
+        *///?} else {
+        boolean sword = item instanceof SwordItem;
+        boolean armor = item instanceof ArmorItem;
+        //?}
+        return sword
+                || armor
                 || item instanceof BowItem
                 || item instanceof CrossbowItem
                 || item instanceof TridentItem
@@ -732,7 +756,7 @@ public class ItemSelectorScreen extends KineticScreen {
             return;
         }
 
-        graphics.drawString(
+        VanillaGuiDraw.text(graphics, 
                 font,
                 countText,
                 infoX,
@@ -761,7 +785,7 @@ public class ItemSelectorScreen extends KineticScreen {
         int closeX = nextX + filterW - 11;
         int closeY = badgeY + 4;
         boolean closeHovered = mouseX >= closeX - 1 && mouseX < closeX + 7 && mouseY >= closeY - 1 && mouseY < closeY + 9;
-        graphics.drawString(this.font, "✕", closeX, closeY, closeHovered ? 0xFFFFFF : 0xFF5555, false);
+        VanillaGuiDraw.text(graphics, this.font, "✕", closeX, closeY, closeHovered ? 0xFFFFFF : 0xFF5555, false);
     }
 
     private void renderCategories(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -922,7 +946,7 @@ public class ItemSelectorScreen extends KineticScreen {
             for (VisibleSlot slot : visibleSlotCache) {
                 boolean hovered = mouseInGrid && slot.contains(mouseX, mouseY);
                 GuiTheme.itemSlot(graphics, slot.x(), slot.y(), SLOT_SIZE, SLOT_SIZE, 4, false, hovered, false);
-                graphics.renderItem(slot.stack(), slot.x() + 1, slot.y() + 1);
+                VanillaGuiDraw.item(graphics, slot.stack(), slot.x() + 1, slot.y() + 1);
             }
         } finally {
             disableUiScissor(graphics);

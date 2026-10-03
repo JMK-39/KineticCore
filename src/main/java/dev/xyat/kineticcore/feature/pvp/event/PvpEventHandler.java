@@ -88,7 +88,7 @@ public class PvpEventHandler {
             return;
         }
 
-        for (ServerLevel level : changedPlayer.server.getAllLevels()) {
+        for (ServerLevel level : changedPlayer.level().getServer().getAllLevels()) {
             for (Entity entity : level.getAllEntities()) {
                 if (entity instanceof Mob mob) {
                     clearConflictingTarget(mob, changedPlayer);

@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.internal.mixin.api.despawn;
 
+import dev.xyat.kineticcore.internal.runtime.DespawnCacheAccess;
 import dev.xyat.kineticcore.internal.runtime.KineticCommonHookRuntime;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -20,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class MobDespawnMixins {
 
     @Mixin(Mob.class)
-    public static abstract class MobTweaks {
+    public static abstract class MobTweaks implements DespawnCacheAccess {
         @Accessor("persistenceRequired")
         public abstract void kineticcore$setPersistenceRequired(boolean required);
 
@@ -51,10 +52,18 @@ public class MobDespawnMixins {
             }
         }
 
+        @Override
+        public void kineticcore$resetDespawnCache() {
+            this.kineticcore$despawnCache = 0;
+        }
+
+        // Mob declares setItemSlot up to 1.21.1; on 26.1 only LivingEntity does, see LivingEntityTweaks.
+        //? if <26.1 {
         @Inject(method = "setItemSlot", at = @At("TAIL"))
         private void kineticcore$onSetItemSlot(EquipmentSlot slot, ItemStack stack, CallbackInfo ci) {
             this.kineticcore$despawnCache = 0;
         }
+        //?}
 
         @Inject(method = "setItemSlotAndDropWhenKilled", at = @At("TAIL"))
         private void kineticcore$onSetItemSlotAndDropWhenKilled(EquipmentSlot slot, ItemStack stack, CallbackInfo ci) {
@@ -76,10 +85,17 @@ public class MobDespawnMixins {
     public static abstract class LivingEntityTweaks {
         @Inject(method = "remove", at = @At("HEAD"))
         private void kineticcore$onRemove(Entity.RemovalReason reason, CallbackInfo ci) {
-            if (reason == Entity.RemovalReason.DISCARDED && (Object) this instanceof Mob mob && !mob.level().isClientSide) {
+            if (reason == Entity.RemovalReason.DISCARDED && (Object) this instanceof Mob mob && !mob.level().isClientSide()) {
                 KineticCommonHookRuntime.dropPickedEquipment(mob);
             }
         }
+
+        //? if >=26.1 {
+        /*@Inject(method = "setItemSlot(Lnet/minecraft/world/entity/EquipmentSlot;Lnet/minecraft/world/item/ItemStack;Z)V", at = @At("TAIL"))
+        private void kineticcore$onSetItemSlot(EquipmentSlot slot, ItemStack stack, boolean insideTransaction, CallbackInfo ci) {
+            if ((Object) this instanceof DespawnCacheAccess cache) cache.kineticcore$resetDespawnCache();
+        }
+        *///?}
     }
 
     @Mixin(EnderMan.class)

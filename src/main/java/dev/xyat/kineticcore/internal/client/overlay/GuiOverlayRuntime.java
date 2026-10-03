@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.overlay;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 
 import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.MenuButton;
@@ -7,6 +9,7 @@ import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays.MenuItem;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays.MenuItemStyle;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays.Position;
 import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
+//? if <26.1
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
@@ -413,30 +416,30 @@ public final class GuiOverlayRuntime {
             int mouseX,
             int mouseY
     ) {
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, TOOLTIP_Z);
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, 0, 0, TOOLTIP_Z);
         try {
             if (request instanceof ItemTooltip item) {
-                graphics.renderTooltip(font, item.stack(), mouseX, mouseY);
+                VanillaGuiDraw.tooltip(graphics, font, item.stack(), mouseX, mouseY);
                 return;
             }
             if (request instanceof TextTooltip text) {
                 List<FormattedCharSequence> lines = new ArrayList<>();
                 for (Component line : text.lines()) lines.add(line.getVisualOrderText());
-                graphics.renderTooltip(font, lines, mouseX, mouseY);
+                VanillaGuiDraw.sequenceTooltip(graphics, font, lines, mouseX, mouseY);
                 return;
             }
             if (request instanceof WrappedTextTooltip text) {
                 List<FormattedCharSequence> lines = new ArrayList<>();
                 for (Component line : text.lines()) lines.addAll(font.split(line, text.maxWidth()));
-                graphics.renderTooltip(font, lines, mouseX, mouseY);
+                VanillaGuiDraw.sequenceTooltip(graphics, font, lines, mouseX, mouseY);
                 return;
             }
             if (request instanceof FormattedTooltip text) {
-                graphics.renderTooltip(font, text.lines(), mouseX, mouseY);
+                VanillaGuiDraw.sequenceTooltip(graphics, font, text.lines(), mouseX, mouseY);
             }
         } finally {
-            graphics.pose().popPose();
+            VanillaGuiDraw.pop(graphics);
         }
     }
 
@@ -459,9 +462,9 @@ public final class GuiOverlayRuntime {
         int rowMouseY = mouseInViewport ? mouseY : Integer.MIN_VALUE / 2;
         int rowRight = bounds.x + bounds.width - (bounds.scrollable() ? MENU_SCROLLBAR_WIDTH + 2 : 0);
 
-        graphics.pose().pushPose();
+        VanillaGuiDraw.push(graphics);
         try {
-            graphics.pose().translate(0, 0, 900);
+            VanillaGuiDraw.translate(graphics, 0, 0, 900);
             GuiTheme.panel(graphics, bounds.x, bounds.y, bounds.width, bounds.height);
             graphics.enableScissor(bounds.x, viewportTop, rowRight, viewportBottom);
             try {
@@ -476,11 +479,11 @@ public final class GuiOverlayRuntime {
                     }
                     MenuButton button = control.button();
                     if (button == null) continue;
-                    button.render(graphics, mouseX, rowMouseY, 0f);
+                    VanillaGuiDraw.render(button, graphics, mouseX, rowMouseY, 0f);
                     if (!item.detail().getString().isBlank()) {
                         int detailX = rowRight - 7 - font.width(item.detail());
                         int detailY = row.y() + (row.height() - 8) / 2;
-                        graphics.drawString(font, item.detail(), detailX, detailY, GuiTheme.current().text(), false);
+                        VanillaGuiDraw.text(graphics, font, item.detail(), detailX, detailY, GuiTheme.current().text(), false);
                     }
                     if (button.isMouseOver(mouseX, rowMouseY)) {
                         hoveredItem = item;
@@ -495,7 +498,7 @@ public final class GuiOverlayRuntime {
                         bounds.maxScroll(), menuScroll, draggingMenuThumb);
             }
         } finally {
-            graphics.pose().popPose();
+            VanillaGuiDraw.pop(graphics);
         }
 
         if (hoveredItem != null && !hoveredItem.tooltip().getString().isBlank()) {
@@ -527,29 +530,29 @@ public final class GuiOverlayRuntime {
             int mouseY
     ) {
         DialogBounds bounds = dialogBounds(screenWidth, screenHeight, font);
-        graphics.pose().pushPose();
+        VanillaGuiDraw.push(graphics);
         try {
-            graphics.pose().translate(0, 0, 950);
+            VanillaGuiDraw.translate(graphics, 0, 0, 950);
             graphics.fill(0, 0, screenWidth, screenHeight, GuiTheme.current().shadow());
             GuiTheme.panel(graphics, bounds.x, bounds.y, bounds.width, bounds.height);
             GuiTheme.stateOutline(graphics, bounds.x, bounds.y, bounds.width, bounds.height, true, false, false);
             GuiTheme.stateOutline(graphics, bounds.x + 2, bounds.y + 2, bounds.width - 4, bounds.height - 4, true, false, false);
-            graphics.drawCenteredString(font, dialog.title(), bounds.x + bounds.width / 2, bounds.y + 12, GuiTheme.current().text());
+            VanillaGuiDraw.centeredText(graphics, font, dialog.title(), bounds.x + bounds.width / 2, bounds.y + 12, GuiTheme.current().text());
 
             List<FormattedCharSequence> lines = font.split(dialog.message(), bounds.width - 24);
             int lineY = bounds.y + 34;
             for (FormattedCharSequence line : lines) {
                 int lineX = bounds.x + (bounds.width - font.width(line)) / 2;
-                graphics.drawString(font, line, lineX, lineY, GuiTheme.current().text(), false);
+                VanillaGuiDraw.text(graphics, font, line, lineX, lineY, GuiTheme.current().text(), false);
                 lineY += 10;
             }
 
             dialog.confirmButton().setBounds(bounds.confirmX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight);
             dialog.cancelButton().setBounds(bounds.cancelX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight);
-            dialog.confirmButton().render(graphics, mouseX, mouseY, 0f);
-            dialog.cancelButton().render(graphics, mouseX, mouseY, 0f);
+            VanillaGuiDraw.render(dialog.confirmButton(), graphics, mouseX, mouseY, 0f);
+            VanillaGuiDraw.render(dialog.cancelButton(), graphics, mouseX, mouseY, 0f);
         } finally {
-            graphics.pose().popPose();
+            VanillaGuiDraw.pop(graphics);
         }
     }
 
@@ -758,22 +761,24 @@ public final class GuiOverlayRuntime {
             int text = alphaHex | 0x00FFFFFF;
             int renderY = Math.round(toast.currentY);
 
+            //? if <26.1 {
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
-            graphics.pose().pushPose();
+            //?}
+            VanillaGuiDraw.push(graphics);
             try {
-                graphics.pose().translate(0, 0, 800);
+                VanillaGuiDraw.translate(graphics, 0, 0, 800);
                 graphics.fill(targetX, renderY, targetX + width, renderY + height, border);
                 graphics.fill(targetX + 2, renderY + 2, targetX + width - 2, renderY + height - 2, background);
                 int textY = renderY + 5;
                 for (FormattedCharSequence line : lines) {
                     int lineX = targetX + (width - font.width(line)) / 2;
-                    graphics.drawString(font, line, lineX, textY, text, false);
+                    VanillaGuiDraw.text(graphics, font, line, lineX, textY, text, false);
                     textY += 10;
                 }
             } finally {
                 // One failed addon font/render call must not leave subsequent HUD frames translated.
-                graphics.pose().popPose();
+                VanillaGuiDraw.pop(graphics);
             }
         }
     }

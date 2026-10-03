@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.editor;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
@@ -7,10 +9,14 @@ import dev.xyat.kineticcore.internal.client.gui.command.KineticCommandSuggestion
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.GuiGraphics;
+//? if <26.1
 import net.minecraftforge.api.distmarker.Dist;
+//? if <26.1
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
+// NeoForge 26.1 no longer strips @OnlyIn members; client-only code is kept off the server by where it is called from.
+//? if <26.1
 @OnlyIn(Dist.CLIENT)
 final class CommandEditorScreen extends KineticScreen {
     private final CommandListEditorScreen parent;
@@ -74,8 +80,8 @@ final class CommandEditorScreen extends KineticScreen {
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fillGradient(0, 0, canvasWidth(), canvasHeight(), 0xFF171717, 0xFF0E0E0E);
         GuiTheme.panel(graphics, 24, 18, 592, 324);
-        graphics.drawCenteredString(font, title, canvasWidth() / 2, 30, 0xFFFFFF);
-        graphics.drawString(
+        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 30, 0xFFFFFF);
+        VanillaGuiDraw.text(graphics, 
                 font,
                 KineticText.translatable("gui.kineticcore.command_edit.hint"),
                 44,
@@ -84,7 +90,7 @@ final class CommandEditorScreen extends KineticScreen {
                 false
         );
         if (parent.variableHint() != null) {
-            graphics.drawString(font, parent.variableHint(), 44, 76, 0xFFFFFF, false);
+            VanillaGuiDraw.text(graphics, font, parent.variableHint(), 44, 76, 0xFFFFFF, false);
         }
     }
 

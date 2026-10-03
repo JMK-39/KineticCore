@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.button;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 
 import dev.xyat.kineticcore.api.client.gui.widget.KineticButton;
@@ -65,7 +67,7 @@ public final class KineticButtons {
     }
 
     /** Standard Kinetic button rendered with an explicit texture. */
-    public static final class TextureButton extends Button implements InternalControl {
+    public static final class TextureButton extends VanillaButton implements InternalControl {
         private final ResourceLocation texture;
         private final int u;
         private final int v;
@@ -103,7 +105,7 @@ public final class KineticButtons {
 
 
         @Override
-        protected void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        protected void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             renderTextureButtonIcon(
                     graphics,
                     getX(),
@@ -127,7 +129,7 @@ public final class KineticButtons {
     }
 
     /** Standard Kinetic button with selected and error visual states. */
-    public static class StateButton extends Button implements InternalControl, KineticButton {
+    public static class StateButton extends VanillaButton implements InternalControl, KineticButton {
         private boolean selected;
         private boolean error;
         private boolean invertedFlash;
@@ -261,7 +263,7 @@ public final class KineticButtons {
         }
 
         @Override
-        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             // Vanilla's nine-slice button renderer divides by the inner tile size. A clipped
             // button narrower than its corners can reduce that size to zero.
             if (getWidth() < 8 || getHeight() < 8) return;
@@ -287,7 +289,7 @@ public final class KineticButtons {
                     storedText = getMessage();
                     setMessage(Component.empty());
                 }
-                super.renderWidget(graphics, mouseX, mouseY, partialTick);
+                renderVanillaButton(graphics, mouseX, mouseY, partialTick);
                 if (storedText != null) setMessage(storedText);
                 if (selected || error) {
                     GuiTheme.stateOutline(
@@ -335,16 +337,16 @@ public final class KineticButtons {
         }
 
         @Override
-        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+        public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            super.renderButton(graphics, mouseX, mouseY, partialTick);
             if (!icon.isEmpty()) {
-                graphics.renderFakeItem(icon, getX() + 8, getY() + (getHeight() - 16) / 2);
+                VanillaGuiDraw.fakeItem(graphics, icon, getX() + 8, getY() + (getHeight() - 16) / 2);
             }
         }
     }
 
     /** Standard Kinetic button that renders a compact color swatch. */
-    public static class ColorSwatchButton extends Button implements InternalControl, KineticColorSwatch {
+    public static class ColorSwatchButton extends VanillaButton implements InternalControl, KineticColorSwatch {
         private int rgb;
 
         /** Creates a new {@code ColorSwatchButton}. */
@@ -367,8 +369,8 @@ public final class KineticButtons {
         }
 
         @Override
-        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+        public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            renderVanillaButton(graphics, mouseX, mouseY, partialTick);
             int inset = Math.max(4, Math.min(getWidth(), getHeight()) / 4);
             graphics.fill(
                     getX() + inset,
@@ -401,8 +403,8 @@ public final class KineticButtons {
         }
 
         @Override
-        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+        public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            super.renderButton(graphics, mouseX, mouseY, partialTick);
             int size = Math.min(12, Math.max(8, getHeight() - 8));
             int x = getX() + 6;
             int y = getY() + (getHeight() - size) / 2;
@@ -421,8 +423,8 @@ public final class KineticButtons {
         }
 
         @Override
-        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+        public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            super.renderButton(graphics, mouseX, mouseY, partialTick);
             var font = KineticClientRuntime.font();
             KineticText.drawScrollingCentered(graphics, font, getMessage(),
                     getX() + getWidth() / 2, getY() + (getHeight() - font.lineHeight) / 2,
@@ -450,13 +452,13 @@ public final class KineticButtons {
         }
 
         @Override
-        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            graphics.pose().pushPose();
-            graphics.pose().translate(0, 0, zLevel);
+        public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            VanillaGuiDraw.push(graphics);
+            VanillaGuiDraw.translate(graphics, 0, 0, zLevel);
             try {
-                super.renderWidget(graphics, mouseX, mouseY, partialTick);
+                super.renderButton(graphics, mouseX, mouseY, partialTick);
             } finally {
-                graphics.pose().popPose();
+                VanillaGuiDraw.pop(graphics);
             }
         }
     }
@@ -631,13 +633,13 @@ public final class KineticButtons {
         }
 
         @Override
-        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            graphics.pose().pushPose();
-            graphics.pose().translate(0, 0, zLevel);
+        public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            VanillaGuiDraw.push(graphics);
+            VanillaGuiDraw.translate(graphics, 0, 0, zLevel);
             try {
-                super.renderWidget(graphics, mouseX, mouseY, partialTick);
+                super.renderButton(graphics, mouseX, mouseY, partialTick);
             } finally {
-                graphics.pose().popPose();
+                VanillaGuiDraw.pop(graphics);
             }
         }
     }

@@ -28,7 +28,11 @@ public final class MinecraftChat {
     /** Adds one message to the active client chat component. */
     public static void addMessage(Component message) {
         KineticClientRuntimeImpl.initialize();
+        //? if >=26.1 {
+        /*KineticClientRuntimeImpl.chatComponent().addClientSystemMessage(Objects.requireNonNull(message, "message"));
+        *///?} else {
         KineticClientRuntimeImpl.chatComponent().addMessage(Objects.requireNonNull(message, "message"));
+        //?}
     }
 
     /** Adds one recent input entry to the active client chat component. */
@@ -64,7 +68,7 @@ public final class MinecraftChat {
     /** Returns the configured chat width in chat-local coordinates. */
     public static int width() {
         KineticClientRuntimeImpl.initialize();
-        return KineticClientRuntimeImpl.chatComponent().getWidth();
+        return KineticClientRuntimeImpl.chatWidth();
     }
 
     /** Returns the current chat scale. */

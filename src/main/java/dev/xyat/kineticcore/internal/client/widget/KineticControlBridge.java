@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.widget;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.widget.KineticControl;
 import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
 import dev.xyat.kineticcore.internal.client.screen.KineticScreenControls;
@@ -54,7 +56,7 @@ public final class KineticControlBridge {
 
 
     public static void render(KineticControl control, GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        widget(control).render(graphics, mouseX, mouseY, partialTick);
+        VanillaGuiDraw.render(widget(control), graphics, mouseX, mouseY, partialTick);
     }
 
     public static boolean contains(KineticControl control, double mouseX, double mouseY) {
@@ -70,7 +72,7 @@ public final class KineticControlBridge {
     }
 
     public static boolean mouseClicked(KineticControl control, double mouseX, double mouseY, int button) {
-        return widget(control).mouseClicked(mouseX, mouseY, button);
+        return GuiInputCompat.mouseClicked(widget(control), mouseX, mouseY, button);
     }
 
     public static boolean mouseDragged(
@@ -81,11 +83,11 @@ public final class KineticControlBridge {
             double dragX,
             double dragY
     ) {
-        return widget(control).mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return GuiInputCompat.mouseDragged(widget(control), mouseX, mouseY, button, dragX, dragY);
     }
 
     public static boolean mouseReleased(KineticControl control, double mouseX, double mouseY, int button) {
-        return widget(control).mouseReleased(mouseX, mouseY, button);
+        return GuiInputCompat.mouseReleased(widget(control), mouseX, mouseY, button);
     }
 
     public static boolean mouseScrolled(KineticControl control, double mouseX, double mouseY, double delta) {

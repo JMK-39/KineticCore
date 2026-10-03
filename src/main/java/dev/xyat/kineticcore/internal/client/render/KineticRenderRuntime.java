@@ -12,31 +12,41 @@ public final class KineticRenderRuntime {
 
     /** Enables alpha blending. */
     public static void enableBlend() {
+        // Blending and depth testing belong to the render pipeline on 26.1.
+        //? if <26.1
         RenderSystem.enableBlend();
     }
 
     /** Disables alpha blending. */
     public static void disableBlend() {
+        // Blending and depth testing belong to the render pipeline on 26.1.
+        //? if <26.1
         RenderSystem.disableBlend();
     }
 
     /** Enables depth testing. */
     public static void enableDepthTest() {
+        // Blending and depth testing belong to the render pipeline on 26.1.
+        //? if <26.1
         RenderSystem.enableDepthTest();
     }
 
     /** Disables depth testing. */
     public static void disableDepthTest() {
+        // Blending and depth testing belong to the render pipeline on 26.1.
+        //? if <26.1
         RenderSystem.disableDepthTest();
     }
 
     /** Runs one action with depth testing disabled and restores the standard enabled state afterward. */
     public static void runWithoutDepthTest(Runnable action) {
         Objects.requireNonNull(action, "action");
+        //? if <26.1
         RenderSystem.disableDepthTest();
         try {
             action.run();
         } finally {
+            //? if <26.1
             RenderSystem.enableDepthTest();
         }
     }
@@ -53,6 +63,8 @@ public final class KineticRenderRuntime {
 
     /** Restores the standard opaque-white shader color. */
     public static void resetShaderColor() {
+        // Blending and depth testing belong to the render pipeline on 26.1.
+        //? if <26.1
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 }

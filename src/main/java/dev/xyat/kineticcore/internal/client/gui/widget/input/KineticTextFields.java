@@ -16,6 +16,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.internal.client.gui.widget.KineticWidgets.FactoryAccess;
@@ -31,6 +32,7 @@ import java.util.function.Predicate;
 public final class KineticTextFields {
     private KineticTextFields() {}
 
+    //? if <26.1 {
     /**
      * Keeps vanilla editing, cursor and selection behavior while removing its forced text shadow.
      *
@@ -85,7 +87,9 @@ public final class KineticTextFields {
             target.disableScissor();
         }
     }
+    //?}
 
+    //? if <26.1 {
     /** Standard multi-line Kinetic text field used by the public widget factories. */
     public static class KineticMultiLineEditBox extends MultiLineEditBox implements InternalControl, KineticTextArea {
         /** Creates the concrete multiline implementation used by Kinetic widget factories. */
@@ -166,6 +170,156 @@ public final class KineticTextFields {
             );
         }
     }
+    //?} else {
+    /*// Standard multi-line Kinetic text field used by the public widget factories. On 26.1 MultiLineEditBox can only be
+    // built through its builder, so this field wraps one and keeps the methods of the subclass used before.
+    public static class KineticMultiLineEditBox extends net.minecraft.client.gui.components.AbstractWidget
+            implements InternalControl, KineticTextArea {
+        private final Font font;
+        private final Component placeholder;
+        private final MultiLineEditBox box;
+        private String initialText;
+
+        public KineticMultiLineEditBox(
+                FactoryAccess access, Font font, int x, int y, int width, int height,
+                Component message, Component placeholder
+        ) {
+            super(x, y, width, height, message);
+            Objects.requireNonNull(access, "factory access");
+            this.font = font;
+            this.placeholder = placeholder == null ? Component.empty() : placeholder;
+            // The placeholder is drawn here in pure white instead of the light-gray vanilla placeholder.
+            this.box = MultiLineEditBox.builder().setX(x).setY(y).setTextShadow(false)
+                    .setTextColor(GuiTheme.fieldDefaultText()).build(font, width, height, message);
+        }
+
+        public String getValue() {
+            return box.getValue();
+        }
+
+        public void setValue(String value) {
+            box.setValue(value);
+        }
+
+        public void setCharacterLimit(int limit) {
+            box.setCharacterLimit(limit);
+        }
+
+        public void setValueListener(java.util.function.Consumer<String> listener) {
+            box.setValueListener(listener);
+        }
+
+        @Override
+        public String textValue() {
+            return getValue();
+        }
+
+        @Override
+        public void setTextValue(String value) {
+            setValue(value);
+        }
+
+        @Override
+        public void limitTextLength(int limit) {
+            setCharacterLimit(limit);
+        }
+
+        @Override
+        public void onTextChange(java.util.function.Consumer<String> listener) {
+            setValueListener(listener);
+        }
+
+        @Override
+        public void setEnabled(boolean enabled) {
+            this.active = enabled;
+        }
+
+        @Override
+        public void setVisible(boolean visible) {
+            this.visible = visible;
+        }
+
+        @Override
+        public boolean isEnabled() {
+            return this.active;
+        }
+
+        @Override
+        public boolean isVisible() {
+            return this.visible;
+        }
+
+        private MultiLineEditBox box() {
+            box.setX(getX());
+            box.setY(getY());
+            box.setWidth(getWidth());
+            box.setHeight(getHeight());
+            box.active = active;
+            box.visible = visible;
+            return box;
+        }
+
+        @Override
+        protected void extractWidgetRenderState(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            if (initialText == null) initialText = getValue();
+            int color = Objects.equals(getValue(), initialText)
+                    ? GuiTheme.fieldDefaultText() : GuiTheme.fieldModifiedText();
+            ((MultiLineTextColorAccess) box)
+                    .kineticcore$setTextColor(color);
+            box().extractRenderState(graphics, mouseX, mouseY, partialTick);
+            if (!isFocused() && getValue().isEmpty() && !placeholder.getString().isBlank()) {
+                String plain = net.minecraft.ChatFormatting.stripFormatting(placeholder.getString());
+                VanillaGuiDraw.wordWrap(graphics, font, Component.literal(plain == null ? "" : plain),
+                        getX() + 4, getY() + 4, Math.max(1, getWidth() - 8), GuiTheme.fieldPlaceholderText());
+            }
+            GuiTheme.stateOutline(
+                    graphics, getX(), getY(), getWidth(), getHeight(),
+                    isFocused(), isHovered(), false
+            );
+        }
+
+        @Override
+        public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+            return box().mouseClicked(event, doubleClick);
+        }
+
+        @Override
+        public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+            return box().mouseReleased(event);
+        }
+
+        @Override
+        public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dragX, double dragY) {
+            return box().mouseDragged(event, dragX, dragY);
+        }
+
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+            return box().mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        }
+
+        @Override
+        public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+            return box().keyPressed(event);
+        }
+
+        @Override
+        public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+            return box().charTyped(event);
+        }
+
+        @Override
+        public void setFocused(boolean focused) {
+            super.setFocused(focused);
+            box.setFocused(focused);
+        }
+
+        @Override
+        protected void updateWidgetNarration(@NotNull net.minecraft.client.gui.narration.NarrationElementOutput output) {
+            box.updateWidgetNarration(output);
+        }
+    }
+    *///?}
 
     /** Standard single-line Kinetic text field used by the public widget factories. */
     public static class KineticEditBox extends EditBox implements InternalControl, KineticTextField {
@@ -277,10 +431,71 @@ public final class KineticTextFields {
             setFilter(filter);
         }
 
+        //? if >=26.1 {
+        /*// Since 1.21.9 input arrives as events. The field and its subclasses keep the coordinate and key-code methods;
+        // the events are forwarded to them, and they reach the vanilla behavior through super.
+        private net.minecraft.client.input.MouseButtonEvent currentMouseEvent;
+        private boolean currentDoubleClick;
+
+        @Override
+        public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+            currentMouseEvent = event;
+            currentDoubleClick = doubleClick;
+            return mouseClicked(event.x(), event.y(), event.button());
+        }
+
+        @Override
+        public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+            return keyPressed(event.key(), event.scancode(), event.modifiers());
+        }
+
+        @Override
+        public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+            boolean handled = false;
+            for (char character : Character.toChars(event.codepoint())) handled |= charTyped(character, 0);
+            return handled;
+        }
+
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            int modifiers = currentMouseEvent == null ? 0 : currentMouseEvent.modifiers();
+            return super.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY,
+                    new net.minecraft.client.input.MouseButtonInfo(button, modifiers)), currentDoubleClick);
+        }
+
+        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+            return super.keyPressed(new net.minecraft.client.input.KeyEvent(keyCode, scanCode, modifiers));
+        }
+
+        public boolean charTyped(char codePoint, int modifiers) {
+            return super.charTyped(new net.minecraft.client.input.CharacterEvent(codePoint));
+        }
+        *///?}
+
+        private void renderVanillaText(
+GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            //? if >=26.1 {
+            /*setTextShadow(false);
+            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            *///?} else {
+            super.renderWidget(new ShadowlessGraphics(graphics), mouseX, mouseY, partialTick);
+            //?}
+        }
+
+        //? if >=26.1 {
+        /*// 26.1 keeps a list of formatters; the field installs one that applies the latest formatText function.
+        private java.util.function.BiFunction<String, Integer, net.minecraft.util.FormattedCharSequence> formatter;
+
+        @Override
+        public void formatText(java.util.function.BiFunction<String, Integer, net.minecraft.util.FormattedCharSequence> formatter) {
+            if (this.formatter == null) addFormatter((text, offset) -> this.formatter.apply(text, offset));
+            this.formatter = formatter;
+        }
+        *///?} else {
         @Override
         public void formatText(java.util.function.BiFunction<String, Integer, net.minecraft.util.FormattedCharSequence> formatter) {
             setFormatter(formatter);
         }
+        //?}
 
         @Override
         public int cursorIndex() {
@@ -434,7 +649,7 @@ public final class KineticTextFields {
             setY(contentY);
             setWidth(contentWidth);
             try {
-                super.renderWidget(new ShadowlessGraphics(graphics), mouseX, mouseY, partialTick);
+                renderVanillaText(graphics, mouseX, mouseY, partialTick);
             } finally {
                 setWidth(fieldWidth);
                 setX(fieldX);

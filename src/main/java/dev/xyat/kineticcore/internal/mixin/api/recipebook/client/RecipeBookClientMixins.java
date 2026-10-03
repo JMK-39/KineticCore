@@ -18,8 +18,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class RecipeBookClientMixins {
     @Mixin(ClientRecipeBook.class)
     public static class Logic {
+        //? if >=26.1 {
+        /*// 26.1 builds the client collections from the recipes the server sent.
+        @Inject(method = "rebuildCollections", at = @At("HEAD"), cancellable = true)
+        private void kineticcore$onSetup(CallbackInfo ci) {
+        *///?} else {
         @Inject(method = "setupCollections", at = @At("HEAD"), cancellable = true)
         private void kineticcore$onSetup(Iterable<Recipe<?>> iterable, RegistryAccess registryAccess, CallbackInfo ci) {
+        //?}
             if (KineticCommonHookRuntime.recipeBookRemovalEnabled()) ci.cancel();
         }
     }

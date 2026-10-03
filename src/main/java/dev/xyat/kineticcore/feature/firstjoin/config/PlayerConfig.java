@@ -22,8 +22,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class PlayerConfig {
-    // Item data follows /give: {NBT} on 1.20.1, [components] from 1.20.5 on.
-    //? if >=1.20.5 {
+    // Item data follows /give: {NBT} on 1.20.1, [components] from 1.20.5 on. 26.1 writes enchantments as a plain
+    // enchantment-to-level map; 1.21.1 wraps it in levels.
+    //? if >=26.1 {
+    /*public static final String DEFAULT_HELMET = "1x minecraft:leather_helmet[enchantments={\"minecraft:unbreaking\":2,\"minecraft:protection\":2,\"minecraft:respiration\":1}]";
+    public static final String DEFAULT_CHESTPLATE = "1x minecraft:leather_chestplate[enchantments={\"minecraft:unbreaking\":2,\"minecraft:protection\":2}]";
+    public static final String DEFAULT_LEGGINGS = "1x minecraft:leather_leggings[enchantments={\"minecraft:unbreaking\":2,\"minecraft:protection\":2}]";
+    public static final String DEFAULT_BOOTS = "1x minecraft:leather_boots[enchantments={\"minecraft:unbreaking\":2,\"minecraft:protection\":2}]";
+    private static final String ITEM_DATA = "[components]";
+    *///?} else if >=1.20.5 {
     /*public static final String DEFAULT_HELMET = "1x minecraft:leather_helmet[enchantments={levels:{\"minecraft:unbreaking\":2,\"minecraft:protection\":2,\"minecraft:respiration\":1}}]";
     public static final String DEFAULT_CHESTPLATE = "1x minecraft:leather_chestplate[enchantments={levels:{\"minecraft:unbreaking\":2,\"minecraft:protection\":2}}]";
     public static final String DEFAULT_LEGGINGS = "1x minecraft:leather_leggings[enchantments={levels:{\"minecraft:unbreaking\":2,\"minecraft:protection\":2}}]";
@@ -60,6 +67,8 @@ public class PlayerConfig {
     private static final Map<Integer, ItemStack> CACHED_JOIN_ITEMS = new HashMap<>();
     private static final Map<EquipmentSlot, ItemStack> CACHED_ARMOR = new EnumMap<>(EquipmentSlot.class);
     private static boolean isCacheInitialized = false;
+    // Whether every configured reward parsed; a reward with a broken entry is not handed out at all.
+    private static boolean rewardsValid = true;
 
     public static void load() {
         try {
@@ -168,9 +177,16 @@ public class PlayerConfig {
         return CACHED_ARMOR;
     }
 
+    /** Returns whether every configured first-join item and armor entry parsed. */
+    public static boolean rewardsValid() {
+        if (!isCacheInitialized) rebuildCache();
+        return rewardsValid;
+    }
+
     private static void rebuildCache() {
         CACHED_JOIN_ITEMS.clear();
         CACHED_ARMOR.clear();
+        boolean valid = true;
 
         int defaultSlot = 0;
         for (String s : firstJoinItemsRaw) {
@@ -191,17 +207,27 @@ public class PlayerConfig {
             ItemStack stack = parseItemStackInternal(itemStr);
             if (!stack.isEmpty()) {
                 CACHED_JOIN_ITEMS.put(slot, stack);
+            } else if (!itemStr.isBlank()) {
+                valid = false;
             }
             defaultSlot++;
         }
 
-        CACHED_ARMOR.put(EquipmentSlot.HEAD, parseItemStackInternal(helmetId));
-        CACHED_ARMOR.put(EquipmentSlot.CHEST, parseItemStackInternal(chestplateId));
-        CACHED_ARMOR.put(EquipmentSlot.LEGS, parseItemStackInternal(leggingsId));
-        CACHED_ARMOR.put(EquipmentSlot.FEET, parseItemStackInternal(bootsId));
-        CACHED_ARMOR.put(EquipmentSlot.OFFHAND, parseItemStackInternal(offhandId));
+        valid &= cacheArmor(EquipmentSlot.HEAD, helmetId);
+        valid &= cacheArmor(EquipmentSlot.CHEST, chestplateId);
+        valid &= cacheArmor(EquipmentSlot.LEGS, leggingsId);
+        valid &= cacheArmor(EquipmentSlot.FEET, bootsId);
+        valid &= cacheArmor(EquipmentSlot.OFFHAND, offhandId);
 
+        rewardsValid = valid;
         isCacheInitialized = true;
+    }
+
+    // Caches one armor entry; an empty entry means no item, a non-empty one that does not parse is an error.
+    private static boolean cacheArmor(EquipmentSlot slot, String entry) {
+        ItemStack stack = parseItemStackInternal(entry);
+        CACHED_ARMOR.put(slot, stack);
+        return !stack.isEmpty() || entry == null || entry.isBlank();
     }
 
     private static ItemStack parseItemStackInternal(String input) {
@@ -218,15 +244,22 @@ public class PlayerConfig {
                 itemPart = matcher.group(2).trim();
             }
 
-            // The item data follows the id: {NBT} on 1.20.1, [components] from 1.20.5 on, as in /give.
+            // The item data follows the id in this version's /give syntax only: {NBT} on 1.20.1, [components] since 1.20.5.
             String itemId;
             String dataStr = "";
-            int dataStart = firstIndexOf(itemPart, '{', '[');
+            //? if >=1.20.5 {
+            /*int dataStart = itemPart.indexOf('[');
+            *///?} else {
+            int dataStart = itemPart.indexOf('{');
+            //?}
             if (dataStart >= 0) {
                 itemId = itemPart.substring(0, dataStart).trim();
                 dataStr = itemPart.substring(dataStart).trim();
             } else {
                 itemId = itemPart;
+            }
+            if (itemId.indexOf('{') >= 0 || itemId.indexOf('[') >= 0) {
+                throw new IllegalArgumentException("item data is not in this Minecraft version's /give syntax");
             }
 
             itemId = itemId.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_\\-:.]", "");
@@ -241,6 +274,7 @@ public class PlayerConfig {
                     return stack;
                 }
             }
+            KineticRuntime.logger().error("[FirstJoin] 物品解析失败: {} | 错误: 未知物品 {}", input, itemId);
         } catch (Exception e) {
             KineticRuntime.logger().error("[FirstJoin] 物品解析失败: {} | 错误: {}", input, e.getMessage());
         }
@@ -256,14 +290,6 @@ public class PlayerConfig {
         if (id == null) return "";
 
         return stack.getCount() + "x " + KineticItemText.format(stack);
-    }
-
-    private static int firstIndexOf(String text, char first, char second) {
-        int a = text.indexOf(first);
-        int b = text.indexOf(second);
-        if (a < 0) return b;
-        if (b < 0) return a;
-        return Math.min(a, b);
     }
 
     public static ItemStack parseItemStack(String input) {

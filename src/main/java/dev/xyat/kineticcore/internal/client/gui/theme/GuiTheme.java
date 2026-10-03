@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.theme;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme.Indicator;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme.Palette;
@@ -140,7 +142,7 @@ public final class GuiTheme {
     ) {
         if (graphics == null || width <= 0 || height <= 0) return;
         graphics.fill(x, y, x + width, y + height, surfaceColor(surface));
-        graphics.renderOutline(x, y, width, height, stateBorder(selected, hovered, error));
+        VanillaGuiDraw.outline(graphics, x, y, width, height, stateBorder(selected, hovered, error));
     }
 
     /** 选中边框的反色，用于中键跳转后的边框闪烁 / Inverse of the selected border color, used by the jump flash. */
@@ -154,10 +156,10 @@ public final class GuiTheme {
      */
     public static void selectionFlash(GuiGraphics graphics, int x, int y, int width, int height) {
         if (graphics == null || width <= 0 || height <= 0) return;
-        graphics.pose().pushPose();
-        graphics.pose().translate(0.0F, 0.0F, 200.0F);
-        graphics.renderOutline(x, y, width, height, BORDER_SELECTED_INVERSE);
-        graphics.pose().popPose();
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, 0.0F, 0.0F, 200.0F);
+        VanillaGuiDraw.outline(graphics, x, y, width, height, BORDER_SELECTED_INVERSE);
+        VanillaGuiDraw.pop(graphics);
     }
 
     /** 闪烁期间文字颜色：边框闪烁不改变文字 / Text color during the flash; the border flash keeps normal text. */
@@ -266,7 +268,7 @@ public final class GuiTheme {
         int layers = Math.max(1, thickness);
         int color = stateBorder(selected, hovered, error);
         for (int i = 0; i < layers && width - i * 2 > 0 && height - i * 2 > 0; i++) {
-            graphics.renderOutline(x + i, y + i, width - i * 2, height - i * 2, color);
+            VanillaGuiDraw.outline(graphics, x + i, y + i, width - i * 2, height - i * 2, color);
         }
     }
 
@@ -296,7 +298,7 @@ public final class GuiTheme {
         int layers = Math.max(1, thickness);
         int color = indicatorColor(indicator);
         for (int i = 0; i < layers && width - i * 2 > 0 && height - i * 2 > 0; i++) {
-            graphics.renderOutline(x + i, y + i, width - i * 2, height - i * 2, color);
+            VanillaGuiDraw.outline(graphics, x + i, y + i, width - i * 2, height - i * 2, color);
         }
     }
 
@@ -343,14 +345,14 @@ public final class GuiTheme {
     public static void panelAlt(GuiGraphics graphics, int x, int y, int width, int height) {
         if (graphics == null || width <= 0 || height <= 0) return;
         graphics.fill(x, y, x + width, y + height, PALETTE.panelAlt());
-        graphics.renderOutline(x, y, width, height, PALETTE.border());
+        VanillaGuiDraw.outline(graphics, x, y, width, height, PALETTE.border());
     }
 
     /** Draws the standard Kinetic panel using the active theme's panel background and border. */
     public static void panel(GuiGraphics graphics, int x, int y, int width, int height) {
         if (graphics == null || width <= 0 || height <= 0) return;
         graphics.fill(x, y, x + width, y + height, PALETTE.panel());
-        graphics.renderOutline(x, y, width, height, PALETTE.border());
+        VanillaGuiDraw.outline(graphics, x, y, width, height, PALETTE.border());
     }
 
     /** Draws the standard full-surface Kinetic shadow. */
@@ -373,7 +375,7 @@ public final class GuiTheme {
         int alphaByte = Math.round(clampedAlpha * 255.0F);
         int color = (alphaByte << 24) | (PALETTE.text() & 0x00FFFFFF);
         KineticRenderRuntime.enableBlend();
-        graphics.drawString(font, text, x, y, color);
+        VanillaGuiDraw.text(graphics, font, text, x, y, color);
         KineticRenderRuntime.disableBlend();
     }
 
@@ -534,12 +536,12 @@ public final class GuiTheme {
         float renderSize = 16f * scale;
         float offset = (slotSize - renderSize) / 2f;
         KineticRenderRuntime.enableDepthTest();
-        graphics.pose().pushPose();
-        graphics.pose().translate(x + offset, y + offset, 0);
-        graphics.pose().scale(scale, scale, 1f);
-        graphics.renderItem(stack, 0, 0);
-        if (decorations && font != null) graphics.renderItemDecorations(font, stack, 0, 0);
-        graphics.pose().popPose();
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, x + offset, y + offset, 0);
+        VanillaGuiDraw.scale(graphics, scale, scale, 1f);
+        VanillaGuiDraw.item(graphics, stack, 0, 0);
+        if (decorations && font != null) VanillaGuiDraw.itemDecorations(graphics, font, stack, 0, 0);
+        VanillaGuiDraw.pop(graphics);
         KineticRenderRuntime.disableDepthTest();
     }
 
@@ -554,9 +556,9 @@ public final class GuiTheme {
             int sourceWidth,
             int sourceHeight
     ) {
-        graphics.pose().pushPose();
-        graphics.pose().translate(x, y, 0);
-        graphics.pose().scale(width / (float) sourceWidth, height / (float) sourceHeight, 1f);
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, x, y, 0);
+        VanillaGuiDraw.scale(graphics, width / (float) sourceWidth, height / (float) sourceHeight, 1f);
         graphics.blit(
                 ITEM_GRID_TEXTURE,
                 0,
@@ -568,6 +570,6 @@ public final class GuiTheme {
                 ITEM_GRID_TEXTURE_WIDTH,
                 ITEM_GRID_TEXTURE_HEIGHT
         );
-        graphics.pose().popPose();
+        VanillaGuiDraw.pop(graphics);
     }
 }

@@ -71,10 +71,12 @@ tasks.named('processResources', ProcessResources).configure {
             neoforge_version       : project.findProperty('neoforge_version')?.toString(),
             neoforge_version_range : project.findProperty('neoforge_version_range')?.toString(),
             loader_version_range   : project.findProperty('loader_version_range')?.toString(),
-            pack_format            : project.property('pack_format').toString(),
-            // From 1.20.2 the mod pack also serves data, whose format differs from the resource format.
-            pack_supported_formats : project.findProperty('pack_supported_formats')
-                    ? ",\n    \"supported_formats\": [${project.property('pack_supported_formats')}]" : '',
+            // The mod pack serves resources and, from 1.20.2, data, whose format differs from the resource format. Up to
+            // 1.21.1 that is pack_format plus supported_formats; 26.1 declares a min_format..max_format range instead.
+            pack_version_fields    : project.findProperty('pack_min_format')
+                    ? "\"min_format\": ${project.property('pack_min_format')},\n    \"max_format\": ${project.property('pack_max_format')}"
+                    : "\"pack_format\": ${project.property('pack_format')}" + (project.findProperty('pack_supported_formats')
+                        ? ",\n    \"supported_formats\": [${project.property('pack_supported_formats')}]" : ''),
             mod_id                 : pModId,
             mod_name               : project.findProperty('mod_name')?.toString(),
             mod_license            : project.findProperty('mod_license')?.toString(),
@@ -243,7 +245,7 @@ configurations {
 }
 
 dependencies {
-    kineticMixinCheck 'org.ow2.asm:asm-tree:9.7.1'
+    kineticMixinCheck 'org.ow2.asm:asm-tree:9.10.1'
 }
 
 tasks.register('checkKineticMixinTargets', Exec) {

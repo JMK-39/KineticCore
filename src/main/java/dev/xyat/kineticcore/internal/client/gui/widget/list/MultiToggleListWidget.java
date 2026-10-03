@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.list;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.widget.list.KineticMultiToggleList;
 import dev.xyat.kineticcore.api.client.gui.widget.list.MultiToggleItem;
 import dev.xyat.kineticcore.api.client.gui.widget.list.RowToggle;
@@ -199,8 +201,8 @@ public final class MultiToggleListWidget extends VerticalScrollListWidget implem
     protected void renderWidget(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         refreshRange();
         refreshLayout();
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, zLevel);
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, 0, 0, zLevel);
         try {
             KineticRenderRuntime.enableScissor(graphics, getX(), getY(), getX() + contentWidth(), getY() + getHeight());
             try {
@@ -212,9 +214,9 @@ public final class MultiToggleListWidget extends VerticalScrollListWidget implem
                     int clippedMouseX = mouseX >= getX() && mouseX < getX() + contentWidth()
                             ? mouseX : Integer.MIN_VALUE;
                     rowButton.setInvertedFlash(scroll.isSelectionFlashInverted(index));
-                    rowButton.render(graphics, clippedMouseX, mouseY, partialTick);
+                    VanillaGuiDraw.render(rowButton, graphics, clippedMouseX, mouseY, partialTick);
                     for (ToggleButton toggleButton : toggleButtons.get(index)) {
-                        if (toggleButton.visible) toggleButton.render(graphics, clippedMouseX, mouseY, partialTick);
+                        if (toggleButton.visible) VanillaGuiDraw.render(toggleButton, graphics, clippedMouseX, mouseY, partialTick);
                     }
                 }
             } finally {
@@ -222,7 +224,7 @@ public final class MultiToggleListWidget extends VerticalScrollListWidget implem
             }
             renderScrollbar(graphics, mouseX, mouseY);
         } finally {
-            graphics.pose().popPose();
+            VanillaGuiDraw.pop(graphics);
         }
         ToggleHit hit = toggleAt(mouseX, mouseY);
         if (hit != null) {

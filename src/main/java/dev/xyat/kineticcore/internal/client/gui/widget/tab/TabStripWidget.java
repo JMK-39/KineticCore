@@ -1,5 +1,9 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.tab;
 
+import dev.xyat.kineticcore.internal.client.gui.widget.VanillaWidget;
+
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.widget.KineticTabStrip;
 import dev.xyat.kineticcore.api.client.gui.widget.TabStripItem;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
@@ -22,7 +26,7 @@ import dev.xyat.kineticcore.internal.client.gui.widget.KineticWidgets.FactoryAcc
 import java.util.Objects;
 
 /** Variable-width tab strip with pinned leading tabs and horizontal scrolling; created only through {@code KineticWidgets}. */
-public final class TabStripWidget extends AbstractWidget implements KineticTabStrip, InternalControl {
+public final class TabStripWidget extends VanillaWidget implements KineticTabStrip, InternalControl {
     private static final int TAB_HEIGHT = KineticScreen.COMPACT_CONTROL_HEIGHT;
     private static final int TAB_GAP = 4;
     private static final int ARROW_WIDTH = 18;
@@ -196,11 +200,11 @@ public final class TabStripWidget extends AbstractWidget implements KineticTabSt
             tabButtons.get(index).setInvertedFlash(scroll.isSelectionFlashInverted(index));
         }
         for (int index = 0; index < pinned; index++) {
-            tabButtons.get(index).render(graphics, mouseX, mouseY, partialTick);
+            VanillaGuiDraw.render(tabButtons.get(index), graphics, mouseX, mouseY, partialTick);
         }
 
-        previousButton.render(graphics, mouseX, mouseY, partialTick);
-        nextButton.render(graphics, mouseX, mouseY, partialTick);
+        VanillaGuiDraw.render(previousButton, graphics, mouseX, mouseY, partialTick);
+        VanillaGuiDraw.render(nextButton, graphics, mouseX, mouseY, partialTick);
 
         if (scrollViewportWidth() > 0) {
             KineticRenderRuntime.enableScissor(graphics, scrollViewportLeft(), getY(), scrollViewportRight(), getY() + TAB_HEIGHT);
@@ -211,7 +215,7 @@ public final class TabStripWidget extends AbstractWidget implements KineticTabSt
                     int clippedMouseX = mouseX >= scrollViewportLeft() && mouseX < scrollViewportRight()
                             ? mouseX
                             : Integer.MIN_VALUE;
-                    button.render(graphics, clippedMouseX, mouseY, partialTick);
+                    VanillaGuiDraw.render(button, graphics, clippedMouseX, mouseY, partialTick);
                 }
             } finally {
                 KineticRenderRuntime.disableScissor(graphics);

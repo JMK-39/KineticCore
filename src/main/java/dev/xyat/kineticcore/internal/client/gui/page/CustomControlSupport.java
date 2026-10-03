@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.page;
 
+import dev.xyat.kineticcore.internal.client.gui.widget.VanillaWidget;
+
 import dev.xyat.kineticcore.api.client.gui.input.CharInput;
 import dev.xyat.kineticcore.api.client.gui.input.KeyInput;
 import dev.xyat.kineticcore.api.client.gui.input.MouseDragInput;
@@ -107,7 +109,7 @@ public final class CustomControlSupport {
     }
 
     /** Vanilla widget adapter hosting one custom control. */
-    public static final class Widget extends AbstractWidget implements InternalControl {
+    public static final class Widget extends VanillaWidget implements InternalControl {
         private int pressedButton = -1;
         private final KineticCustomControl control;
 

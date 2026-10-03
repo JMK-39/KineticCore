@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.client.search.KineticItemSearch;
@@ -146,7 +148,7 @@ public final class ItemListEditorScreen extends KineticScreen {
             float partialTick
     ) {
         GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
-        graphics.drawCenteredString(font, title, canvasWidth() / 2, 30, 0xFFFFAA00);
+        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 30, 0xFFFFAA00);
         graphics.fill(
                 GRID_X,
                 GRID_Y,
@@ -175,7 +177,7 @@ public final class ItemListEditorScreen extends KineticScreen {
             float partialTick
     ) {
         if (rules.isEmpty()) {
-            graphics.drawCenteredString(
+            VanillaGuiDraw.centeredText(graphics, 
                     font,
                     KineticText.translatable("gui.kineticcore.items.list_editor.empty"),
                     GRID_X + GRID_WIDTH / 2,
@@ -233,7 +235,7 @@ public final class ItemListEditorScreen extends KineticScreen {
             }
 
             if (rule.startsWith("#") || rule.startsWith("@")) {
-                graphics.drawString(font, rule.substring(0, 1), x + 2, y + 2, 0xFFFFFFFF, true);
+                VanillaGuiDraw.text(graphics, font, rule.substring(0, 1), x + 2, y + 2, 0xFFFFFFFF, true);
             }
         }
         disableUiScissor(graphics);

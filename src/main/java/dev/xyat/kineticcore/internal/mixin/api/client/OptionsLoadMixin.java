@@ -15,9 +15,12 @@ public class OptionsLoadMixin {
             KineticClientHookRuntime.fireOptionsLoading((Options) (Object) this);
         }
 
+        // Forge and NeoForge up to 1.21.1 also load options through load(boolean); 26.1 only has load().
+        //? if <26.1 {
         @Inject(method = "load(Z)V", at = @At("HEAD"), remap = false, require = 0)
         private void kineticcore$preLoadForge(boolean limited, CallbackInfo ci) {
             KineticClientHookRuntime.fireOptionsLoading((Options) (Object) this);
         }
+        //?}
     }
 }

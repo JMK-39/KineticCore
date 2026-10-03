@@ -69,10 +69,17 @@ public class SetSpawnHandler {
                 return SetSpawnHandler.getOrCreateGlobalSpawn(server);
             }
 
+            //? if >=26.1 {
+            /*@Override
+            public boolean prepareFreshLogin(MinecraftServer server, UUID playerId, String playerName) {
+                return SetSpawnHandler.prepareFreshLogin(server, playerId, playerName);
+            }
+            *///?} else {
             @Override
             public Optional<ServerPlayer> createFreshLoginPlayer(MinecraftServer server, GameProfile profile) {
                 return SetSpawnHandler.createFreshLoginPlayer(server, profile);
             }
+            //?}
 
             @Override
             public boolean isFreshLoginPlayer(ServerPlayer player) {
@@ -152,9 +159,10 @@ public class SetSpawnHandler {
         }
     }
 
-    public static Optional<ServerPlayer> createFreshLoginPlayer(MinecraftServer server, GameProfile profile) {
-        UUID uuid = profile.getId();
-        debug("createFreshLoginPlayer init: name=" + profile.getName() + ", uuid=" + uuid);
+    // Reserves the custom spawn for a player that never joined; the placement is applied when the player is added
+    // to the level.
+    private static Optional<Pair<ServerLevel, BlockPos>> reserveFreshLogin(MinecraftServer server, UUID uuid, String name) {
+        debug("createFreshLoginPlayer init: name=" + name + ", uuid=" + uuid);
 
         if (uuid == null) {
             debug("createFreshLoginPlayer abort: uuid is null");
@@ -188,12 +196,25 @@ public class SetSpawnHandler {
 
         debug("Created custom dimension player: dim=" + spawn.get().getFirst().dimension().location() + ", pos=" + posToString(spawn.get().getSecond()));
         FRESH_LOGIN_PLACEMENTS.put(uuid, spawn.get());
-        //? if >=1.20.2 {
-        /*return Optional.of(new ServerPlayer(server, spawn.get().getFirst(), profile, net.minecraft.server.level.ClientInformation.createDefault()));
-        *///?} else {
-        return Optional.of(new ServerPlayer(server, spawn.get().getFirst(), profile));
-        //?}
+        return spawn;
     }
+
+    //? if >=26.1 {
+    /*// 26.1 creates the player itself, in the dimension of the world spawn data.
+    public static boolean prepareFreshLogin(MinecraftServer server, UUID uuid, String name) {
+        return reserveFreshLogin(server, uuid, name).isPresent();
+    }
+    *///?} else if >=1.20.2 {
+    /*public static Optional<ServerPlayer> createFreshLoginPlayer(MinecraftServer server, GameProfile profile) {
+        return reserveFreshLogin(server, profile.getId(), profile.getName()).map(spawn ->
+                new ServerPlayer(server, spawn.getFirst(), profile, net.minecraft.server.level.ClientInformation.createDefault()));
+    }
+    *///?} else {
+    public static Optional<ServerPlayer> createFreshLoginPlayer(MinecraftServer server, GameProfile profile) {
+        return reserveFreshLogin(server, profile.getId(), profile.getName()).map(spawn ->
+                new ServerPlayer(server, spawn.getFirst(), profile));
+    }
+    //?}
 
     public static boolean isFreshLoginPlayer(ServerPlayer player) {
         return FRESH_LOGIN_PLACEMENTS.containsKey(player.getUUID());
@@ -555,7 +576,17 @@ public class SetSpawnHandler {
             debug("calculateConfiguredSpawn: Structure search skipped (all disabled/invalid), falling back to biome/dim logic");
         }
 
-        if (useStructures && server.getWorldData().worldGenOptions().generateStructures()) {
+        //? if >=26.1 {
+
+        /*boolean generatesStructures = server.getWorldGenSettings().options().generateStructures();
+
+        *///?} else {
+
+        boolean generatesStructures = server.getWorldData().worldGenOptions().generateStructures();
+
+        //?}
+
+        if (useStructures && generatesStructures) {
             debug("calculateConfiguredSpawn: Starting structure search");
             BlockPos structurePos = findStructureSpawn(level, effectiveStructures);
             if (structurePos != null) {
@@ -810,7 +841,11 @@ public class SetSpawnHandler {
         debug("setWorldSpawn: dim=" + level.dimension().location() + ", pos=" + posToString(pos));
         isInternalModifying = true;
         try {
+            //? if >=26.1 {
+            /*level.setRespawnData(net.minecraft.world.level.storage.LevelData.RespawnData.of(level.dimension(), pos, 0.0F, 0.0F));
+            *///?} else {
             level.setDefaultSpawnPos(pos, 0.0F);
+            //?}
         } finally {
             isInternalModifying = false;
         }
@@ -828,7 +863,9 @@ public class SetSpawnHandler {
     }
 
     private static BlockPos getVanillaSharedSpawn(ServerLevel level) {
-        //? if >=1.20.5 {
+        //? if >=26.1 {
+        /*return level.getRespawnData().pos();
+        *///?} else if >=1.20.5 {
         /*return level.getLevelData().getSpawnPos();
         *///?} else {
         return new BlockPos(level.getLevelData().getXSpawn(), level.getLevelData().getYSpawn(), level.getLevelData().getZSpawn());

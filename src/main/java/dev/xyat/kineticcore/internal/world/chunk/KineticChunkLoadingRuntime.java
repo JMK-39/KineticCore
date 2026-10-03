@@ -17,8 +17,12 @@ import java.util.HashMap;
 import java.util.Map;
 *///?}
 
-//? if neoforge
+//? if neoforge && >=26.1 {
+/*// 26.1 routes mod bus events to subscribers on its own.
+@EventBusSubscriber(modid = "kineticcore")
+*///?} else if neoforge {
 /*@EventBusSubscriber(modid = "kineticcore", bus = EventBusSubscriber.Bus.MOD)*/
+//?}
 public final class KineticChunkLoadingRuntime {
     //? if neoforge {
     /*// NeoForge only accepts ticket controllers while mods load, but the API names the owning mod when a chunk is

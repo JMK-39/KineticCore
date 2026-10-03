@@ -2,6 +2,7 @@ package dev.xyat.kineticcore.internal.client.gui.widget.scroll;
 
 import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
 import net.minecraft.client.gui.GuiGraphics;
+//? if <26.1
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
 
@@ -17,6 +18,11 @@ public final class SmoothSelectionListLifecycleRegression {
     }
 
     private static final class Row extends KineticScroll.SmoothEntry<Row> {
+        //? if >=26.1 {
+        /*@Override
+        public void extractContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
+        }
+        *///?} else {
         @Override
         public void render(
                 GuiGraphics graphics,
@@ -31,6 +37,7 @@ public final class SmoothSelectionListLifecycleRegression {
                 float partialTick
         ) {
         }
+        //?}
 
         @Override
         public Component getNarration() {
@@ -41,6 +48,14 @@ public final class SmoothSelectionListLifecycleRegression {
     private static void check(boolean value, String message) {
         if (!value) throw new AssertionError(message);
         checks++;
+    }
+
+    private static GuiGraphics graphics() {
+        //? if >=26.1 {
+        /*return new GuiGraphics(null, new net.minecraft.client.renderer.state.gui.GuiRenderState(), 0, 0);
+        *///?} else {
+        return new GuiGraphics(null, (MultiBufferSource.BufferSource) null);
+        //?}
     }
 
     public static void main(String[] args) {
@@ -61,12 +76,12 @@ public final class SmoothSelectionListLifecycleRegression {
         check(!list.mouseDragged(116D, Double.NaN, 0, 0D, 1D), "invalid drag Y rejected");
         check(Double.isFinite(list.targetScrollAmount()), "invalid drag preserves finite target");
         list.range(0);
-        list.render(new GuiGraphics(null, (MultiBufferSource.BufferSource) null), 0, 0, 0F);
+        dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw.render(list, graphics(), 0, 0, 0F);
         check(list.targetScrollAmount() == 0D, "shrink resets target");
         check(!list.mouseDragged(116D, 30D, 0, 0D, 1D), "shrink releases stale drag");
         check(!list.mouseReleased(116D, 30D, 0), "release after shrink not consumed");
         list.range(100);
-        list.render(new GuiGraphics(null, (MultiBufferSource.BufferSource) null), 0, 0, 0F);
+        dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw.render(list, graphics(), 0, 0, 0F);
         check(list.targetScrollAmount() == 0D, "expanding does not revive old target");
         System.out.println("PASS: " + checks + " smooth selection-list lifecycle checks");
     }

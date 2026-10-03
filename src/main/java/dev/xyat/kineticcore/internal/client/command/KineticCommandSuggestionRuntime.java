@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.command;
 
+import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
+
 import dev.xyat.kineticcore.internal.client.gui.command.KineticCommandSuggestions;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -21,7 +23,11 @@ public final class KineticCommandSuggestionRuntime {
         Minecraft minecraft = Minecraft.getInstance();
         Screen host = new Screen(Component.empty()) {
         };
+        //? if >=26.1 {
+        /*host.init(Math.max(1, hostWidth), Math.max(1, hostHeight));
+        *///?} else {
         host.init(minecraft, Math.max(1, hostWidth), Math.max(1, hostHeight));
+        //?}
         boolean fieldAbove = options.placement() == KineticCommandSuggestions.Placement.FIELD_ABOVE;
         if (fieldAbove) {
             alignHostAboveField(host, input);
@@ -54,17 +60,30 @@ public final class KineticCommandSuggestionRuntime {
             public void render(GuiGraphics graphics, int mouseX, int mouseY) {
                 if (!inputInteractive()) return;
                 if (fieldAbove) alignHostAboveField(host, input);
+                //? if >=26.1 {
+                /*delegate.extractRenderState(graphics, mouseX, mouseY);
+                *///?} else {
                 delegate.render(graphics, mouseX, mouseY);
+                //?}
             }
 
             @Override
             public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+                //? if >=26.1 {
+                /*return inputInteractive() && delegate.keyPressed(new net.minecraft.client.input.KeyEvent(keyCode, scanCode, modifiers));
+                *///?} else {
                 return inputInteractive() && delegate.keyPressed(keyCode, scanCode, modifiers);
+                //?}
             }
 
             @Override
             public boolean mouseClicked(double mouseX, double mouseY, int button) {
+                //? if >=26.1 {
+                /*return inputInteractive() && delegate.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY,
+                        new net.minecraft.client.input.MouseButtonInfo(button, GuiInputCompat.currentModifiers())));
+                *///?} else {
                 return inputInteractive() && delegate.mouseClicked(mouseX, mouseY, button);
+                //?}
             }
 
             @Override

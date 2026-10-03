@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.list;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.widget.list.ItemActionItem;
 import dev.xyat.kineticcore.api.client.gui.widget.list.KineticItemActionList;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
@@ -182,8 +184,8 @@ public final class ItemActionListWidget extends VerticalScrollListWidget impleme
     protected void renderWidget(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         refreshRange();
         refreshLayout();
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, zLevel);
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, 0, 0, zLevel);
         try {
             KineticRenderRuntime.enableScissor(graphics, getX(), getY(), getX() + contentWidth(), getY() + getHeight());
             try {
@@ -197,17 +199,17 @@ public final class ItemActionListWidget extends VerticalScrollListWidget impleme
                             ? mouseX
                             : Integer.MIN_VALUE;
                     rowButton.setInvertedFlash(scroll.isSelectionFlashInverted(index));
-                    rowButton.render(graphics, clippedMouseX, mouseY, partialTick);
+                    VanillaGuiDraw.render(rowButton, graphics, clippedMouseX, mouseY, partialTick);
                     renderRowContent(graphics, rowButton, items.get(index), mouseX, mouseY,
                             scroll.isSelectionFlashInverted(index));
-                    if (actionButton.visible) actionButton.render(graphics, clippedMouseX, mouseY, partialTick);
+                    if (actionButton.visible) VanillaGuiDraw.render(actionButton, graphics, clippedMouseX, mouseY, partialTick);
                 }
             } finally {
                 KineticRenderRuntime.disableScissor(graphics);
             }
             renderScrollbar(graphics, mouseX, mouseY);
         } finally {
-            graphics.pose().popPose();
+            VanillaGuiDraw.pop(graphics);
         }
         int actionIndex = actionAt(mouseX, mouseY);
         if (actionIndex >= 0) {

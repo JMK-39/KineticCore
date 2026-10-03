@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.editor;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.editor.KineticCommandListEditor;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
@@ -12,7 +14,9 @@ import net.minecraft.client.gui.GuiGraphics;
 import dev.xyat.kineticcore.internal.client.gui.widget.button.KineticButtons.StateButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+//? if <26.1
 import net.minecraftforge.api.distmarker.Dist;
+//? if <26.1
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,6 +26,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+// NeoForge 26.1 no longer strips @OnlyIn members; client-only code is kept off the server by where it is called from.
+//? if <26.1
 @OnlyIn(Dist.CLIENT)
 public final class CommandListEditorScreen extends KineticScreen {
     private static final int PANEL_X = 24;
@@ -201,13 +207,13 @@ public final class CommandListEditorScreen extends KineticScreen {
         graphics.fillGradient(0, 0, canvasWidth(), canvasHeight(), 0xFF171717, 0xFF0E0E0E);
         GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_W, PANEL_H);
         GuiTheme.panelAlt(graphics, LIST_X - 4, LIST_Y - 4, LIST_W + 8, LIST_H + 8);
-        graphics.drawCenteredString(font, title, canvasWidth() / 2, 30, 0xFFFFFF);
+        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 30, 0xFFFFFF);
 
         renderRows(graphics, mouseX, mouseY);
         scroll.render(graphics, mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18);
 
         if (currentCommands().isEmpty()) {
-            graphics.drawCenteredString(
+            VanillaGuiDraw.centeredText(graphics, 
                     font,
                     text.emptyMessage(),
                     LIST_X + LIST_W / 2,

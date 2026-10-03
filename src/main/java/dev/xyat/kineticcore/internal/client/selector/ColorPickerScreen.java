@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
@@ -157,21 +159,21 @@ public final class ColorPickerScreen extends KineticScreen {
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         GuiTheme.shadow(graphics, canvasWidth(), canvasHeight());
         GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_W, paletteMode ? PANEL_H : 215);
-        graphics.drawCenteredString(font, title, PANEL_X + PANEL_W / 2, PANEL_Y + 15, 0xFFFFFF);
+        VanillaGuiDraw.centeredText(graphics, font, title, PANEL_X + PANEL_W / 2, PANEL_Y + 15, 0xFFFFFF);
 
-        graphics.drawString(font, KineticText.translatable("gui.kineticcore.palette.picker"), PICKER_X, PICKER_Y - 15, 0xFFFFFF, false);
-        graphics.drawString(font, KineticText.translatable("gui.kineticcore.palette.current"), SIDE_X, PICKER_Y - 15, 0xFFFFFF, false);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.picker"), PICKER_X, PICKER_Y - 15, 0xFFFFFF, false);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.current"), SIDE_X, PICKER_Y - 15, 0xFFFFFF, false);
         renderPicker(graphics);
 
         graphics.fill(SIDE_X, PICKER_Y, SIDE_X + SIDE_W, PICKER_Y + 24, 0xFF000000 | rgb);
-        graphics.renderOutline(SIDE_X, PICKER_Y, SIDE_W, 24, 0xFFFFFFFF);
-        graphics.drawString(font, KineticText.translatable("gui.kineticcore.palette.hex"), SIDE_X, PICKER_Y + 38, 0xFFFFFF, false);
-        graphics.drawString(font, KineticText.translatable("gui.kineticcore.palette.red"), SIDE_X, PICKER_Y + 64, 0xFFFFFF, false);
-        graphics.drawString(font, KineticText.translatable("gui.kineticcore.palette.green"), SIDE_X, PICKER_Y + 88, 0xFFFFFF, false);
-        graphics.drawString(font, KineticText.translatable("gui.kineticcore.palette.blue"), SIDE_X, PICKER_Y + 112, 0xFFFFFF, false);
+        VanillaGuiDraw.outline(graphics, SIDE_X, PICKER_Y, SIDE_W, 24, 0xFFFFFFFF);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.hex"), SIDE_X, PICKER_Y + 38, 0xFFFFFF, false);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.red"), SIDE_X, PICKER_Y + 64, 0xFFFFFF, false);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.green"), SIDE_X, PICKER_Y + 88, 0xFFFFFF, false);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.blue"), SIDE_X, PICKER_Y + 112, 0xFFFFFF, false);
 
         if (paletteMode) {
-            graphics.drawString(
+            VanillaGuiDraw.text(graphics, 
                     font,
                     KineticText.translatable("gui.kineticcore.palette.selected", colors.size(), maxColors),
                     SWATCH_X,
@@ -190,7 +192,7 @@ public final class ColorPickerScreen extends KineticScreen {
             int top = 0xFF000000 | (Mth.hsvToRgb(hue, sat, 1.0f) & 0xFFFFFF);
             graphics.fillGradient(PICKER_X + x, PICKER_Y, PICKER_X + x + 1, PICKER_Y + PICKER_SIZE, top, 0xFF000000);
         }
-        graphics.renderOutline(PICKER_X - 1, PICKER_Y - 1, PICKER_SIZE + 2, PICKER_SIZE + 2, 0xFFFFFFFF);
+        VanillaGuiDraw.outline(graphics, PICKER_X - 1, PICKER_Y - 1, PICKER_SIZE + 2, PICKER_SIZE + 2, 0xFFFFFFFF);
 
         int[] hues = {
                 0xFFFF0000,
@@ -206,12 +208,12 @@ public final class ColorPickerScreen extends KineticScreen {
             int y2 = PICKER_Y + (i + 1) * PICKER_SIZE / 6;
             graphics.fillGradient(HUE_X, y1, HUE_X + HUE_W, y2, hues[i], hues[i + 1]);
         }
-        graphics.renderOutline(HUE_X - 1, PICKER_Y - 1, HUE_W + 2, PICKER_SIZE + 2, 0xFFFFFFFF);
+        VanillaGuiDraw.outline(graphics, HUE_X - 1, PICKER_Y - 1, HUE_W + 2, PICKER_SIZE + 2, 0xFFFFFFFF);
 
         int selectorX = PICKER_X + Math.round(saturation * (PICKER_SIZE - 1));
         int selectorY = PICKER_Y + Math.round((1.0f - value) * (PICKER_SIZE - 1));
-        graphics.renderOutline(selectorX - 2, selectorY - 2, 5, 5, 0xFF000000);
-        graphics.renderOutline(selectorX - 1, selectorY - 1, 3, 3, 0xFFFFFFFF);
+        VanillaGuiDraw.outline(graphics, selectorX - 2, selectorY - 2, 5, 5, 0xFF000000);
+        VanillaGuiDraw.outline(graphics, selectorX - 1, selectorY - 1, 3, 3, 0xFFFFFFFF);
 
         int hueY = PICKER_Y + Math.round(hue * (PICKER_SIZE - 1));
         graphics.fill(HUE_X - 2, hueY - 1, HUE_X + HUE_W + 2, hueY + 2, 0xFFFFFFFF);
@@ -220,7 +222,7 @@ public final class ColorPickerScreen extends KineticScreen {
 
     private void renderSwatches(GuiGraphics graphics, int mouseX, int mouseY) {
         if (colors.isEmpty()) {
-            graphics.drawString(font, KineticText.translatable("gui.kineticcore.palette.empty"), SWATCH_X, SWATCH_Y + 5, 0xFFFFFF, false);
+            VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.empty"), SWATCH_X, SWATCH_Y + 5, 0xFFFFFF, false);
             return;
         }
         for (int i = 0; i < colors.size(); i++) {
@@ -230,9 +232,9 @@ public final class ColorPickerScreen extends KineticScreen {
             int y = SWATCH_Y + row * (SWATCH_CELL + SWATCH_GAP);
             int color = colors.get(i) & 0xFFFFFF;
             graphics.fill(x, y, x + SWATCH_CELL, y + SWATCH_CELL, 0xFF000000 | color);
-            graphics.renderOutline(x, y, SWATCH_CELL, SWATCH_CELL, 0xFFFFFFFF);
+            VanillaGuiDraw.outline(graphics, x, y, SWATCH_CELL, SWATCH_CELL, 0xFFFFFFFF);
             if (GuiTheme.hovering(mouseX, mouseY, x, y, SWATCH_CELL, SWATCH_CELL)) {
-                graphics.renderOutline(x - 1, y - 1, SWATCH_CELL + 2, SWATCH_CELL + 2, 0xFFFFB300);
+                VanillaGuiDraw.outline(graphics, x - 1, y - 1, SWATCH_CELL + 2, SWATCH_CELL + 2, 0xFFFFB300);
             }
         }
     }

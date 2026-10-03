@@ -40,7 +40,11 @@ public final class MinecraftKeysImpl {
 
 
     public static boolean inventoryMatches(int keyCode, int scanCode) {
+        //? if >=26.1 {
+        /*return Minecraft.getInstance().options.keyInventory.matches(new net.minecraft.client.input.KeyEvent(keyCode, scanCode, 0));
+        *///?} else {
         return Minecraft.getInstance().options.keyInventory.matches(keyCode, scanCode);
+        //?}
     }
 
     public static List<KeyMapping> snapshotMappings(KeyMapping[] mappings) {

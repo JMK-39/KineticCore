@@ -55,7 +55,13 @@ public final class KineticResourceEventRuntime {
 
         @Override
         public void addListener(net.minecraft.server.packs.resources.PreparableReloadListener listener) {
+            //? if >=26.1 {
+            /*// 26.1 orders reload listeners by id; each Kinetic listener gets its own.
+            event.addListener(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("kineticcore",
+                    "server_reload_" + Integer.toHexString(System.identityHashCode(listener))), listener);
+            *///?} else {
             event.addListener(listener);
+            //?}
         }
     }
 

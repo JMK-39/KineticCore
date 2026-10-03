@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.page;
 
+import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
+
 import dev.xyat.kineticcore.api.client.gui.input.CharInput;
 import dev.xyat.kineticcore.api.client.gui.input.KeyInput;
 import dev.xyat.kineticcore.api.client.gui.input.KeyModifiers;
@@ -17,9 +19,9 @@ public final class InputRecords {
     /** Current modifier mask read from the keyboard state. */
     public static int currentModifiers() {
         int modifiers = 0;
-        if (Screen.hasShiftDown()) modifiers |= KeyModifiers.SHIFT;
-        if (Screen.hasControlDown()) modifiers |= KeyModifiers.CONTROL;
-        if (Screen.hasAltDown()) modifiers |= KeyModifiers.ALT;
+        if (GuiInputCompat.shiftDown()) modifiers |= KeyModifiers.SHIFT;
+        if (GuiInputCompat.controlDown()) modifiers |= KeyModifiers.CONTROL;
+        if (GuiInputCompat.altDown()) modifiers |= KeyModifiers.ALT;
         return modifiers;
     }
 

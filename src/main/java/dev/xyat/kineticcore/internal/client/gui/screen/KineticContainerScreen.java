@@ -173,12 +173,13 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     // ---- rendering ---------------------------------------------------------------------------------------------
 
     /** {@inheritDoc} */
+    //? if <26.1
     @Override
     public final void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         runtime.render(graphics, mouseX, mouseY, partialTick, this::renderContainerFrame);
     }
 
-    //? if >=1.20.2 {
+    //? if >=1.20.2 <26.1 {
     /*// Screen.render draws the background itself since 1.20.2; KineticScreenRuntime already drew it this frame.
     @Override
     public void renderBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
@@ -190,10 +191,25 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
         renderTransparentBackground(graphics);
     }
     *///?}
+    //? if >=26.1 {
+    /*// Screen.extractRenderState draws the background itself; KineticScreenRuntime already drew it this frame.
+    @Override
+    public void extractBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBg(graphics, partialTick, mouseX, mouseY);
+    }
+
+    @Override
+    public void renderVanillaBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        extractTransparentBackground(graphics);
+    }
+
+    // AbstractContainerScreen no longer declares renderBg on 26.1; subclasses still draw their background in it.
+    protected abstract void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY);
+    *///?}
 
     private void renderContainerFrame(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         runtime.renderInCanvas(graphics, mouseX, mouseY, partialTick, (uiGraphics, virtualMouseX, virtualMouseY, tick) -> {
-            super.render(uiGraphics, virtualMouseX, virtualMouseY, tick);
+            vanillaRender(uiGraphics, virtualMouseX, virtualMouseY, tick);
             renderUiForeground(uiGraphics, virtualMouseX, virtualMouseY, tick);
             runtime.controls().renderAutoCompleteSuggestions(uiGraphics, virtualMouseX, virtualMouseY);
             if (runtime.businessTooltipsAllowed(isInsideUi(mouseX, mouseY))) {
@@ -302,29 +318,32 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     }
 
     /** {@inheritDoc} */
+    //? if <26.1
     @Override
     public final boolean mouseClicked(double mouseX, double mouseY, int button) {
         return runtime.mouseClicked(mouseX, mouseY, button, (x, y, pressed) ->
                 containerMouseClicked(x, y, pressed)
-                        || super.mouseClicked(x, y, pressed)
+                        || vanillaMouseClicked(x, y, pressed)
                         || afterMouseClicked(x, y, pressed));
     }
 
     /** {@inheritDoc} */
+    //? if <26.1
     @Override
     public final boolean mouseReleased(double mouseX, double mouseY, int button) {
         return runtime.mouseReleased(mouseX, mouseY, button, (x, y, released) ->
                 containerMouseReleased(x, y, released)
-                        || super.mouseReleased(x, y, released)
+                        || vanillaMouseReleased(x, y, released)
                         || afterMouseReleased(x, y, released));
     }
 
     /** {@inheritDoc} */
+    //? if <26.1
     @Override
     public final boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         return runtime.mouseDragged(mouseX, mouseY, button, dragX, dragY, (x, y, dragged, dx, dy) ->
                 containerMouseDragged(x, y, dragged, dx, dy)
-                        || super.mouseDragged(x, y, dragged, dx, dy)
+                        || vanillaMouseDragged(x, y, dragged, dx, dy)
                         || afterMouseDragged(x, y, dragged, dx, dy));
     }
 
@@ -357,22 +376,136 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     }
 
     /** {@inheritDoc} */
+    //? if <26.1
     @Override
     public final boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        return runtime.keyPressed(keyCode, scanCode, modifiers, this::containerKeyPressed, super::keyPressed);
+        return runtime.keyPressed(keyCode, scanCode, modifiers, this::containerKeyPressed, this::vanillaKeyPressed);
     }
 
     /** {@inheritDoc} */
+    //? if <26.1
     @Override
     public final boolean keyReleased(int keyCode, int scanCode, int modifiers) {
         return runtime.keyReleased(keyCode, scanCode, modifiers,
-                (key, scan, mods) -> containerKeyReleased(key, scan, mods) || super.keyReleased(key, scan, mods));
+                (key, scan, mods) -> containerKeyReleased(key, scan, mods) || vanillaKeyReleased(key, scan, mods));
     }
 
     /** {@inheritDoc} */
+    //? if <26.1
     @Override
     public final boolean charTyped(char codePoint, int modifiers) {
         return runtime.charTyped(codePoint, modifiers,
-                (character, mods) -> containerCharTyped(character, mods) || super.charTyped(character, mods));
+                (character, mods) -> containerCharTyped(character, mods) || vanillaCharTyped(character, mods));
     }
+
+    // ---- vanilla input and rendering across versions -----------------------------------------------------------
+
+    //? if >=26.1 {
+    /*// Since 1.21.9 input arrives as events. The coordinate handlers above stay the entry points; the mouse event that
+    // started the current call is kept, so vanilla handling gets its modifiers and double click back.
+    private net.minecraft.client.input.MouseButtonEvent currentMouseEvent;
+    private boolean currentDoubleClick;
+
+    @Override
+    public final void extractRenderState(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public final boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        currentMouseEvent = event;
+        currentDoubleClick = doubleClick;
+        return mouseClicked(event.x(), event.y(), event.button());
+    }
+
+    @Override
+    public final boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+        currentMouseEvent = event;
+        return mouseReleased(event.x(), event.y(), event.button());
+    }
+
+    @Override
+    public final boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dragX, double dragY) {
+        currentMouseEvent = event;
+        return mouseDragged(event.x(), event.y(), event.button(), dragX, dragY);
+    }
+
+    @Override
+    public final boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        return keyPressed(event.key(), event.scancode(), event.modifiers());
+    }
+
+    @Override
+    public final boolean keyReleased(net.minecraft.client.input.KeyEvent event) {
+        return keyReleased(event.key(), event.scancode(), event.modifiers());
+    }
+
+    @Override
+    public final boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+        boolean handled = false;
+        for (char character : Character.toChars(event.codepoint())) handled |= charTyped(character, 0);
+        return handled;
+    }
+
+    private net.minecraft.client.input.MouseButtonEvent mouseEventAt(double x, double y, int button) {
+        int modifiers = currentMouseEvent == null ? 0 : currentMouseEvent.modifiers();
+        return new net.minecraft.client.input.MouseButtonEvent(x, y, new net.minecraft.client.input.MouseButtonInfo(button, modifiers));
+    }
+
+    private boolean vanillaMouseClicked(double mouseX, double mouseY, int button) {
+        return super.mouseClicked(mouseEventAt(mouseX, mouseY, button), currentDoubleClick);
+    }
+
+    private boolean vanillaMouseReleased(double mouseX, double mouseY, int button) {
+        return super.mouseReleased(mouseEventAt(mouseX, mouseY, button));
+    }
+
+    private boolean vanillaMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        return super.mouseDragged(mouseEventAt(mouseX, mouseY, button), dragX, dragY);
+    }
+
+    private boolean vanillaKeyPressed(int keyCode, int scanCode, int modifiers) {
+        return super.keyPressed(new net.minecraft.client.input.KeyEvent(keyCode, scanCode, modifiers));
+    }
+
+    private boolean vanillaKeyReleased(int keyCode, int scanCode, int modifiers) {
+        return super.keyReleased(new net.minecraft.client.input.KeyEvent(keyCode, scanCode, modifiers));
+    }
+
+    private boolean vanillaCharTyped(char codePoint, int modifiers) {
+        return super.charTyped(new net.minecraft.client.input.CharacterEvent(codePoint));
+    }
+
+    private void vanillaRender(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    }
+    *///?} else {
+    private boolean vanillaMouseClicked(double mouseX, double mouseY, int button) {
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private boolean vanillaMouseReleased(double mouseX, double mouseY, int button) {
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    private boolean vanillaMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    private boolean vanillaKeyPressed(int keyCode, int scanCode, int modifiers) {
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private boolean vanillaKeyReleased(int keyCode, int scanCode, int modifiers) {
+        return super.keyReleased(keyCode, scanCode, modifiers);
+    }
+
+    private boolean vanillaCharTyped(char codePoint, int modifiers) {
+        return super.charTyped(codePoint, modifiers);
+    }
+
+    private void vanillaRender(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
+    }
+    //?}
 }

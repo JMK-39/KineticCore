@@ -139,7 +139,10 @@ public class LetMeDespawnLogic {
     // The marker lives in the item's own NBT; since 1.20.5 that is the custom_data component.
     private static boolean isPickedUp(ItemStack stack) {
         if (stack.isEmpty()) return false;
-        //? if >=1.20.5 {
+        //? if >=26.1 {
+        /*CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        return data != null && data.copyTag().getBooleanOr("kt_picked_up", false);
+        *///?} else if >=1.20.5 {
         /*CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         return data != null && data.copyTag().getBoolean("kt_picked_up");
         *///?} else {

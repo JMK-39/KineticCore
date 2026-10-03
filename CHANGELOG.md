@@ -1,24 +1,64 @@
-历史记录（原记录未标注时间）
+2026年10月03日 20时11分
 
-- Added the KineticGui.findPage API: addons can find a page in the current screen's back-navigation chain, so data can still reach a parent page while one of its child pages is open.
-- Fixed command suggestions in text fields drifting out of line with long commands; suggestions and usage hints now follow the scrolled text.
-- Drop-down and context menus now show at most 10 rows; longer menus scroll with the mouse wheel or a scrollbar you can drag or click.
+- Added Minecraft 26.1.2 (NeoForge 26.1.2.112, Java 25). Its JAR is kineticcore-neoforge-26.1.2-<version>.jar.
+- On 26.1.2 everything follows 26.1's own formats: item text uses 26.1's /give syntax, for example enchantments={"minecraft:protection":2}, and the default first-join rewards are written in it.
+- First-join rewards are marked as received only after every reward was granted. If a reward item in the config fails to parse, nothing is cleared, granted or marked, and the error is logged; after the config is fixed, the player still gets the rewards on the next join within the first minute.
+- The compact potion-effect display works on 26.1.2, including JEI keeping clear of it.
+- On 26.1.2 new players start at the custom spawn through 26.1's new login flow.
+- The mod's pack.mcmeta follows each version's format, so 26.1.2 no longer logs a pack metadata warning.
+- 26.1.2 API: key binding categories take an id (KineticKeyBindings.Builder.category), item model properties are registered with KineticItemProperties.registerRange/registerConditional, and spawn handlers reserve first logins with ServerHooks.prepareFreshLogin.
 
-- 新增 KineticGui.findPage 接口：附属模组可以在当前界面的返回链中查找页面，打开子页面时数据仍能更新到下层的父页面。
-- 修复文本框中命令较长时，命令补全弹窗与文字错位的问题；补全和用法提示现在跟随滚动后的文字对齐。
-- 下拉菜单和右键菜单最多显示 10 行，更长的菜单可用滚轮、拖动或点击滚动条浏览。
+- 新增 Minecraft 26.1.2 支持（NeoForge 26.1.2.112，Java 25），JAR 为 kineticcore-neoforge-26.1.2-<版本>.jar。
+- 26.1.2 完全使用 26.1 自己的格式：物品文本使用 26.1 的 /give 写法，例如 enchantments={"minecraft:protection":2}，默认的首次进入奖励也按此写法生成。
+- 首次进入奖励只有全部发放成功后才打上已领取标记。配置中有奖励物品解析失败时，既不清理快捷栏、不发放也不标记，并在日志中报错；修好配置后，玩家在游玩 1 分钟内再次进入仍可领取。
+- 紧凑的药水效果显示支持 26.1.2，JEI 同样会避开它。
+- 26.1.2 中新玩家通过 26.1 新的登录流程出生在自定义出生点。
+- 模组的 pack.mcmeta 按各版本自己的格式生成，26.1.2 不再出现资源包元数据警告。
+- 26.1.2 接口：按键分类改用 ID（KineticKeyBindings.Builder.category），物品模型属性通过 KineticItemProperties.registerRange/registerConditional 注册，出生点处理器通过 ServerHooks.prepareFreshLogin 预留首次登录位置。
 
 ---
 
-2026年10月02日 13时53分
+2026年10月03日 16时21分
 
-- Fixed a development-client startup crash caused by reading client settings before Forge loaded their configuration.
-- Client settings now use their in-memory defaults or edits until loading completes, then read and write the loaded configuration.
-- Added a regression test covering startup defaults, preload edits, loaded values, and native writes. All core verification suites and the final-JAR API check pass.
+- Items as text strictly follow each version's `/give` syntax again: `id{NBT}` on 1.20.1, `id[components]` on 1.21.1. The conversion of 1.20.1 `{NBT}` text on 1.21.1 is removed; such entries are reported as an error in the log and not given. 1.21.1 configs that still use `{NBT}` must be rewritten, for example `1x minecraft:leather_helmet[enchantments={levels:{"minecraft:protection":2}}]`.
 
-- 修复 Forge 尚未加载客户端配置时提前读取设置，导致开发客户端启动崩溃的问题。
-- 配置加载前使用内存默认值或编辑值；加载完成后正常读写已加载的配置。
-- 新增回归测试，覆盖启动默认值、加载前编辑、加载后读取和原生写入。核心验证套件及最终 JAR API 检查全部通过。
+- 以文本表示的物品重新严格遵循各版本的 `/give` 写法：1.20.1 为 `物品ID{NBT}`，1.21.1 为 `物品ID[组件]`。移除在 1.21.1 中转换 1.20.1 `{NBT}` 写法的功能；这类条目会在日志中报错且不会发放。仍使用 `{NBT}` 的 1.21.1 配置需要改写，例如 `1x minecraft:leather_helmet[enchantments={levels:{"minecraft:protection":2}}]`。
+
+---
+
+2026年10月03日 00时21分
+
+- Log deduplication is back (`log_cleaner.deduplication`, on by default): consecutive identical logs are written once, followed by their repeat count before the next different log.
+- Errors-only mode (`log_cleaner.errors_only`) is now off by default on clients as well as servers, so normal logs are no longer hidden. Existing config files keep their value; set it to `false` to see all logs.
+
+- 恢复日志去重功能（`log_cleaner.deduplication`，默认开启）：连续相同的日志只输出一次，并在下一条不同日志前输出重复次数。
+- 仅错误日志模式（`log_cleaner.errors_only`）在客户端和服务端都改为默认关闭，正常日志不再被隐藏。已有配置文件会保留原值，需要看到全部日志时请设为 `false`。
+
+---
+
+2026年10月03日 00时14分
+
+- Fixed first-join equipment on 1.21.1 arriving without enchantments when the config still used the 1.20.1 `{NBT}` syntax. On 1.21.1, items written as `id{NBT}` are now upgraded to components the same way the game upgrades old worlds, so configs copied from 1.20.1 keep working; the `id[components]` syntax works as before. Text the game cannot read is now reported in the log instead of being ignored.
+
+- 修复 1.21.1 中首次加入发放的装备在配置仍使用 1.20.1 `{NBT}` 写法时不带附魔的问题。1.21.1 现在会把 `物品ID{NBT}` 按游戏升级旧存档的方式转换为组件，从 1.20.1 复制来的配置可直接使用；`物品ID[组件]` 写法照常可用。无法识别的物品文本现在会在日志中报错，不再被静默忽略。
+
+---
+
+2026年10月02日 23时58分
+
+- Fixed custom spawn on 1.21.1: new players and respawns now go to the configured spawn (for example a village) instead of the vanilla world spawn. Since 1.20.5 the game re-applies the world spawn on every start, which was mistaken for an admin `/setworldspawn` and saved the vanilla spawn as a fixed spawn. 1.21.1 worlds created with earlier builds keep that fixed spawn; use a new world.
+- Fixed a crash when entering a world on 1.21.1 (`IllegalClassLoadError` for `FlightServerMixins`): flight packet handling no longer calls into the mixin package.
+- Fixed joining a world failing with "Invalid player data" on 1.20.1: the noclip eye-height check no longer runs before the player is fully created.
+- Fixed oversized custom payloads on 1.20.1 failing with a class-loading error instead of the intended "Packet limit exceeded" message.
+- The KineticCore data pack is no longer listed as incompatible on 1.21.1.
+- The build now also fails when code refers to a class inside a mixin package, which Mixin cannot load at runtime.
+
+- 修复 1.21.1 自定义出生点无效：新玩家和重生现在会到配置的出生点（例如村庄），不再是原版世界出生点。1.20.5 起游戏每次启动都会重新设置一次世界出生点，此前被误认为管理员执行了 `/setworldspawn`，从而把原版出生点保存成了固定出生点。用之前版本创建的 1.21.1 世界会保留这个固定出生点，请新建世界。
+- 修复 1.21.1 进入世界时崩溃（`FlightServerMixins` 的 `IllegalClassLoadError`）：飞行数据包处理不再调用 mixin 包内的类。
+- 修复 1.20.1 进入世界时提示"无效的玩家数据"：穿墙视角高度的判断不再在玩家创建完成之前执行。
+- 修复 1.20.1 自定义数据包超出大小时报类加载错误，而不是预期的"Packet limit exceeded"提示。
+- 1.21.1 中 KineticCore 数据包不再显示为不兼容。
+- 构建时还会检查代码是否引用了 mixin 包内的类（Mixin 运行时无法加载这类引用），发现即构建失败。
 
 ---
 
@@ -48,36 +88,24 @@
 
 ---
 
-2026年10月02日 23时58分
+2026年10月02日 13时53分
 
-- Fixed custom spawn on 1.21.1: new players and respawns now go to the configured spawn (for example a village) instead of the vanilla world spawn. Since 1.20.5 the game re-applies the world spawn on every start, which was mistaken for an admin `/setworldspawn` and saved the vanilla spawn as a fixed spawn. 1.21.1 worlds created with earlier builds keep that fixed spawn; use a new world.
-- Fixed a crash when entering a world on 1.21.1 (`IllegalClassLoadError` for `FlightServerMixins`): flight packet handling no longer calls into the mixin package.
-- Fixed joining a world failing with "Invalid player data" on 1.20.1: the noclip eye-height check no longer runs before the player is fully created.
-- Fixed oversized custom payloads on 1.20.1 failing with a class-loading error instead of the intended "Packet limit exceeded" message.
-- The KineticCore data pack is no longer listed as incompatible on 1.21.1.
-- The build now also fails when code refers to a class inside a mixin package, which Mixin cannot load at runtime.
+- Fixed a development-client startup crash caused by reading client settings before Forge loaded their configuration.
+- Client settings now use their in-memory defaults or edits until loading completes, then read and write the loaded configuration.
+- Added a regression test covering startup defaults, preload edits, loaded values, and native writes. All core verification suites and the final-JAR API check pass.
 
-- 修复 1.21.1 自定义出生点无效：新玩家和重生现在会到配置的出生点（例如村庄），不再是原版世界出生点。1.20.5 起游戏每次启动都会重新设置一次世界出生点，此前被误认为管理员执行了 `/setworldspawn`，从而把原版出生点保存成了固定出生点。用之前版本创建的 1.21.1 世界会保留这个固定出生点，请新建世界。
-- 修复 1.21.1 进入世界时崩溃（`FlightServerMixins` 的 `IllegalClassLoadError`）：飞行数据包处理不再调用 mixin 包内的类。
-- 修复 1.20.1 进入世界时提示"无效的玩家数据"：穿墙视角高度的判断不再在玩家创建完成之前执行。
-- 修复 1.20.1 自定义数据包超出大小时报类加载错误，而不是预期的"Packet limit exceeded"提示。
-- 1.21.1 中 KineticCore 数据包不再显示为不兼容。
-- 构建时还会检查代码是否引用了 mixin 包内的类（Mixin 运行时无法加载这类引用），发现即构建失败。
+- 修复 Forge 尚未加载客户端配置时提前读取设置，导致开发客户端启动崩溃的问题。
+- 配置加载前使用内存默认值或编辑值；加载完成后正常读写已加载的配置。
+- 新增回归测试，覆盖启动默认值、加载前编辑、加载后读取和原生写入。核心验证套件及最终 JAR API 检查全部通过。
 
 ---
 
-2026年10月03日 00时14分
+历史记录（原记录未标注时间）
 
-- Fixed first-join equipment on 1.21.1 arriving without enchantments when the config still used the 1.20.1 `{NBT}` syntax. On 1.21.1, items written as `id{NBT}` are now upgraded to components the same way the game upgrades old worlds, so configs copied from 1.20.1 keep working; the `id[components]` syntax works as before. Text the game cannot read is now reported in the log instead of being ignored.
+- Added the KineticGui.findPage API: addons can find a page in the current screen's back-navigation chain, so data can still reach a parent page while one of its child pages is open.
+- Fixed command suggestions in text fields drifting out of line with long commands; suggestions and usage hints now follow the scrolled text.
+- Drop-down and context menus now show at most 10 rows; longer menus scroll with the mouse wheel or a scrollbar you can drag or click.
 
-- 修复 1.21.1 中首次加入发放的装备在配置仍使用 1.20.1 `{NBT}` 写法时不带附魔的问题。1.21.1 现在会把 `物品ID{NBT}` 按游戏升级旧存档的方式转换为组件，从 1.20.1 复制来的配置可直接使用；`物品ID[组件]` 写法照常可用。无法识别的物品文本现在会在日志中报错，不再被静默忽略。
-
----
-
-2026年10月03日 00时21分
-
-- Log deduplication is back (`log_cleaner.deduplication`, on by default): consecutive identical logs are written once, followed by their repeat count before the next different log.
-- Errors-only mode (`log_cleaner.errors_only`) is now off by default on clients as well as servers, so normal logs are no longer hidden. Existing config files keep their value; set it to `false` to see all logs.
-
-- 恢复日志去重功能（`log_cleaner.deduplication`，默认开启）：连续相同的日志只输出一次，并在下一条不同日志前输出重复次数。
-- 仅错误日志模式（`log_cleaner.errors_only`）在客户端和服务端都改为默认关闭，正常日志不再被隐藏。已有配置文件会保留原值，需要看到全部日志时请设为 `false`。
+- 新增 KineticGui.findPage 接口：附属模组可以在当前界面的返回链中查找页面，打开子页面时数据仍能更新到下层的父页面。
+- 修复文本框中命令较长时，命令补全弹窗与文字错位的问题；补全和用法提示现在跟随滚动后的文字对齐。
+- 下拉菜单和右键菜单最多显示 10 行，更长的菜单可用滚轮、拖动或点击滚动条浏览。

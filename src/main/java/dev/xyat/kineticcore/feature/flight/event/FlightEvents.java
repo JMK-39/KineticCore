@@ -36,7 +36,7 @@ public class FlightEvents {
         ServerPlayer player = context.player();
         GameType newMode = context.newGameMode();
         if (newMode != GameType.CREATIVE) {
-            player.server.execute(() -> FlightNetwork.applyServerNoclip(player, false));
+            player.level().getServer().execute(() -> FlightNetwork.applyServerNoclip(player, false));
         }
         if (newMode == GameType.CREATIVE) {
             boolean noclip = player.getPersistentData().getBoolean("kt_noclip");
@@ -47,15 +47,15 @@ public class FlightEvents {
             MutableComponent speedKey = Component.keybind("key.kineticcore.flying.speed.modifier");
             MutableComponent noclipKey = Component.keybind("key.kineticcore.flying.noclip");
 
-            player.displayClientMessage(
+            player.sendSystemMessage(
                     KineticI18n.translatable("msg.kineticcore.flying.fine.tune", speedKey),
                     false
             );
-            player.displayClientMessage(
+            player.sendSystemMessage(
                     KineticI18n.translatable("msg.kineticcore.flying.fast.tune", speedKey),
                     false
             );
-            player.displayClientMessage(
+            player.sendSystemMessage(
                     KineticI18n.translatable("msg.kineticcore.flying.noclip.status", statusText, noclipKey),
                     false
             );
@@ -63,7 +63,7 @@ public class FlightEvents {
     }
 
     public static void onPlayerLogin(ServerPlayer player) {
-        player.server.execute(() -> {
+        player.level().getServer().execute(() -> {
             FlightNetwork.applyServerNoclip(player, false);
             // A new connection must never inherit an enabled super-flight toggle
             // from persistent player NBT or from the previous client session.
@@ -75,7 +75,7 @@ public class FlightEvents {
     }
 
     public static void onDimensionChange(ServerPlayer player) {
-        player.server.execute(() -> {
+        player.level().getServer().execute(() -> {
             KineticSuperFlight.resetTransientState(player);
             resyncFlightAbilities(player);
             FlightNetwork.syncNoclipState(player);
@@ -84,7 +84,7 @@ public class FlightEvents {
     }
 
     public static void onPlayerRespawn(ServerPlayer player) {
-        player.server.execute(() -> {
+        player.level().getServer().execute(() -> {
             KineticSuperFlight.resetTransientState(player);
             KineticSuperFlight.setActive(player, false);
             resyncFlightAbilities(player);
@@ -93,7 +93,7 @@ public class FlightEvents {
     }
 
     private static boolean applySuperFlightPose(Player player) {
-        if (player == null || player.level().isClientSide) return false;
+        if (player == null || player.level().isClientSide()) return false;
         if (!KineticSuperFlight.fallFlyingPose(player)) return false;
         KineticCrawling.clear(player);
         KineticPlayerPose.apply(player, Pose.SWIMMING);

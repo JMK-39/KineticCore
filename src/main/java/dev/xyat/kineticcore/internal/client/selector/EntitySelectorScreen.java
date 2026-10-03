@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
@@ -302,13 +304,13 @@ public final class EntitySelectorScreen extends KineticScreen {
             @NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         deferredTooltip = null;
         GuiTheme.panel(graphics, 20, 12, 600, 342);
-        graphics.drawCenteredString(font, title, canvasWidth() / 2, 22, 0xFFFFAA00);
+        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 22, 0xFFFFAA00);
         GuiTheme.panelAlt(graphics, GRID_X - 3, GRID_Y - 3, GRID_W + 6, GRID_H + 6);
         renderGrid(graphics, mouseX, mouseY);
         scroll.render(graphics, mouseX, mouseY,
                 SCROLL_X, GRID_Y, SCROLL_W, GRID_H, 18
         );
-        graphics.drawCenteredString(
+        VanillaGuiDraw.centeredText(graphics, 
                 font,
                 KineticText.translatable("gui.kineticcore.entity_selector.selected", Component.literal(String.valueOf(selectedIds.size()))),
                 canvasWidth() / 2,
@@ -316,7 +318,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                 0xFFAAAAAA
         );
         if (filteredEntityIds.isEmpty()) {
-            graphics.drawCenteredString(
+            VanillaGuiDraw.centeredText(graphics, 
                     font,
                     KineticText.translatable("gui.kineticcore.entity_selector.empty"),
                     GRID_X + GRID_W / 2,
@@ -365,7 +367,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                     x + 3, y + 3, CELL_W - 6, CELL_H - 6, hovered
             );
             if (!rendered) {
-                graphics.drawCenteredString(font, "?", x + CELL_W / 2, y + 23, 0xFF777777);
+                VanillaGuiDraw.centeredText(graphics, font, "?", x + CELL_W / 2, y + 23, 0xFF777777);
             }
             int previewTop = Math.max(y, GRID_Y);
             int previewBottom = Math.min(y + CELL_H, GRID_Y + GRID_H);

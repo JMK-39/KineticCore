@@ -253,7 +253,17 @@ public class RepositorySource extends FolderRepositorySource {
 
         description.addProperty("translate", "datapack.kineticcore.virtual_desc");
         pack.add("description", description);
+        //? if >=26.1 {
+        /*// 26.1 packs declare a major.minor format range.
+        net.minecraft.server.packs.metadata.pack.PackFormat format = SharedConstants.getCurrentVersion().packVersion(packType);
+        com.google.gson.JsonArray version = new com.google.gson.JsonArray();
+        version.add(format.major());
+        version.add(format.minor());
+        pack.add("min_format", version);
+        pack.add("max_format", version.deepCopy());
+        *///?} else {
         pack.addProperty("pack_format", SharedConstants.getCurrentVersion().getPackVersion(packType));
+        //?}
         root.add("pack", pack);
 
         return root;

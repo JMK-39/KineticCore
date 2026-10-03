@@ -81,6 +81,17 @@ public final class ServerHooks {
             return Optional.empty();
         }
 
+        //? if >=26.1 {
+        /*/^*
+         * Reserves a custom placement for a player logging in for the first time. 26.1 creates the player itself, in
+         * the dimension of the world spawn data; the reserved placement is applied when the player joins the level.
+         *
+         * @return whether a placement was reserved
+         ^/
+        default boolean prepareFreshLogin(MinecraftServer server, java.util.UUID playerId, String playerName) {
+            return false;
+        }
+        *///?} else {
         /**
          * Creates the player object for a login when the player must be constructed in a custom spawn level.
          *
@@ -89,6 +100,7 @@ public final class ServerHooks {
         default Optional<ServerPlayer> createFreshLoginPlayer(MinecraftServer server, GameProfile profile) {
             return Optional.empty();
         }
+        //?}
 
         /**
          * Returns whether this handler places the given player; only players that never joined before should return

@@ -15,7 +15,12 @@ public final class SpawnEggInit {
                             .sized(0.25F, 0.25F)
                             .clientTrackingRange(4)
                             .updateInterval(10)
+                            //? if >=26.1 {
+                            /*.build(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.ENTITY_TYPE,
+                                    KineticRuntime.id("throwable_spawn_egg")))
+                            *///?} else {
                             .build("throwable_spawn_egg")
+                            //?}
             );
 
     private SpawnEggInit() {

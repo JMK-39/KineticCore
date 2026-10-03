@@ -1,9 +1,9 @@
 package dev.xyat.kineticcore.internal.mixin.api.recipebook;
 
-import com.google.gson.JsonElement;
 import dev.xyat.kineticcore.internal.runtime.KineticCommonHookRuntime;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import net.minecraft.nbt.CompoundTag;
+//? if <26.1
 import net.minecraft.network.protocol.game.ClientboundRecipePacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.ServerAdvancementManager;
@@ -28,6 +28,25 @@ public class RecipeBookServerMixins {
 
     @Mixin(ServerRecipeBook.class)
     public static class BookData {
+        //? if >=26.1 {
+        /*// 26.1 saves the book as a Packed record and sends it in sendInitialRecipeBook.
+        @Inject(method = "pack", at = @At("RETURN"), cancellable = true)
+        private void kineticcore$onSave(CallbackInfoReturnable<ServerRecipeBook.Packed> cir) {
+            if (KineticCommonHookRuntime.recipeBookRemovalEnabled()) {
+                cir.setReturnValue(new ServerRecipeBook.Packed(cir.getReturnValue().settings(), List.of(), List.of()));
+            }
+        }
+
+        @Inject(method = "loadUntrusted", at = @At("HEAD"), cancellable = true)
+        private void kineticcore$onLoad(CallbackInfo ci) {
+            if (KineticCommonHookRuntime.recipeBookRemovalEnabled()) ci.cancel();
+        }
+
+        @Inject(method = "sendInitialRecipeBook", at = @At("HEAD"), cancellable = true)
+        private void kineticcore$onSend(ServerPlayer player, CallbackInfo ci) {
+            if (KineticCommonHookRuntime.recipeBookRemovalEnabled()) ci.cancel();
+        }
+        *///?} else {
         @Inject(method = "toNbt", at = @At("HEAD"), cancellable = true)
         private void kineticcore$onSave(CallbackInfoReturnable<CompoundTag> cir) {
             if (KineticCommonHookRuntime.recipeBookRemovalEnabled()) cir.setReturnValue(new CompoundTag());
@@ -42,15 +61,16 @@ public class RecipeBookServerMixins {
         private void kineticcore$onSend(ClientboundRecipePacket.State pState, ServerPlayer pPlayer, List<ResourceLocation> pRecipes, CallbackInfo ci) {
             if (KineticCommonHookRuntime.recipeBookRemovalEnabled()) ci.cancel();
         }
+        //?}
     }
 
     @Mixin(ServerAdvancementManager.class)
     public static class Advancements {
         @Inject(method = "apply*", at = @At("HEAD"))
-        private void kineticcore$filterRecipeAdvancements(Map<ResourceLocation, JsonElement> map, ResourceManager rm, ProfilerFiller pf, CallbackInfo ci) {
+        private void kineticcore$filterRecipeAdvancements(Map<ResourceLocation, ?> map, ResourceManager rm, ProfilerFiller pf, CallbackInfo ci) {
             if (!KineticCommonHookRuntime.recipeBookRemovalEnabled()) return;
             int removed = 0;
-            Iterator<Map.Entry<ResourceLocation, JsonElement>> it = map.entrySet().iterator();
+            Iterator<? extends Map.Entry<ResourceLocation, ?>> it = map.entrySet().iterator();
             while (it.hasNext()) {
                 if (it.next().getKey().getPath().startsWith("recipes/")) {
                     it.remove();

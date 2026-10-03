@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.config;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.widget.KineticDropdown;
 
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
@@ -830,7 +832,7 @@ final class KTConfigScreen extends KineticScreen {
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         GuiTheme.panel(graphics, 18, 12, 604, 342);
-        graphics.drawCenteredString(font, title, canvasWidth() / 2, 24, 0xFFFFAA00);
+        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 24, 0xFFFFAA00);
 
         hoveredEntry = null;
         double pixelOffset = entryPixelOffset();
@@ -851,7 +853,7 @@ final class KTConfigScreen extends KineticScreen {
                 }
                 if (entry.type() == KTConfigEntry.Type.SECTION) {
                     graphics.fill(30, y - 3, 612, y + 20, 0x55222222);
-                    graphics.drawString(font, entry.label(), 38, y + 4, 0xFFFFAA00, false);
+                    VanillaGuiDraw.text(graphics, font, entry.label(), 38, y + 4, 0xFFFFAA00, false);
                 } else if (entry.type() == KTConfigEntry.Type.DESCRIPTION) {
                     KineticText.drawScrollingLeft(graphics, font, entry.label(), 38, y + 5, 562, 0xFFAAAAAA, false);
                 } else {
@@ -864,7 +866,7 @@ final class KTConfigScreen extends KineticScreen {
         }
 
         if (layoutEntries.isEmpty()) {
-            graphics.drawCenteredString(
+            VanillaGuiDraw.centeredText(graphics, 
                     font,
                     KineticText.translatable("gui.kineticcore.config.no_fields"),
                     canvasWidth() / 2,
@@ -879,14 +881,14 @@ final class KTConfigScreen extends KineticScreen {
         );
 
         if (status != null) {
-            graphics.drawCenteredString(font, status, canvasWidth() / 2, 309,
+            VanillaGuiDraw.centeredText(graphics, font, status, canvasWidth() / 2, 309,
                     invalidEntries.isEmpty() ? 0xFFFFFF55 : 0xFFFF5555);
         } else if (showApplyTiming) {
             List<FormattedCharSequence> timingLines = font.split(configPage.applyDetail(), 570);
             int visibleLineCount = Math.min(2, timingLines.size());
             int firstY = visibleLineCount == 1 ? 309 : 298;
             for (int index = 0; index < visibleLineCount; index++) {
-                graphics.drawCenteredString(
+                VanillaGuiDraw.centeredText(graphics, 
                         font,
                         timingLines.get(index),
                         canvasWidth() / 2,

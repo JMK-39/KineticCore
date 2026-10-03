@@ -59,10 +59,10 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
 
         ItemStack stack = getItem();
         if (!(stack.getItem() instanceof SpawnEggItem spawnEgg)) {
-            if (!level().isClientSide) discard();
+            if (!level().isClientSide()) discard();
             return;
         }
-        if (level().isClientSide || !(level() instanceof ServerLevel serverLevel)) return;
+        if (level().isClientSide() || !(level() instanceof ServerLevel serverLevel)) return;
 
         //? if >=1.20.5 {
         /*CompoundTag stackTag = entityDataAsStackTag(stack);
@@ -210,7 +210,9 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
         CompoundTag spawnerData = new CompoundTag();
         spawnerData.put("SpawnData", spawnData);
         spawnerData.putShort("Delay", (short) 20);
-        //? if >=1.20.5 {
+        //? if >=26.1 {
+        /*spawner.setEntityId(entityType, level().getRandom());
+        *///?} else if >=1.20.5 {
         /*spawner.loadWithComponents(spawnerData, level().registryAccess());
         *///?} else {
         spawner.load(spawnerData);
@@ -220,6 +222,11 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
         return true;
     }
 
+    //? if >=26.1 {
+    /*// Vanilla spawning applies the egg's entity data (name, equipment, NBT) itself on 26.1.
+    private void applyExtraNbt(Entity entity, CompoundTag stackTag) {
+    }
+    *///?} else {
     private void applyExtraNbt(Entity entity, CompoundTag stackTag) {
         if (stackTag == null) return;
         CompoundTag entityTag = stackTag.contains("EntityTag", Tag.TAG_COMPOUND)
@@ -274,8 +281,15 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
         return ItemStack.of(tag);
         //?}
     }
+    //?}
 
-    //? if >=1.20.5 {
+    //? if >=26.1 {
+    /*// On 26.1 vanilla spawning reads the egg's entity data itself, so nothing is copied here.
+    private static CompoundTag entityDataAsStackTag(ItemStack stack) {
+        return null;
+    }
+    *///?}
+    //? if >=1.20.5 <26.1 {
     /*// Since 1.20.5 a spawn egg keeps its entity data in the entity_data component; it is read here in the shape
     // the item NBT had before: {EntityTag:{...}}.
     private static CompoundTag entityDataAsStackTag(ItemStack stack) {

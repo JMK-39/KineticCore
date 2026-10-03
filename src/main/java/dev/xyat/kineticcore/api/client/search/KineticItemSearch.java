@@ -4,6 +4,7 @@ import dev.xyat.kineticcore.internal.client.KineticCreativeTabClientRuntime;
 import dev.xyat.kineticcore.internal.client.search.ItemSearchIndex;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+//? if <26.1
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.FishingRodItem;
@@ -13,7 +14,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.ShearsItem;
 import net.minecraft.world.item.ShieldItem;
+//? if <26.1
 import net.minecraft.world.item.SwordItem;
+//? if <26.1
 import net.minecraft.world.item.TieredItem;
 import net.minecraft.world.item.TridentItem;
 
@@ -158,12 +161,25 @@ public final class KineticItemSearch {
         EnumSet<ItemCategory> result = EnumSet.of(ItemCategory.GENERAL);
         boolean tool = isTool(item);
         boolean block = item instanceof BlockItem;
+        //? if >=26.1 {
+        /*boolean food = stack.get(net.minecraft.core.component.DataComponents.FOOD) != null;
+        *///?} else {
         boolean food = stack.getFoodProperties(null) != null;
+        //?}
         if (tool) result.add(ItemCategory.TOOL);
         if (block) result.add(ItemCategory.BLOCK);
         if (food) result.add(ItemCategory.FOOD);
-        if (item instanceof ArmorItem
-                || item instanceof SwordItem
+        //? if >=26.1 {
+        /*// 26.1 has no armor, sword or tiered item classes; equipment and tool kinds are components and tags.
+        net.minecraft.world.item.equipment.Equippable equippable = stack.get(net.minecraft.core.component.DataComponents.EQUIPPABLE);
+        boolean armor = equippable != null && equippable.slot().getType() == EquipmentSlot.Type.HUMANOID_ARMOR;
+        boolean sword = stack.is(net.minecraft.tags.ItemTags.SWORDS);
+        *///?} else {
+        boolean armor = item instanceof ArmorItem;
+        boolean sword = item instanceof SwordItem;
+        //?}
+        if (armor
+                || sword
                 || item instanceof ProjectileWeaponItem
                 || item instanceof TridentItem
                 || item instanceof ShieldItem
@@ -187,7 +203,13 @@ public final class KineticItemSearch {
     }
 
     private static boolean isTool(Item item) {
+        //? if >=26.1 {
+        /*var holder = item.builtInRegistryHolder();
+        return holder.is(net.minecraft.tags.ItemTags.PICKAXES) || holder.is(net.minecraft.tags.ItemTags.AXES)
+                || holder.is(net.minecraft.tags.ItemTags.SHOVELS) || holder.is(net.minecraft.tags.ItemTags.HOES)
+        *///?} else {
         return item instanceof TieredItem && !(item instanceof SwordItem)
+        //?}
                 || item instanceof ShearsItem
                 || item instanceof FishingRodItem
                 || item instanceof FlintAndSteelItem;

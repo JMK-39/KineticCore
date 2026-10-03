@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.selector;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
@@ -95,8 +97,8 @@ public final class HudPositionEditor {
         int left = getInventoryLeft(screenWidth);
         int top = getInventoryTop(screenHeight);
 
-        graphics.blit(INVENTORY_TEXTURE, left, top, 0, 0, INVENTORY_WIDTH, INVENTORY_HEIGHT);
-        graphics.drawString(
+        VanillaGuiDraw.texture(graphics, INVENTORY_TEXTURE, left, top, 0, 0, INVENTORY_WIDTH, INVENTORY_HEIGHT, 256, 256);
+        VanillaGuiDraw.text(graphics, 
                 font,
                 KineticI18n.translatable("container.crafting"),
                 left + 97,
@@ -104,7 +106,7 @@ public final class HudPositionEditor {
                 4210752,
                 false
         );
-        graphics.drawString(
+        VanillaGuiDraw.text(graphics, 
                 font,
                 KineticI18n.translatable("container.inventory"),
                 left + 8,
@@ -224,9 +226,9 @@ public final class HudPositionEditor {
             ElementRenderer renderer
     ) {
         renderGuides(graphics);
-        graphics.drawCenteredString(font, title, screenWidth / 2, 12, 0xFFFFFF);
-        graphics.drawCenteredString(font, instruction, screenWidth / 2, 28, 0xFFFFFF);
-        graphics.drawCenteredString(font, position, screenWidth / 2, 42, 0xFFFFFF);
+        VanillaGuiDraw.centeredText(graphics, font, title, screenWidth / 2, 12, 0xFFFFFF);
+        VanillaGuiDraw.centeredText(graphics, font, instruction, screenWidth / 2, 28, 0xFFFFFF);
+        VanillaGuiDraw.centeredText(graphics, font, position, screenWidth / 2, 42, 0xFFFFFF);
         renderElement(graphics, mouseX, mouseY, renderer);
     }
 
@@ -407,12 +409,12 @@ public final class HudPositionEditor {
         graphics.fill(right - 1, top, right, bottom, borderColor);
         graphics.fill(left + 1, top + 1, right - 1, bottom - 1, 0x66000000);
 
-        graphics.pose().pushPose();
-        graphics.pose().translate(x, y, 0.0F);
-        graphics.pose().scale((float) scale, (float) scale, 1.0F);
-        graphics.pose().translate(-x, -y, 0.0F);
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, x, y, 0.0F);
+        VanillaGuiDraw.scale(graphics, (float) scale, (float) scale, 1.0F);
+        VanillaGuiDraw.translate(graphics, -x, -y, 0.0F);
         renderer.render(graphics, x, y, mouseX, mouseY);
-        graphics.pose().popPose();
+        VanillaGuiDraw.pop(graphics);
     }
 
     private boolean isElementHovered(double mouseX, double mouseY) {

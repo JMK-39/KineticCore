@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -47,7 +49,7 @@ public final class ScreenOverlayControls {
 
     public static void render(Screen screen, GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         for (AbstractWidget widget : snapshot(screen)) {
-            if (widget.visible) widget.render(graphics, mouseX, mouseY, partialTick);
+            if (widget.visible) VanillaGuiDraw.render(widget, graphics, mouseX, mouseY, partialTick);
         }
     }
 
@@ -55,7 +57,7 @@ public final class ScreenOverlayControls {
         List<AbstractWidget> list = snapshot(screen);
         for (int index = list.size() - 1; index >= 0; index--) {
             AbstractWidget widget = list.get(index);
-            if (widget.visible && widget.active && widget.mouseClicked(mouseX, mouseY, button)) {
+            if (widget.visible && widget.active && GuiInputCompat.mouseClicked(widget, mouseX, mouseY, button)) {
                 dragging = widget;
                 return true;
             }
@@ -67,14 +69,14 @@ public final class ScreenOverlayControls {
         AbstractWidget target = dragging;
         dragging = null;
         if (target == null || !snapshot(screen).contains(target)) return false;
-        target.mouseReleased(mouseX, mouseY, button);
+        GuiInputCompat.mouseReleased(target, mouseX, mouseY, button);
         return true;
     }
 
     public static boolean mouseDragged(Screen screen, double mouseX, double mouseY, int button, double dragX, double dragY) {
         AbstractWidget target = dragging;
         if (target == null || !snapshot(screen).contains(target)) return false;
-        return target.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return GuiInputCompat.mouseDragged(target, mouseX, mouseY, button, dragX, dragY);
     }
 
     public static boolean mouseScrolled(Screen screen, double mouseX, double mouseY, double delta) {

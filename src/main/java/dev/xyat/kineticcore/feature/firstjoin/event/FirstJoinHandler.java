@@ -32,7 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *     <li>玩家在这个世界的游玩时间不超过 1 分钟（原版统计 PLAY_TIME）。</li>
  * </ol>
  * 任一条件不满足就既不清理也不发放。发放时只清空快捷栏（9 格），背包与装备不动；
- * 奖励指定的槽位上已有物品时直接替换为奖励。发放完成后打上标记。
+ * 奖励指定的槽位上已有物品时直接替换为奖励。只有全部奖励成功发放后才打上标记：配置中有物品解析失败时
+ * 本次既不清理也不发放，修好配置后玩家在游玩 1 分钟内重新进入仍可领取。
  */
 public class FirstJoinHandler {
     private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
@@ -98,22 +99,29 @@ public class FirstJoinHandler {
     }
 
     private static boolean hasReceived(ServerPlayer player) {
-        return player.getPersistentData().getBoolean(NBT_KEY) || getRewardData(player.server).hasReceived(player.getUUID());
+        return player.getPersistentData().getBoolean(NBT_KEY) || getRewardData(player.level().getServer()).hasReceived(player.getUUID());
     }
 
     private static void grantAndMark(ServerPlayer player) {
         // 延迟期间可能已被其它途径标记（例如同一玩家重复登录事件）。
         if (hasReceived(player)) return;
+        // 配置有误时整份奖励都不发，也不清理快捷栏，避免玩家只拿到一部分却被标记为已领取。
+        if (!PlayerConfig.rewardsValid()) {
+            KineticRuntime.logger().error("首次进服奖励配置中有物品解析失败，本次不发放也不标记: {}", player.getGameProfile().getName());
+            return;
+        }
+        boolean granted;
         try {
-            grantRewards(player);
+            granted = grantRewards(player);
         } catch (Throwable throwable) {
             KineticRuntime.logger().error("首次进服奖励发放失败: {}", player.getGameProfile().getName(), throwable);
+            granted = false;
         }
-        // 无论发放中途是否出错都打标记，避免下次登录再次清理快捷栏。
-        markReceived(player);
+        // 只有成功发放才打标记。
+        if (granted) markReceived(player);
     }
 
-    private static void grantRewards(ServerPlayer player) {
+    private static boolean grantRewards(ServerPlayer player) {
         Inventory inventory = player.getInventory();
         if (PlayerConfig.clearInvBeforeJoin) {
             for (int slot = 0; slot < Inventory.getSelectionSize(); slot++) {
@@ -136,12 +144,15 @@ public class FirstJoinHandler {
             if (!stack.isEmpty()) player.setItemSlot(slot, stack.copy());
         });
 
-        runCommands(player);
+        boolean commandsRan = runCommands(player);
         player.inventoryMenu.broadcastChanges();
+        return commandsRan;
     }
 
-    private static void runCommands(ServerPlayer player) {
-        if (PlayerConfig.firstJoinCommands.isEmpty()) return;
+    // Returns whether every command ran without throwing.
+    private static boolean runCommands(ServerPlayer player) {
+        if (PlayerConfig.firstJoinCommands.isEmpty()) return true;
+        boolean allRan = true;
         CommandSourceStack source = player.createCommandSourceStack().withPermission(2).withSuppressedOutput();
         for (String cmd : PlayerConfig.firstJoinCommands) {
             try {
@@ -152,22 +163,28 @@ public class FirstJoinHandler {
                     parsedCmd = parsedCmd.substring(1).trim();
                 }
                 if (!parsedCmd.isEmpty()) {
-                    player.server.getCommands().performPrefixedCommand(source, parsedCmd);
+                    player.level().getServer().getCommands().performPrefixedCommand(source, parsedCmd);
                 }
             } catch (Exception e) {
                 KineticRuntime.logger().error("首次进服指令执行失败: {}", cmd, e);
+                allRan = false;
             }
         }
+        return allRan;
     }
 
     private static void markReceived(ServerPlayer player) {
         player.getPersistentData().putBoolean(NBT_KEY, true);
         player.getPersistentData().remove(LEGACY_PENDING_NBT_KEY);
-        getRewardData(player.server).markReceived(player.getUUID());
+        getRewardData(player.level().getServer()).markReceived(player.getUUID());
     }
 
     private static FirstJoinRewardData getRewardData(MinecraftServer server) {
-        //? if >=1.20.5 {
+        //? if >=26.1 {
+        /*return server.overworld().getDataStorage().computeIfAbsent(new net.minecraft.world.level.saveddata.SavedDataType<>(
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("kineticcore", DATA_NAME), FirstJoinRewardData::new,
+                CompoundTag.CODEC.xmap(FirstJoinRewardData::load, data -> data.save(new CompoundTag()))));
+        *///?} else if >=1.20.5 {
         /*return server.overworld().getDataStorage().computeIfAbsent(new SavedData.Factory<>(FirstJoinRewardData::new, (tag, registries) -> FirstJoinRewardData.load(tag)), DATA_NAME);
         *///?} else {
         return server.overworld().getDataStorage().computeIfAbsent(FirstJoinRewardData::load, FirstJoinRewardData::new, DATA_NAME);
@@ -189,8 +206,10 @@ public class FirstJoinHandler {
             return data;
         }
 
+
+        //? if <26.1
         @Override
-        //? if >=1.20.5 {
+        //? if >=1.20.5 <26.1 {
         /*public @NotNull CompoundTag save(@NotNull CompoundTag tag, @NotNull net.minecraft.core.HolderLookup.Provider registries) {
         *///?} else {
         public @NotNull CompoundTag save(@NotNull CompoundTag tag) {

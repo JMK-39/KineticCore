@@ -4,6 +4,8 @@ import dev.xyat.kineticcore.internal.client.input.KineticKeyBindingRuntime;
 import dev.xyat.kineticcore.internal.client.input.KineticKeyCodeRuntime;
 import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
 import net.minecraft.network.chat.Component;
+//? if >=26.1
+/*import net.minecraft.resources.ResourceLocation;*/
 
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
@@ -233,7 +235,11 @@ public final class KineticKeyBindings {
     /** Collects the complete settings for one key binding before registration. */
     public static final class Builder {
         private final String translationKey;
-        private String categoryTranslationKey = "key.categories.misc";
+        //? if >=26.1 {
+        /*private ResourceLocation category = ResourceLocation.withDefaultNamespace("misc");
+        *///?} else {
+        private String category = "key.categories.misc";
+        //?}
         private Context context = Context.IN_GAME;
         private Modifier modifier = Modifier.NONE;
         private boolean mouseInput;
@@ -248,11 +254,22 @@ public final class KineticKeyBindings {
             this.translationKey = requireText(translationKey, "translationKey");
         }
 
-        /** Sets the controls-menu category translation key. */
-        public Builder category(String categoryTranslationKey) {
-            this.categoryTranslationKey = requireText(categoryTranslationKey, "categoryTranslationKey");
+        //? if >=26.1 {
+        /*/^*
+         * Sets the controls-menu category. Categories outside the { minecraft} namespace are registered when key
+         * bindings are, and their label is the { key.category.<namespace>.<path>} translation key.
+         ^/
+        public Builder category(ResourceLocation category) {
+            this.category = Objects.requireNonNull(category, "category");
             return this;
         }
+        *///?} else {
+        /** Sets the controls-menu category translation key. */
+        public Builder category(String categoryTranslationKey) {
+            this.category = requireText(categoryTranslationKey, "categoryTranslationKey");
+            return this;
+        }
+        //?}
 
         /** Sets the input context in which this binding may fire. */
         public Builder context(Context context) {
@@ -332,7 +349,7 @@ public final class KineticKeyBindings {
             }
             long id = KineticKeyBindingRuntime.register(
                     translationKey,
-                    categoryTranslationKey,
+                    category,
                     context,
                     modifier,
                     mouseInput,

@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
@@ -100,7 +102,7 @@ public class NbtEditorScreen extends KineticScreen {
         if (nbtEditor != null) {
             String countText = nbtEditor.getSearchMatchCount();
             if (!countText.isEmpty()) {
-                g.drawString(this.font, countText, 195, 16, 0xFFFFFFFF, false);
+                VanillaGuiDraw.text(g, this.font, countText, 195, 16, 0xFFFFFFFF, false);
             }
         }
     }
@@ -446,7 +448,7 @@ public class NbtEditorScreen extends KineticScreen {
                     g.fill(pxS, py - 1, pxE, py + font.lineHeight, 0x66777777);
                 }
 
-                g.drawString(font, line.coloredString, x + 4, py, 0xFFFFFF, false);
+                VanillaGuiDraw.text(g, font, line.coloredString, x + 4, py, 0xFFFFFF, false);
 
                 long elapsed = System.currentTimeMillis() - flashStartTime;
                 for (int m = 0; m < matchIndices.size(); m++) {
@@ -458,7 +460,7 @@ public class NbtEditorScreen extends KineticScreen {
                             int selE = Math.min(mEnd, line.rawEndIndex);
                             int pxS = x + 4 + getPixelX(line, selS);
                             String snippet = value.substring(selS, selE);
-                            g.drawString(font, snippet, pxS, py, 0xFF000000, false);
+                            VanillaGuiDraw.text(g, font, snippet, pxS, py, 0xFF000000, false);
                         }
                     }
                 }
@@ -506,10 +508,10 @@ public class NbtEditorScreen extends KineticScreen {
                 KineticText.drawScrollingLeft(g, font, KineticText.translatable("gui.kineticcore.nbt.editor.error_prefix", errorMsg),
                         x + 4, footerY, Math.max(0, width - 100), GuiTheme.current().text(), false);
             } else if (!value.trim().isEmpty() && !value.trim().equals("{}")) {
-                g.drawString(font, "✅", x + 4, footerY, 0x55FF55, false);
+                VanillaGuiDraw.text(g, font, "✅", x + 4, footerY, 0x55FF55, false);
             }
             String lenStr = value.length() + "/32767";
-            g.drawString(font, lenStr, x + width - 4 - font.width(lenStr), footerY, 0xAAAAAA, false);
+            VanillaGuiDraw.text(g, font, lenStr, x + width - 4 - font.width(lenStr), footerY, 0xAAAAAA, false);
 
             boolean hasValue = !value.isEmpty() && !value.equals("{}");
             boolean hasError = errorMsg != null && !errorMsg.isEmpty();

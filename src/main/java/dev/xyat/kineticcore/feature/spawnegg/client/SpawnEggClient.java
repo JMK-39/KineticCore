@@ -31,7 +31,11 @@ public final class SpawnEggClient {
                         .register(),
                 () -> KineticClientRenderers.registerEntityRenderer(
                         SpawnEggInit.THROWABLE_SPAWN_EGG,
+                        //? if >=26.1 {
+                        /*net.minecraft.client.renderer.entity.ThrownItemRenderer::new
+                        *///?} else {
                         ThrowSpawnEggRenderer::new
+                        //?}
                 )
         );
     }

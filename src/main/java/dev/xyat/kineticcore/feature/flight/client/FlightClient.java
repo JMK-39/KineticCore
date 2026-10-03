@@ -84,7 +84,7 @@ public final class FlightClient {
         Component status = KineticI18n.translatable(
                 state ? "msg.kineticcore.flying.on" : "msg.kineticcore.flying.off"
         );
-        player.displayClientMessage(KineticI18n.translatable("msg.kineticcore.flying.noclip_status", status), true);
+        KineticClientRuntime.displayClientMessage(KineticI18n.translatable("msg.kineticcore.flying.noclip_status", status), true);
     }
 
     public static void toggleNoclip() {

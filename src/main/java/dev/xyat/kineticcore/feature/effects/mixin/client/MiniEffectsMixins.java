@@ -10,13 +10,16 @@ import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+//? if <26.1
 import net.minecraft.client.gui.screens.inventory.EffectRenderingInventoryScreen;
 import net.minecraft.client.gui.screens.recipebook.RecipeUpdateListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+//? if <26.1
 import net.minecraft.client.resources.MobEffectTextureManager;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -27,7 +30,9 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Pseudo;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -38,6 +43,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.List;
 
 public class MiniEffectsMixins {
+    //? if <26.1 {
     @Mixin(EffectRenderingInventoryScreen.class)
     public static abstract class DisplayEffectsScreenMixin<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements EffectAreaProvider {
         public DisplayEffectsScreenMixin(T abstractContainerMenu, Inventory inventory, Component component) {
@@ -317,6 +323,7 @@ public class MiniEffectsMixins {
             return l >= 120;
         }
     }
+    //?}
 
     @Mixin(GameRenderer.class)
     public static class GameRendererMixin {
@@ -335,6 +342,7 @@ public class MiniEffectsMixins {
         }
     }
 
+    //? if <26.1 {
     @Pseudo
     @Mixin(targets = "mezz.jei.library.plugins.vanilla.gui.InventoryEffectRendererGuiHandler", remap = false)
     public static class InventoryEffectRendererGuiHandlerMixin {
@@ -345,4 +353,242 @@ public class MiniEffectsMixins {
             }
         }
     }
+    //?}
+
+    //? if >=26.1 {
+    /*// 26.1 draws inventory effects through EffectsInInventory, owned by the inventory and creative screens. The
+    // compact view replaces it entirely; the screen positions come from NeoForge's public getters.
+    @Mixin(net.minecraft.client.gui.screens.inventory.EffectsInInventory.class)
+    public static abstract class EffectsInInventoryMixin implements EffectAreaProvider {
+        @Unique private static final ResourceLocation kineticrefined$BACKGROUND = ResourceLocation.withDefaultNamespace("container/inventory/effect_background");
+        @Unique private static final ResourceLocation kineticrefined$BACKGROUND_AMBIENT = ResourceLocation.withDefaultNamespace("container/inventory/effect_background_ambient");
+
+        @Shadow @Final private AbstractContainerScreen<?> screen;
+        @Shadow @Final private net.minecraft.client.Minecraft minecraft;
+
+        @Unique private boolean kineticrefined$expand;
+        @Unique private int kineticrefined$effects;
+        @Unique private Rect2i kineticrefined$area;
+        @Unique private final ItemStack kineticrefined$iconItem = new ItemStack(Items.POTION);
+
+        @Inject(method = "extractRenderState", at = @At("HEAD"), cancellable = true)
+        private void minieffects$renderEffects(GuiGraphics graphics, int mouseX, int mouseY, CallbackInfo ci) {
+            ci.cancel();
+            LocalPlayer player = this.minecraft.player;
+            if (player == null) return;
+            minieffects$updateArea();
+            if (kineticrefined$area == null) return;
+
+            int effects = 0, bad = 0;
+            for (MobEffectInstance effectInstance : player.getActiveEffects()) {
+                ++effects;
+                if (!effectInstance.getEffect().value().isBeneficial()) ++bad;
+            }
+            this.kineticrefined$effects = effects;
+
+            KineticClientRuntime.CursorPosition cursor = KineticClientRuntime.scaledCursorPosition();
+            boolean expand = MiniEffectsFeature.requiresHoldingTab() || kineticrefined$area.contains((int) cursor.x(), (int) cursor.y());
+            if (expand != this.kineticrefined$expand) {
+                this.kineticrefined$expand = expand;
+                minieffects$updateArea();
+            }
+            if (effects == 0) return;
+
+            if (!expand) {
+                int x = kineticrefined$area.getX();
+                int y = kineticrefined$area.getY();
+                graphics.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, kineticrefined$BACKGROUND, x, y, 24, 24);
+                if (!MiniEffectsFeature.potionItemIcon()) {
+                    var effectsToShow = player.getActiveEffects().stream().skip(Math.max(0, effects - 4)).toList();
+                    if (effectsToShow.size() == 1) {
+                        minieffects$icon(graphics, effectsToShow.get(0), x + 4, y + 4, 16);
+                    } else if (effectsToShow.size() == 2) {
+                        minieffects$icon(graphics, effectsToShow.get(0), x + 3, y + 4, 10);
+                        minieffects$icon(graphics, effectsToShow.get(1), x + 3 + 8, y + 4 + 8, 10);
+                    } else if (effectsToShow.size() > 2) {
+                        int effectsPerLine = Mth.ceil(effectsToShow.size() / 2f);
+                        int effectWidth = 16 / effectsPerLine;
+                        for (int i = 0; i < effectsPerLine; i++) {
+                            minieffects$icon(graphics, effectsToShow.get(i), x + 3 + effectWidth * i, y + 3, 8);
+                        }
+                        for (int i = 0; i < effectsToShow.size() - effectsPerLine; i++) {
+                            minieffects$icon(graphics, effectsToShow.get(i + effectsPerLine), x + 3 + effectWidth * i, y + 3 + 9, 8);
+                        }
+                    }
+                } else {
+                    int color = net.minecraft.world.item.alchemy.PotionContents.getColorOptional(player.getActiveEffects()).orElse(-13083194);
+                    kineticrefined$iconItem.set(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
+                            new net.minecraft.world.item.alchemy.PotionContents(java.util.Optional.empty(), java.util.Optional.of(color), List.of(), java.util.Optional.empty()));
+                    graphics.fakeItem(kineticrefined$iconItem, x + 3, y + 4);
+                }
+
+                // Counts go above the icons.
+                graphics.nextStratum();
+                var font = KineticClientRuntime.font();
+                int yOffset = 0;
+                if (effects - bad > 0) {
+                    yOffset = -10;
+                    String s = Integer.toString(effects - bad);
+                    graphics.text(font, s, x + 22 - font.width(s), y + 14, 0xFF000000 | KineticTheme.current().text());
+                }
+                if (bad > 0) {
+                    String s = Integer.toString(bad);
+                    graphics.text(font, s, x + 22 - font.width(s), y + 14 + yOffset, 0xFF000000 | KineticTheme.current().danger());
+                }
+                return;
+            }
+
+            int left = kineticrefined$area.getX();
+            int startY = kineticrefined$area.getY();
+            boolean fullWidth = kineticrefined$area.getWidth() > 32;
+            int step = effects > 1 ? (kineticrefined$area.getHeight() - 32) / (effects - 1) : 33;
+
+            var list = player.getActiveEffects().stream().sorted().toList();
+            int hoveredIndex = -1;
+            for (int i = list.size() - 1; i >= 0; --i) {
+                int cardY = startY + i * step;
+                if (mouseX >= left && mouseX <= left + kineticrefined$area.getWidth() && mouseY >= cardY && mouseY <= cardY + 32) {
+                    hoveredIndex = i;
+                    break;
+                }
+            }
+            for (int i = 0; i < list.size(); ++i) {
+                if (i != hoveredIndex) minieffects$renderEffectCard(graphics, list.get(i), left, startY + i * step, fullWidth);
+            }
+            if (hoveredIndex >= 0) {
+                // The hovered card is drawn over its neighbours.
+                graphics.nextStratum();
+                minieffects$renderEffectCard(graphics, list.get(hoveredIndex), left, startY + hoveredIndex * step, fullWidth);
+            }
+        }
+
+        @Unique
+        private static void minieffects$icon(GuiGraphics graphics, MobEffectInstance effect, int x, int y, int size) {
+            graphics.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                    net.minecraft.client.gui.Gui.getMobEffectSprite(effect.getEffect()), x, y, size, size);
+        }
+
+        @Unique
+        private void minieffects$renderEffectCard(GuiGraphics graphics, MobEffectInstance effect, int x, int y, boolean fullWidth) {
+            graphics.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                    effect.isAmbient() ? kineticrefined$BACKGROUND_AMBIENT : kineticrefined$BACKGROUND, x, y, fullWidth ? 120 : 32, 32);
+            minieffects$icon(graphics, effect, x + (fullWidth ? 6 : 7), y + 7, 18);
+            if (fullWidth) {
+                var font = KineticClientRuntime.font();
+                graphics.text(font, minieffects$getEffectName(effect), x + 28, y + 6, 0xFF000000 | KineticTheme.current().text());
+                graphics.text(font, minieffects$getDurationText(effect), x + 28, y + 6 + 10, 0xFF000000 | KineticTheme.current().mutedText());
+            }
+        }
+
+        @Unique
+        private static Component minieffects$getEffectName(MobEffectInstance effect) {
+            net.minecraft.network.chat.MutableComponent component = effect.getEffect().value().getDisplayName().copy();
+            if (effect.getAmplifier() >= 1 && effect.getAmplifier() <= 9) {
+                component.append(" ").append(KineticI18n.translatable("enchantment.level." + (effect.getAmplifier() + 1)));
+            }
+            return component;
+        }
+
+        @Unique
+        private static String minieffects$getDurationText(MobEffectInstance effect) {
+            int ticks = effect.getDuration();
+            if (ticks > 32104) return "**:**";
+            int seconds = ticks / 20;
+            int minutes = seconds / 60;
+            seconds = seconds % 60;
+            return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+        }
+
+        @Unique
+        private void minieffects$updateArea() {
+            if (!((net.minecraft.client.gui.screens.inventory.EffectsInInventory) (Object) this).canSeeEffects()) {
+                kineticrefined$area = null;
+                return;
+            }
+            int leftPos = screen.getGuiLeft();
+            int topPos = screen.getGuiTop();
+            int left;
+            boolean fullWidth;
+            if (MiniEffectsFeature.isLeftSide()) {
+                fullWidth = leftPos > 120;
+                left = kineticrefined$expand ? (fullWidth ? leftPos - 120 - 4 : leftPos - 32 - 4) : leftPos - 20 - 8;
+            } else {
+                left = leftPos + screen.getXSize() + 2;
+                fullWidth = (screen.width - left) >= 120;
+            }
+
+            if (kineticrefined$expand) {
+                int totalAvailableHeight = (int) (screen.height * 0.90);
+                int step = 33;
+                if (kineticrefined$effects > 1) {
+                    step = Math.min((totalAvailableHeight - 32) / (kineticrefined$effects - 1), 33);
+                }
+                int totalHeight = (kineticrefined$effects - 1) * step + 32;
+                int startY = topPos;
+                if (startY + totalHeight > screen.height - 10) {
+                    startY = screen.height - totalHeight - 10;
+                }
+                startY = Math.max(10, startY);
+                kineticrefined$area = new Rect2i(left, startY, fullWidth ? 120 : 32, totalHeight);
+            } else {
+                kineticrefined$area = new Rect2i(left, topPos, 20, 20);
+            }
+        }
+
+        @Inject(method = "canSeeEffects", at = @At("HEAD"), cancellable = true)
+        private void minieffects$canSeeEffects(CallbackInfoReturnable<Boolean> cir) {
+            if (MiniEffectsFeature.requiresHoldingTab()
+                    && (MinecraftKeys.inventoryUses(KineticKeyBindings.Key.TAB) || !KineticKeyBindings.isKeyDown(KineticKeyBindings.Key.TAB))) {
+                cir.setReturnValue(false);
+                return;
+            }
+            if (screen instanceof net.minecraft.client.gui.screens.inventory.AbstractRecipeBookScreen<?>
+                    && ((RecipeBookScreenAccessor) screen).kineticcore$getRecipeBookComponent().isVisible()) {
+                cir.setReturnValue(false);
+                return;
+            }
+            if (MiniEffectsFeature.isLeftSide()) cir.setReturnValue(screen.getGuiLeft() >= 36);
+        }
+
+        @Override
+        public List<Rect2i> kineticcore$effectAreas() {
+            if (kineticrefined$area == null || kineticrefined$effects == 0) return List.of();
+            return List.of(kineticrefined$area);
+        }
+
+        @Override
+        public boolean kineticcore$effectsExpanded() {
+            return kineticrefined$expand;
+        }
+    }
+
+    // The screens owning the effect display answer for it, as the effect screens do before 26.1.
+    @Mixin({net.minecraft.client.gui.screens.inventory.InventoryScreen.class, net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen.class})
+    public static abstract class EffectScreenAreaMixin implements EffectAreaProvider {
+        // Multi-target mixins may only use shadows that are not remapped.
+        @Shadow(remap = false) @Final private net.minecraft.client.gui.screens.inventory.EffectsInInventory effects;
+
+        @Override
+        public List<Rect2i> kineticcore$effectAreas() {
+            return ((EffectAreaProvider) (Object) this.effects).kineticcore$effectAreas();
+        }
+
+        @Override
+        public boolean kineticcore$effectsExpanded() {
+            return ((EffectAreaProvider) (Object) this.effects).kineticcore$effectsExpanded();
+        }
+    }
+
+    // JEI 26.1 asks every container screen for its effect area.
+    @Pseudo
+    @Mixin(targets = "mezz.jei.library.plugins.vanilla.gui.InventoryEffectRendererGuiHandler", remap = false)
+    public static class InventoryEffectRendererGuiHandlerMixin {
+        @Inject(method = "getGuiExtraAreas(Lnet/minecraft/client/gui/screens/inventory/AbstractContainerScreen;)Ljava/util/List;", at = @At("HEAD"), cancellable = true, require = 0)
+        private void getGuiExtraAreas(AbstractContainerScreen<?> containerScreen, CallbackInfoReturnable<List<Rect2i>> ci) {
+            if (containerScreen instanceof EffectAreaProvider getter) {
+                ci.setReturnValue(getter.kineticcore$effectAreas());
+            }
+        }
+    }
+    *///?}
 }

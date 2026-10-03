@@ -17,7 +17,7 @@ public final class KineticPlayerMessageRuntime {
 
     /** Sends one normal or overlay client message. */
     public static void display(ServerPlayer player, Component message, boolean overlay) {
-        player.displayClientMessage(message, overlay);
+        player.sendSystemMessage(message, overlay);
     }
 
     /** Sends title timing followed by the title text packet. */

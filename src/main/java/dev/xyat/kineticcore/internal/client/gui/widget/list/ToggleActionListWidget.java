@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.list;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.widget.list.KineticToggleActionList;
 import dev.xyat.kineticcore.api.client.gui.widget.list.ToggleActionItem;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
@@ -180,8 +182,8 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
     protected void renderWidget(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         refreshRange();
         refreshLayout();
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, zLevel);
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, 0, 0, zLevel);
         try {
             KineticRenderRuntime.enableScissor(graphics, getX(), getY(), getX() + contentWidth(), getY() + getHeight());
             try {
@@ -193,16 +195,16 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
                     int clippedMouseX = mouseX >= getX() && mouseX < getX() + contentWidth()
                             ? mouseX : Integer.MIN_VALUE;
                     rowButton.setInvertedFlash(scroll.isSelectionFlashInverted(index));
-                    rowButton.render(graphics, clippedMouseX, mouseY, partialTick);
-                    toggleButtons.get(index).render(graphics, clippedMouseX, mouseY, partialTick);
-                    actionButtons.get(index).render(graphics, clippedMouseX, mouseY, partialTick);
+                    VanillaGuiDraw.render(rowButton, graphics, clippedMouseX, mouseY, partialTick);
+                    VanillaGuiDraw.render(toggleButtons.get(index), graphics, clippedMouseX, mouseY, partialTick);
+                    VanillaGuiDraw.render(actionButtons.get(index), graphics, clippedMouseX, mouseY, partialTick);
                 }
             } finally {
                 KineticRenderRuntime.disableScissor(graphics);
             }
             renderScrollbar(graphics, mouseX, mouseY);
         } finally {
-            graphics.pose().popPose();
+            VanillaGuiDraw.pop(graphics);
         }
         int hit = toggleAt(mouseX, mouseY);
         if (hit >= 0) {

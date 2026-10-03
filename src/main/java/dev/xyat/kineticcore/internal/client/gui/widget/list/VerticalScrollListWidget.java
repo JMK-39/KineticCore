@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.list;
 
+import dev.xyat.kineticcore.internal.client.gui.widget.VanillaWidget;
+
 import dev.xyat.kineticcore.internal.client.gui.widget.InternalControl;
 import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
 import net.minecraft.client.gui.GuiGraphics;
@@ -12,7 +14,7 @@ import java.util.Objects;
  * 所有纵向滚动列表/网格共用的滚动条、拖拽、滚轮、中键跳转与悬停提示逻辑。
  * Shared scrollbar, drag, wheel, middle-click jump and hover-hint handling for vertical lists and grids.
  */
-public abstract class VerticalScrollListWidget extends AbstractWidget implements InternalControl {
+public abstract class VerticalScrollListWidget extends VanillaWidget implements InternalControl {
     /** 内容与滚动条间距 / Gap between content and scrollbar. */
     protected static final int SCROLLBAR_GAP = 4;
     /** 滚动条宽度 / Scrollbar width. */

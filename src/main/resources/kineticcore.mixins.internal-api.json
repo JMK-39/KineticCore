@@ -15,6 +15,7 @@
     "recipebook.RecipeBookServerMixins$BookData",
     "recipebook.RecipeBookServerMixins$Player",
     "setspawn.SetSpawnMixins$MinecraftServerMixin",
+    "setspawn.SetSpawnMixins$PrepareSpawnTaskMixin",
     "setspawn.SetSpawnMixins$PlayerListMixin",
     "setspawn.SetSpawnMixins$ServerPlayerMixin",
     "setspawn.SetSpawnMixins$ServerLevelMixin",
@@ -38,6 +39,8 @@
     "minecraft.client.AbstractContainerScreenAccessor",
     "minecraft.client.ChatComponentAccess",
     "minecraft.client.EditBoxAccessor",
+    "minecraft.client.AbstractContainerScreenSizeAccessor",
+    "minecraft.client.MultiLineEditBoxAccessor",
     "advancement.client.ClientAdvancementsAccessor"
   ]
 }

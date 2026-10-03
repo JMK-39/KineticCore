@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client;
 
+import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
+
 import dev.xyat.kineticcore.internal.runtime.KineticForgeListenerRegistrations;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
@@ -109,7 +111,13 @@ public final class KineticClientRuntimeImpl {
     public static void displayClientMessage(Component message, boolean overlay) {
         if (message == null) return;
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player != null) player.displayClientMessage(message, overlay);
+        if (player == null) return;
+        //? if >=26.1 {
+        /*if (overlay) player.sendOverlayMessage(message);
+        else player.sendSystemMessage(message);
+        *///?} else {
+        player.displayClientMessage(message, overlay);
+        //?}
     }
 
     public static Font font() {
@@ -134,6 +142,14 @@ public final class KineticClientRuntimeImpl {
 
     public static double chatScale() {
         return Minecraft.getInstance().options.chatScale().get();
+    }
+
+    public static int chatWidth() {
+        //? if >=26.1 {
+        /*return net.minecraft.client.gui.components.ChatComponent.getWidth(Minecraft.getInstance().options.chatWidth().get());
+        *///?} else {
+        return chatComponent().getWidth();
+        //?}
     }
 
     public static String username() {
@@ -209,31 +225,31 @@ public final class KineticClientRuntimeImpl {
     }
 
     public static boolean controlModifierDown() {
-        return Screen.hasControlDown();
+        return GuiInputCompat.controlDown();
     }
 
     public static boolean shiftModifierDown() {
-        return Screen.hasShiftDown();
+        return GuiInputCompat.shiftDown();
     }
 
     public static boolean altModifierDown() {
-        return Screen.hasAltDown();
+        return GuiInputCompat.altDown();
     }
 
     public static boolean isSelectAllShortcut(int keyCode) {
-        return Screen.isSelectAll(keyCode);
+        return GuiInputCompat.isSelectAll(keyCode);
     }
 
     public static boolean isCopyShortcut(int keyCode) {
-        return Screen.isCopy(keyCode);
+        return GuiInputCompat.isCopy(keyCode);
     }
 
     public static boolean isPasteShortcut(int keyCode) {
-        return Screen.isPaste(keyCode);
+        return GuiInputCompat.isPaste(keyCode);
     }
 
     public static boolean isCutShortcut(int keyCode) {
-        return Screen.isCut(keyCode);
+        return GuiInputCompat.isCut(keyCode);
     }
 
     public static boolean jumpKeyDown() {
@@ -345,10 +361,12 @@ public final class KineticClientRuntimeImpl {
     public static void refreshScreen(Screen screen) {
         if (screen == null) return;
         Minecraft minecraft = Minecraft.getInstance();
-        screen.resize(
-                minecraft,
-                minecraft.getWindow().getGuiScaledWidth(),
-                minecraft.getWindow().getGuiScaledHeight()
-        );
+        int width = minecraft.getWindow().getGuiScaledWidth();
+        int height = minecraft.getWindow().getGuiScaledHeight();
+        //? if >=26.1 {
+        /*screen.resize(width, height);
+        *///?} else {
+        screen.resize(minecraft, width, height);
+        //?}
     }
 }

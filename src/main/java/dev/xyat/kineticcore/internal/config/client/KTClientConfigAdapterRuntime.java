@@ -8,7 +8,9 @@ import dev.xyat.kineticcore.api.config.client.KTConfigScope;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import net.minecraft.network.chat.Component;
 import net.minecraft.client.resources.language.I18n;
+//? if <26.1
 import net.minecraftforge.api.distmarker.Dist;
+//? if <26.1
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.ForgeConfigSpec;
 
@@ -30,6 +32,8 @@ import java.util.function.Predicate;
  * or SERVER specs: those need an authenticated server snapshot/save protocol
  * instead of writing the client's local copy.</p>
  */
+// NeoForge 26.1 no longer strips @OnlyIn members; client-only code is kept off the server by where it is called from.
+//? if <26.1
 @OnlyIn(Dist.CLIENT)
 public final class KTClientConfigAdapterRuntime {
     private KTClientConfigAdapterRuntime() {

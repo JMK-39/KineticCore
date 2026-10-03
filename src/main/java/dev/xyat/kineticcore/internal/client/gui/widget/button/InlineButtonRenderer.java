@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.button;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -22,11 +24,11 @@ public final class InlineButtonRenderer {
         BUTTON.active = active;
         BUTTON.visible = true;
         int mouse = hovered ? 0 : -100000;
-        BUTTON.render(graphics, hovered ? x + 1 : mouse, hovered ? y + 1 : mouse, 0F);
+        VanillaGuiDraw.render(BUTTON, graphics, hovered ? x + 1 : mouse, hovered ? y + 1 : mouse, 0F);
         if (error) GuiTheme.stateOutline(graphics, x, y, width, height, false, hovered, true);
     }
 
-    private static final class PaintButton extends Button {
+    private static final class PaintButton extends VanillaButton {
         private PaintButton() {
             super(0, 0, 1, 1, Component.empty(), ignored -> { }, DEFAULT_NARRATION);
         }

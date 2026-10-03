@@ -8,6 +8,9 @@
     "client.MiniEffectsMixins$GameRendererMixin",
     "client.MiniEffectsMixins$DisplayEffectsScreenMixin",
     "client.MiniEffectsMixins$DisplayEffectsScreenMixinFailsafe",
+    "client.MiniEffectsMixins$EffectsInInventoryMixin",
+    "client.MiniEffectsMixins$EffectScreenAreaMixin",
+    "client.RecipeBookScreenAccessor",
     "client.LivingEntityAccessor",
     "client.MiniEffectsMixins$InventoryEffectRendererGuiHandlerMixin"
   ]

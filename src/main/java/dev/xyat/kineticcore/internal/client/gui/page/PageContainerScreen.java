@@ -33,8 +33,7 @@ public final class PageContainerScreen<M extends AbstractContainerMenu> extends 
 
     private void applyLayout() {
         int[] layout = access.containerLayout(page);
-        this.imageWidth = layout[0];
-        this.imageHeight = layout[1];
+        setImageSize(layout[0], layout[1]);
         this.titleLabelX = layout[2];
         this.titleLabelY = layout[3];
         this.inventoryLabelX = layout[4];
@@ -214,8 +213,14 @@ public final class PageContainerScreen<M extends AbstractContainerMenu> extends 
 
     @Override
     public void setImageSize(int width, int height) {
+        //? if >=26.1 {
+        /*ContainerScreenSizeAccess size = (ContainerScreenSizeAccess) (Object) this;
+        size.kineticcore$setImageWidth(width);
+        size.kineticcore$setImageHeight(height);
+        *///?} else {
         this.imageWidth = width;
         this.imageHeight = height;
+        //?}
     }
 
     @Override

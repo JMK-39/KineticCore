@@ -34,7 +34,7 @@ public class FlightServerMixins {
         @Inject(method = "onUpdateAbilities", at = @At("HEAD"))
         private void kineticcore$guardFlightState(CallbackInfo ci) {
             Player self = (Player) (Object) this;
-            if (self.level().isClientSide) return;
+            if (self.level().isClientSide()) return;
             if (KineticFlightSources.allowsFlight(self) && !self.getAbilities().mayfly) {
                 self.getAbilities().mayfly = true;
                 if (FlightState.lastKnownFlying(self) && !FlightState.isProcessingExplicitCancel) {
@@ -46,7 +46,9 @@ public class FlightServerMixins {
         // Noclip keeps the standing eye height in any pose. 1.20.1 asks Player for it; since 1.20.5 it is part of the
         // pose dimensions, so only their eye height is replaced and the hitbox stays as it is. Entity's constructor asks
         // as well, before abilities and the server game mode exist, so isCreative() cannot be used here.
-        //? if >=1.20.5 {
+        //? if >=26.1 {
+        /*// 26.1: Avatar declares getDefaultDimensions, see AvatarDimensionTweaks.
+        *///?} else if >=1.20.5 {
         /*@Inject(method = "getDefaultDimensions", at = @At("RETURN"), cancellable = true)
         private void kineticcore$getEyeHeight(Pose pose, CallbackInfoReturnable<EntityDimensions> cir) {
             Player player = (Player) (Object) this;
@@ -70,6 +72,19 @@ public class FlightServerMixins {
         }
     }
 
+    //? if >=26.1 {
+    /*@Mixin(net.minecraft.world.entity.Avatar.class)
+    public static abstract class AvatarDimensionTweaks {
+        @Inject(method = "getDefaultDimensions", at = @At("RETURN"), cancellable = true)
+        private void kineticcore$getEyeHeight(Pose pose, CallbackInfoReturnable<EntityDimensions> cir) {
+            if ((Object) this instanceof Player player && KineticFlight.noclipEnabled(player)
+                    && player.getAbilities() != null && player.getAbilities().instabuild) {
+                cir.setReturnValue(cir.getReturnValue().withEyeHeight(1.62F));
+            }
+        }
+    }
+
+    *///?}
     @Mixin(ServerPlayer.class)
     public static abstract class ServerPlayerTweaks {
         @Unique private boolean kineticcore$wasFlyingBeforeGamemode;
@@ -141,9 +156,17 @@ public class FlightServerMixins {
             FlightState.isProcessingExplicitCancel = false;
         }
 
+        //? if >=26.1 {
+        /*// 26.1 checks players and vehicles with one method.
+        @Inject(method = "isEntityCollidingWithAnythingNew", at = @At("HEAD"), cancellable = true)
+        private void kineticcore$bypassBlockCollisionCheck(LevelReader level, net.minecraft.world.entity.Entity entity, AABB aabb, double x, double y, double z, CallbackInfoReturnable<Boolean> cir) {
+            ServerPlayer player = this.kineticcore$getPlayer();
+            if (entity != player) return;
+        *///?} else {
         @Inject(method = "isPlayerCollidingWithAnythingNew", at = @At("HEAD"), cancellable = true)
         private void kineticcore$bypassBlockCollisionCheck(LevelReader level, AABB aabb, double x, double y, double z, CallbackInfoReturnable<Boolean> cir) {
             ServerPlayer player = this.kineticcore$getPlayer();
+        //?}
             if (player.isCreative() && KineticFlight.noclipEnabled(player)) cir.setReturnValue(false);
         }
 
@@ -156,7 +179,15 @@ public class FlightServerMixins {
 
     // Outbound ability packets go through the game packet listener before 1.20.2 and through the listener shared by
     // the configuration and game phases since.
-    //? if >=1.20.2 {
+    //? if >=26.1 {
+    /*@Mixin(ServerCommonPacketListenerImpl.class)
+    public static abstract class CommonNetworkTweaks {
+        @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;)V", at = @At("HEAD"), cancellable = true)
+        private void kineticcore$interceptOutboundAbilities(Packet<?> packet, io.netty.channel.ChannelFutureListener listener, CallbackInfo ci) {
+            if ((Object) this instanceof ServerGamePacketListenerImpl game) FlightAbilityPackets.interceptOutbound(game.player, packet, ci);
+        }
+    }
+    *///?} else if >=1.20.2 {
     /*@Mixin(ServerCommonPacketListenerImpl.class)
     public static abstract class CommonNetworkTweaks {
         @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;)V", at = @At("HEAD"), cancellable = true)

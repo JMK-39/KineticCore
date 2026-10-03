@@ -1,5 +1,8 @@
 package dev.xyat.kineticcore.api.villager.event;
 
+// 26.1 defines villager and wandering trader trades in data packs; NeoForge no longer posts trade events there.
+//? if <26.1 {
+
 import dev.xyat.kineticcore.api.event.KineticEventPriority;
 import dev.xyat.kineticcore.api.event.KineticEventSubscription;
 import dev.xyat.kineticcore.internal.runtime.event.KineticVillagerEventRuntime;
@@ -86,3 +89,4 @@ public final class KineticVillagerEvents {
         );
     }
 }
+//?}

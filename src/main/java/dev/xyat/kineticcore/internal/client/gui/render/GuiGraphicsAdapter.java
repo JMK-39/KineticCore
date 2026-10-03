@@ -1,13 +1,11 @@
 package dev.xyat.kineticcore.internal.client.gui.render;
 
-import com.mojang.math.Axis;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import dev.xyat.kineticcore.api.client.gui.render.KineticTexture;
 import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -66,39 +64,39 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
 
     @Override
     public void outline(int x, int y, int width, int height, int argb) {
-        graphics.renderOutline(x, y, width, height, argb);
+        VanillaGuiDraw.outline(graphics, x, y, width, height, argb);
     }
 
     @Override
     public int text(String text, int x, int y, int argb, boolean shadow) {
-        return graphics.drawString(font(), text == null ? "" : text, x, y, argb, shadow);
+        return VanillaGuiDraw.text(graphics, font(), text == null ? "" : text, x, y, argb, shadow);
     }
 
     @Override
     public int text(Component text, int x, int y, int argb, boolean shadow) {
-        return graphics.drawString(font(), text == null ? Component.empty() : text, x, y, argb, shadow);
+        return VanillaGuiDraw.text(graphics, font(), text == null ? Component.empty() : text, x, y, argb, shadow);
     }
 
     @Override
     public int text(FormattedCharSequence text, int x, int y, int argb, boolean shadow) {
-        return graphics.drawString(font(), text == null ? FormattedCharSequence.EMPTY : text, x, y, argb, shadow);
+        return VanillaGuiDraw.text(graphics, font(), text == null ? FormattedCharSequence.EMPTY : text, x, y, argb, shadow);
     }
 
     @Override
     public void centeredText(Component text, int centerX, int y, int argb, boolean shadow) {
         Component safe = text == null ? Component.empty() : text;
-        graphics.drawString(font(), safe, centerX - font().width(safe) / 2, y, argb, shadow);
+        VanillaGuiDraw.text(graphics, font(), safe, centerX - font().width(safe) / 2, y, argb, shadow);
     }
 
     @Override
     public void centeredText(String text, int centerX, int y, int argb, boolean shadow) {
         String safe = text == null ? "" : text;
-        graphics.drawString(font(), safe, centerX - font().width(safe) / 2, y, argb, shadow);
+        VanillaGuiDraw.text(graphics, font(), safe, centerX - font().width(safe) / 2, y, argb, shadow);
     }
 
     @Override
     public void wrappedText(Component text, int x, int y, int maxWidth, int argb) {
-        graphics.drawWordWrap(font(), text == null ? Component.empty() : text, x, y, Math.max(1, maxWidth), argb);
+        VanillaGuiDraw.wordWrap(graphics, font(), text == null ? Component.empty() : text, x, y, Math.max(1, maxWidth), argb);
     }
 
     @Override
@@ -118,7 +116,7 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
 
     @Override
     public void item(ItemStack stack, int x, int y) {
-        if (stack != null && !stack.isEmpty()) graphics.renderItem(stack, x, y);
+        if (stack != null && !stack.isEmpty()) VanillaGuiDraw.item(graphics, stack, x, y);
     }
 
     @Override
@@ -126,92 +124,76 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
         if (stack == null || stack.isEmpty()) return;
         float safeAlpha = Float.isFinite(alpha) ? Math.max(0.0F, Math.min(1.0F, alpha)) : 1.0F;
         if (safeAlpha <= 0.0F) return;
-        graphics.setColor(1.0F, 1.0F, 1.0F, safeAlpha);
-        try {
-            graphics.renderItem(stack, x, y);
-        } finally {
-            graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
-        }
+        VanillaGuiDraw.item(graphics, stack, x, y, safeAlpha);
     }
 
     @Override
     public void fakeItem(ItemStack stack, int x, int y) {
-        if (stack != null && !stack.isEmpty()) graphics.renderFakeItem(stack, x, y);
+        if (stack != null && !stack.isEmpty()) VanillaGuiDraw.fakeItem(graphics, stack, x, y);
     }
 
     @Override
     public void itemDecorations(ItemStack stack, int x, int y) {
-        if (stack != null && !stack.isEmpty()) graphics.renderItemDecorations(font(), stack, x, y);
+        if (stack != null && !stack.isEmpty()) VanillaGuiDraw.itemDecorations(graphics, font(), stack, x, y);
     }
 
     @Override
     public void itemDecorations(ItemStack stack, int x, int y, String countText) {
-        if (stack != null && !stack.isEmpty()) graphics.renderItemDecorations(font(), stack, x, y, countText);
+        if (stack != null && !stack.isEmpty()) VanillaGuiDraw.itemDecorations(graphics, font(), stack, x, y, countText);
     }
 
     @Override
     public void texture(KineticTexture texture, int x, int y, int u, int v, int width, int height) {
-        graphics.blit(location(texture), x, y, u, v, width, height, texture.textureWidth(), texture.textureHeight());
+        VanillaGuiDraw.texture(graphics, location(texture), x, y, u, v, width, height, texture.textureWidth(), texture.textureHeight());
     }
 
     @Override
     public void texture(KineticTexture texture, int x, int y, int width, int height, float u, float v,
                         int regionWidth, int regionHeight) {
-        graphics.blit(location(texture), x, y, width, height, u, v, regionWidth, regionHeight,
+        VanillaGuiDraw.texture(graphics, location(texture), x, y, width, height, u, v, regionWidth, regionHeight,
                 texture.textureWidth(), texture.textureHeight());
     }
 
     @Override
     public void texture(KineticTexture texture, int x, int y, int u, int v, int width, int height, int argb) {
-        graphics.setColor(((argb >> 16) & 0xFF) / 255F, ((argb >> 8) & 0xFF) / 255F, (argb & 0xFF) / 255F,
-                ((argb >>> 24) & 0xFF) / 255F);
-        try {
-            texture(texture, x, y, u, v, width, height);
-        } finally {
-            graphics.setColor(1F, 1F, 1F, 1F);
-        }
+        VanillaGuiDraw.tintedTexture(graphics, location(texture), x, y, u, v, width, height,
+                texture.textureWidth(), texture.textureHeight(), argb);
     }
 
     @Override
     public void effectIcon(MobEffect effect, int x, int y, int size) {
         if (effect == null || size <= 0) return;
-        //? if >=1.20.5 {
-        /*TextureAtlasSprite sprite = KineticClientRuntimeImpl.client().getMobEffectTextures()
-                .get(net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect));
-        *///?} else {
-        TextureAtlasSprite sprite = KineticClientRuntimeImpl.client().getMobEffectTextures().get(effect);
-        //?}
-        graphics.blit(x, y, 0, size, size, sprite);
+        VanillaGuiDraw.effectIcon(graphics, effect, x, y, size);
     }
 
     @Override
     public void push() {
-        graphics.pose().pushPose();
+        VanillaGuiDraw.push(graphics);
     }
 
     @Override
     public void pop() {
-        graphics.pose().popPose();
+        VanillaGuiDraw.pop(graphics);
     }
 
     @Override
     public void translate(float x, float y) {
-        graphics.pose().translate(x, y, 0F);
+        VanillaGuiDraw.translate(graphics, x, y, 0F);
     }
 
     @Override
     public void scale(float x, float y) {
-        graphics.pose().scale(x, y, 1F);
+        VanillaGuiDraw.scale(graphics, x, y, 1F);
     }
 
     @Override
     public void rotate(float degrees) {
-        graphics.pose().mulPose(Axis.ZP.rotationDegrees(degrees));
+        VanillaGuiDraw.rotate(graphics, degrees);
     }
 
     @Override
     public void raise(int steps) {
-        if (steps > 0) graphics.pose().translate(0F, 0F, (float) steps * RAISE_STEP_DEPTH);
+        if (steps > 0) VanillaGuiDraw.raise(graphics, (float) steps * RAISE_STEP_DEPTH);
     }
 
     @Override

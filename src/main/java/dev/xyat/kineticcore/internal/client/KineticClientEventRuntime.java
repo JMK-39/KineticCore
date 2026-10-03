@@ -97,7 +97,27 @@ public final class KineticClientEventRuntime {
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onInteractionKey));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onPlayerRenderBefore));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onPlayerRenderAfter));
+        //? if >=26.1 {
+        /*// 26.1 posts one event class per stage; each maps to the Kinetic stages it covers.
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener((RenderLevelStageEvent.AfterSky event) ->
+                onLevelRender(event, KineticClientEvents.LevelRenderStage.AFTER_SKY)));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener((RenderLevelStageEvent.AfterOpaqueBlocks event) ->
+                onLevelRender(event, KineticClientEvents.LevelRenderStage.AFTER_SOLID_BLOCKS,
+                        KineticClientEvents.LevelRenderStage.AFTER_CUTOUT_MIPPED_BLOCKS, KineticClientEvents.LevelRenderStage.AFTER_CUTOUT_BLOCKS)));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener((RenderLevelStageEvent.AfterOpaqueFeatures event) ->
+                onLevelRender(event, KineticClientEvents.LevelRenderStage.AFTER_ENTITIES, KineticClientEvents.LevelRenderStage.AFTER_BLOCK_ENTITIES)));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener((RenderLevelStageEvent.AfterTranslucentBlocks event) ->
+                onLevelRender(event, KineticClientEvents.LevelRenderStage.AFTER_TRANSLUCENT_BLOCKS,
+                        KineticClientEvents.LevelRenderStage.AFTER_TRIPWIRE_BLOCKS)));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener((RenderLevelStageEvent.AfterTranslucentParticles event) ->
+                onLevelRender(event, KineticClientEvents.LevelRenderStage.AFTER_PARTICLES)));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener((RenderLevelStageEvent.AfterWeather event) ->
+                onLevelRender(event, KineticClientEvents.LevelRenderStage.AFTER_WEATHER)));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener((RenderLevelStageEvent.AfterLevel event) ->
+                onLevelRender(event, KineticClientEvents.LevelRenderStage.AFTER_LEVEL)));
+        *///?} else {
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLevelRender));
+        //?}
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onCameraAngles));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onBlockScreenEffect));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onInventoryEffectLayout));
@@ -239,7 +259,12 @@ public final class KineticClientEventRuntime {
         try {
             for (PreparableReloadListener listener : CLIENT_RELOAD_LISTENERS) {
                 try {
+                    //? if >=26.1 {
+                    /*event.addListener(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("kineticcore",
+                            "client_reload_" + Integer.toHexString(System.identityHashCode(listener))), listener);
+                    *///?} else {
                     event.registerReloadListener(listener);
+                    //?}
                 } catch (RuntimeException exception) {
                     if (failure == null) failure = exception;
                     else if (failure != exception) failure.addSuppressed(exception);
@@ -374,6 +399,18 @@ public final class KineticClientEventRuntime {
         KineticCallbackBatch.runAll(PLAYER_RENDER_AFTER, listener -> listener.render(context));
     }
 
+    //? if >=26.1 {
+    /*private static void onLevelRender(RenderLevelStageEvent event, KineticClientEvents.LevelRenderStage... stages) {
+        LevelRenderContextImpl context = null;
+        for (KineticClientEvents.LevelRenderStage stage : stages) {
+            CopyOnWriteArrayList<KineticClientEvents.LevelRenderHandler> listeners = LEVEL_RENDER.get(stage);
+            if (listeners == null || listeners.isEmpty()) continue;
+            if (context == null) context = new LevelRenderContextImpl(event);
+            LevelRenderContextImpl stageContext = context;
+            KineticCallbackBatch.runAll(listeners, listener -> listener.render(stageContext));
+        }
+    }
+    *///?} else {
     private static void onLevelRender(RenderLevelStageEvent event) {
         KineticClientEvents.LevelRenderStage stage = mapLevelRenderStage(event.getStage());
         if (stage == null) return;
@@ -382,6 +419,7 @@ public final class KineticClientEventRuntime {
         LevelRenderContextImpl context = new LevelRenderContextImpl(event);
         KineticCallbackBatch.runAll(listeners, listener -> listener.render(context));
     }
+    //?}
 
     private static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
         if (CAMERA_ANGLES.isEmpty()) return;
@@ -391,6 +429,7 @@ public final class KineticClientEventRuntime {
         event.setRoll(context.roll());
     }
 
+    //? if <26.1 {
     private static KineticClientEvents.LevelRenderStage mapLevelRenderStage(RenderLevelStageEvent.Stage stage) {
         if (stage == RenderLevelStageEvent.Stage.AFTER_SKY) return KineticClientEvents.LevelRenderStage.AFTER_SKY;
         if (stage == RenderLevelStageEvent.Stage.AFTER_SOLID_BLOCKS) return KineticClientEvents.LevelRenderStage.AFTER_SOLID_BLOCKS;
@@ -405,6 +444,7 @@ public final class KineticClientEventRuntime {
         if (stage == RenderLevelStageEvent.Stage.AFTER_LEVEL) return KineticClientEvents.LevelRenderStage.AFTER_LEVEL;
         return null;
     }
+    //?}
 
     private static void onHudRenderEnd(RenderGuiEvent.Post event) {
         KineticCallbackBatch.runAll(HUD_END, listener -> listener.render(dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(event.getGuiGraphics()), partialTick(event.getPartialTick())));
@@ -611,10 +651,22 @@ public final class KineticClientEventRuntime {
         }
     }
 
+    //? if >=26.1 {
+    /*private static net.minecraft.client.player.AbstractClientPlayer renderedPlayer(int entityId) {
+        net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
+        return level != null && level.getEntity(entityId) instanceof net.minecraft.client.player.AbstractClientPlayer player
+                ? player : null;
+    }
+    *///?}
+
     private record PlayerRenderBeforeContextImpl(RenderPlayerEvent.Pre event) implements KineticClientEvents.PlayerRenderBeforeContext {
         @Override
         public net.minecraft.client.player.AbstractClientPlayer player() {
+            //? if >=26.1 {
+            /*return renderedPlayer(((net.minecraft.client.renderer.entity.state.AvatarRenderState) event.getRenderState()).id);
+            *///?} else {
             return (net.minecraft.client.player.AbstractClientPlayer) event.getEntity();
+            //?}
         }
 
         @Override
@@ -641,7 +693,11 @@ public final class KineticClientEventRuntime {
     private record PlayerRenderContextImpl(RenderPlayerEvent.Post event) implements KineticClientEvents.PlayerRenderContext {
         @Override
         public net.minecraft.client.player.AbstractClientPlayer player() {
+            //? if >=26.1 {
+            /*return renderedPlayer(((net.minecraft.client.renderer.entity.state.AvatarRenderState) event.getRenderState()).id);
+            *///?} else {
             return (net.minecraft.client.player.AbstractClientPlayer) event.getEntity();
+            //?}
         }
 
         @Override
@@ -698,7 +754,11 @@ public final class KineticClientEventRuntime {
 
         @Override
         public net.minecraft.client.Camera camera() {
+            //? if >=26.1 {
+            /*return net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera();
+            *///?} else {
             return event.getCamera();
+            //?}
         }
 
         @Override
@@ -745,7 +805,11 @@ public final class KineticClientEventRuntime {
 
         @Override
         public net.minecraft.client.Camera camera() {
+            //? if >=26.1 {
+            /*return net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera();
+            *///?} else {
             return event.getCamera();
+            //?}
         }
 
         @Override
@@ -755,12 +819,20 @@ public final class KineticClientEventRuntime {
 
         @Override
         public org.joml.Matrix4f projectionMatrix() {
+            //? if >=26.1 {
+            /*return new org.joml.Matrix4f(event.getLevelRenderState().cameraRenderState.projectionMatrix);
+            *///?} else {
             return event.getProjectionMatrix();
+            //?}
         }
 
         @Override
         public float partialTick() {
+            //? if >=26.1 {
+            /*return net.minecraft.client.Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+            *///?} else {
             return KineticClientEventRuntime.partialTick(event.getPartialTick());
+            //?}
         }
     }
 

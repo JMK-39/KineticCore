@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.input;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 
 import dev.xyat.kineticcore.api.client.gui.widget.KineticAutoCompleteField;
@@ -297,13 +299,13 @@ public final class KineticAutoComplete {
                     suggestions.size() - firstIndex
             );
 
-            gui.pose().pushPose();
+            VanillaGuiDraw.push(gui);
             try {
-                gui.pose().translate(0, 0, 600);
+                VanillaGuiDraw.translate(gui, 0, 0, 600);
                 KineticTheme.Palette theme = GuiTheme.current();
                 boolean showTranslations = shouldShowTranslations();
                 gui.fill(x, y, x + w, y + totalH, theme.background());
-                gui.renderOutline(x, y, w, totalH, theme.border());
+                VanillaGuiDraw.outline(gui, x, y, w, totalH, theme.border());
                 KineticRenderRuntime.enableScissor(gui, x, y, x + w, y + totalH);
                 try {
                     for (int i = 0; i < rowsToRender; i++) {
@@ -327,10 +329,10 @@ public final class KineticAutoComplete {
 
                         KineticSuggestion suggestion = suggestions.get(index);
                         Font font = KineticClientRuntime.font();
-                        gui.drawString(font, styledSuggestion(suggestion.value()), x + 4, top + 2, theme.text(), false);
+                        VanillaGuiDraw.text(gui, font, styledSuggestion(suggestion.value()), x + 4, top + 2, theme.text(), false);
                         if (showTranslations && !suggestion.translation().getString().isBlank()) {
                             int detailX = x + 4 + font.width(suggestion.value()) + font.width("  ");
-                            gui.drawString(font, suggestion.translation(), detailX, top + 2, theme.translatedText(), false);
+                            VanillaGuiDraw.text(gui, font, suggestion.translation(), detailX, top + 2, theme.translatedText(), false);
                         }
                     }
 
@@ -348,7 +350,7 @@ public final class KineticAutoComplete {
                         10
                 );
             } finally {
-                gui.pose().popPose();
+                VanillaGuiDraw.pop(gui);
             }
         }
 

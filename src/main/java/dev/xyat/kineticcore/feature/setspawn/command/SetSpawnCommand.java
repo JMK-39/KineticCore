@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.feature.setspawn.command;
 
+import net.minecraft.server.level.ServerLevel;
+
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import dev.xyat.kineticcore.api.command.CommandText;
@@ -40,7 +42,7 @@ public class SetSpawnCommand {
     private static int checkCurrentPosStructures(CommandSourceStack source) {
         try {
             ServerPlayer player = source.getPlayerOrException();
-            List<String> structures = StructureUtils.getStructuresAt(player.serverLevel(), player.blockPosition());
+            List<String> structures = StructureUtils.getStructuresAt(((ServerLevel) player.level()), player.blockPosition());
 
             if (structures.isEmpty()) {
                 source.sendSuccess(() -> KineticI18n.translatable("msg.kineticcore.structure.not_found"), false);

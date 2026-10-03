@@ -119,8 +119,8 @@ public final class KineticDropdowns {
         }
 
         @Override
-        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+        public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            super.renderButton(graphics, mouseX, mouseY, partialTick);
         }
 
         private void refreshState() {

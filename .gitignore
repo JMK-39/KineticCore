@@ -1,39 +1,40 @@
-# eclipse
+# IDE
+.idea
+out
+*.ipr
+*.iws
+*.iml
 bin
+eclipse
 *.launch
 .settings
 .metadata
 .classpath
 .project
 
-# idea
-out
-*.ipr
-*.iws
-*.iml
-.idea
-
-# gradle
+# Gradle and build output
 build
 .gradle
-# Generated Javadoc at the project root
 /javadoc/
 
-# other
-eclipse
+# Game runs: Forge uses run/, NeoForge run-<node>/
 run
 run-*
-# 临时压缩包（截图里有 kineticCore.zip 等，不要传上去）
+/config/
+/logs/
+
+# Archives
 *.zip
 *.tar.gz
 
-# 如果你的【.授权加密工具】包含敏感密钥或工具，也建议加上：
-.授权加密工具/
-# Files from Forge MDK
+# Forge MDK leftovers
 forge*changelog.txt
 
+# Local only: tools, notes and inspection settings that the build does not use.
+# Usage documentation lives in the GitHub wiki.
+/docs/
+/tools/
+/qodana.yaml
+/.github/workflows/qodana_code_quality.yml
 /CF_UPDATE_LOG.md
-
-# Files that tests or IDE runs with the project root as working directory may create
-/config/
-/logs/
+.授权加密工具/

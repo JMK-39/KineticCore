@@ -29,9 +29,15 @@ public class BeeMixins {
     // 1. Bee 修复
     @Mixin(Bee.class)
     public static abstract class BeeMixin {
+        //? if >=26.1 {
+        /*@Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
+        private void onReadAdditionalSaveData(net.minecraft.world.level.storage.ValueInput input, CallbackInfo ci) {
+            if (input.getBooleanOr("NoGravity", false)) {
+        *///?} else {
         @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
         private void onReadAdditionalSaveData(CompoundTag compound, CallbackInfo ci) {
             if (compound.contains("NoGravity")) {
+        //?}
                 ((Bee) (Object) this).setNoGravity(true);
             }
         }
@@ -58,6 +64,18 @@ public class BeeMixins {
     }
 
     // 2. Level 修复
+    //? if >=26.1 {
+    /*// 26.1 prepares the weather in ServerLevel.
+    @Mixin(ServerLevel.class)
+    public static abstract class LevelMixin {
+        @Inject(method = "prepareWeather", at = @At("HEAD"), cancellable = true)
+        private void onPrepareWeather(net.minecraft.world.level.saveddata.WeatherData weatherData, CallbackInfo ci) {
+            if (!((ServerLevel) (Object) this).dimensionType().hasSkyLight()) {
+                ci.cancel();
+            }
+        }
+    }
+    *///?} else {
     @Mixin(Level.class)
     public static abstract class LevelMixin {
         @Invoker("dimensionType")
@@ -70,12 +88,17 @@ public class BeeMixins {
             }
         }
     }
+    //?}
 
     // 3. TurtleEggBlock 修复
     @Mixin(TurtleEggBlock.class)
     public static abstract class TurtleEggBlockMixin {
         @Inject(method = "canDestroyEgg", at = @At("HEAD"), cancellable = true)
+        //? if >=26.1 {
+        /*private void preventBeeDestroyingEgg(ServerLevel level, Entity entity, CallbackInfoReturnable<Boolean> cir) {
+        *///?} else {
         private void preventBeeDestroyingEgg(Level level, Entity entity, CallbackInfoReturnable<Boolean> cir) {
+        //?}
             if (entity instanceof Bee) {
                 cir.setReturnValue(false);
             }

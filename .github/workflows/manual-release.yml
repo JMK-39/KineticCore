@@ -18,7 +18,8 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      # Gradle runs on Java 21, and 1.20.1 and 1.21.1 both compile for Java 21.
+      # Gradle runs on Java 21. 1.20.1 and 1.21.1 compile for Java 21; 26.1.2 compiles for Java 25, which Gradle
+      # downloads through the foojay toolchain resolver in settings.gradle.
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:

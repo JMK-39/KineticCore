@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.config;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
@@ -112,8 +114,8 @@ final class KTConfigIndexScreen extends KineticScreen {
             float partialTick
     ) {
         GuiTheme.panel(graphics, 42, 18, 556, 330);
-        graphics.drawCenteredString(font, title, canvasWidth() / 2, 28, 0xFFFFAA00);
-        graphics.drawCenteredString(
+        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 28, 0xFFFFAA00);
+        VanillaGuiDraw.centeredText(graphics, 
                 font,
                 KineticText.translatable(
                         "gui.kineticcore.config.module_count",
@@ -154,7 +156,7 @@ final class KTConfigIndexScreen extends KineticScreen {
             Component message = registeredModules.isEmpty()
                     ? KineticText.translatable("gui.kineticcore.config.plugins_empty")
                     : KineticText.translatable("gui.kineticcore.config.no_plugin_results");
-            graphics.drawCenteredString(
+            VanillaGuiDraw.centeredText(graphics, 
                     font,
                     message,
                     LIST_X + LIST_WIDTH / 2,
@@ -216,8 +218,8 @@ final class KTConfigIndexScreen extends KineticScreen {
                         Component.literal(String.valueOf(module.entryCount()))
                 );
                 int countX = LIST_X + LIST_WIDTH - 9 - font.width(count);
-                graphics.drawString(font, module.namespace(), LIST_X + 9, y + 16, 0xFF999999, false);
-                graphics.drawString(font, count, countX, y + 16, 0xFF999999, false);
+                VanillaGuiDraw.text(graphics, font, module.namespace(), LIST_X + 9, y + 16, 0xFF999999, false);
+                VanillaGuiDraw.text(graphics, font, count, countX, y + 16, 0xFF999999, false);
             }
         } finally {
             disableUiScissor(graphics);

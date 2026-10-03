@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.text;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.internal.client.text.KineticTextRuntime;
 import dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime;
@@ -62,13 +64,13 @@ public final class KineticText {
         if (graphics == null || font == null || text == null || maxWidth <= 0) return 0;
         int textWidth = font.width(text);
         if (textWidth <= maxWidth) {
-            return graphics.drawString(font, text, x, y, color, shadow);
+            return VanillaGuiDraw.text(graphics, font, text, x, y, color, shadow);
         }
         int overflow = textWidth - maxWidth;
         int offset = scrollingOffset(overflow);
         KineticRenderRuntime.enableScissor(graphics, x, y - 1, x + maxWidth, y + font.lineHeight + 1);
         try {
-            return graphics.drawString(font, text, x - offset, y, color, shadow);
+            return VanillaGuiDraw.text(graphics, font, text, x - offset, y, color, shadow);
         } finally {
             KineticRenderRuntime.disableScissor(graphics);
         }
@@ -88,14 +90,14 @@ public final class KineticText {
         if (graphics == null || font == null || text == null || maxWidth <= 0) return 0;
         int textWidth = font.width(text);
         if (textWidth <= maxWidth) {
-            return graphics.drawString(font, text, centerX - textWidth / 2, y, color, shadow);
+            return VanillaGuiDraw.text(graphics, font, text, centerX - textWidth / 2, y, color, shadow);
         }
         int left = centerX - maxWidth / 2;
         int overflow = textWidth - maxWidth;
         int offset = scrollingOffset(overflow);
         KineticRenderRuntime.enableScissor(graphics, left, y - 1, left + maxWidth, y + font.lineHeight + 1);
         try {
-            return graphics.drawString(font, text, left - offset, y, color, shadow);
+            return VanillaGuiDraw.text(graphics, font, text, left - offset, y, color, shadow);
         } finally {
             KineticRenderRuntime.disableScissor(graphics);
         }
@@ -115,14 +117,14 @@ public final class KineticText {
         if (graphics == null || font == null || text == null || maxWidth <= 0) return 0;
         int textWidth = font.width(text);
         if (textWidth <= maxWidth) {
-            return graphics.drawString(font, text, rightX - textWidth, y, color, shadow);
+            return VanillaGuiDraw.text(graphics, font, text, rightX - textWidth, y, color, shadow);
         }
         int left = rightX - maxWidth;
         int overflow = textWidth - maxWidth;
         int offset = scrollingOffset(overflow);
         KineticRenderRuntime.enableScissor(graphics, left, y - 1, rightX, y + font.lineHeight + 1);
         try {
-            return graphics.drawString(font, text, left - offset, y, color, shadow);
+            return VanillaGuiDraw.text(graphics, font, text, left - offset, y, color, shadow);
         } finally {
             KineticRenderRuntime.disableScissor(graphics);
         }

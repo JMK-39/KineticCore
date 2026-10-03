@@ -34,6 +34,135 @@ stonecutter.parameters {
         spec.replace 'MinecraftForge.EVENT_BUS', 'NeoForge.EVENT_BUS'
         spec.replace 'ForgeConfigSpec', 'ModConfigSpec'
     }
+
+    // Classes that Minecraft or NeoForge only renamed or moved between 1.21.2 and 26.1. Whole words only, so
+    // KineticCore names such as GuiGraphicsAdapter stay as they are. Classes whose API changed as well are
+    // handled in code with `//? if >=26.1 {` blocks.
+    replacements.regex(loader == 'neoforge' && eval(current.version, '>=26.1')) { spec ->
+        def rename = { String from, String to ->
+            spec.replace "\\b${from.replace('.', '\\.')}\\b", to, "\\b${to.replace('.', '\\.')}\\b", from
+        }
+        rename 'ResourceLocation', 'Identifier'
+        rename 'GuiGraphics', 'GuiGraphicsExtractor'
+        rename 'MobSpawnType', 'EntitySpawnReason'
+        rename 'DimensionTransition', 'TeleportTransition'
+        rename 'net.minecraft.Util', 'net.minecraft.util.Util'
+        rename 'net.minecraft.client.GuiMessage', 'net.minecraft.client.multiplayer.chat.GuiMessage'
+        rename 'net.minecraft.world.entity.animal.Bee', 'net.minecraft.world.entity.animal.bee.Bee'
+        rename 'net.minecraft.world.entity.npc.VillagerProfession', 'net.minecraft.world.entity.npc.villager.VillagerProfession'
+        rename 'net.minecraft.world.entity.npc.VillagerTrades', 'net.minecraft.world.item.trading.VillagerTrades'
+        rename 'net.minecraft.world.entity.projectile.ThrowableItemProjectile', 'net.minecraft.world.entity.projectile.throwableitemprojectile.ThrowableItemProjectile'
+        rename 'net.minecraft.client.renderer.RenderType', 'net.minecraft.client.renderer.rendertype.RenderType'
+        rename 'net.minecraft.world.level.GameRules', 'net.minecraft.world.level.gamerules.GameRules'
+        rename 'net.neoforged.neoforge.common.util.TriState', 'net.minecraft.util.TriState'
+        rename 'ClickType', 'ContainerInput'
+        rename 'RegisterClientReloadListenersEvent', 'AddClientReloadListenersEvent'
+        rename 'AddReloadListenerEvent', 'AddServerReloadListenersEvent'
+
+        // Methods renamed one to one. location() is renamed only on registry keys: TagKey keeps location().
+        def call = { String from, String to ->
+            spec.replace java.util.regex.Pattern.quote(from), to, java.util.regex.Pattern.quote(to), from
+        }
+        call 'dimension().location()', 'dimension().identifier()'
+        call 'getKey().location()', 'getKey().identifier()'
+        call 'key.location()', 'key.identifier()'
+        call '.moveTo(', '.snapTo('
+        call '.getMinBuildHeight()', '.getMinY()'
+        call '.registryOrThrow(', '.lookupOrThrow('
+        call 'registryAccess().registry(', 'registryAccess().lookup('
+        call 'getWindow().getWindow()', 'getWindow().handle()'
+        call 'camera.getPosition()', 'camera.position()'
+        call 'camera().getPosition()', 'camera().position()'
+        call 'OVERWORLD.location()', 'OVERWORLD.identifier()'
+        call 'ResourceKey::location', 'ResourceKey::identifier'
+        // The exclusive build height became the inclusive maximum Y.
+        call 'level.getMaxBuildHeight()', '(level.getMaxY() + 1)'
+        call 'registry.getHolder(ResourceKey.create(', 'registry.get(ResourceKey.create('
+        call 'TagParser.parseTag(', 'TagParser.parseCompoundFully('
+        call 'new ChunkPos(pos)', 'ChunkPos.containing(pos)'
+        call '.getItemHolder()', '.typeHolder()'
+        // Registries return holders from get and values from getValue since 1.21.2.
+        call 'BuiltInRegistries.CREATIVE_MODE_TAB.get(', 'BuiltInRegistries.CREATIVE_MODE_TAB.getValue('
+        call 'BuiltInRegistries.REGISTRY.get(registryId)', 'BuiltInRegistries.REGISTRY.getValue(registryId)'
+        call 'source.get().get(id)', 'source.get().getValue(id)'
+        call 'DAMAGE_TYPE).getHolderOrThrow(', 'DAMAGE_TYPE).getOrThrow('
+        call 'registry.getHolderOrThrow(', 'registry.getOrThrow('
+        call '.getHolder(Enchantments.', '.get(Enchantments.'
+        call 'getTagNames()', 'getTags().map(net.minecraft.core.HolderSet.Named::key)'
+        // Entities, buffers, environment and networking.
+        call 'entity.getTags()', 'entity.entityTags()'
+        call 'isInWaterOrBubble()', 'isInWater()'
+        call 'entity.getType().is(', 'entity.getType().builtInRegistryHolder().is('
+        call 'entity.spawnAtLocation(', 'entity.spawnAtLocation((net.minecraft.server.level.ServerLevel) entity.level(), '
+        call 'writeResourceLocation(', 'writeIdentifier('
+        call 'readResourceLocation(', 'readIdentifier('
+        call 'FMLEnvironment.dist', 'FMLEnvironment.getDist()'
+        call 'PacketDistributor.sendToServer(', 'net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer('
+        call 'level.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)', 'level.getGameRules().get(GameRules.KEEP_INVENTORY)'
+        call 'type.create(level)', 'type.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD)'
+        call 'sendParticles(viewer, particle, true, ', 'sendParticles(viewer, particle, true, false, '
+        call 'living.getType().is(', 'living.getType().builtInRegistryHolder().is('
+        call 'BlockEvent.BreakEvent', 'net.neoforged.neoforge.event.level.block.BreakBlockEvent'
+        call '.handleInventoryMouseClick(', '.handleContainerInput('
+        call 'InventoryScreen.renderEntityInInventoryFollowsMouse(', 'InventoryScreen.extractEntityInInventoryFollowsMouse('
+        // Key binding categories are ids on 26.1.
+        call '.category("key.kineticcore.category")', '.category(net.minecraft.resources.Identifier.fromNamespaceAndPath("kineticcore", "main"))'
+        call '.category("key.categories.movement")', '.category(net.minecraft.client.KeyMapping.Category.MOVEMENT.id())'
+        // Click and hover events are one record per action on 26.1.
+        call 'new ClickEvent(ClickEvent.Action.RUN_COMMAND, ', 'new ClickEvent.RunCommand('
+        call 'new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, ', 'new ClickEvent.SuggestCommand('
+        call 'new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, ', 'new ClickEvent.CopyToClipboard('
+        call 'new ClickEvent(ClickEvent.Action.OPEN_URL, url)', 'new ClickEvent.OpenUrl(java.net.URI.create(url))'
+        call 'new HoverEvent(HoverEvent.Action.SHOW_TEXT, ', 'new HoverEvent.ShowText('
+        // ChunkPos is a record on 26.1.
+        spec.replace '\\bcenter\\.([xz])\\b(?![\\w(])', 'center.$1()', '\\bcenter\\.([xz])\\(\\)', 'center.$1'
+        spec.replace '\\b(?:MobSpawnType|EntitySpawnReason)\\.SPAWN_EGG\\b', 'EntitySpawnReason.SPAWN_ITEM_USE',
+                '\\bEntitySpawnReason\\.SPAWN_ITEM_USE\\b', 'MobSpawnType.SPAWN_EGG'
+        // Widget methods: renderWidget became extractWidgetRenderState, the scroll accessors lost their get prefix,
+        // and onPress receives the input that pressed the button.
+        rename 'renderWidget', 'extractWidgetRenderState'
+        rename 'getScrollbarPosition', 'scrollBarX'
+        rename 'getScrollAmount', 'scrollAmount'
+        rename 'getMaxScroll', 'maxScrollAmount'
+        call 'this.getMaxPosition()', 'this.contentHeight()'
+        call 'void onPress()', 'void onPress(net.minecraft.client.input.InputWithModifiers input)'
+
+        // CompoundTag and ListTag getters return Optional since 1.21.5; the ...Or forms keep the old defaults for
+        // missing entries. Only receivers named like NBT, since Components and configs have getString/getInt as well.
+        def nbt = '\\b(tag|entityTag|stackTag|forgeData|persistentData|root|nbt|compound|data|list|armor|hands|brain|memories|getPersistentData\\(\\))'
+        def getter = { String from, String to, String defaultArgument ->
+            spec.replace "${nbt}\\.${from}\\(([^()]*)\\)", "\$1.${to}(\$2${defaultArgument})",
+                    "${nbt}\\.${to}\\(([^()]*?)${java.util.regex.Pattern.quote(defaultArgument)}\\)", "\$1.${from}(\$2)"
+        }
+        getter 'getInt', 'getIntOr', ', 0'
+        getter 'getLong', 'getLongOr', ', 0L'
+        getter 'getBoolean', 'getBooleanOr', ', false'
+        getter 'getString', 'getStringOr', ', ""'
+        getter 'getDouble', 'getDoubleOr', ', 0D'
+        getter 'getFloat', 'getFloatOr', ', 0F'
+        getter 'getCompound', 'getCompoundOrEmpty', ''
+        // contains and getList lost their element type; contains keeps its check as an instanceof, getList keeps the
+        // type as a comment so the reverse direction can restore it.
+        ['COMPOUND': 'CompoundTag', 'STRING': 'StringTag', 'LIST': 'ListTag'].each { type, tagClass ->
+            spec.replace "\\b([A-Za-z_]\\w*(?:\\(\\))?)\\.contains\\(([^(),]*), Tag\\.TAG_${type}\\)",
+                    "(\$1.get(\$2) instanceof net.minecraft.nbt.${tagClass})",
+                    "\\(([A-Za-z_]\\w*(?:\\(\\))?)\\.get\\(([^(),]*)\\) instanceof net\\.minecraft\\.nbt\\.${tagClass}\\)",
+                    "\$1.contains(\$2, Tag.TAG_${type})"
+        }
+        spec.replace '\\.getList\\(([^(),]*), Tag\\.(TAG_[A-Z]+)\\)', '.getListOrEmpty($1)/*$2*/',
+                '\\.getListOrEmpty\\(([^(),]*)\\)/\\*(TAG_[A-Z]+)\\*/', '.getList($1, Tag.$2)'
+        // Inventory slots became private (equipment moved to the entity), and GameProfile is a record.
+        call 'getInventory().items', 'getInventory().getNonEquipmentItems()'
+        call 'inventory.items', 'inventory.getNonEquipmentItems()'
+        call 'getGameProfile().getName()', 'getGameProfile().name()'
+        call 'profile.getName()', 'profile.name()'
+        call 'profile.getId()', 'profile.id()'
+        call '.withPermission(2)', '.withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.GAMEMASTER)'
+        call '.withPermission(4)', '.withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.OWNER)'
+        // Permission level 2 became a permission set; the two spellings keep the reverse direction unambiguous.
+        call '.hasPermission(2)', '.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER)'
+        call '.hasPermissions(2)', '.permissions().hasPermission(new net.minecraft.server.permissions.Permission.HasCommandLevel(net.minecraft.server.permissions.PermissionLevel.GAMEMASTERS))'
+    }
 }
 
 tasks.register('buildAll') {

@@ -6,6 +6,7 @@
   "refmap": "kineticcore.mixins.refmap.json",
   "mixins": [
     "FlightServerMixins$PlayerAbilityTweaks",
+    "FlightServerMixins$AvatarDimensionTweaks",
     "FlightServerMixins$ServerPlayerTweaks",
     "FlightServerMixins$NetworkTweaks",
     "FlightServerMixins$CommonNetworkTweaks"

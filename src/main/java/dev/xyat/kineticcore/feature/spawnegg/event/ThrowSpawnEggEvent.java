@@ -37,19 +37,27 @@ public final class ThrowSpawnEggEvent {
         ItemStack stack = context.stack();
         if (!(stack.getItem() instanceof SpawnEggItem)) return;
 
+        //? if >=26.1 {
+        /*player.getCooldowns().removeCooldown(player.getCooldowns().getCooldownGroup(stack));
+        *///?} else {
         player.getCooldowns().removeCooldown(stack.getItem());
+        //?}
         throwSpawnEgg(player, stack);
 
         if (!player.getAbilities().instabuild) {
             stack.shrink(1);
         }
 
-        context.cancellationResult(InteractionResult.sidedSuccess(player.level().isClientSide));
+        //? if >=26.1 {
+        /*context.cancellationResult(InteractionResult.SUCCESS);
+        *///?} else {
+        context.cancellationResult(InteractionResult.sidedSuccess(player.level().isClientSide()));
+        //?}
         context.cancel();
     }
 
     private static void throwSpawnEgg(Player player, ItemStack stack) {
-        if (player.level().isClientSide) return;
+        if (player.level().isClientSide()) return;
 
         ItemStack projectileStack = stack.copy();
         if (projectileStack.getItem() instanceof SpawnEggItem spawnEgg
@@ -75,7 +83,14 @@ public final class ThrowSpawnEggEvent {
     }
 
     private static void addWardenDigCooldown(ItemStack stack) {
-        //? if >=1.20.5 {
+        //? if >=26.1 {
+        /*// 26.1 keeps the entity type next to the data instead of in an id field.
+        net.minecraft.world.item.component.TypedEntityData<EntityType<?>> data = stack.get(DataComponents.ENTITY_DATA);
+        CompoundTag entityTag = data == null ? new CompoundTag() : data.copyTagWithoutId();
+        putDigCooldown(entityTag);
+        stack.set(DataComponents.ENTITY_DATA,
+                net.minecraft.world.item.component.TypedEntityData.<EntityType<?>>of(EntityType.WARDEN, entityTag));
+        *///?} else if >=1.20.5 {
         /*// The egg's entity data is the entity_data component since 1.20.5, which must name the entity.
         CustomData.update(DataComponents.ENTITY_DATA, stack, entityTag -> {
             if (!entityTag.contains("id", Tag.TAG_STRING)) entityTag.putString("id", "minecraft:warden");

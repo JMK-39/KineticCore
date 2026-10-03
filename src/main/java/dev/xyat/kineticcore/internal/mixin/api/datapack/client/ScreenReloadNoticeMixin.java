@@ -17,7 +17,12 @@ public abstract class ScreenReloadNoticeMixin {
     @Accessor("height")
     public abstract int kineticcore$getHeight();
 
+    // 26.1 renders every screen through the final extractRenderStateWithTooltipAndSubtitles.
+    //? if >=26.1 {
+    /*@Inject(method = "extractRenderStateWithTooltipAndSubtitles", at = @At("TAIL"))
+    *///?} else {
     @Inject(method = "render", at = @At("TAIL"))
+    //?}
     private void kineticcore$datapack$renderReloadNotice(
             GuiGraphics guiGraphics,
             int mouseX,

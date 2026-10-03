@@ -1,5 +1,8 @@
 package dev.xyat.kineticcore.feature.spawnegg.client;
 
+// 26.1 renders the thrown egg with vanilla ThrownItemRenderer (see SpawnEggClient).
+//? if <26.1 {
+
 import javax.annotation.Nonnull;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -56,3 +59,4 @@ public final class ThrowSpawnEggRenderer extends EntityRenderer<ThrowSpawnEgg> {
         return TextureAtlas.LOCATION_BLOCKS;
     }
 }
+//?}

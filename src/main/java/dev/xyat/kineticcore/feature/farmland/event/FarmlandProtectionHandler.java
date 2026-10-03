@@ -20,7 +20,7 @@ public class FarmlandProtectionHandler {
     public static void onFarmlandTrample(KineticWorldEvents.FarmlandTrampleContext context) {
         if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "farmland", true)) return;
         if (context.entity() instanceof Player player) {
-            ItemStack boots = player.getInventory().getArmor(0);
+            ItemStack boots = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET);
             //? if >=1.21 {
             /*if (!boots.isEmpty() && boots.getEnchantments().keySet().stream().anyMatch(enchantment -> enchantment.is(Enchantments.FEATHER_FALLING))) {
             *///?} else {

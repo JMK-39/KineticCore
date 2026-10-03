@@ -19,7 +19,9 @@ public class FoodAndToolTweaks {
     public static void onRightClickItem(KineticPlayerEvents.RightClickItemContext context) {
         if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "always_edible", true)) return;
         ItemStack stack = context.stack();
-        //? if >=1.20.5 {
+        //? if >=26.1 {
+        /*if (stack.get(net.minecraft.core.component.DataComponents.FOOD) == null) return;
+        *///?} else if >=1.20.5 {
         /*if (stack.getFoodProperties(context.player()) == null) return;
         *///?} else {
         if (!stack.isEdible()) return;

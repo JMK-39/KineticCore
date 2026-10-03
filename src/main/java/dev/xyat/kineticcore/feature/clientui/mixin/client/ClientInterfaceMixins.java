@@ -11,7 +11,11 @@ import net.minecraft.client.NarratorStatus;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.components.toasts.Toast;
+//? if >=26.1 {
+/*import net.minecraft.client.gui.components.toasts.ToastManager;
+*///?} else {
 import net.minecraft.client.gui.components.toasts.ToastComponent;
+//?}
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
@@ -39,7 +43,11 @@ public class ClientInterfaceMixins {
         @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/text2speech/Narrator;getNarrator()Lcom/mojang/text2speech/Narrator;", remap = false))
         private Narrator kineticcore$replaceWithDummy() {
             return new Narrator() {
+                //? if >=26.1 {
+                /*@Override public void say(String msg, boolean interrupt, float volume) {}
+                *///?} else {
                 @Override public void say(String msg, boolean interrupt) {}
+                //?}
                 @Override public void clear() {}
                 @Override public boolean active() { return false; }
                 @Override public void destroy() {}
@@ -52,8 +60,13 @@ public class ClientInterfaceMixins {
         @Inject(method = "isActive", at = @At("HEAD"), cancellable = true)
         private void kineticcore$forceInactive(CallbackInfoReturnable<Boolean> cir) { cir.setReturnValue(false); }
 
+        //? if >=26.1 {
+        /*@Inject(method = "saySystemNow(Ljava/lang/String;)V", at = @At("HEAD"), cancellable = true)
+        private void kineticcore$silenceSayNow(String pMessage, CallbackInfo ci) { ci.cancel(); }
+        *///?} else {
         @Inject(method = "sayNow(Lnet/minecraft/network/chat/Component;)V", at = @At("HEAD"), cancellable = true)
         private void kineticcore$silenceSayNow(Component pMessage, CallbackInfo ci) { ci.cancel(); }
+        //?}
 
         @Inject(method = "updateNarratorStatus", at = @At("HEAD"), cancellable = true)
         private void kineticcore$blockStatusUpdate(NarratorStatus pStatus, CallbackInfo ci) { ci.cancel(); }
@@ -72,7 +85,11 @@ public class ClientInterfaceMixins {
     //?}
 
     // 3. 将“未经验证服务器”弹窗改为聊天提示
+    //? if >=26.1 {
+    /*@Mixin(ToastManager.class)
+    *///?} else {
     @Mixin(ToastComponent.class)
+    //?}
     public static class ToastTweaks {
         @Inject(method = "addToast", at = @At("HEAD"), cancellable = true)
         private void interceptUnsecureToast(Toast toast, CallbackInfo ci) {
@@ -113,8 +130,13 @@ public class ClientInterfaceMixins {
     // 5. 阻止 UI 强制跳转
     @Mixin(WorldSelectionList.class)
     public static class SelectionListTweaks {
+        //? if >=26.1 {
+        /*@Redirect(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/worldselection/CreateWorldScreen;openFresh(Lnet/minecraft/client/Minecraft;Ljava/lang/Runnable;)V"))
+        private void kineticcore$stopAutoJump(Minecraft mc, Runnable onClose) {
+        *///?} else {
         @Redirect(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/worldselection/CreateWorldScreen;openFresh(Lnet/minecraft/client/Minecraft;Lnet/minecraft/client/gui/screens/Screen;)V"))
         private void kineticcore$stopAutoJump(Minecraft mc, Screen screen) {
+        //?}
             // 阻止自动跳转
         }
     }

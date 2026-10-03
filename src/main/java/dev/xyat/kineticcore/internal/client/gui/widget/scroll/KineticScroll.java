@@ -654,7 +654,7 @@ public final class KineticScroll {
 
         private int scrollbarThumbHeight() {
             int trackHeight = scrollbarTrackHeight();
-            int contentHeight = Math.max(trackHeight, getMaxPosition());
+            int contentHeight = Math.max(trackHeight, this.getMaxPosition());
             return Mth.clamp(
                     (int) Math.round((double) trackHeight * trackHeight / contentHeight),
                     Math.min(20, trackHeight),
@@ -798,12 +798,13 @@ public final class KineticScroll {
             }
         }
 
+        //? if <26.1
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             if (!Double.isFinite(mouseX) || !Double.isFinite(mouseY)) return false;
             if (beginScrollbarDrag(mouseX, mouseY, button)) return true;
 
-            boolean handled = super.mouseClicked(mouseX, mouseY, button);
+            boolean handled = vanillaMouseClicked(mouseX, mouseY, button);
             if (handled && button == 0) {
                 double max = Math.max(0D, getMaxScroll());
                 targetScrollAmount = Mth.clamp(super.getScrollAmount(), 0D, max);
@@ -839,6 +840,7 @@ public final class KineticScroll {
             return true;
         }
 
+        //? if <26.1
         @Override
         public boolean mouseDragged(
                 double mouseX,
@@ -851,7 +853,7 @@ public final class KineticScroll {
                     || !Double.isFinite(dragX) || !Double.isFinite(dragY)) return false;
             if (dragScrollbar(mouseY, button)) return true;
 
-            boolean handled = super.mouseDragged(
+            boolean handled = vanillaMouseDragged(
                     mouseX,
                     mouseY,
                     button,
@@ -868,6 +870,7 @@ public final class KineticScroll {
             return handled;
         }
 
+        //? if <26.1
         @Override
         public boolean mouseReleased(double mouseX, double mouseY, int button) {
             if (button == 0 && scrollbarDragging) {
@@ -875,8 +878,61 @@ public final class KineticScroll {
                 scrollbarDragGrabOffset = 0D;
                 return true;
             }
+            return vanillaMouseReleased(mouseX, mouseY, button);
+        }
+        //? if >=26.1 {
+        /*// Since 1.21.9 input arrives as events; the coordinate handlers above stay the entry points.
+        private net.minecraft.client.input.MouseButtonEvent currentMouseEvent;
+        private boolean currentDoubleClick;
+
+        @Override
+        public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+            currentMouseEvent = event;
+            currentDoubleClick = doubleClick;
+            return mouseClicked(event.x(), event.y(), event.button());
+        }
+
+        @Override
+        public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dragX, double dragY) {
+            currentMouseEvent = event;
+            return mouseDragged(event.x(), event.y(), event.button(), dragX, dragY);
+        }
+
+        @Override
+        public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+            currentMouseEvent = event;
+            return mouseReleased(event.x(), event.y(), event.button());
+        }
+
+        private net.minecraft.client.input.MouseButtonEvent mouseEventAt(double x, double y, int button) {
+            int modifiers = currentMouseEvent == null ? 0 : currentMouseEvent.modifiers();
+            return new net.minecraft.client.input.MouseButtonEvent(x, y, new net.minecraft.client.input.MouseButtonInfo(button, modifiers));
+        }
+
+        private boolean vanillaMouseClicked(double mouseX, double mouseY, int button) {
+            return super.mouseClicked(mouseEventAt(mouseX, mouseY, button), currentDoubleClick);
+        }
+
+        private boolean vanillaMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+            return super.mouseDragged(mouseEventAt(mouseX, mouseY, button), dragX, dragY);
+        }
+
+        private boolean vanillaMouseReleased(double mouseX, double mouseY, int button) {
+            return super.mouseReleased(mouseEventAt(mouseX, mouseY, button));
+        }
+        *///?} else {
+        private boolean vanillaMouseClicked(double mouseX, double mouseY, int button) {
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
+
+        private boolean vanillaMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+            return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        }
+
+        private boolean vanillaMouseReleased(double mouseX, double mouseY, int button) {
             return super.mouseReleased(mouseX, mouseY, button);
         }
+        //?}
     }
 
     /** Controls logical offset, dragging, animation, and themed rendering for grid-style scrolling. */

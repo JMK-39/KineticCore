@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.config;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.widget.KineticDropdown;
 
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
@@ -774,7 +776,7 @@ final class KTModuleConfigScreen extends KineticScreen {
             float partialTick
     ) {
         GuiTheme.panel(graphics, 18, 12, 604, 342);
-        graphics.drawCenteredString(font, title, canvasWidth() / 2, 24, 0xFFFFAA00);
+        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 24, 0xFFFFAA00);
 
         hoveredRow = null;
         double pixelOffset = rowPixelOffset();
@@ -797,14 +799,14 @@ final class KTModuleConfigScreen extends KineticScreen {
                 switch (row.kind()) {
                     case SCOPE -> {
                         graphics.fill(30, y - 3, 612, y + 20, 0x66303030);
-                        graphics.drawString(font, row.text(), 38, y + 4, GuiTheme.current().text(), false);
+                        VanillaGuiDraw.text(graphics, font, row.text(), 38, y + 4, GuiTheme.current().text(), false);
                     }
                     case ENTRY -> {
                         KTConfigEntry<?> entry = row.entry();
                         String key = entryKey(row.page(), entry);
                         if (entry.type() == KTConfigEntry.Type.SECTION) {
                             graphics.fill(38, y - 3, 612, y + 20, 0x33222222);
-                            graphics.drawString(font, entry.label(), 46, y + 4, 0xFFFFCC55, false);
+                            VanillaGuiDraw.text(graphics, font, entry.label(), 46, y + 4, 0xFFFFCC55, false);
                         } else if (entry.type() == KTConfigEntry.Type.DESCRIPTION) {
                             KineticText.drawScrollingLeft(graphics, font, entry.label(), 46, y + 5, 554, 0xFFAAAAAA, false);
                         } else {
@@ -824,7 +826,7 @@ final class KTModuleConfigScreen extends KineticScreen {
         }
 
         if (rows.isEmpty()) {
-            graphics.drawCenteredString(
+            VanillaGuiDraw.centeredText(graphics, 
                     font,
                     KineticText.translatable("gui.kineticcore.config.no_fields"),
                     canvasWidth() / 2,
@@ -845,7 +847,7 @@ final class KTModuleConfigScreen extends KineticScreen {
         );
 
         if (status != null) {
-            graphics.drawCenteredString(
+            VanillaGuiDraw.centeredText(graphics, 
                     font,
                     status,
                     canvasWidth() / 2,
@@ -853,7 +855,7 @@ final class KTModuleConfigScreen extends KineticScreen {
                     invalidEntries.isEmpty() ? 0xFFFFFF55 : 0xFFFF5555
             );
         } else {
-            graphics.drawCenteredString(
+            VanillaGuiDraw.centeredText(graphics, 
                     font,
                     KineticText.translatable("gui.kineticcore.config.module_scope_hint"),
                     canvasWidth() / 2,

@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.config;
 
+import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 
 
@@ -251,7 +253,7 @@ final class KTConfigListScreen extends KineticScreen {
     private void renderSnapshotButton(GuiGraphics graphics, int x, int y, int width, Component label, boolean lifted) {
         GuiTheme.stateSurface(graphics, x, y, width, 20,
                 KineticTheme.Surface.PANEL_ALT, false, lifted, false);
-        graphics.drawCenteredString(font, label, x + width / 2, y + 6, GuiTheme.current().text());
+        VanillaGuiDraw.centeredText(graphics, font, label, x + width / 2, y + 6, GuiTheme.current().text());
     }
 
     private void renderRowSnapshot(
@@ -266,7 +268,7 @@ final class KTConfigListScreen extends KineticScreen {
         int rowWidth = ROW_RIGHT - LIST_X - 4;
         GuiTheme.stateSurface(graphics, rowX + 2, y + 1, rowWidth, ROW_HEIGHT - 2,
                 lifted ? KineticTheme.Surface.PANEL_ALT : KineticTheme.Surface.PANEL, false, lifted, false);
-        graphics.drawString(
+        VanillaGuiDraw.text(graphics, 
                 font,
                 Integer.toString(rank + 1),
                 52 + dx,
@@ -329,14 +331,14 @@ final class KTConfigListScreen extends KineticScreen {
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         GuiTheme.panel(graphics, 20, 12, 600, 342);
-        graphics.drawCenteredString(font, title, canvasWidth() / 2, 23, GuiTheme.current().accentHover());
+        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 23, GuiTheme.current().accentHover());
 
         if (description != null) {
             List<FormattedCharSequence> lines = font.split(description, 548);
             int count = Math.min(3, lines.size());
             int firstY = count <= 1 ? 47 : count == 2 ? 41 : 35;
             for (int index = 0; index < count; index++) {
-                graphics.drawCenteredString(
+                VanillaGuiDraw.centeredText(graphics, 
                         font,
                         lines.get(index),
                         canvasWidth() / 2,
@@ -356,7 +358,7 @@ final class KTConfigListScreen extends KineticScreen {
                 int last = Math.min(first + VISIBLE_ROWS + 2, values.size());
                 for (int index = first; index < last; index++) {
                     int y = LIST_Y + index * ROW_HEIGHT - (int) Math.round(pixelOffset);
-                    graphics.drawString(
+                    VanillaGuiDraw.text(graphics, 
                             font,
                             Integer.toString(index + 1),
                             52,
@@ -371,7 +373,7 @@ final class KTConfigListScreen extends KineticScreen {
         }
 
         if (values.isEmpty()) {
-            graphics.drawCenteredString(font, KineticText.translatable("gui.kineticcore.config.list_empty"),
+            VanillaGuiDraw.centeredText(graphics, font, KineticText.translatable("gui.kineticcore.config.list_empty"),
                     canvasWidth() / 2, LIST_Y + LIST_HEIGHT / 2 - 4, GuiTheme.current().mutedText());
         }
         listScroll.render(
@@ -379,7 +381,7 @@ final class KTConfigListScreen extends KineticScreen {
                 SCROLL_X, LIST_Y, SCROLL_WIDTH, LIST_HEIGHT, 18
         );
         if (status != null) {
-            graphics.drawCenteredString(font, status, canvasWidth() / 2, 309, GuiTheme.current().danger());
+            VanillaGuiDraw.centeredText(graphics, font, status, canvasWidth() / 2, 309, GuiTheme.current().danger());
         }
     }
 
@@ -393,8 +395,8 @@ final class KTConfigListScreen extends KineticScreen {
         ghostY = Math.max(45, Math.min(309, ghostY));
         int rowWidth = ROW_RIGHT - LIST_X - 4;
 
-        graphics.pose().pushPose();
-        graphics.pose().translate(0.0F, 0.0F, 250.0F);
+        VanillaGuiDraw.push(graphics);
+        VanillaGuiDraw.translate(graphics, 0.0F, 0.0F, 250.0F);
         try {
             graphics.fill(
                     ghostX + 5,
@@ -405,7 +407,7 @@ final class KTConfigListScreen extends KineticScreen {
             );
             renderRowSnapshot(graphics, draggingIndex, dragTargetIndex, ghostX, ghostY, true);
         } finally {
-            graphics.pose().popPose();
+            VanillaGuiDraw.pop(graphics);
         }
     }
 

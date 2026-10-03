@@ -96,11 +96,20 @@ public final class KineticServerHookRuntime {
         });
     }
 
+    //? if >=26.1 {
+    /*/^* Lets every handler reserve a first-login placement until one does; a failing handler does not stop later ones. ^/
+    public static boolean prepareFreshLogin(MinecraftServer server, java.util.UUID playerId, String playerName) {
+        return KineticCallbackQueries.firstPresent(SPAWN_OVERRIDES,
+                handler -> handler.prepareFreshLogin(server, playerId, playerName) ? Optional.of(Boolean.TRUE) : Optional.<Boolean>empty())
+                .isPresent();
+    }
+    *///?} else {
     /** Picks the first login-player override while allowing later handlers after a failure. */
     public static Optional<ServerPlayer> createFreshLoginPlayer(MinecraftServer server, GameProfile profile) {
         return KineticCallbackQueries.firstPresent(SPAWN_OVERRIDES,
                 handler -> handler.createFreshLoginPlayer(server, profile));
     }
+    //?}
 
     /** Picks the first shared-spawn override; an empty result keeps vanilla behavior. */
     public static Optional<BlockPos> sharedSpawn(MinecraftServer server, ServerLevel level) {

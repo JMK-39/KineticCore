@@ -179,7 +179,7 @@ public final class NbtNetwork {
             return;
         }
 
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = ((ServerLevel) player.level());
         if (!level.dimension().location().equals(request.dimension())) {
             sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
             return;
@@ -233,8 +233,7 @@ public final class NbtNetwork {
             return;
         }
 
-        CompoundTag tag = new CompoundTag();
-        target.saveWithoutId(tag);
+        CompoundTag tag = entityTag(target);
         openEditor(
                 player,
                 new EditorSession(TARGET_ENTITY, level.dimension(), target),
@@ -253,11 +252,7 @@ public final class NbtNetwork {
         openEditor(
                 player,
                 new EditorSession(TARGET_BLOCK_ENTITY, level.dimension(), target),
-                //? if >=1.20.5 {
-                /*target.saveWithId(level.registryAccess()).toString()
-                *///?} else {
-                target.saveWithId().toString()
-                //?}
+                blockEntityTag(target, level).toString()
         );
     }
 
@@ -289,7 +284,7 @@ public final class NbtNetwork {
             sendNotify(player, PERMISSION_ERROR_KEY);
             return;
         }
-        if (session == null || !player.serverLevel().dimension().equals(session.dimension())) {
+        if (session == null || !((ServerLevel) player.level()).dimension().equals(session.dimension())) {
             if (session != null) EDITOR_SESSIONS.remove(playerId, session);
             sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
             return;
@@ -333,7 +328,7 @@ public final class NbtNetwork {
         //? if >=1.20.5 {
         /*// An item's components cannot be replaced in place, so the edited item replaces the held one.
         DataComponentPatch components = DataComponentPatch.CODEC
-                .parse(player.serverLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE), tag)
+                .parse(((ServerLevel) player.level()).registryAccess().createSerializationContext(NbtOps.INSTANCE), tag)
                 .getOrThrow();
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(item.getItemHolder(), item.getCount(), components));
         *///?} else {
@@ -343,7 +338,7 @@ public final class NbtNetwork {
     }
 
     private static void saveEntity(ServerPlayer player, EditorSession session, CompoundTag tag) {
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = ((ServerLevel) player.level());
         Entity target = session.target() instanceof Entity entity ? entity : null;
         if (isUnavailableEntity(player, level, target)
                 || level.getEntity(target.getUUID()) != target) {
@@ -352,14 +347,13 @@ public final class NbtNetwork {
         }
 
         UUID oldUuid = target.getUUID();
-        CompoundTag previousTag = new CompoundTag();
-        target.saveWithoutId(previousTag);
+        CompoundTag previousTag = entityTag(target);
         try {
-            target.load(tag);
+            loadEntity(target, tag);
         } catch (RuntimeException failure) {
             // Loading a malformed tag can mutate the entity before it fails.
             try {
-                target.load(previousTag);
+                loadEntity(target, previousTag);
             } catch (RuntimeException rollbackFailure) {
                 if (rollbackFailure != failure) failure.addSuppressed(rollbackFailure);
             }
@@ -371,7 +365,7 @@ public final class NbtNetwork {
     }
 
     private static void saveBlockEntity(ServerPlayer player, EditorSession session, CompoundTag tag) {
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = ((ServerLevel) player.level());
         BlockEntity target = session.target() instanceof BlockEntity blockEntity ? blockEntity : null;
         if (target == null) {
             sendNotify(player, TARGET_UNAVAILABLE_ERROR_KEY);
@@ -388,24 +382,12 @@ public final class NbtNetwork {
         tag.putInt("x", pos.getX());
         tag.putInt("y", pos.getY());
         tag.putInt("z", pos.getZ());
-        //? if >=1.20.5 {
-        /*CompoundTag previousTag = target.saveWithId(level.registryAccess());
-        *///?} else {
-        CompoundTag previousTag = target.saveWithId();
-        //?}
+        CompoundTag previousTag = blockEntityTag(target, level);
         try {
-            //? if >=1.20.5 {
-            /*target.loadWithComponents(tag, level.registryAccess());
-            *///?} else {
-            target.load(tag);
-            //?}
+            loadBlockEntity(target, tag, level);
         } catch (RuntimeException failure) {
             try {
-                //? if >=1.20.5 {
-                /*target.loadWithComponents(previousTag, level.registryAccess());
-                *///?} else {
-                target.load(previousTag);
-                //?}
+                loadBlockEntity(target, previousTag, level);
             } catch (RuntimeException rollbackFailure) {
                 if (rollbackFailure != failure) failure.addSuppressed(rollbackFailure);
             }
@@ -462,5 +444,48 @@ public final class NbtNetwork {
     }
 
     private record EditorSession(byte targetType, ResourceKey<Level> dimension, Object target) {
+    }
+    // Entity and block entity data: CompoundTag based up to 1.21.1, ValueInput/ValueOutput based on 26.1.
+    private static CompoundTag entityTag(Entity entity) {
+        //? if >=26.1 {
+        /*net.minecraft.world.level.storage.TagValueOutput output = net.minecraft.world.level.storage.TagValueOutput
+                .createWithContext(net.minecraft.util.ProblemReporter.DISCARDING, entity.registryAccess());
+        entity.saveWithoutId(output);
+        return output.buildResult();
+        *///?} else {
+        CompoundTag tag = new CompoundTag();
+        entity.saveWithoutId(tag);
+        return tag;
+        //?}
+    }
+
+    private static void loadEntity(Entity entity, CompoundTag tag) {
+        //? if >=26.1 {
+        /*entity.load(net.minecraft.world.level.storage.TagValueInput.create(
+                net.minecraft.util.ProblemReporter.DISCARDING, entity.registryAccess(), tag));
+        *///?} else {
+        entity.load(tag);
+        //?}
+    }
+
+    private static CompoundTag blockEntityTag(BlockEntity blockEntity, ServerLevel level) {
+        //? if >=26.1 {
+        /*return blockEntity.saveWithFullMetadata(level.registryAccess());
+        *///?} else if >=1.20.5 {
+        /*return blockEntity.saveWithId(level.registryAccess());
+        *///?} else {
+        return blockEntity.saveWithId();
+        //?}
+    }
+
+    private static void loadBlockEntity(BlockEntity blockEntity, CompoundTag tag, ServerLevel level) {
+        //? if >=26.1 {
+        /*blockEntity.loadWithComponents(net.minecraft.world.level.storage.TagValueInput.create(
+                net.minecraft.util.ProblemReporter.DISCARDING, level.registryAccess(), tag));
+        *///?} else if >=1.20.5 {
+        /*blockEntity.loadWithComponents(tag, level.registryAccess());
+        *///?} else {
+        blockEntity.load(tag);
+        //?}
     }
 }
