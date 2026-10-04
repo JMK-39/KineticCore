@@ -423,15 +423,20 @@ public final class GuiOverlayRuntime {
                 VanillaGuiDraw.tooltip(graphics, font, item.stack(), mouseX, mouseY);
                 return;
             }
+            // Lines wider than the room beside the cursor are wrapped so the tooltip stays on screen.
+            int fitWidth = VanillaGuiDraw.tooltipWrapWidth(graphics, mouseX);
             if (request instanceof TextTooltip text) {
                 List<FormattedCharSequence> lines = new ArrayList<>();
-                for (Component line : text.lines()) lines.add(line.getVisualOrderText());
+                for (Component line : text.lines()) {
+                    if (font.width(line) <= fitWidth) lines.add(line.getVisualOrderText());
+                    else lines.addAll(font.split(line, fitWidth));
+                }
                 VanillaGuiDraw.sequenceTooltip(graphics, font, lines, mouseX, mouseY);
                 return;
             }
             if (request instanceof WrappedTextTooltip text) {
                 List<FormattedCharSequence> lines = new ArrayList<>();
-                for (Component line : text.lines()) lines.addAll(font.split(line, text.maxWidth()));
+                for (Component line : text.lines()) lines.addAll(font.split(line, Math.min(text.maxWidth(), fitWidth)));
                 VanillaGuiDraw.sequenceTooltip(graphics, font, lines, mouseX, mouseY);
                 return;
             }

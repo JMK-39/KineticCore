@@ -1,15 +1,21 @@
 package dev.xyat.kineticcore.internal.client.gui.render;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Renderable;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Vanilla GUI drawing calls whose names or behaviour differ between Minecraft versions. 26.1 renamed GuiGraphics
@@ -236,15 +242,53 @@ public final class VanillaGuiDraw {
         //?}
     }
 
+    // A tooltip wider than the room beside the cursor is wrapped to the wider side first. Vanilla and loaders only
+    // flip such a tooltip, and renderers that restyle tooltips (ModernUI and the like) add their own padding, so an
+    // unwrapped long line, such as an NBT dump, would leave the screen. The edge room covers border, padding and margin.
+    private static final int TOOLTIP_CURSOR_GAP = 12;
+    private static final int TOOLTIP_EDGE_ROOM = 16;
+    private static final int TOOLTIP_MIN_WIDTH = 48;
+
+    /** Widest tooltip text that fits beside the cursor on the side with more room. */
+    public static int tooltipWrapWidth(GuiGraphics graphics, int mouseX) {
+        int right = graphics.guiWidth() - mouseX - TOOLTIP_CURSOR_GAP - TOOLTIP_EDGE_ROOM;
+        int left = mouseX - TOOLTIP_CURSOR_GAP - TOOLTIP_EDGE_ROOM;
+        return Math.max(TOOLTIP_MIN_WIDTH, Math.max(right, left));
+    }
+
+    /** Splits lines wider than maxWidth, keeping their styles. */
+    public static List<Component> fitTooltipLines(Font font, List<Component> lines, int maxWidth) {
+        List<Component> fitted = new ArrayList<>(lines.size());
+        for (Component line : lines) {
+            if (font.width(line) <= maxWidth) {
+                fitted.add(line);
+                continue;
+            }
+            for (FormattedText part : font.getSplitter().splitLines(line, maxWidth, Style.EMPTY)) {
+                MutableComponent piece = Component.empty();
+                part.visit((style, text) -> {
+                    piece.append(Component.literal(text).setStyle(style));
+                    return Optional.empty();
+                }, Style.EMPTY);
+                fitted.add(piece);
+            }
+        }
+        return fitted;
+    }
+
     public static void tooltip(GuiGraphics graphics, Font font, ItemStack stack, int mouseX, int mouseY) {
+        List<Component> lines = fitTooltipLines(font,
+                Screen.getTooltipFromItem(Minecraft.getInstance(), stack), tooltipWrapWidth(graphics, mouseX));
         //? if >=26.1 {
-        /*graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY);
+        /*graphics.setTooltipForNextFrame(font, lines, stack.getTooltipImage(), stack, mouseX, mouseY,
+                stack.get(net.minecraft.core.component.DataComponents.TOOLTIP_STYLE));
         *///?} else {
-        graphics.renderTooltip(font, stack, mouseX, mouseY);
+        graphics.renderTooltip(font, lines, stack.getTooltipImage(), stack, mouseX, mouseY);
         //?}
     }
 
     public static void tooltip(GuiGraphics graphics, Font font, List<Component> lines, int mouseX, int mouseY) {
+        lines = fitTooltipLines(font, lines, tooltipWrapWidth(graphics, mouseX));
         //? if >=26.1 {
         /*graphics.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
         *///?} else {

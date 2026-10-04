@@ -1,3 +1,13 @@
+2026年10月04日 13时42分
+
+- Item and text tooltips near the screen edge no longer run off the screen: long lines wrap to the room left on the wider side of the cursor, on every supported version. Tooltips requested through KineticOverlays.requestTooltip are fitted the same way.
+- Builds now fail when the English and Chinese language files do not have exactly the same keys, so a missing or extra translation is caught before release.
+
+- 屏幕边缘的物品和文字悬浮提示不再超出屏幕：过长的行会按光标较宽一侧剩余的空间自动换行，所有支持的版本均生效。通过 KineticOverlays.requestTooltip 请求的提示同样会自动适配。
+- 英文与中文语言文件的键不完全一致时构建会失败，缺失或多出的翻译在发布前就会被发现。
+
+---
+
 2026年10月03日 20时11分
 
 - Added Minecraft 26.1.2 (NeoForge 26.1.2.112, Java 25). Its JAR is kineticcore-neoforge-26.1.2-<version>.jar.

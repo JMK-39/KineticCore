@@ -280,3 +280,6 @@ tasks.named('check').configure {
 
 apply from: rootProject.file('gradle/kinetic-architecture.gradle')
 apply from: rootProject.file('gradle/kinetic-api-verification.gradle')
+
+// English and Chinese must expose exactly the same authored translation keys.
+apply from: rootProject.file('gradle/kinetic-language-validation.gradle')
