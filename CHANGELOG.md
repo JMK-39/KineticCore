@@ -2,9 +2,11 @@
 
 - Item and text tooltips near the screen edge no longer run off the screen: long lines wrap to the room left on the wider side of the cursor, on every supported version. Tooltips requested through KineticOverlays.requestTooltip are fitted the same way.
 - Builds now fail when the English and Chinese language files do not have exactly the same keys, so a missing or extra translation is caught before release.
+- Text that is too long for its space scrolls back and forth at a steady speed, twice as fast as before, pausing for half a second at the start and at the end instead of slowing down near them, and glides smoothly instead of moving a whole pixel at a time.
 
 - 屏幕边缘的物品和文字悬浮提示不再超出屏幕：过长的行会按光标较宽一侧剩余的空间自动换行，所有支持的版本均生效。通过 KineticOverlays.requestTooltip 请求的提示同样会自动适配。
 - 英文与中文语言文件的键不完全一致时构建会失败，缺失或多出的翻译在发布前就会被发现。
+- 超出可用空间的文字以匀速左右往返滚动，速度比之前快一倍，到开头和结尾时各停顿半秒，不再在接近两端时减速，并且平滑移动，不再一次跳动一个像素。
 
 ---
 

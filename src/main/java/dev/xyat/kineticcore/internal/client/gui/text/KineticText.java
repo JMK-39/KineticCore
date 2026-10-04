@@ -9,7 +9,6 @@ import dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime;
 import net.minecraft.Util;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.util.Mth;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
@@ -67,10 +66,9 @@ public final class KineticText {
             return VanillaGuiDraw.text(graphics, font, text, x, y, color, shadow);
         }
         int overflow = textWidth - maxWidth;
-        int offset = scrollingOffset(overflow);
         KineticRenderRuntime.enableScissor(graphics, x, y - 1, x + maxWidth, y + font.lineHeight + 1);
         try {
-            return VanillaGuiDraw.text(graphics, font, text, x - offset, y, color, shadow);
+            return drawShifted(graphics, font, text, x, y, color, shadow, scrollingOffsetExact(overflow));
         } finally {
             KineticRenderRuntime.disableScissor(graphics);
         }
@@ -94,10 +92,9 @@ public final class KineticText {
         }
         int left = centerX - maxWidth / 2;
         int overflow = textWidth - maxWidth;
-        int offset = scrollingOffset(overflow);
         KineticRenderRuntime.enableScissor(graphics, left, y - 1, left + maxWidth, y + font.lineHeight + 1);
         try {
-            return VanillaGuiDraw.text(graphics, font, text, left - offset, y, color, shadow);
+            return drawShifted(graphics, font, text, left, y, color, shadow, scrollingOffsetExact(overflow));
         } finally {
             KineticRenderRuntime.disableScissor(graphics);
         }
@@ -121,10 +118,9 @@ public final class KineticText {
         }
         int left = rightX - maxWidth;
         int overflow = textWidth - maxWidth;
-        int offset = scrollingOffset(overflow);
         KineticRenderRuntime.enableScissor(graphics, left, y - 1, rightX, y + font.lineHeight + 1);
         try {
-            return VanillaGuiDraw.text(graphics, font, text, left - offset, y, color, shadow);
+            return drawShifted(graphics, font, text, left, y, color, shadow, scrollingOffsetExact(overflow));
         } finally {
             KineticRenderRuntime.disableScissor(graphics);
         }
@@ -141,11 +137,44 @@ public final class KineticText {
     }
 
     private static int scrollingOffset(int overflow) {
-        if (overflow <= 0) return 0;
-        double seconds = Util.getMillis() / 1000.0D;
-        double duration = Math.max(overflow * 0.5D, 3.0D);
-        double phase = Math.sin((Math.PI / 2.0D) * Math.cos((Math.PI * 2.0D) * seconds / duration)) / 2.0D + 0.5D;
-        return (int) Math.round(Mth.lerp(phase, 0.0D, overflow));
+        return Math.round(scrollingOffsetExact(overflow));
+    }
+
+    // Back and forth at a constant 8 GUI pixels per second (twice vanilla's average button speed, at least 0.75
+    // seconds per direction), with no easing: the text holds still for half a second at the start and at the end.
+    // The offset stays fractional so the text glides instead of stepping a whole pixel at a time.
+    private static final double SCROLL_PIXELS_PER_SECOND = 8.0D;
+    private static final double MIN_SWEEP_SECONDS = 0.75D;
+    private static final double END_PAUSE_SECONDS = 0.5D;
+
+    private static float scrollingOffsetExact(int overflow) {
+        if (overflow <= 0) return 0F;
+        double sweep = Math.max(overflow / SCROLL_PIXELS_PER_SECOND, MIN_SWEEP_SECONDS);
+        double leg = END_PAUSE_SECONDS + sweep;
+        double time = (Util.getMillis() / 1000.0D) % (leg * 2.0D);
+        double progress;
+        if (time < END_PAUSE_SECONDS) {
+            progress = 0.0D;                                        // paused at the start
+        } else if (time < leg) {
+            progress = (time - END_PAUSE_SECONDS) / sweep;          // moving towards the end
+        } else if (time < leg + END_PAUSE_SECONDS) {
+            progress = 1.0D;                                        // paused at the end
+        } else {
+            progress = 1.0D - (time - leg - END_PAUSE_SECONDS) / sweep; // moving back
+        }
+        return (float) (progress * overflow);
+    }
+
+    // The scissor is set before the shift, so only the text moves inside the clipped box.
+    private static int drawShifted(GuiGraphics graphics, Font font, Component text, int x, int y, int color,
+                                   boolean shadow, float offset) {
+        VanillaGuiDraw.push(graphics);
+        try {
+            VanillaGuiDraw.translate(graphics, -offset, 0F, 0F);
+            return VanillaGuiDraw.text(graphics, font, text, x, y, color, shadow);
+        } finally {
+            VanillaGuiDraw.pop(graphics);
+        }
     }
 
 }
