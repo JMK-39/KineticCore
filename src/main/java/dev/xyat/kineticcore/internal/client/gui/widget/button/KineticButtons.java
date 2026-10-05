@@ -53,7 +53,8 @@ public final class KineticButtons {
             boolean hovered
     ) {
         if (graphics == null || texture == null) return;
-        graphics.blit(
+        VanillaGuiDraw.texture(
+                graphics,
                 texture,
                 x,
                 y,

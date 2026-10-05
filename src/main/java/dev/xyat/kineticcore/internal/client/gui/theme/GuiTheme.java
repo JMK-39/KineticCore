@@ -508,7 +508,8 @@ public final class GuiTheme {
         if (graphics == null || columns <= 0 || rows <= 0) return;
         int width = Math.min(ITEM_GRID_TEXTURE_WIDTH, columns * 19);
         int height = Math.min(ITEM_GRID_TEXTURE_HEIGHT, rows * 19);
-        graphics.blit(
+        VanillaGuiDraw.texture(
+                graphics,
                 ITEM_GRID_TEXTURE,
                 x,
                 y,
@@ -559,7 +560,8 @@ public final class GuiTheme {
         VanillaGuiDraw.push(graphics);
         VanillaGuiDraw.translate(graphics, x, y, 0);
         VanillaGuiDraw.scale(graphics, width / (float) sourceWidth, height / (float) sourceHeight, 1f);
-        graphics.blit(
+        VanillaGuiDraw.texture(
+                graphics,
                 ITEM_GRID_TEXTURE,
                 0,
                 0,
