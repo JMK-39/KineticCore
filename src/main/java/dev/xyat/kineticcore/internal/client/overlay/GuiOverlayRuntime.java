@@ -206,7 +206,10 @@ public final class GuiOverlayRuntime {
                         item.action().run();
                     }
             );
-            button.setSelected(Boolean.TRUE.equals(item.checked()));
+            // The current option of a single choice is yellow; switched-on rows of a multi-selection are green.
+            boolean checked = Boolean.TRUE.equals(item.checked());
+            button.setSelected(checked && item.isChoice());
+            button.setPicked(checked && !item.isChoice());
             controls.add(new MenuControl(item, button));
         }
         if (controls.isEmpty()) {

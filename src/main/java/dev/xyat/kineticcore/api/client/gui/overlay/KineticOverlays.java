@@ -47,6 +47,7 @@ public final class KineticOverlays {
         private final Component detail;
         private final Component tooltip;
         private final Boolean checked;
+        private final boolean choice;
         private final Runnable action;
         private final boolean enabled;
         private final MenuItemStyle style;
@@ -60,6 +61,20 @@ public final class KineticOverlays {
                 boolean enabled,
                 MenuItemStyle style
         ) {
+            this(label, detail, tooltip, checked, false, action, enabled, style);
+        }
+
+        private MenuItem(
+                Component label,
+                Component detail,
+                Component tooltip,
+                Boolean checked,
+                boolean choice,
+                Runnable action,
+                boolean enabled,
+                MenuItemStyle style
+        ) {
+            this.choice = choice;
             this.label = Objects.requireNonNullElse(label, Component.empty());
             this.detail = Objects.requireNonNullElse(detail, Component.empty());
             this.tooltip = Objects.requireNonNullElse(tooltip, Component.empty());
@@ -104,9 +119,20 @@ public final class KineticOverlays {
             return new MenuItem(label, Component.empty(), tooltip, null, action, true, MenuItemStyle.NORMAL);
         }
 
-        /** Creates a context-menu toggle item with the supplied checked state. */
+        /**
+         * Creates an on/off row of a menu whose rows are switched independently (a multi-selection); a checked row
+         * is drawn green.
+         */
         public static MenuItem toggle(Component label, Component tooltip, boolean checked, Runnable action) {
             return new MenuItem(label, Component.empty(), tooltip, checked, action, true, MenuItemStyle.NORMAL);
+        }
+
+        /**
+         * Creates a row of a menu that picks exactly one of several options (such as a mode or a profile); the
+         * current option is drawn yellow.
+         */
+        public static MenuItem choice(Component label, Component tooltip, boolean current, Runnable action) {
+            return new MenuItem(label, Component.empty(), tooltip, current, true, action, true, MenuItemStyle.NORMAL);
         }
 
         /** Creates a destructive-action context-menu item without a tooltip. */
@@ -156,6 +182,11 @@ public final class KineticOverlays {
          */
         public Boolean checked() {
             return checked;
+        }
+
+        /** Whether this row picks one of several options (yellow when current) rather than switching on and off (green). */
+        public boolean isChoice() {
+            return choice;
         }
 
         /** Returns the click action; never {@code null}. */

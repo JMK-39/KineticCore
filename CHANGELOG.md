@@ -11,6 +11,7 @@
 - Button labels keep 4 px from the button edge, clear of the frame, instead of vanilla's 2 px on the bevel, and follow the same scrolling rule.
 - A text field that is not being edited shows its text from the first character. A long value no longer stays scrolled to its end after it was set or picked from the suggestions, which made it look shifted against the frame.
 - 3D mob previews keep the model 3 px inside their cell (the 1 px frame plus 2 px of space) instead of drawing up to the frame.
+- Context menus tell single choices from on/off switches: `MenuItem.choice(...)` marks the current option yellow, and checked `MenuItem.toggle(...)` rows (a multi-selection) are now green instead of yellow.
 
 - 标准 NBT 编辑器可以使用附属提供的规则检查文本，附属可在与 Forge 编辑 NBT 相同的编辑器中编辑 1.20.5+ 的物品数据组件（`[damage=5]`），各版本界面一致：`KineticSelectors.openNbtEditor(initialText, problem, onSave)`。
 - 26.1.2 上的容器页面（例如垃圾桶或基于原版容器贴图的配方编辑器）背景按屏幕坐标绘制，而槽位与物品按页面画布绘制，导致背景放大并与槽位错位。现在背景与槽位一起在画布中绘制，与 1.20.1 和 1.21.1 一致。
@@ -23,6 +24,7 @@
 - 按钮文字与按钮边缘保持 4 像素、不压边框（原版为 2 像素，压在斜面上），并遵循相同的滚动规则。
 - 不在编辑中的输入框从第一个字符开始显示。设置或从候选中选取较长的值后，不再停留在末尾，因此不会看起来贴着边框偏移。
 - 生物 3D 预览中的模型与格子边缘保持 3 像素（1 像素边框加 2 像素间距），不再画到边框上。
+- 右键菜单区分单选与开关：`MenuItem.choice(...)` 把当前选项标为黄色；勾选的 `MenuItem.toggle(...)` 行（多选）改为绿色（原为黄色）。
 
 ---
 
