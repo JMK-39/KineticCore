@@ -405,6 +405,26 @@ public final class KineticTextFields {
             return defaultText != null && defaultText.equals(value) ? GuiTheme.fieldDefaultText() : GuiTheme.fieldModifiedText();
         }
 
+        // A field that is not being edited shows its text from the start. Vanilla keeps the view scrolled to the
+        // cursor, which is left at the end after a value is set or picked, so a long value showed only its end.
+        @Override
+        public void setFocused(boolean focused) {
+            super.setFocused(focused);
+            if (!focused) showStart();
+        }
+
+        @Override
+        public void setValue(String value) {
+            super.setValue(value);
+            if (!isFocused()) showStart();
+        }
+
+        /** Moves the cursor and the view back to the first character, without a selection. */
+        protected final void showStart() {
+            setCursorPosition(0);
+            setHighlightPos(0);
+        }
+
         // ---- 公共 API（稳定名称）委托给原版 EditBox / Public API (stable names) delegating to vanilla EditBox ----
         @Override
         public String textValue() {

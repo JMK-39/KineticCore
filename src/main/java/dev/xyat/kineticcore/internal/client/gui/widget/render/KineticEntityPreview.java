@@ -71,6 +71,8 @@ public final class KineticEntityPreview {
         public static final float DEFAULT_VISUAL_HEIGHT_FLOOR = 1.35f;
 
         private static final int CHECKER_SIZE = 6;
+        /** Gap between the model and the preview cell edge: the 1 px frame plus 2 px of space. */
+        private static final float MODEL_INSET = 3f;
         private static final int CHECKER_LIGHT = 0xFFF0F0F0;
         private static final int CHECKER_DARK = 0xFFD2D2D2;
 
@@ -253,8 +255,9 @@ public final class KineticEntityPreview {
             // boxes while leaving normal/large entities governed by their real dimensions.
             float fitWidth = Math.max(entityWidth, DEFAULT_VISUAL_WIDTH_FLOOR);
             float fitHeight = Math.max(entityHeight, DEFAULT_VISUAL_HEIGHT_FLOOR);
-            float safeWidth = Math.max(1f, boxW * fillRatio);
-            float safeHeight = Math.max(1f, boxH * fillRatio);
+            // The model keeps MODEL_INSET px from the cell edge: the 1 px frame plus 2 px of space.
+            float safeWidth = Math.max(1f, Math.min(boxW * fillRatio, boxW - MODEL_INSET * 2));
+            float safeHeight = Math.max(1f, Math.min(boxH * fillRatio, boxH - MODEL_INSET * 2));
             float autoScale = Math.min(safeWidth / fitWidth, safeHeight / fitHeight);
             float boxScaleCap = Math.min(boxW, boxH) * maxAutoScaleFactor;
             autoScale = Math.min(autoScale, boxScaleCap);
@@ -266,23 +269,23 @@ public final class KineticEntityPreview {
 
             //? if >=26.1 {
             /*// 26.1 maps scissor rectangles through the pose, so the box is given as it is.
-            int scissorX1 = (int) Math.ceil(boxX + 0.5f);
-            int scissorY1 = (int) Math.ceil(boxY + 0.5f);
-            int scissorX2 = (int) Math.floor(boxX + boxW - 0.5f);
-            int scissorY2 = (int) Math.floor(boxY + boxH - 0.5f);
+            int scissorX1 = (int) Math.ceil(boxX + MODEL_INSET);
+            int scissorY1 = (int) Math.ceil(boxY + MODEL_INSET);
+            int scissorX2 = (int) Math.floor(boxX + boxW - MODEL_INSET);
+            int scissorY2 = (int) Math.floor(boxY + boxH - MODEL_INSET);
             *///?} else {
             int scissorX1 = canvasCoordinates
-                    ? (int) Math.ceil(boxX + 0.5f)
-                    : offsetX + (int) Math.ceil((boxX + 0.5f) * guiScale);
+                    ? (int) Math.ceil(boxX + MODEL_INSET)
+                    : offsetX + (int) Math.ceil((boxX + MODEL_INSET) * guiScale);
             int scissorY1 = canvasCoordinates
-                    ? (int) Math.ceil(boxY + 0.5f)
-                    : offsetY + (int) Math.ceil((boxY + 0.5f) * guiScale);
+                    ? (int) Math.ceil(boxY + MODEL_INSET)
+                    : offsetY + (int) Math.ceil((boxY + MODEL_INSET) * guiScale);
             int scissorX2 = canvasCoordinates
-                    ? (int) Math.floor(boxX + boxW - 0.5f)
-                    : offsetX + (int) Math.floor((boxX + boxW - 0.5f) * guiScale);
+                    ? (int) Math.floor(boxX + boxW - MODEL_INSET)
+                    : offsetX + (int) Math.floor((boxX + boxW - MODEL_INSET) * guiScale);
             int scissorY2 = canvasCoordinates
-                    ? (int) Math.floor(boxY + boxH - 0.5f)
-                    : offsetY + (int) Math.floor((boxY + boxH - 0.5f) * guiScale);
+                    ? (int) Math.floor(boxY + boxH - MODEL_INSET)
+                    : offsetY + (int) Math.floor((boxY + boxH - MODEL_INSET) * guiScale);
             //?}
             if (scissorX2 <= scissorX1 || scissorY2 <= scissorY1) return false;
             KineticRenderRuntime.enableScissor(graphics, scissorX1, scissorY1, scissorX2, scissorY2);

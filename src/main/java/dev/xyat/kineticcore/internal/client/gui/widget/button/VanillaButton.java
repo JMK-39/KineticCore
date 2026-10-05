@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.button;
 
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
@@ -9,6 +11,9 @@ import net.minecraft.network.chat.Component;
  * on 26.1 AbstractButton's render method is final and calls extractContents instead.
  */
 public abstract class VanillaButton extends Button {
+    /** Smallest gap between a label and the button's outer edge: the 2 px frame plus 2 px of space. */
+    private static final int LABEL_PADDING = 4;
+
     protected VanillaButton(int x, int y, int width, int height, Component message, Button.OnPress onPress,
                             Button.CreateNarration createNarration) {
         super(x, y, width, height, message, onPress, createNarration);
@@ -23,10 +28,26 @@ public abstract class VanillaButton extends Button {
     protected final void renderVanillaButton(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         //? if >=26.1 {
         /*extractDefaultSprite(graphics);
-        extractDefaultLabel(graphics.textRendererForWidget(this, GuiGraphics.HoveredTextEffects.NONE));
+        drawLabel(graphics, (active ? 0xFFFFFF : 0xA0A0A0) | net.minecraft.util.Mth.ceil(alpha * 255.0F) << 24);
         *///?} else {
         super.renderWidget(graphics, mouseX, mouseY, partialTick);
         //?}
+    }
+
+    //? if <26.1 {
+    // Vanilla draws the label 2 px from the edge, on the frame's bevel; Kinetic labels keep clear of the frame.
+    @Override
+    public void renderString(GuiGraphics graphics, net.minecraft.client.gui.Font font, int color) {
+        drawLabel(graphics, color);
+    }
+    //?}
+
+    /** Centred, vertically centred label that keeps its padding, scrolls when long and ellipsizes when far too long. */
+    private void drawLabel(GuiGraphics graphics, int color) {
+        Component message = getMessage();
+        if (message == null || message.getString().isEmpty()) return;
+        KineticText.drawScrollingCentered(graphics, Minecraft.getInstance().font, message, getX() + getWidth() / 2,
+                getY() + (getHeight() - 8 + 1) / 2, getWidth() - LABEL_PADDING * 2, color, true);
     }
 
     //? if >=26.1 {

@@ -330,6 +330,31 @@ public final class VanillaGuiDraw {
         //?}
     }
 
+    /**
+     * Whether the mouse is over a rectangle given in the graphics' current local coordinates. Only true while a
+     * screen is open, so HUD text never reacts to the cursor.
+     */
+    public static boolean mouseOver(GuiGraphics graphics, int x, int y, int width, int height) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (graphics == null || minecraft.screen == null || width <= 0 || height <= 0) return false;
+        var window = minecraft.getWindow();
+        if (window.getScreenWidth() <= 0 || window.getScreenHeight() <= 0) return false;
+        float mouseX = (float) (minecraft.mouseHandler.xpos() * window.getGuiScaledWidth() / window.getScreenWidth());
+        float mouseY = (float) (minecraft.mouseHandler.ypos() * window.getGuiScaledHeight() / window.getScreenHeight());
+        //? if >=26.1 {
+        /*org.joml.Vector2f local = new org.joml.Matrix3x2f(graphics.pose()).invert()
+                .transformPosition(new org.joml.Vector2f(mouseX, mouseY));
+        float localX = local.x;
+        float localY = local.y;
+        *///?} else {
+        org.joml.Vector4f local = new org.joml.Matrix4f(graphics.pose().last().pose()).invert()
+                .transform(new org.joml.Vector4f(mouseX, mouseY, 0F, 1F));
+        float localX = local.x();
+        float localY = local.y();
+        //?}
+        return localX >= x && localX < x + width && localY >= y && localY < y + height;
+    }
+
     public static void scale(GuiGraphics graphics, float x, float y, float z) {
         //? if >=26.1 {
         /*graphics.pose().scale(x, y);

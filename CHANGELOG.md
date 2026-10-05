@@ -7,6 +7,10 @@
 - Lists of identifiers can be drawn as plain text rows instead of buttons: selection and toggle lists take `.textRows()`, which draws striped 14 px rows packed without gaps, with vertically centered text that keeps its padding and scrolls when too long. The current choice is yellow, the hovered row is outlined and, in toggle lists (multi-select), chosen rows are green.
 - Toggle lists now mark chosen rows green instead of yellow, in both row styles, and buttons gain a green "picked" state for multi-select groups (`KineticButton.setPicked`). Yellow stays the current choice.
 - Search suggestion popups no longer draw a box around every row; only the hovered row and the keyboard choice are outlined, and suggestion text keeps 4 px from the row edges.
+- Text that does not fit its space is never cut off: up to twice the space it scrolls back and forth, and longer text shows its start with an ellipsis and scrolls through in full while the mouse is over it. This applies to every scrolling text drawn by the core and by addons.
+- Button labels keep 4 px from the button edge, clear of the frame, instead of vanilla's 2 px on the bevel, and follow the same scrolling rule.
+- A text field that is not being edited shows its text from the first character. A long value no longer stays scrolled to its end after it was set or picked from the suggestions, which made it look shifted against the frame.
+- 3D mob previews keep the model 3 px inside their cell (the 1 px frame plus 2 px of space) instead of drawing up to the frame.
 
 - 标准 NBT 编辑器可以使用附属提供的规则检查文本，附属可在与 Forge 编辑 NBT 相同的编辑器中编辑 1.20.5+ 的物品数据组件（`[damage=5]`），各版本界面一致：`KineticSelectors.openNbtEditor(initialText, problem, onSave)`。
 - 26.1.2 上的容器页面（例如垃圾桶或基于原版容器贴图的配方编辑器）背景按屏幕坐标绘制，而槽位与物品按页面画布绘制，导致背景放大并与槽位错位。现在背景与槽位一起在画布中绘制，与 1.20.1 和 1.21.1 一致。
@@ -15,6 +19,10 @@
 - ID 列表可以用纯文字行代替按钮显示：单选列表和开关列表支持 `.textRows()`。行高 14 像素、条纹背景、行间无空隙；文字垂直居中并保留内边距，过长时滚动。当前选择为黄色，光标所在行加边框，开关列表（多选）中已选的行为绿色。
 - 开关列表中已选的行在两种行样式下都改为绿色（原为黄色）。按钮新增用于多选组的绿色"已选"状态（`KineticButton.setPicked`）。黄色继续表示当前选择。
 - 搜索候选弹窗不再给每一行画边框，只有光标所在行和键盘选中项带边框；候选文字与行边缘保持 4 像素。
+- 放不下的文字不再被截断：超出不到一倍时来回滚动；更长的文字显示开头加省略号，鼠标悬停时滚动显示完整内容。核心与附属绘制的所有滚动文字均适用。
+- 按钮文字与按钮边缘保持 4 像素、不压边框（原版为 2 像素，压在斜面上），并遵循相同的滚动规则。
+- 不在编辑中的输入框从第一个字符开始显示。设置或从候选中选取较长的值后，不再停留在末尾，因此不会看起来贴着边框偏移。
+- 生物 3D 预览中的模型与格子边缘保持 3 像素（1 像素边框加 2 像素间距），不再画到边框上。
 
 ---
 

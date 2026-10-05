@@ -65,13 +65,7 @@ public final class KineticText {
         if (textWidth <= maxWidth) {
             return VanillaGuiDraw.text(graphics, font, text, x, y, color, shadow);
         }
-        int overflow = textWidth - maxWidth;
-        KineticRenderRuntime.enableScissor(graphics, x, y - 1, x + maxWidth, y + font.lineHeight + 1);
-        try {
-            return drawShifted(graphics, font, text, x, y, color, shadow, scrollingOffsetExact(overflow));
-        } finally {
-            KineticRenderRuntime.disableScissor(graphics);
-        }
+        return drawOverflowing(graphics, font, text, x, y, maxWidth, textWidth, color, shadow);
     }
 
     /** Draws a centered component and scrolls it when it exceeds the available width. */
@@ -90,14 +84,7 @@ public final class KineticText {
         if (textWidth <= maxWidth) {
             return VanillaGuiDraw.text(graphics, font, text, centerX - textWidth / 2, y, color, shadow);
         }
-        int left = centerX - maxWidth / 2;
-        int overflow = textWidth - maxWidth;
-        KineticRenderRuntime.enableScissor(graphics, left, y - 1, left + maxWidth, y + font.lineHeight + 1);
-        try {
-            return drawShifted(graphics, font, text, left, y, color, shadow, scrollingOffsetExact(overflow));
-        } finally {
-            KineticRenderRuntime.disableScissor(graphics);
-        }
+        return drawOverflowing(graphics, font, text, centerX - maxWidth / 2, y, maxWidth, textWidth, color, shadow);
     }
 
     /** Draws a right-aligned component and scrolls it when it exceeds the available width. */
@@ -116,14 +103,32 @@ public final class KineticText {
         if (textWidth <= maxWidth) {
             return VanillaGuiDraw.text(graphics, font, text, rightX - textWidth, y, color, shadow);
         }
-        int left = rightX - maxWidth;
-        int overflow = textWidth - maxWidth;
-        KineticRenderRuntime.enableScissor(graphics, left, y - 1, rightX, y + font.lineHeight + 1);
+        return drawOverflowing(graphics, font, text, rightX - maxWidth, y, maxWidth, textWidth, color, shadow);
+    }
+
+    /**
+     * Text wider than its space never gets cut off: up to twice the space it scrolls back and forth; text longer
+     * than that shows its start with an ellipsis and scrolls through in full while the mouse is over it.
+     */
+    private static int drawOverflowing(GuiGraphics graphics, Font font, Component text, int left, int y, int maxWidth,
+                                       int textWidth, int color, boolean shadow) {
+        if (textWidth > maxWidth * 2
+                && !VanillaGuiDraw.mouseOver(graphics, left, y - 1, maxWidth, font.lineHeight + 2)) {
+            return VanillaGuiDraw.text(graphics, font, ellipsized(font, text, maxWidth), left, y, color, shadow);
+        }
+        KineticRenderRuntime.enableScissor(graphics, left, y - 1, left + maxWidth, y + font.lineHeight + 1);
         try {
-            return drawShifted(graphics, font, text, left, y, color, shadow, scrollingOffsetExact(overflow));
+            return drawShifted(graphics, font, text, left, y, color, shadow, scrollingOffsetExact(textWidth - maxWidth));
         } finally {
             KineticRenderRuntime.disableScissor(graphics);
         }
+    }
+
+    /** The start of the text that fits together with a trailing ellipsis, keeping the text's own styles. */
+    private static net.minecraft.util.FormattedCharSequence ellipsized(Font font, Component text, int maxWidth) {
+        Component ellipsis = Component.literal("...");
+        net.minecraft.network.chat.FormattedText head = font.substrByWidth(text, Math.max(0, maxWidth - font.width(ellipsis)));
+        return net.minecraft.locale.Language.getInstance().getVisualOrder(net.minecraft.network.chat.FormattedText.composite(head, ellipsis));
     }
 
     /** Returns the shared horizontal scrolling offset for custom mixed-content rendering. */

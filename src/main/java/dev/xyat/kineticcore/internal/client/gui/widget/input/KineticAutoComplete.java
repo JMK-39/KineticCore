@@ -269,7 +269,8 @@ public final class KineticAutoComplete {
         private void selectItem(int index) {
             String val = suggestions.get(index).value();
             this.setValue(val);
-            this.setCursorPosition(this.getValue().length());
+            // A picked value is complete: show it from its first character instead of scrolled to its end.
+            this.showStart();
             this.clearSuggestions();
             if (this.selectionResponder != null) {
                 this.selectionResponder.accept(val);
