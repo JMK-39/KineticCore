@@ -13,6 +13,8 @@ import net.minecraft.network.chat.Component;
 public abstract class VanillaButton extends Button {
     /** Smallest gap between a label and the button's outer edge: the 2 px frame plus 2 px of space. */
     private static final int LABEL_PADDING = 4;
+    /** The smallest gap a label keeps from the button edge when the normal padding leaves too little room. */
+    private static final int MIN_LABEL_PADDING = 2;
 
     protected VanillaButton(int x, int y, int width, int height, Component message, Button.OnPress onPress,
                             Button.CreateNarration createNarration) {
@@ -46,8 +48,11 @@ public abstract class VanillaButton extends Button {
     private void drawLabel(GuiGraphics graphics, int color) {
         Component message = getMessage();
         if (message == null || message.getString().isEmpty()) return;
-        KineticText.drawScrollingCentered(graphics, Minecraft.getInstance().font, message, getX() + getWidth() / 2,
-                getY() + (getHeight() - 8 + 1) / 2, getWidth() - LABEL_PADDING * 2, color, true);
+        var font = Minecraft.getInstance().font;
+        // Small buttons (icons such as ▶) keep the label whole with the minimum 2 px gap instead of scrolling it.
+        int padding = font.width(message) <= getWidth() - LABEL_PADDING * 2 ? LABEL_PADDING : MIN_LABEL_PADDING;
+        KineticText.drawScrollingCentered(graphics, font, message, getX() + getWidth() / 2,
+                getY() + (getHeight() - 8 + 1) / 2, getWidth() - padding * 2, color, true);
     }
 
     //? if >=26.1 {
