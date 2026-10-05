@@ -97,11 +97,12 @@ public class NbtEditorScreen extends KineticScreen {
         int editorH = this.canvasHeight() - 60;
 
         nbtEditor = new NbtEditorWidget(this.font, editorX, editorY, editorW, editorH);
-        nbtEditor.setValue(initialNbt);
         nbtEditor.setResponder(val -> {
             String error = val.trim().isEmpty() ? null : problem.apply(val.trim());
             nbtEditor.setError(error == null ? "" : error);
         });
+        // Set after the responder so the text the editor opens with is checked too.
+        nbtEditor.setValue(initialNbt);
     }
 
     @Override
