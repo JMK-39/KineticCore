@@ -35,7 +35,7 @@ public final class ServerConfigClientRuntime {
         if (initialized) return;
         // Install both listeners as one operation. If the second registration fails,
         // release the first handle so retrying does not accumulate duplicate callbacks.
-        var loginSubscription = KineticClientEventRuntime.registerLogin(ServerConfigClientRuntime::clear);
+        var loginSubscription = KineticClientEventRuntime.registerLogin(ServerConfigClientRuntime::onLogin);
         try {
             KineticClientEventRuntime.registerLogout(ServerConfigClientRuntime::clear);
             initialized = true;
@@ -46,6 +46,14 @@ public final class ServerConfigClientRuntime {
                 if (cleanupFailure != failure) failure.addSuppressed(cleanupFailure);
             }
             throw failure;
+        }
+    }
+
+    // A fresh connection starts without cached pages; pages that opted in load their own values right away.
+    private static void onLogin() {
+        clear();
+        for (KTConfigPage page : KTConfigApi.pages()) {
+            if (page.mirrorOnJoin()) request(page);
         }
     }
 

@@ -1,3 +1,11 @@
+2026年10月06日 07时17分
+
+- A server-managed config page can load its server values on the client when the player joins (`KTConfigPage.Builder.mirrorOnJoin()`), so a client that shows or uses those values never runs on its own local file. Only the joining player is answered; nothing is sent to other players, and later admin edits reach other players when they next join.
+
+- 由服务端管理的配置页面可以在玩家加入时把服务端数值加载到客户端（`KTConfigPage.Builder.mirrorOnJoin()`），显示或使用这些数值的客户端不再依赖自己的本地文件。只回复加入的玩家，不向其他玩家发送任何内容；管理员之后的修改会在其他玩家下次加入时生效。
+
+---
+
 2026年10月05日 13时02分
 
 - The standard NBT editor can check text with a rule supplied by the addon, so addons edit 1.20.5+ item component text (`[damage=5]`) in the same editor they use for NBT on Forge, and the screen looks the same on every version: `KineticSelectors.openNbtEditor(initialText, problem, onSave)`.

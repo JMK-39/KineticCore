@@ -100,6 +100,7 @@ public final class KTConfigPage {
     private final Component description;
     private final KTConfigScope scope;
     private final boolean serverManaged;
+    private final boolean mirrorOnJoin;
     private final ApplyTiming applyTiming;
     private final Component applyNotice;
     private final List<KTConfigEntry<?>> entries;
@@ -111,6 +112,7 @@ public final class KTConfigPage {
         this.description = builder.description;
         this.scope = builder.scope;
         this.serverManaged = builder.serverManaged;
+        this.mirrorOnJoin = builder.mirrorOnJoin;
         this.applyTiming = builder.applyTiming;
         this.applyNotice = builder.applyNotice;
         this.entries = List.copyOf(builder.entries);
@@ -164,6 +166,11 @@ public final class KTConfigPage {
      */
     public boolean serverManaged() {
         return serverManaged;
+    }
+
+    /** Whether the client loads this server-managed page's values from the server when it joins (see {@link Builder#mirrorOnJoin()}). */
+    public boolean mirrorOnJoin() {
+        return mirrorOnJoin;
     }
 
     /** Returns when saved values from this page take effect. */
@@ -231,6 +238,7 @@ public final class KTConfigPage {
         private Component description;
         private KTConfigScope scope = KTConfigScope.LOCAL_INSTALLATION;
         private boolean serverManaged;
+        private boolean mirrorOnJoin;
         private ApplyTiming applyTiming = ApplyTiming.MIXED;
         private Component applyNotice;
         private Runnable saver = () -> { };
@@ -274,6 +282,19 @@ public final class KTConfigPage {
          */
         public Builder serverManaged() {
             this.serverManaged = true;
+            return this;
+        }
+
+        /**
+         * For a server-managed page whose values the client itself uses (for example to show tooltips): when the
+         * player joins a server, the client asks for this page's values once and applies them, so the client never
+         * runs on its own local copy. Only the joining player is answered; nothing is sent to other players, and
+         * later admin edits reach other players when they next join.
+         *
+         * @return this builder
+         */
+        public Builder mirrorOnJoin() {
+            this.mirrorOnJoin = true;
             return this;
         }
 
