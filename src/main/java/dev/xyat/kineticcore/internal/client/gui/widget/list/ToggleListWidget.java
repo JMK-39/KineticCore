@@ -20,9 +20,13 @@ import net.minecraft.network.chat.Component;
 
 /** Smooth scrolling list control behind the public {@code Kinetic*List} API; created only through {@code KineticWidgets}. */
 public final class ToggleListWidget extends VerticalScrollListWidget implements KineticToggleList {
-    private static final int ROW_HEIGHT = KineticScreen.STANDARD_CONTROL_HEIGHT;
-    private static final int ROW_PITCH = ROW_HEIGHT + 5;
-    private static final int ROW_TOP_PADDING = 2;
+    private static final int BUTTON_ROW_HEIGHT = KineticScreen.STANDARD_CONTROL_HEIGHT;
+    // Plain text rows: 8 px glyphs with 3 px above and below, packed without gaps.
+    private static final int TEXT_ROW_HEIGHT = 14;
+    private boolean textRows;
+    private int rowHeight = BUTTON_ROW_HEIGHT;
+    private int rowStep = BUTTON_ROW_HEIGHT + 5;
+    private int rowTopPadding = 2;
 
     private final BiConsumer<Integer, Boolean> responder;
     private final int zLevel;
@@ -66,10 +70,12 @@ public final class ToggleListWidget extends VerticalScrollListWidget implements 
                     getX(),
                     getY(),
                     contentWidth(),
-                    ROW_HEIGHT,
+                    rowHeight,
                     itemLabel(item),
                     ignored -> toggle(rowIndex)
             );
+            button.setTextRow(textRows);
+            button.setRowStripe((index & 1) == 1);
             rowButtons.add(button);
         }
         refreshRange();
@@ -113,14 +119,14 @@ public final class ToggleListWidget extends VerticalScrollListWidget implements 
         if (!visible || mouseX < getX() || mouseX >= getX() + contentWidth()
                 || mouseY < getY() || mouseY >= getY() + getHeight()) return -1;
         int start = scroll.smoothIndexOffset();
-        int shift = scroll.visualShift(ROW_PITCH);
+        int shift = scroll.visualShift(rowStep);
         for (int index = start; index < rowButtons.size(); index++) {
             StateButton button = rowButtons.get(index);
-            int rowY = getY() + (index - start) * ROW_PITCH - shift + ROW_TOP_PADDING;
+            int rowY = getY() + (index - start) * rowStep - shift + rowTopPadding;
             if (rowY >= getY() + getHeight()) break;
-            if (rowY + ROW_HEIGHT <= getY()) continue;
+            if (rowY + rowHeight <= getY()) continue;
             if (mouseX >= button.getX() && mouseX < button.getX() + button.getWidth()
-                    && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT) return index;
+                    && mouseY >= rowY && mouseY < rowY + rowHeight) return index;
         }
         return -1;
     }
@@ -210,7 +216,7 @@ public final class ToggleListWidget extends VerticalScrollListWidget implements 
         for (int index = 0; index < rowButtons.size(); index++) {
             StateButton button = rowButtons.get(index);
             ToggleItem item = items.get(index);
-            button.setSelected(item != null && item.value());
+            button.setPicked(item != null && item.value());
             button.setMessage(itemLabel(item));
             button.active = active && item != null && item.active();
         }
@@ -219,14 +225,14 @@ public final class ToggleListWidget extends VerticalScrollListWidget implements 
     @Override
     protected void refreshLayout() {
         int start = scroll.smoothIndexOffset();
-        int shift = scroll.visualShift(ROW_PITCH);
+        int shift = scroll.visualShift(rowStep);
         int end = Math.min(rowButtons.size(), start + visibleRows() + 1);
         for (int index = 0; index < rowButtons.size(); index++) {
             StateButton button = rowButtons.get(index);
             boolean rowVisible = visible && index >= start && index < end;
             button.visible = rowVisible;
             button.setX(getX());
-            button.setY(getY() + (index - start) * ROW_PITCH - shift + ROW_TOP_PADDING);
+            button.setY(getY() + (index - start) * rowStep - shift + rowTopPadding);
             button.setWidth(contentWidth());
             ToggleItem item = items.get(index);
             button.active = active && rowVisible && item != null && item.active();
@@ -253,7 +259,28 @@ public final class ToggleListWidget extends VerticalScrollListWidget implements 
     }
 
     @Override
+    public void setTextRows(boolean textRows) {
+        this.textRows = textRows;
+        rowHeight = textRows ? TEXT_ROW_HEIGHT : BUTTON_ROW_HEIGHT;
+        rowStep = textRows ? TEXT_ROW_HEIGHT : BUTTON_ROW_HEIGHT + 5;
+        rowTopPadding = textRows ? 0 : 2;
+        for (int index = 0; index < rowButtons.size(); index++) {
+            StateButton button = rowButtons.get(index);
+            button.setTextRow(textRows);
+            button.setRowStripe((index & 1) == 1);
+            button.setHeight(rowHeight);
+        }
+        refreshRange();
+        refreshLayout();
+    }
+
+    @Override
+    public boolean textRows() {
+        return textRows;
+    }
+
+    @Override
     protected int rowPitch() {
-        return ROW_PITCH;
+        return rowStep;
     }
 }

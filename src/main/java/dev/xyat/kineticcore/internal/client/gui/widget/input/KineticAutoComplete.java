@@ -320,19 +320,24 @@ public final class KineticAutoComplete {
                         boolean hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY < y + totalH
                                 && mouseY >= top && mouseY < top + itemH;
                         boolean selected = index == selectedIndex;
+                        // Plain text rows: only the hovered row and the keyboard choice (yellow) are outlined.
                         if (hovered || selected) {
                             gui.fill(x + 1, top, x + w - 1, top + itemH, theme.panel());
                             GuiTheme.stateOutline(gui, x + 1, top, w - 2, itemH, selected, hovered, false);
-                        } else {
-                            GuiTheme.indicatorOutline(gui, x + 1, top, w - 2, itemH, KineticTheme.Indicator.MUTED);
                         }
 
                         KineticSuggestion suggestion = suggestions.get(index);
                         Font font = KineticClientRuntime.font();
-                        VanillaGuiDraw.text(gui, font, styledSuggestion(suggestion.value()), x + 4, top + 2, theme.text(), false);
-                        if (showTranslations && !suggestion.translation().getString().isBlank()) {
-                            int detailX = x + 4 + font.width(suggestion.value()) + font.width("  ");
-                            VanillaGuiDraw.text(gui, font, suggestion.translation(), detailX, top + 2, theme.translatedText(), false);
+                        // Text keeps 4 px from the row edges; 8 px glyphs sit 2 px from the top of the 12 px row.
+                        KineticRenderRuntime.enableScissor(gui, x + 4, top, x + w - 4, top + itemH);
+                        try {
+                            VanillaGuiDraw.text(gui, font, styledSuggestion(suggestion.value()), x + 4, top + 2, theme.text(), false);
+                            if (showTranslations && !suggestion.translation().getString().isBlank()) {
+                                int detailX = x + 4 + font.width(suggestion.value()) + font.width("  ");
+                                VanillaGuiDraw.text(gui, font, suggestion.translation(), detailX, top + 2, theme.translatedText(), false);
+                            }
+                        } finally {
+                            KineticRenderRuntime.disableScissor(gui);
                         }
                     }
 

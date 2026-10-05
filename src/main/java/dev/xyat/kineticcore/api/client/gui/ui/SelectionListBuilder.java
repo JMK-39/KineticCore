@@ -16,6 +16,8 @@ public abstract class SelectionListBuilder extends LayeredControlBuilder<Selecti
     protected int selected = -1;
     /** 初始滚动行 / Initial scroll offset in rows. */
     protected int scrollOffset = 0;
+    /** 纯文字行（无按钮边框），用于 ID 列表 / Plain text rows without button frames, for identifier lists. */
+    protected boolean textRows = false;
     /** 选中回调 / Selection callback. */
     protected Consumer<Integer> onSelect = null;
 
@@ -46,6 +48,12 @@ public abstract class SelectionListBuilder extends LayeredControlBuilder<Selecti
     /** 选中回调 / Selection callback. */
     public final SelectionListBuilder onSelect(Consumer<Integer> onSelect) {
         this.onSelect = onSelect;
+        return this;
+    }
+
+    /** 纯文字行（无按钮边框），用于群系、伤害类型、属性等 ID 列表 / Draws plain text rows without button frames, for identifier lists such as biomes, damage types or attributes. */
+    public final SelectionListBuilder textRows() {
+        this.textRows = true;
         return this;
     }
 }

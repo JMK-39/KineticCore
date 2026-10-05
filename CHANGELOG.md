@@ -4,11 +4,17 @@
 - On 26.1.2, container pages (for example a trash bin or a recipe editor drawn on a vanilla container texture) drew their background in screen space while the slots and items were drawn in the page canvas, so the background was enlarged and offset from the slots. The background is now drawn in the canvas with the slots, as on 1.20.1 and 1.21.1.
 - On 26.1.2, item slots and item grids (for example a Curios slot or an item selector) showed only a plain frame instead of the checkerboard slot texture, and buttons drawn from a texture were blank. They now draw the same textures as on 1.20.1 and 1.21.1.
 - The NBT editor now checks the text it opens with, so invalid saved text is marked in red with its error straight away instead of showing a green check until the first edit.
+- Lists of identifiers can be drawn as plain text rows instead of buttons: selection and toggle lists take `.textRows()`, which draws striped 14 px rows packed without gaps, with vertically centered text that keeps its padding and scrolls when too long. The current choice is yellow, the hovered row is outlined and, in toggle lists (multi-select), chosen rows are green.
+- Toggle lists now mark chosen rows green instead of yellow, in both row styles, and buttons gain a green "picked" state for multi-select groups (`KineticButton.setPicked`). Yellow stays the current choice.
+- Search suggestion popups no longer draw a box around every row; only the hovered row and the keyboard choice are outlined, and suggestion text keeps 4 px from the row edges.
 
 - 标准 NBT 编辑器可以使用附属提供的规则检查文本，附属可在与 Forge 编辑 NBT 相同的编辑器中编辑 1.20.5+ 的物品数据组件（`[damage=5]`），各版本界面一致：`KineticSelectors.openNbtEditor(initialText, problem, onSave)`。
 - 26.1.2 上的容器页面（例如垃圾桶或基于原版容器贴图的配方编辑器）背景按屏幕坐标绘制，而槽位与物品按页面画布绘制，导致背景放大并与槽位错位。现在背景与槽位一起在画布中绘制，与 1.20.1 和 1.21.1 一致。
 - 26.1.2 上的物品槽和物品网格（例如饰品槽或物品选择器）只显示一个空边框而没有棋盘格槽位贴图，使用贴图的按钮也显示为空白。现在与 1.20.1 和 1.21.1 绘制相同的贴图。
 - NBT 编辑器打开时即检查初始文本，已保存的无效文本会立即以红色标出并显示错误，不再在首次编辑前显示绿色对勾。
+- ID 列表可以用纯文字行代替按钮显示：单选列表和开关列表支持 `.textRows()`。行高 14 像素、条纹背景、行间无空隙；文字垂直居中并保留内边距，过长时滚动。当前选择为黄色，光标所在行加边框，开关列表（多选）中已选的行为绿色。
+- 开关列表中已选的行在两种行样式下都改为绿色（原为黄色）。按钮新增用于多选组的绿色"已选"状态（`KineticButton.setPicked`）。黄色继续表示当前选择。
+- 搜索候选弹窗不再给每一行画边框，只有光标所在行和键盘选中项带边框；候选文字与行边缘保持 4 像素。
 
 ---
 

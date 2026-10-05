@@ -16,8 +16,14 @@ public interface KineticButton extends KineticControl {
     /** 是否处于选中态 / Whether the button is shown as selected. */
     boolean isSelected();
 
-    /** 设置选中态 / Sets the selected state. */
+    /** 设置选中态（黄色，表示当前选择）/ Sets the selected state (yellow: the current choice). */
     void setSelected(boolean selected);
+
+    /** 是否为多选中已选的一项 / Whether the button is one of the chosen entries of a multi-select group. */
+    boolean isPicked();
+
+    /** 设置多选已选态（绿色）/ Marks the button as a chosen entry of a multi-select group (green). */
+    void setPicked(boolean picked);
 
     /** 是否处于错误态 / Whether the button is shown in error state. */
     boolean isError();

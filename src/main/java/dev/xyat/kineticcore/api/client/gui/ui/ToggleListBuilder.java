@@ -14,6 +14,8 @@ public abstract class ToggleListBuilder extends LayeredControlBuilder<ToggleList
     protected final List<ToggleItem> items;
     /** 初始滚动行 / Initial scroll offset in rows. */
     protected int scrollOffset = 0;
+    /** 纯文字行（无按钮边框），用于 ID 列表 / Plain text rows without button frames, for identifier lists. */
+    protected boolean textRows = false;
     /** 开关回调 / Toggle callback. */
     protected BiConsumer<Integer, Boolean> onToggle = null;
 
@@ -38,6 +40,12 @@ public abstract class ToggleListBuilder extends LayeredControlBuilder<ToggleList
     /** 开关回调 / Toggle callback. */
     public final ToggleListBuilder onToggle(BiConsumer<Integer, Boolean> onToggle) {
         this.onToggle = onToggle;
+        return this;
+    }
+
+    /** 纯文字行（无按钮边框），用于群系、伤害类型、属性等 ID 列表 / Draws plain text rows without button frames, for identifier lists such as biomes, damage types or attributes. */
+    public final ToggleListBuilder textRows() {
+        this.textRows = true;
         return this;
     }
 }

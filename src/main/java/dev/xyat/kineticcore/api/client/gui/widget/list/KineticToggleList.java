@@ -19,6 +19,15 @@ public interface KineticToggleList extends KineticControl {
     List<ToggleItem> items();
 
     /**
+     * Draws the rows as plain text rows (striped background, no button frames), for lists of identifiers such as
+     * biomes, damage types or attributes. Rows are 14 px high and packed without gaps.
+     */
+    void setTextRows(boolean textRows);
+
+    /** Returns whether the rows are drawn as plain text rows. */
+    boolean textRows();
+
+    /**
      * Returns the state of a row's toggle.
      *
      * @throws IndexOutOfBoundsException if {@code index} is not a row index

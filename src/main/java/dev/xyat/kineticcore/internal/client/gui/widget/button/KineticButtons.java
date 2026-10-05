@@ -131,7 +131,12 @@ public final class KineticButtons {
 
     /** Standard Kinetic button with selected and error visual states. */
     public static class StateButton extends VanillaButton implements InternalControl, KineticButton {
+        /** Smallest gap between a text row's label and its edges. */
+        private static final int TEXT_ROW_PADDING = 4;
         private boolean selected;
+        private boolean picked;
+        private boolean textRow;
+        private boolean rowStripe;
         private boolean error;
         private boolean invertedFlash;
         private boolean textVisible = true;
@@ -171,6 +176,34 @@ public final class KineticButtons {
         /** Sets whether this button is rendered as selected. */
         public void setSelected(boolean selected) {
             this.selected = selected;
+        }
+
+        /** Sets whether this button is one of several chosen entries of a multi-select control (drawn green). */
+        public void setPicked(boolean picked) {
+            this.picked = picked;
+        }
+
+        /** Returns whether this button is a chosen entry of a multi-select control. */
+        public boolean isPicked() {
+            return picked;
+        }
+
+        /**
+         * Draws this button as a plain list row (striped background, no button frame) for lists of identifiers,
+         * instead of Minecraft's button chrome.
+         */
+        public void setTextRow(boolean textRow) {
+            this.textRow = textRow;
+        }
+
+        /** Returns whether this button is drawn as a plain list row. */
+        public boolean isTextRow() {
+            return textRow;
+        }
+
+        /** Uses the alternate stripe color for a plain list row. */
+        public void setRowStripe(boolean alternate) {
+            this.rowStripe = alternate;
         }
 
         /** Sets whether this button is rendered with the Kinetic error state. */
@@ -286,6 +319,10 @@ public final class KineticButtons {
                     if (invertedFlash) GuiTheme.selectionFlash(graphics, getX(), getY(), getWidth(), getHeight());
                     return;
                 }
+                if (textRow) {
+                    renderTextRow(graphics);
+                    return;
+                }
                 if (!textVisible) {
                     storedText = getMessage();
                     setMessage(Component.empty());
@@ -303,6 +340,8 @@ public final class KineticButtons {
                             isHovered(),
                             error
                     );
+                } else if (picked) {
+                    GuiTheme.indicatorOutline(graphics, getX(), getY(), getWidth(), getHeight(), KineticTheme.Indicator.SUCCESS);
                 }
                 // 中键跳转后的橘黄色边框闪烁，绘制在按钮之上 / Orange border flash after a middle-click jump, on top.
                 if (invertedFlash) GuiTheme.selectionFlash(graphics, getX(), getY(), getWidth(), getHeight());
@@ -310,6 +349,34 @@ public final class KineticButtons {
                 if (storedText != null) setMessage(storedText);
                 if (clipEnabled) graphics.disableScissor();
             }
+        }
+
+        /**
+         * Plain list row: striped background; the hovered row is outlined, the current choice is yellow and picked
+         * rows of a multi-select list are green. The label is vertically centered, keeps its padding and scrolls
+         * when it is too long.
+         */
+        private void renderTextRow(GuiGraphics graphics) {
+            KineticTheme.Palette theme = GuiTheme.current();
+            int x = getX();
+            int y = getY();
+            int width = getWidth();
+            int height = getHeight();
+            graphics.fill(x, y, x + width, y + height, rowStripe ? theme.panelAlt() : theme.panel());
+            if (selected || error || isHovered()) {
+                GuiTheme.stateOutline(graphics, x, y, width, height, selected, isHovered(), error);
+            } else if (picked) {
+                GuiTheme.indicatorOutline(graphics, x, y, width, height, KineticTheme.Indicator.SUCCESS);
+            }
+            if (textVisible) {
+                var font = KineticClientRuntime.font();
+                int color = !active ? 0xFFA0A0A0 : error ? 0xFFFF5555 : selected ? 0xFFFFAA00 : picked ? 0xFF55DD88 : theme.text();
+                // Glyphs occupy the top 8 px of the font's line, so center that block in the row.
+                int textY = y + (height - 8 + 1) / 2;
+                KineticText.drawScrollingLeft(graphics, font, getMessage(), x + TEXT_ROW_PADDING, textY,
+                        width - TEXT_ROW_PADDING * 2, color, false);
+            }
+            if (invertedFlash) GuiTheme.selectionFlash(graphics, x, y, width, height);
         }
     }
 

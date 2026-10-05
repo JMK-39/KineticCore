@@ -16,6 +16,15 @@ public interface KineticSelectionList extends KineticControl {
     /** Returns the immutable row model currently displayed by this list. */
     List<SelectionItem> items();
 
+    /**
+     * Draws the rows as plain text rows (striped background, no button frames), for lists of identifiers such as
+     * biomes, damage types or attributes. Rows are 14 px high and packed without gaps.
+     */
+    void setTextRows(boolean textRows);
+
+    /** Returns whether the rows are drawn as plain text rows. */
+    boolean textRows();
+
     /** Returns the selected row index, or {@code -1} when no row is selected. */
     int selectedIndex();
 

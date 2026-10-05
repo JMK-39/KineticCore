@@ -371,6 +371,7 @@ public final class PageUi implements KineticUi {
                 KineticSelectionList list = layer > 0
                         ? host.addHighZScrollableSelectionList(x, y, width, height, items, selected, scrollOffset, orNoop(onSelect), z(layer))
                         : host.addScrollableSelectionList(x, y, width, height, items, selected, scrollOffset, orNoop(onSelect));
+                if (textRows) list.setTextRows(true);
                 return finishPublic(list, tooltip, dynamicTooltip, enabled, visible);
             }
         };
@@ -485,6 +486,7 @@ public final class PageUi implements KineticUi {
                 KineticToggleList list = layer > 0
                         ? host.addHighZScrollableToggleList(x, y, width, height, items, scrollOffset, orNoop(onToggle), z(layer))
                         : host.addScrollableToggleList(x, y, width, height, items, scrollOffset, orNoop(onToggle));
+                if (textRows) list.setTextRows(true);
                 return finishPublic(list, tooltip, dynamicTooltip, enabled, visible);
             }
         };
