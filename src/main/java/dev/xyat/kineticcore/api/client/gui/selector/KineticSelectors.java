@@ -309,6 +309,15 @@ public final class KineticSelectors {
         KineticClientRuntime.openScreen(new NbtEditorScreen(initialNbt, onSave, KineticClientRuntimeImpl.currentScreen()));
     }
 
+    /**
+     * Opens the standard NBT text editor for text the caller checks instead of NBT, such as item component text
+     * ({@code [damage=5]}) on Minecraft 1.20.5 and newer, so every version shows the same editor.
+     * {@code problem} returns null when the text can be saved, otherwise the error to show; blank text saves as "".
+     */
+    public static void openNbtEditor(String initialText, java.util.function.Function<String, String> problem, Consumer<String> onSave) {
+        KineticClientRuntime.openScreen(new NbtEditorScreen(initialText, problem, onSave, KineticClientRuntimeImpl.currentScreen()));
+    }
+
     /** Opens the standard single-color picker with the supplied initial RGB value. */
     public static void openColorPicker(Component title, int initialRgb, Consumer<Integer> onApply) {
         KineticClientRuntime.openScreen(ColorPickerScreen.single(title, initialRgb, onApply));

@@ -192,10 +192,11 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
     }
     *///?}
     //? if >=26.1 {
-    /*// Screen.extractRenderState draws the background itself; KineticScreenRuntime already drew it this frame.
+    /*// 26.1 draws the screen background before and outside extractRenderState, in screen space, and
+    // KineticScreenRuntime already drew the dimmed background this frame. The container background belongs to the
+    // canvas with the slots, so renderContainerFrame draws it there.
     @Override
     public void extractBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBg(graphics, partialTick, mouseX, mouseY);
     }
 
     @Override
@@ -209,6 +210,8 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
 
     private void renderContainerFrame(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         runtime.renderInCanvas(graphics, mouseX, mouseY, partialTick, (uiGraphics, virtualMouseX, virtualMouseY, tick) -> {
+            //? if >=26.1
+            /*renderBg(uiGraphics, tick, virtualMouseX, virtualMouseY);*/
             vanillaRender(uiGraphics, virtualMouseX, virtualMouseY, tick);
             renderUiForeground(uiGraphics, virtualMouseX, virtualMouseY, tick);
             runtime.controls().renderAutoCompleteSuggestions(uiGraphics, virtualMouseX, virtualMouseY);

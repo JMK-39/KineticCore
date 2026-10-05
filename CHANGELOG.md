@@ -1,3 +1,13 @@
+2026年10月05日 13时02分
+
+- The standard NBT editor can check text with a rule supplied by the addon, so addons edit 1.20.5+ item component text (`[damage=5]`) in the same editor they use for NBT on Forge, and the screen looks the same on every version: `KineticSelectors.openNbtEditor(initialText, problem, onSave)`.
+- On 26.1.2, container pages (for example a trash bin or a recipe editor drawn on a vanilla container texture) drew their background in screen space while the slots and items were drawn in the page canvas, so the background was enlarged and offset from the slots. The background is now drawn in the canvas with the slots, as on 1.20.1 and 1.21.1.
+
+- 标准 NBT 编辑器可以使用附属提供的规则检查文本，附属可在与 Forge 编辑 NBT 相同的编辑器中编辑 1.20.5+ 的物品数据组件（`[damage=5]`），各版本界面一致：`KineticSelectors.openNbtEditor(initialText, problem, onSave)`。
+- 26.1.2 上的容器页面（例如垃圾桶或基于原版容器贴图的配方编辑器）背景按屏幕坐标绘制，而槽位与物品按页面画布绘制，导致背景放大并与槽位错位。现在背景与槽位一起在画布中绘制，与 1.20.1 和 1.21.1 一致。
+
+---
+
 2026年10月04日 13时42分
 
 - Item and text tooltips near the screen edge no longer run off the screen: long lines wrap to the room left on the wider side of the cursor, on every supported version. Tooltips requested through KineticOverlays.requestTooltip are fitted the same way.

@@ -28,14 +28,32 @@ import java.util.function.Consumer;
 public class NbtEditorScreen extends KineticScreen {
     private final String initialNbt;
     private final Consumer<String> onSave;
+    // Null when the text can be saved, otherwise the error to show. Blank text always saves as "".
+    private final java.util.function.Function<String, String> problem;
+    private static final java.util.function.Function<String, String> NBT_PROBLEM = NbtEditorScreen::nbtProblem;
 
     private NbtEditorWidget nbtEditor;
     private dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox searchBox;
 
     public NbtEditorScreen(String initialNbt, Consumer<String> onSave, Screen parentScreen) {
+        this(initialNbt, NBT_PROBLEM, onSave, parentScreen);
+    }
+
+    public NbtEditorScreen(String initialText, java.util.function.Function<String, String> problem, Consumer<String> onSave, Screen parentScreen) {
         super(KineticText.translatable("screen.kineticcore.nbt_editor"));
-        this.initialNbt = initialNbt;
+        this.initialNbt = initialText;
+        this.problem = problem;
         this.onSave = onSave;
+    }
+
+    private static String nbtProblem(String value) {
+        if (value.equals("{}")) return null;
+        try {
+            TagParser.parseTag(value);
+            return null;
+        } catch (CommandSyntaxException e) {
+            return e.getMessage();
+        }
     }
 
     @Override
@@ -61,15 +79,12 @@ public class NbtEditorScreen extends KineticScreen {
 
         addButton(saveX, 10, btnW, KineticText.translatable("gui.kineticcore.nbt.save"), null, () -> {
             String val = nbtEditor.getValue().trim();
-            if (val.isEmpty() || val.equals("{}")) {
+            if (val.isEmpty() || problem == NBT_PROBLEM && val.equals("{}")) {
                 onSave.accept("");
+            } else if (problem.apply(val) == null) {
+                onSave.accept(val);
             } else {
-                try {
-                    TagParser.parseTag(val);
-                    onSave.accept(val);
-                } catch (CommandSyntaxException e) {
-                    nbtEditor.setError(KineticText.translatable("gui.kineticcore.nbt.editor.invalid").getString());
-                }
+                nbtEditor.setError(KineticText.translatable("gui.kineticcore.nbt.editor.invalid").getString());
             }
         });
 
@@ -84,13 +99,8 @@ public class NbtEditorScreen extends KineticScreen {
         nbtEditor = new NbtEditorWidget(this.font, editorX, editorY, editorW, editorH);
         nbtEditor.setValue(initialNbt);
         nbtEditor.setResponder(val -> {
-            try {
-                if (val.trim().isEmpty() || val.trim().equals("{}")) { nbtEditor.setError(""); return; }
-                TagParser.parseTag(val);
-                nbtEditor.setError("");
-            } catch (CommandSyntaxException e) {
-                nbtEditor.setError(e.getMessage());
-            }
+            String error = val.trim().isEmpty() ? null : problem.apply(val.trim());
+            nbtEditor.setError(error == null ? "" : error);
         });
     }
 
