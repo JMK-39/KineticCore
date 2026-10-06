@@ -75,6 +75,7 @@ public final class KineticNumericFields {
 
         /** Returns whether the current raw input satisfies this field's numeric validation rules. */
         public boolean isValueValid() {
+            if (optional && getValue().isBlank()) return true;
             return switch (type) {
                 case INTEGER -> getIntValue() != null;
                 case LONG -> getLongValue() != null;
@@ -99,6 +100,13 @@ public final class KineticNumericFields {
 
         private boolean isAllowedText(String value) {
             return NumericInputRules.isAllowedText(value, type, allowNegative);
+        }
+
+        private boolean optional;
+
+        /** An optional field may stay empty ("not set") without being marked as an error. */
+        public void setOptional(boolean optional) {
+            this.optional = optional;
         }
 
         @Override

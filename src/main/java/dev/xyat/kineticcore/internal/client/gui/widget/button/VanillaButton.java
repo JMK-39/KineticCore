@@ -60,8 +60,10 @@ public abstract class VanillaButton extends Button {
             KineticText.drawScrollingCentered(graphics, font, message, (left + right) / 2, textY, right - left, color, true);
             return;
         }
-        // Small buttons (icons such as ▶) keep the label whole with the minimum 2 px gap instead of scrolling it.
-        int padding = textWidth <= getWidth() - LABEL_PADDING * 2 ? LABEL_PADDING : MIN_LABEL_PADDING;
+        // Small buttons (icons such as ▶) keep the label whole with the minimum 2 px gap instead of scrolling it;
+        // a label that scrolls anyway keeps the normal padding.
+        boolean fitsWithMinimum = textWidth > getWidth() - LABEL_PADDING * 2 && textWidth <= getWidth() - MIN_LABEL_PADDING * 2;
+        int padding = fitsWithMinimum ? MIN_LABEL_PADDING : LABEL_PADDING;
         KineticText.drawScrollingCentered(graphics, font, message, getX() + getWidth() / 2,
                 textY, getWidth() - padding * 2, color, true);
     }

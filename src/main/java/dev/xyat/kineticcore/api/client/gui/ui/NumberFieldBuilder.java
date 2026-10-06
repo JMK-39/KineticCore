@@ -31,6 +31,8 @@ public abstract class NumberFieldBuilder extends ControlBuilder<NumberFieldBuild
     protected boolean firstShownTextAsDefault = false;
     /** 自定义文字颜色规则 / Custom value color rule. */
     protected java.util.function.Function<String, Integer> valueColor = null;
+    /** 允许留空 / Empty means "not set" and is not an error. */
+    protected boolean optional = false;
 
     /** 由 KineticUi 创建 / Created by KineticUi. */
     protected NumberFieldBuilder(int x, int y, int width, NumberType type) {
@@ -105,6 +107,15 @@ public abstract class NumberFieldBuilder extends ControlBuilder<NumberFieldBuild
      */
     public final NumberFieldBuilder valueColor(java.util.function.Function<String, Integer> valueColor) {
         this.valueColor = valueColor;
+        return this;
+    }
+
+    /**
+     * 允许留空（表示"不设置"），空输入框不显示红色错误边框。
+     * Lets the field stay empty (meaning "not set"); an empty field is not marked as an error.
+     */
+    public final NumberFieldBuilder optional() {
+        this.optional = true;
         return this;
     }
 }

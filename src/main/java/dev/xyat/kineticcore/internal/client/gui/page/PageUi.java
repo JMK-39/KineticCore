@@ -262,6 +262,7 @@ public final class PageUi implements KineticUi {
                 if (firstShownTextAsDefault) field.useFirstShownTextAsDefault();
                 else field.setDefaultText(defaultText);
                 field.setValueColor(valueColor);
+                field.setOptional(optional);
                 return finish(field, tooltip, dynamicTooltip, enabled, visible);
             }
         };
