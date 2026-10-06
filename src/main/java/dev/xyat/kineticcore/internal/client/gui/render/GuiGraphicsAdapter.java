@@ -69,11 +69,13 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
 
     @Override
     public int text(String text, int x, int y, int argb, boolean shadow) {
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.text(graphics, x, y, font().width(text == null ? "" : text), text);
         return VanillaGuiDraw.text(graphics, font(), text == null ? "" : text, x, y, argb, shadow);
     }
 
     @Override
     public int text(Component text, int x, int y, int argb, boolean shadow) {
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED && text != null) dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.text(graphics, x, y, font().width(text), text.getString());
         return VanillaGuiDraw.text(graphics, font(), text == null ? Component.empty() : text, x, y, argb, shadow);
     }
 
@@ -85,6 +87,7 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
     @Override
     public void centeredText(Component text, int centerX, int y, int argb, boolean shadow) {
         Component safe = text == null ? Component.empty() : text;
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.text(graphics, centerX - font().width(safe) / 2, y, font().width(safe), safe.getString());
         VanillaGuiDraw.text(graphics, font(), safe, centerX - font().width(safe) / 2, y, argb, shadow);
     }
 
@@ -198,11 +201,13 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
 
     @Override
     public void scissor(int left, int top, int right, int bottom) {
+        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.pushClip(graphics, left, top, right, bottom);
         dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime.enableScissor(graphics, left, top, right, bottom);
     }
 
     @Override
     public void endScissor() {
+        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.popClip();
         graphics.disableScissor();
     }
 

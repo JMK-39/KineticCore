@@ -298,6 +298,23 @@ public final class VanillaGuiDraw {
 
     // A separate name, since List<Component> and List<FormattedCharSequence> overloads would clash after erasure.
     public static void sequenceTooltip(GuiGraphics graphics, Font font, List<? extends FormattedCharSequence> lines, int mouseX, int mouseY) {
+        // Lines wider than the room beside the cursor are rebuilt with their styles and wrapped, so the tooltip
+        // stays inside the screen; only its height may exceed it, as in vanilla.
+        int fitWidth = tooltipWrapWidth(graphics, mouseX);
+        List<FormattedCharSequence> fitted = new ArrayList<>(lines.size());
+        for (FormattedCharSequence line : lines) {
+            if (font.width(line) <= fitWidth) {
+                fitted.add(line);
+                continue;
+            }
+            net.minecraft.network.chat.MutableComponent rebuilt = Component.empty();
+            line.accept((index, style, codePoint) -> {
+                rebuilt.append(Component.literal(new String(Character.toChars(codePoint))).setStyle(style));
+                return true;
+            });
+            fitted.addAll(font.split(rebuilt, fitWidth));
+        }
+        lines = fitted;
         //? if >=26.1 {
         /*graphics.setTooltipForNextFrame(font, lines, mouseX, mouseY);
         *///?} else {

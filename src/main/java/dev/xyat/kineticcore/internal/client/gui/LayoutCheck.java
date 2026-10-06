@@ -42,7 +42,64 @@ public final class LayoutCheck {
                 if (problem != null) problems.add(problem);
             }
         }
+        problems.addAll(frameProblems(LayoutFrameRecorder.lastFrame()));
         return problems;
+    }
+
+    /**
+     * Text, page-drawn buttons and controls against the frame lines drawn in the same page frame: nothing may cross
+     * or cover a frame line, and anything inside a frame keeps {@link #MIN_GAP} px from it. A text box that lies inside
+     * a button or control is that control's label and is not compared with it.
+     */
+    static List<String> frameProblems(List<LayoutFrameRecorder.Box> boxes) {
+        List<String> problems = new ArrayList<>();
+        List<LayoutFrameRecorder.Box> frames = new ArrayList<>();
+        List<LayoutFrameRecorder.Box> items = new ArrayList<>();
+        for (LayoutFrameRecorder.Box box : boxes) (box.kind() == LayoutFrameRecorder.Kind.FRAME ? frames : items).add(box);
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (LayoutFrameRecorder.Box item : items) {
+            for (LayoutFrameRecorder.Box frame : frames) {
+                // A frame drawn as a control's own background, or the control's own outline.
+                if (Math.abs(frame.x() - item.x()) <= 1 && Math.abs(frame.y() - item.y()) <= 1
+                        && Math.abs(frame.right() - item.right()) <= 1 && Math.abs(frame.bottom() - item.bottom()) <= 1) continue;
+                boolean overlaps = item.x() < frame.right() && item.right() > frame.x() && item.y() < frame.bottom() && item.bottom() > frame.y();
+                if (!overlaps) continue;
+                if (item.x() <= frame.x() && item.y() <= frame.y() && item.right() >= frame.right() && item.bottom() >= frame.bottom()
+                        && item.kind() != LayoutFrameRecorder.Kind.TEXT) continue;
+                String problem;
+                if (!item.inside(frame.x() + 1, frame.y() + 1, frame.right() - 1, frame.bottom() - 1)) {
+                    problem = "on frame line: " + describe(item) + " / frame " + describe(frame);
+                } else {
+                    int gap = Math.min(Math.min(item.x() - frame.x() - 1, frame.right() - 1 - item.right()),
+                            Math.min(item.y() - frame.y() - 1, frame.bottom() - 1 - item.bottom()));
+                    if (gap >= MIN_GAP) continue;
+                    problem = "gap " + gap + " px to frame line: " + describe(item) + " / frame " + describe(frame);
+                }
+                if (seen.add(problem)) problems.add(problem);
+            }
+        }
+        for (int i = 0; i < items.size(); i++) {
+            for (int j = i + 1; j < items.size(); j++) {
+                LayoutFrameRecorder.Box a = items.get(i);
+                LayoutFrameRecorder.Box b = items.get(j);
+                if (a.kind() == LayoutFrameRecorder.Kind.CONTROL && b.kind() == LayoutFrameRecorder.Kind.CONTROL) continue;
+                boolean overlaps = a.x() < b.right() && a.right() > b.x() && a.y() < b.bottom() && a.bottom() > b.y();
+                if (!overlaps) continue;
+                // Text inside a button or control is its label; anything inside a control is drawn by that control.
+                if (a.inside(b.x(), b.y(), b.right(), b.bottom())
+                        && (a.kind() == LayoutFrameRecorder.Kind.TEXT || b.kind() == LayoutFrameRecorder.Kind.CONTROL)) continue;
+                if (b.inside(a.x(), a.y(), a.right(), a.bottom())
+                        && (b.kind() == LayoutFrameRecorder.Kind.TEXT || a.kind() == LayoutFrameRecorder.Kind.CONTROL)) continue;
+                String problem = "overlap: " + describe(a) + " / " + describe(b);
+                if (seen.add(problem)) problems.add(problem);
+            }
+        }
+        return problems;
+    }
+
+    private static String describe(LayoutFrameRecorder.Box box) {
+        return box.kind().name().toLowerCase(java.util.Locale.ROOT) + (box.label().isEmpty() ? "" : "[" + box.label() + "]")
+                + " @" + box.x() + "," + box.y() + " " + box.width() + "x" + box.height();
     }
 
     private static String compare(AbstractWidget a, AbstractWidget b) {

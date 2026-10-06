@@ -276,6 +276,7 @@ public final class KineticTheme {
      */
     public static void button(KineticGraphics graphics, int x, int y, int width, int height, Component text,
                               boolean hovered, boolean active, boolean error) {
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.button(GuiGraphicsAdapter.unwrap(graphics), x, y, width, height, text == null ? "" : text.getString());
         dev.xyat.kineticcore.internal.client.gui.widget.button.InlineButtonRenderer.render(
                 GuiGraphicsAdapter.unwrap(graphics), x, y, width, height, text, hovered, active, error);
     }

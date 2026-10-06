@@ -62,6 +62,7 @@ public final class KineticText {
     ) {
         if (graphics == null || font == null || text == null || maxWidth <= 0) return 0;
         int textWidth = font.width(text);
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.text(graphics, x, y, Math.min(textWidth, maxWidth), text.getString());
         if (textWidth <= maxWidth) {
             return VanillaGuiDraw.text(graphics, font, text, x, y, color, shadow);
         }
@@ -81,6 +82,7 @@ public final class KineticText {
     ) {
         if (graphics == null || font == null || text == null || maxWidth <= 0) return 0;
         int textWidth = font.width(text);
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.text(graphics, centerX - Math.min(textWidth, maxWidth) / 2, y, Math.min(textWidth, maxWidth), text.getString());
         if (textWidth <= maxWidth) {
             return VanillaGuiDraw.text(graphics, font, text, centerX - textWidth / 2, y, color, shadow);
         }
@@ -100,6 +102,7 @@ public final class KineticText {
     ) {
         if (graphics == null || font == null || text == null || maxWidth <= 0) return 0;
         int textWidth = font.width(text);
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.text(graphics, rightX - Math.min(textWidth, maxWidth), y, Math.min(textWidth, maxWidth), text.getString());
         if (textWidth <= maxWidth) {
             return VanillaGuiDraw.text(graphics, font, text, rightX - textWidth, y, color, shadow);
         }

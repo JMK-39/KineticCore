@@ -142,6 +142,7 @@ public final class GuiTheme {
     ) {
         if (graphics == null || width <= 0 || height <= 0) return;
         graphics.fill(x, y, x + width, y + height, surfaceColor(surface));
+        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.frame(graphics, x, y, width, height);
         VanillaGuiDraw.outline(graphics, x, y, width, height, stateBorder(selected, hovered, error));
     }
 
@@ -344,6 +345,7 @@ public final class GuiTheme {
     /** Draws a panel using the alternate panel background and standard border. */
     public static void panelAlt(GuiGraphics graphics, int x, int y, int width, int height) {
         if (graphics == null || width <= 0 || height <= 0) return;
+        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.frame(graphics, x, y, width, height);
         graphics.fill(x, y, x + width, y + height, PALETTE.panelAlt());
         VanillaGuiDraw.outline(graphics, x, y, width, height, PALETTE.border());
     }
@@ -351,6 +353,7 @@ public final class GuiTheme {
     /** Draws the standard Kinetic panel using the active theme's panel background and border. */
     public static void panel(GuiGraphics graphics, int x, int y, int width, int height) {
         if (graphics == null || width <= 0 || height <= 0) return;
+        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.frame(graphics, x, y, width, height);
         graphics.fill(x, y, x + width, y + height, PALETTE.panel());
         VanillaGuiDraw.outline(graphics, x, y, width, height, PALETTE.border());
     }

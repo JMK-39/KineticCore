@@ -8,6 +8,8 @@
 - The text editor's save button says "Save" instead of "Save NBT", since on 1.20.5+ it also edits item components.
 - The shared item search index (used by item pickers, recipe pages and searches) reads the game's items a few milliseconds per tick instead of all at once, so in large modpacks opening such a page no longer freezes the game, which on a server could get the player dropped for timing out.
 - An item button whose label would reach its icon centres the label in the space after the icon and scrolls it there, instead of running the text under the icon. Labels that fit stay centred on the whole button.
+- Preformatted tooltips (`KineticOverlays.requestFormattedTooltip`, `showFormattedTooltip`) now wrap lines that would run past the screen edge, keeping their styles, like text and item tooltips already did. Only a tooltip taller than the screen may exceed it, as in vanilla.
+- GUI validation: with `-Dkineticcore.layoutCheck=true` the core records every frame, text box, page-drawn button and control of a page and logs (`KINETIC_LAYOUT`) any text or button that crosses or touches a frame line, sits closer than 2 px to one, or overlaps other text. `LayoutCheck.currentScreenProblems()` includes these findings.
 
 - 由服务端管理的配置页面可以在玩家加入时把服务端数值加载到客户端（`KTConfigPage.Builder.mirrorOnJoin()`），显示或使用这些数值的客户端不再依赖自己的本地文件。只回复加入的玩家，不向其他玩家发送任何内容；管理员之后的修改会在其他玩家下次加入时生效。
 - 按钮宽度不足以按 4 像素内边距放下文字时（例如 ▶ 这样的图标按钮），文字改为保留 2 像素间距完整显示，而不是滚动。本来就需要滚动的文字仍与边框保持 4 像素。
@@ -17,6 +19,8 @@
 - 文本编辑器的保存按钮显示为"保存"而不是"保存NBT"，因为在 1.20.5+ 上它也用于编辑物品数据组件。
 - 共用的物品搜索索引（用于物品选择器、配方页面和搜索）改为每个刻读取几毫秒的物品，而不是一次读完；在大型整合包中打开这类页面不再卡住游戏，在服务器上也不会因此超时被断开。
 - 物品按钮的文字会碰到图标时，改为在图标之后的空间内居中并在其中滚动，不再从图标下面穿过。放得下的文字仍在整个按钮上居中。
+- 预格式化的悬浮提示（`KineticOverlays.requestFormattedTooltip`、`showFormattedTooltip`）现在也会把超出屏幕边缘的行保留样式换行，与文字和物品提示一致。只有比屏幕还高的提示才允许超出，与原版相同。
+- 界面验证：使用 `-Dkineticcore.layoutCheck=true` 时，核心会记录页面中的每个边框、文字框、页面绘制的按钮和控件，并记录（`KINETIC_LAYOUT`）任何压到或碰到边框线、与边框线距离小于 2 像素或与其他文字重叠的文字和按钮。`LayoutCheck.currentScreenProblems()` 也包含这些结果。
 
 ---
 

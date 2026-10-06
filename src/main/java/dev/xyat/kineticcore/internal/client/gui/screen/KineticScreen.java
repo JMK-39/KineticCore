@@ -622,6 +622,7 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
     private void renderCanvasFrame(GuiGraphics canvasGraphics, int virtualMouseX, int virtualMouseY,
                                    int screenMouseX, int screenMouseY, float partialTick) {
         updateScrollableWidgetPositions();
+        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.beginFrame(canvasGraphics);
         renderCanvasBackground(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
 
         List<AbstractWidget> hiddenScrollableWidgets = hideScrollableWidgetsForDefaultRender();
@@ -633,6 +634,14 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
 
         renderScrollableWidgets(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
         renderCanvasForeground(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) {
+            List<AbstractWidget> shown = new java.util.ArrayList<>();
+            for (var child : children()) {
+                if (child instanceof AbstractWidget widget && !hiddenScrollableWidgets.contains(widget)) shown.add(widget);
+            }
+            dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.controls(canvasGraphics, shown);
+        }
+        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.endFrame();
         runtime.controls().renderAutoCompleteSuggestions(canvasGraphics, virtualMouseX, virtualMouseY);
 
         if (runtime.businessTooltipsAllowed(isInsideCanvas(screenMouseX, screenMouseY))
