@@ -49,10 +49,26 @@ public abstract class VanillaButton extends Button {
         Component message = getMessage();
         if (message == null || message.getString().isEmpty()) return;
         var font = Minecraft.getInstance().font;
+        int textY = getY() + (getHeight() - 8 + 1) / 2;
+        int textWidth = font.width(message);
+        int leftInset = labelLeftInset();
+        // A label that would reach the icon on the left is centred in the space after the icon instead, and
+        // scrolls there when it is still too long.
+        if (leftInset > 0 && (getWidth() - textWidth) / 2 < leftInset + LABEL_PADDING) {
+            int left = getX() + leftInset + MIN_LABEL_PADDING;
+            int right = getX() + getWidth() - LABEL_PADDING;
+            KineticText.drawScrollingCentered(graphics, font, message, (left + right) / 2, textY, right - left, color, true);
+            return;
+        }
         // Small buttons (icons such as ▶) keep the label whole with the minimum 2 px gap instead of scrolling it.
-        int padding = font.width(message) <= getWidth() - LABEL_PADDING * 2 ? LABEL_PADDING : MIN_LABEL_PADDING;
+        int padding = textWidth <= getWidth() - LABEL_PADDING * 2 ? LABEL_PADDING : MIN_LABEL_PADDING;
         KineticText.drawScrollingCentered(graphics, font, message, getX() + getWidth() / 2,
-                getY() + (getHeight() - 8 + 1) / 2, getWidth() - padding * 2, color, true);
+                textY, getWidth() - padding * 2, color, true);
+    }
+
+    /** Width at the left of the button taken by an icon, which the label keeps clear of; 0 for no icon. */
+    protected int labelLeftInset() {
+        return 0;
     }
 
     //? if >=26.1 {

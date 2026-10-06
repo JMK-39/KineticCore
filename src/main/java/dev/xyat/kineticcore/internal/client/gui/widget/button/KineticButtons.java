@@ -404,6 +404,12 @@ public final class KineticButtons {
             return icon.copy();
         }
 
+        // The icon is drawn 8 px in and is 16 px wide.
+        @Override
+        protected int labelLeftInset() {
+            return icon.isEmpty() ? 0 : 8 + 16;
+        }
+
         @Override
         public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             super.renderButton(graphics, mouseX, mouseY, partialTick);
