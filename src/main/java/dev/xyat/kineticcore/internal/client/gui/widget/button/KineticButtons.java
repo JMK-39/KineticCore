@@ -301,7 +301,7 @@ public final class KineticButtons {
             // Vanilla's nine-slice button renderer divides by the inner tile size. A clipped
             // button narrower than its corners can reduce that size to zero.
             if (getWidth() < 8 || getHeight() < 8) return;
-            if (clipEnabled) graphics.enableScissor(clipLeft, clipTop, clipRight, clipBottom);
+            if (clipEnabled) dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime.enableScissor(graphics, clipLeft, clipTop, clipRight, clipBottom);
             Component storedText = null;
             try {
                 if (contentCardSurface) {

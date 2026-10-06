@@ -51,9 +51,24 @@ public final class KineticRenderRuntime {
         }
     }
 
-    /** Enables one GUI scissor rectangle using screen-space coordinates. */
+    /** Enables one GUI scissor rectangle in the coordinates of the current pose. */
     public static void enableScissor(GuiGraphics graphics, int left, int top, int right, int bottom) {
-        Objects.requireNonNull(graphics, "graphics").enableScissor(left, top, right, bottom);
+        Objects.requireNonNull(graphics, "graphics");
+        //? if >=26.1 {
+        /*// 26.1 maps the rectangle through the pose and floors its size, so inside a scaled page canvas the right
+        // and bottom edges lost up to one unit and cut off frames drawn on them. Round them outwards instead,
+        // as the canvas does on earlier versions.
+        var pose = graphics.pose();
+        var min = pose.transformPosition(left, top, new org.joml.Vector2f());
+        var max = pose.transformPosition(right, bottom, new org.joml.Vector2f());
+        pose.pushMatrix();
+        pose.identity();
+        graphics.enableScissor(net.minecraft.util.Mth.floor(Math.min(min.x, max.x)), net.minecraft.util.Mth.floor(Math.min(min.y, max.y)),
+                net.minecraft.util.Mth.ceil(Math.max(min.x, max.x)), net.minecraft.util.Mth.ceil(Math.max(min.y, max.y)));
+        pose.popMatrix();
+        *///?} else {
+        graphics.enableScissor(left, top, right, bottom);
+        //?}
     }
 
     /** Disables the active GUI scissor rectangle. */

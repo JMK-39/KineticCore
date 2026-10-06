@@ -2,9 +2,11 @@
 
 - A server-managed config page can load its server values on the client when the player joins (`KTConfigPage.Builder.mirrorOnJoin()`), so a client that shows or uses those values never runs on its own local file. Only the joining player is answered; nothing is sent to other players, and later admin edits reach other players when they next join.
 - A button too narrow for its label with the normal 4 px padding (an icon button such as ▶) keeps the label whole with 2 px of space instead of scrolling it.
+- On 26.1.2, lists and other clipped areas inside a scaled page cut off up to 2 px at their right and bottom edges, so row frames lost their right border. The clip area now rounds outwards, as on 1.20.1 and 1.21.1.
 
 - 由服务端管理的配置页面可以在玩家加入时把服务端数值加载到客户端（`KTConfigPage.Builder.mirrorOnJoin()`），显示或使用这些数值的客户端不再依赖自己的本地文件。只回复加入的玩家，不向其他玩家发送任何内容；管理员之后的修改会在其他玩家下次加入时生效。
 - 按钮宽度不足以按 4 像素内边距放下文字时（例如 ▶ 这样的图标按钮），文字改为保留 2 像素间距完整显示，而不是滚动。
+- 26.1.2 上，缩放页面中的列表和其他裁剪区域会在右边和下边多裁掉最多 2 像素，导致行边框缺少右边线。现在裁剪区域向外取整，与 1.20.1 和 1.21.1 一致。
 
 ---
 

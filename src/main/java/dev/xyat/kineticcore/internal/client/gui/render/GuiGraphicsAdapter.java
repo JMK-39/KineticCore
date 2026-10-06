@@ -198,7 +198,7 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
 
     @Override
     public void scissor(int left, int top, int right, int bottom) {
-        graphics.enableScissor(left, top, right, bottom);
+        dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime.enableScissor(graphics, left, top, right, bottom);
     }
 
     @Override
