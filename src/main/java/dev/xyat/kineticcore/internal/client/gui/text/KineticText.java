@@ -127,8 +127,16 @@ public final class KineticText {
     /** The start of the text that fits together with a trailing ellipsis, keeping the text's own styles. */
     private static net.minecraft.util.FormattedCharSequence ellipsized(Font font, Component text, int maxWidth) {
         Component ellipsis = Component.literal("...");
-        net.minecraft.network.chat.FormattedText head = font.substrByWidth(text, Math.max(0, maxWidth - font.width(ellipsis)));
-        return net.minecraft.locale.Language.getInstance().getVisualOrder(net.minecraft.network.chat.FormattedText.composite(head, ellipsis));
+        // Fonts with fractional advances (common in resource packs) can return a head a few pixels wider than asked,
+        // so measure the result and shrink the budget until text and ellipsis really fit.
+        int budget = Math.max(0, maxWidth - font.width(ellipsis));
+        net.minecraft.util.FormattedCharSequence result;
+        do {
+            net.minecraft.network.chat.FormattedText head = font.substrByWidth(text, budget);
+            result = net.minecraft.locale.Language.getInstance().getVisualOrder(net.minecraft.network.chat.FormattedText.composite(head, ellipsis));
+            budget--;
+        } while (budget >= 0 && font.width(result) > maxWidth);
+        return result;
     }
 
     /** Returns the shared horizontal scrolling offset for custom mixed-content rendering. */
