@@ -222,51 +222,80 @@ public final class ItemSearchIndex {
         cacheLevelToken = currentLevel;
     }
 
+    // Item stacks are read on the client thread, a slice per client tick, so a large modpack does not freeze the
+    // game while the index starts (a long freeze can make a server drop the player for timing out).
+    private static final long COLLECT_SLICE_NANOS = 8_000_000L;
+    private static SnapshotCollector collector;
+    private static boolean collectTickHooked;
+
     private static void startBuildTask(int generation) {
         executeOnClient(() -> {
             if (isStaleGeneration(generation)) return;
-            try {
-                List<ItemSnapshot> snapshots = collectSnapshots(generation);
-                if (isStaleGeneration(generation)) return;
-                updateProgressIfChanged(generation, 10);
-                buildSnapshotsAsync(snapshots, generation);
-            } catch (Throwable throwable) {
-                failBuild(generation, throwable);
+            if (!collectTickHooked) {
+                collectTickHooked = true;
+                dev.xyat.kineticcore.api.client.event.KineticClientEvents.onTick(
+                        dev.xyat.kineticcore.api.client.event.KineticClientEvents.TickPhase.END, ItemSearchIndex::stepCollector);
             }
+            collector = new SnapshotCollector(generation);
+            stepCollector();
         });
     }
 
-    private static List<ItemSnapshot> collectSnapshots(int generation) {
-        Set<String> seen = new HashSet<>();
-        List<ItemSnapshot> snapshots = new ArrayList<>();
+    private static void stepCollector() {
+        SnapshotCollector current = collector;
+        if (current == null) return;
+        if (isStaleGeneration(current.generation)) {
+            collector = null;
+            return;
+        }
+        try {
+            if (!current.step(COLLECT_SLICE_NANOS)) return;
+            collector = null;
+            updateProgressIfChanged(current.generation, 10);
+            buildSnapshotsAsync(current.snapshots, current.generation);
+        } catch (Throwable throwable) {
+            collector = null;
+            failBuild(current.generation, throwable);
+        }
+    }
 
-        var items = KineticRegistries.items().values();
-        int itemTotal = Math.max(1, items.size());
-        int itemCount = 0;
+    /** Walks the registered items, then every creative-tab stack, a time slice at a time. */
+    private static final class SnapshotCollector {
+        final int generation;
+        final List<ItemSnapshot> snapshots = new ArrayList<>();
+        private final Set<String> seen = new HashSet<>();
+        private final List<net.minecraft.world.item.Item> items = new ArrayList<>();
+        private List<ItemStack> tabStacks;
+        private int itemIndex;
+        private int tabIndex;
 
-        for (var item : items) {
-            if (item != null && item != Items.AIR) {
-                addSnapshot(new ItemStack(item), seen, snapshots);
+        SnapshotCollector(int generation) {
+            this.generation = generation;
+            for (var item : KineticRegistries.items().values()) items.add(item);
+        }
+
+        /** Processes stacks until the slice runs out; returns whether every stack has been read. */
+        boolean step(long sliceNanos) {
+            long deadline = System.nanoTime() + sliceNanos;
+            int itemTotal = Math.max(1, items.size());
+            while (itemIndex < items.size()) {
+                var item = items.get(itemIndex++);
+                if (item != null && item != Items.AIR) addSnapshot(new ItemStack(item), seen, snapshots);
+                updateProgressIfChanged(generation, itemIndex * 5 / itemTotal);
+                if (System.nanoTime() >= deadline) return false;
             }
-            itemCount++;
-            updateProgressIfChanged(generation, itemCount * 5 / itemTotal);
+            if (tabStacks == null) {
+                tabStacks = new ArrayList<>();
+                for (CreativeModeTab tab : CreativeModeTabs.allTabs()) tabStacks.addAll(tab.getDisplayItems());
+            }
+            int tabTotal = Math.max(1, tabStacks.size());
+            while (tabIndex < tabStacks.size()) {
+                addSnapshot(tabStacks.get(tabIndex++), seen, snapshots);
+                updateProgressIfChanged(generation, 5 + tabIndex * 5 / tabTotal);
+                if (System.nanoTime() >= deadline) return false;
+            }
+            return true;
         }
-
-        List<ItemStack> tabStacks = new ArrayList<>();
-        for (CreativeModeTab tab : CreativeModeTabs.allTabs()) {
-            tabStacks.addAll(tab.getDisplayItems());
-        }
-
-        int tabTotal = Math.max(1, tabStacks.size());
-        int tabCount = 0;
-
-        for (ItemStack stack : tabStacks) {
-            addSnapshot(stack, seen, snapshots);
-            tabCount++;
-            updateProgressIfChanged(generation, 5 + tabCount * 5 / tabTotal);
-        }
-
-        return snapshots;
     }
 
     private static void addSnapshot(ItemStack stack, Set<String> seen, List<ItemSnapshot> snapshots) {
