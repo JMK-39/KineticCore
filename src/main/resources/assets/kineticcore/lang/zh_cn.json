@@ -501,7 +501,7 @@
   "gui.kineticcore.nbt.error.no_target": "§c请先看向实体或带有方块实体数据的方块。",
   "gui.kineticcore.nbt.error.permission": "§c编辑 NBT 需要服务端 OP 2 级权限。",
   "gui.kineticcore.nbt.error.target_unavailable": "§c目标已不可用、位于其他维度或超出距离。",
-  "gui.kineticcore.nbt.save": "§a保存NBT",
+  "gui.kineticcore.nbt.save": "§a保存",
   "gui.kineticcore.nbt.success.block": "§a已更新方块实体 NBT。",
   "gui.kineticcore.nbt.success.entity": "§a已更新实体 NBT。",
   "gui.kineticcore.nbt.success.hand": "§a已更新主手物品 NBT。",

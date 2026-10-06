@@ -501,7 +501,7 @@
   "gui.kineticcore.nbt.error.no_target": "§cLook at an entity or a block with block-entity data first.",
   "gui.kineticcore.nbt.error.permission": "§cNBT editing requires server operator permission level 2.",
   "gui.kineticcore.nbt.error.target_unavailable": "§cThe target is no longer available, is in another dimension, or is out of range.",
-  "gui.kineticcore.nbt.save": "§aSave NBT",
+  "gui.kineticcore.nbt.save": "§aSave",
   "gui.kineticcore.nbt.success.block": "§aBlock entity NBT updated.",
   "gui.kineticcore.nbt.success.entity": "§aEntity NBT updated.",
   "gui.kineticcore.nbt.success.hand": "§aHeld item NBT updated.",
