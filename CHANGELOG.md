@@ -1,3 +1,11 @@
+2026年10月06日 23时27分
+
+- Text that is too long for its space scrolls at about three characters a second (18 GUI pixels a second) instead of about one, still pausing half a second at each end.
+
+- 放不下的文字滚动速度约为每秒 3 个字符（每秒 18 个界面像素），之前约为每秒 1 个；两端仍各停留半秒。
+
+---
+
 2026年10月06日 07时17分
 
 - A server-managed config page can load its server values on the client when the player joins (`KTConfigPage.Builder.mirrorOnJoin()`), so a client that shows or uses those values never runs on its own local file. Only the joining player is answered; nothing is sent to other players, and later admin edits reach other players when they next join.

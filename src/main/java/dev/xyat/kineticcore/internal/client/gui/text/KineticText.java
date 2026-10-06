@@ -156,10 +156,10 @@ public final class KineticText {
         return Math.round(scrollingOffsetExact(overflow));
     }
 
-    // Back and forth at a constant 8 GUI pixels per second (twice vanilla's average button speed, at least 0.75
+    // Back and forth at a constant 18 GUI pixels per second (about three characters a second, at least 0.75
     // seconds per direction), with no easing: the text holds still for half a second at the start and at the end.
     // The offset stays fractional so the text glides instead of stepping a whole pixel at a time.
-    private static final double SCROLL_PIXELS_PER_SECOND = 8.0D;
+    private static final double SCROLL_PIXELS_PER_SECOND = 18.0D;
     private static final double MIN_SWEEP_SECONDS = 0.75D;
     private static final double END_PAUSE_SECONDS = 0.5D;
 
