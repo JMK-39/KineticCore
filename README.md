@@ -14,7 +14,7 @@ How to use each feature is described in the **[Wiki](https://github.com/JMK-39/K
 
 | Minecraft | Loader | Java |
 |---|---|---|
-| 1.20.1 | Forge 47.4.x | 21 |
+| 1.20.1 | Forge 47.4.x | 17 |
 | 1.21.1 | NeoForge 21.1.x | 21 |
 | 26.1.2 | NeoForge 26.1.2.x | 25 |
 
@@ -44,7 +44,7 @@ KineticCore 是 Kinetic 系列的核心模组：自带一组玩法与客户端�
 
 | Minecraft | 加载器 | Java |
 |---|---|---|
-| 1.20.1 | Forge 47.4.x | 21 |
+| 1.20.1 | Forge 47.4.x | 17 |
 | 1.21.1 | NeoForge 21.1.x | 21 |
 | 26.1.2 | NeoForge 26.1.2.x | 25 |
 

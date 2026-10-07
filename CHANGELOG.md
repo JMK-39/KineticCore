@@ -160,7 +160,7 @@
 
 2026年10月02日 23时00分
 
-- KineticCore now builds for Forge 1.20.1 and NeoForge 1.21.1 from one source tree. Jars are named `kineticcore-<loader>-<minecraft>-<version>.jar`, for example `kineticcore-forge-1.20.1-26.10.2.jar`. All versions are compiled with Java 21.
+- KineticCore now builds for Forge 1.20.1 and NeoForge 1.21.1 from one source tree. Jars are named `kineticcore-<loader>-<minecraft>-<version>.jar`, for example `kineticcore-forge-1.20.1-26.10.2.jar`.
 - On 1.21.1, items written as text use the `/give` syntax: `1x minecraft:diamond_sword[enchantments={levels:{"minecraft:sharpness":5}}]` instead of `{NBT}`. This affects `config/kineticcore/player.toml` (`first_join.items` and `first_join.armor.*`); existing entries with `{...}` data need rewriting on 1.21.1. Copied items are also output in this syntax there.
 - Fixed four hooks that never took effect because they pointed at methods the target classes do not have:
   - Bees placed by spawn egg or command, or spawned naturally, now get no gravity, the same as bred bees.
@@ -171,7 +171,7 @@
 - Removed log deduplication. The log cleaner now only filters logs (errors-only mode and keywords); the old `log_cleaner.deduplication` entry is removed from the config automatically. Note that errors-only mode is on by default on clients and hides all logs below ERROR.
 - The build now checks every mixin target, injection point and shadowed member against the game code and fails on any mismatch, so hooks that silently do nothing are caught before release.
 
-- KineticCore 现在由同一份源码构建 Forge 1.20.1 和 NeoForge 1.21.1 两个版本。文件名为 `kineticcore-<加载器>-<游戏版本>-<版本>.jar`，例如 `kineticcore-forge-1.20.1-26.10.2.jar`。所有版本均使用 Java 21 编译。
+- KineticCore 现在由同一份源码构建 Forge 1.20.1 和 NeoForge 1.21.1 两个版本。文件名为 `kineticcore-<加载器>-<游戏版本>-<版本>.jar`，例如 `kineticcore-forge-1.20.1-26.10.2.jar`。
 - 1.21.1 中以文本表示的物品改用与 `/give` 一致的写法：`1x minecraft:diamond_sword[enchantments={levels:{"minecraft:sharpness":5}}]`，不再使用 `{NBT}`。涉及 `config/kineticcore/player.toml`（`first_join.items` 与 `first_join.armor.*`）；在 1.21.1 上，已有的带 `{...}` 数据的条目需要改写。复制物品功能在该版本也输出这种写法。
 - 修复四个因目标方法不在对应类中而一直未生效的钩子：
   - 通过刷怪蛋、指令或自然生成的蜜蜂现在会和繁殖出的蜜蜂一样无重力。
