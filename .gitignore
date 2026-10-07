@@ -38,3 +38,5 @@ forge*changelog.txt
 /.github/workflows/qodana_code_quality.yml
 /CF_UPDATE_LOG.md
 .授权加密工具/
+*.7z
+/wiki/
