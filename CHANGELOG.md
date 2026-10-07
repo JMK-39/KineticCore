@@ -9,20 +9,16 @@
 2026年10月07日 17时30分
 
 - Horizontal tab bars keep 2 px between their tabs, the same spacing as vertical tab bars, instead of tabs touching each other.
-- GUI validation: the layout check also understands dropdowns hanging over a panel edge and rows clipped by a scroll viewport, so neither is reported against frames or controls they do not visibly touch.
 
 - 横向标签栏的标签之间保持 2 像素，与纵向标签栏的间距一致，不再相互紧贴。
-- 界面验证：布局检查也能识别越过面板边缘的下拉框，以及被滚动视口裁掉的行，不再把它们与实际上没有碰到的边框或控件比较。
 
 ---
 
 2026年10月07日 00时40分
 
 - Screens keep the same layout in every language: config controls have one width per type (numbers, text, choices) instead of growing with their value or option names, tab strip tabs have one width instead of growing with their labels, and the item selector's filter label no longer moves with the length of the item count before it. Text that does not fit scrolls.
-- GUI validation: the layout check understands popups. Text drawn under a dialog or dropdown that covers it is no longer reported against the dialog's frame lines or the dialog's own text, and a list control holding its row buttons is not reported as overlapping them.
 
 - 所有语言下界面排版相同：配置页的控件按类型（数字、文字、选项）使用固定宽度，不再随数值或选项名称变宽；标签栏中的标签使用统一宽度，不再随文字变宽；物品选择器的筛选标签不再随前面物品数量文字的长度移动。放不下的文字滚动显示。
-- 界面验证：布局检查能识别弹出层。被对话框或下拉框遮住的文字不再与对话框边框线或对话框自身文字比较；列表控件包含自己的行按钮也不再报告为重叠。
 
 ---
 
@@ -36,68 +32,64 @@
 
 2026年10月06日 07时17分
 
-- A server-managed config page can load its server values on the client when the player joins (`KTConfigPage.Builder.mirrorOnJoin()`), so a client that shows or uses those values never runs on its own local file. Only the joining player is answered; nothing is sent to other players, and later admin edits reach other players when they next join.
+- A server-managed config page can load its server values on the client when the player joins, so a client that shows or uses those values never runs on its own local file. Only the joining player is answered; nothing is sent to other players, and later admin edits reach other players when they next join.
 - A button too narrow for its label with the normal 4 px padding (an icon button such as ▶) keeps the label whole with 2 px of space instead of scrolling it. A label that has to scroll anyway keeps the normal 4 px from the frame.
-- Number fields can be optional (`NumberFieldBuilder.optional()`): an empty field means "not set" and is not marked with a red error border.
+- Number fields can be optional: an empty field means "not set" and is not marked with a red error border.
 - Text shortened with an ellipsis now really fits its space. With resource-pack fonts that have fractional widths, the shortened text came out 1–3 px too wide, so the "..." could touch the text or control next to it.
 - On 26.1.2, lists and other clipped areas inside a scaled page cut off up to 2 px at their right and bottom edges, so row frames lost their right border. The clip area now rounds outwards, as on 1.20.1 and 1.21.1.
 - The text editor's save button says "Save" instead of "Save NBT", since on 1.20.5+ it also edits item components.
 - The shared item search index (used by item pickers, recipe pages and searches) reads the game's items a few milliseconds per tick instead of all at once, so in large modpacks opening such a page no longer freezes the game, which on a server could get the player dropped for timing out.
 - An item button whose label would reach its icon centres the label in the space after the icon and scrolls it there, instead of running the text under the icon. Labels that fit stay centred on the whole button.
-- Preformatted tooltips (`KineticOverlays.requestFormattedTooltip`, `showFormattedTooltip`) now wrap lines that would run past the screen edge, keeping their styles, like text and item tooltips already did. Only a tooltip taller than the screen may exceed it, as in vanilla.
-- GUI validation: with `-Dkineticcore.layoutCheck=true` the core records every frame, text box, page-drawn button and control of a page and logs (`KINETIC_LAYOUT`) any text or button that crosses or touches a frame line, sits closer than 2 px to one, or overlaps other text. `LayoutCheck.currentScreenProblems()` includes these findings.
+- Preformatted tooltips now wrap lines that would run past the screen edge, keeping their styles, like text and item tooltips already did. Only a tooltip taller than the screen may exceed it, as in vanilla.
 
-- 由服务端管理的配置页面可以在玩家加入时把服务端数值加载到客户端（`KTConfigPage.Builder.mirrorOnJoin()`），显示或使用这些数值的客户端不再依赖自己的本地文件。只回复加入的玩家，不向其他玩家发送任何内容；管理员之后的修改会在其他玩家下次加入时生效。
+- 由服务端管理的配置页面可以在玩家加入时把服务端数值加载到客户端，显示或使用这些数值的客户端不再依赖自己的本地文件。只回复加入的玩家，不向其他玩家发送任何内容；管理员之后的修改会在其他玩家下次加入时生效。
 - 按钮宽度不足以按 4 像素内边距放下文字时（例如 ▶ 这样的图标按钮），文字改为保留 2 像素间距完整显示，而不是滚动。本来就需要滚动的文字仍与边框保持 4 像素。
-- 数字输入框可以设为可选（`NumberFieldBuilder.optional()`）：留空表示"不设置"，不再显示红色错误边框。
+- 数字输入框可以设为可选：留空表示"不设置"，不再显示红色错误边框。
 - 用省略号缩短的文字现在确实放得进自己的区域。使用宽度带小数的资源包字体时，缩短后的文字会宽出 1–3 像素，"..." 可能碰到旁边的文字或控件。
 - 26.1.2 上，缩放页面中的列表和其他裁剪区域会在右边和下边多裁掉最多 2 像素，导致行边框缺少右边线。现在裁剪区域向外取整，与 1.20.1 和 1.21.1 一致。
 - 文本编辑器的保存按钮显示为"保存"而不是"保存NBT"，因为在 1.20.5+ 上它也用于编辑物品数据组件。
 - 共用的物品搜索索引（用于物品选择器、配方页面和搜索）改为每个刻读取几毫秒的物品，而不是一次读完；在大型整合包中打开这类页面不再卡住游戏，在服务器上也不会因此超时被断开。
 - 物品按钮的文字会碰到图标时，改为在图标之后的空间内居中并在其中滚动，不再从图标下面穿过。放得下的文字仍在整个按钮上居中。
-- 预格式化的悬浮提示（`KineticOverlays.requestFormattedTooltip`、`showFormattedTooltip`）现在也会把超出屏幕边缘的行保留样式换行，与文字和物品提示一致。只有比屏幕还高的提示才允许超出，与原版相同。
-- 界面验证：使用 `-Dkineticcore.layoutCheck=true` 时，核心会记录页面中的每个边框、文字框、页面绘制的按钮和控件，并记录（`KINETIC_LAYOUT`）任何压到或碰到边框线、与边框线距离小于 2 像素或与其他文字重叠的文字和按钮。`LayoutCheck.currentScreenProblems()` 也包含这些结果。
+- 预格式化的悬浮提示现在也会把超出屏幕边缘的行保留样式换行，与文字和物品提示一致。只有比屏幕还高的提示才允许超出，与原版相同。
 
 ---
 
 2026年10月05日 13时02分
 
-- The standard NBT editor can check text with a rule supplied by the addon, so addons edit 1.20.5+ item component text (`[damage=5]`) in the same editor they use for NBT on Forge, and the screen looks the same on every version: `KineticSelectors.openNbtEditor(initialText, problem, onSave)`.
+- On 1.20.5+, item component text (`[damage=5]`) can be edited in the same standard editor used for NBT on Forge, so the screen looks the same on every version.
 - On 26.1.2, container pages (for example a trash bin or a recipe editor drawn on a vanilla container texture) drew their background in screen space while the slots and items were drawn in the page canvas, so the background was enlarged and offset from the slots. The background is now drawn in the canvas with the slots, as on 1.20.1 and 1.21.1.
 - On 26.1.2, item slots and item grids (for example a Curios slot or an item selector) showed only a plain frame instead of the checkerboard slot texture, and buttons drawn from a texture were blank. They now draw the same textures as on 1.20.1 and 1.21.1.
 - The NBT editor now checks the text it opens with, so invalid saved text is marked in red with its error straight away instead of showing a green check until the first edit.
-- Lists of identifiers can be drawn as plain text rows instead of buttons: selection and toggle lists take `.textRows()`, which draws striped 14 px rows packed without gaps, with vertically centered text that keeps its padding and scrolls when too long. The current choice is yellow, the hovered row is outlined and, in toggle lists (multi-select), chosen rows are green.
-- Toggle lists now mark chosen rows green instead of yellow, in both row styles, and buttons gain a green "picked" state for multi-select groups (`KineticButton.setPicked`). Yellow stays the current choice.
+- Lists of identifiers can use plain text rows instead of buttons: striped 14 px rows packed without gaps, with vertically centered text that keeps its padding and scrolls when too long. The current choice is yellow, the hovered row is outlined and, in toggle lists (multi-select), chosen rows are green.
+- Toggle lists now mark chosen rows green instead of yellow, in both row styles, and buttons in multi-select groups can show a green "picked" state. Yellow stays the current choice.
 - Search suggestion popups no longer draw a box around every row; only the hovered row and the keyboard choice are outlined, and suggestion text keeps 4 px from the row edges.
 - Text that does not fit its space is never cut off: up to twice the space it scrolls back and forth, and longer text shows its start with an ellipsis and scrolls through in full while the mouse is over it. This applies to every scrolling text drawn by the core and by addons.
 - Button labels keep 4 px from the button edge, clear of the frame, instead of vanilla's 2 px on the bevel, and follow the same scrolling rule.
 - A text field that is not being edited shows its text from the first character. A long value no longer stays scrolled to its end after it was set or picked from the suggestions, which made it look shifted against the frame.
 - 3D mob previews keep the model 3 px inside their cell (the 1 px frame plus 2 px of space) instead of drawing up to the frame.
-- Context menus tell single choices from on/off switches: `MenuItem.choice(...)` marks the current option yellow, and checked `MenuItem.toggle(...)` rows (a multi-selection) are now green instead of yellow.
+- Context menus tell single choices from on/off switches: the current option is yellow, and enabled switches (a multi-selection) are now green instead of yellow.
 
-- 标准 NBT 编辑器可以使用附属提供的规则检查文本，附属可在与 Forge 编辑 NBT 相同的编辑器中编辑 1.20.5+ 的物品数据组件（`[damage=5]`），各版本界面一致：`KineticSelectors.openNbtEditor(initialText, problem, onSave)`。
+- 1.20.5+ 的物品数据组件（`[damage=5]`）可在与 Forge 编辑 NBT 相同的标准编辑器中编辑，各版本界面一致。
 - 26.1.2 上的容器页面（例如垃圾桶或基于原版容器贴图的配方编辑器）背景按屏幕坐标绘制，而槽位与物品按页面画布绘制，导致背景放大并与槽位错位。现在背景与槽位一起在画布中绘制，与 1.20.1 和 1.21.1 一致。
 - 26.1.2 上的物品槽和物品网格（例如饰品槽或物品选择器）只显示一个空边框而没有棋盘格槽位贴图，使用贴图的按钮也显示为空白。现在与 1.20.1 和 1.21.1 绘制相同的贴图。
 - NBT 编辑器打开时即检查初始文本，已保存的无效文本会立即以红色标出并显示错误，不再在首次编辑前显示绿色对勾。
-- ID 列表可以用纯文字行代替按钮显示：单选列表和开关列表支持 `.textRows()`。行高 14 像素、条纹背景、行间无空隙；文字垂直居中并保留内边距，过长时滚动。当前选择为黄色，光标所在行加边框，开关列表（多选）中已选的行为绿色。
-- 开关列表中已选的行在两种行样式下都改为绿色（原为黄色）。按钮新增用于多选组的绿色"已选"状态（`KineticButton.setPicked`）。黄色继续表示当前选择。
+- ID 列表可以用纯文字行代替按钮显示。行高 14 像素、条纹背景、行间无空隙；文字垂直居中并保留内边距，过长时滚动。当前选择为黄色，光标所在行加边框，开关列表（多选）中已选的行为绿色。
+- 开关列表中已选的行在两种行样式下都改为绿色（原为黄色）。多选组的按钮可以显示绿色"已选"状态。黄色继续表示当前选择。
 - 搜索候选弹窗不再给每一行画边框，只有光标所在行和键盘选中项带边框；候选文字与行边缘保持 4 像素。
 - 放不下的文字不再被截断：超出不到一倍时来回滚动；更长的文字显示开头加省略号，鼠标悬停时滚动显示完整内容。核心与附属绘制的所有滚动文字均适用。
 - 按钮文字与按钮边缘保持 4 像素、不压边框（原版为 2 像素，压在斜面上），并遵循相同的滚动规则。
 - 不在编辑中的输入框从第一个字符开始显示。设置或从候选中选取较长的值后，不再停留在末尾，因此不会看起来贴着边框偏移。
 - 生物 3D 预览中的模型与格子边缘保持 3 像素（1 像素边框加 2 像素间距），不再画到边框上。
-- 右键菜单区分单选与开关：`MenuItem.choice(...)` 把当前选项标为黄色；勾选的 `MenuItem.toggle(...)` 行（多选）改为绿色（原为黄色）。
+- 右键菜单区分单选与开关：当前选项为黄色；开启的开关行（多选）改为绿色（原为黄色）。
 
 ---
 
 2026年10月04日 13时42分
 
-- Item and text tooltips near the screen edge no longer run off the screen: long lines wrap to the room left on the wider side of the cursor, on every supported version. Tooltips requested through KineticOverlays.requestTooltip are fitted the same way.
-- Builds now fail when the English and Chinese language files do not have exactly the same keys, so a missing or extra translation is caught before release.
+- Item and text tooltips near the screen edge no longer run off the screen: long lines wrap to the room left on the wider side of the cursor, on every supported version.
 - Text that is too long for its space scrolls back and forth at a steady speed, twice as fast as before, pausing for half a second at the start and at the end instead of slowing down near them, and glides smoothly instead of moving a whole pixel at a time.
 
-- 屏幕边缘的物品和文字悬浮提示不再超出屏幕：过长的行会按光标较宽一侧剩余的空间自动换行，所有支持的版本均生效。通过 KineticOverlays.requestTooltip 请求的提示同样会自动适配。
-- 英文与中文语言文件的键不完全一致时构建会失败，缺失或多出的翻译在发布前就会被发现。
+- 屏幕边缘的物品和文字悬浮提示不再超出屏幕：过长的行会按光标较宽一侧剩余的空间自动换行，所有支持的版本均生效。
 - 超出可用空间的文字以匀速左右往返滚动，速度比之前快一倍，到开头和结尾时各停顿半秒，不再在接近两端时减速，并且平滑移动，不再一次跳动一个像素。
 
 ---
@@ -110,7 +102,6 @@
 - The compact potion-effect display works on 26.1.2, including JEI keeping clear of it.
 - On 26.1.2 new players start at the custom spawn through 26.1's new login flow.
 - The mod's pack.mcmeta follows each version's format, so 26.1.2 no longer logs a pack metadata warning.
-- 26.1.2 API: key binding categories take an id (KineticKeyBindings.Builder.category), item model properties are registered with KineticItemProperties.registerRange/registerConditional, and spawn handlers reserve first logins with ServerHooks.prepareFreshLogin.
 
 - 新增 Minecraft 26.1.2 支持（NeoForge 26.1.2.112，Java 25），JAR 为 kineticcore-neoforge-26.1.2-<版本>.jar。
 - 26.1.2 完全使用 26.1 自己的格式：物品文本使用 26.1 的 /give 写法，例如 enchantments={"minecraft:protection":2}，默认的首次进入奖励也按此写法生成。
@@ -118,7 +109,6 @@
 - 紧凑的药水效果显示支持 26.1.2，JEI 同样会避开它。
 - 26.1.2 中新玩家通过 26.1 新的登录流程出生在自定义出生点。
 - 模组的 pack.mcmeta 按各版本自己的格式生成，26.1.2 不再出现资源包元数据警告。
-- 26.1.2 接口：按键分类改用 ID（KineticKeyBindings.Builder.category），物品模型属性通过 KineticItemProperties.registerRange/registerConditional 注册，出生点处理器通过 ServerHooks.prepareFreshLogin 预留首次登录位置。
 
 ---
 
@@ -155,61 +145,43 @@
 - Fixed joining a world failing with "Invalid player data" on 1.20.1: the noclip eye-height check no longer runs before the player is fully created.
 - Fixed oversized custom payloads on 1.20.1 failing with a class-loading error instead of the intended "Packet limit exceeded" message.
 - The KineticCore data pack is no longer listed as incompatible on 1.21.1.
-- The build now also fails when code refers to a class inside a mixin package, which Mixin cannot load at runtime.
 
 - 修复 1.21.1 自定义出生点无效：新玩家和重生现在会到配置的出生点（例如村庄），不再是原版世界出生点。1.20.5 起游戏每次启动都会重新设置一次世界出生点，此前被误认为管理员执行了 `/setworldspawn`，从而把原版出生点保存成了固定出生点。用之前版本创建的 1.21.1 世界会保留这个固定出生点，请新建世界。
 - 修复 1.21.1 进入世界时崩溃（`FlightServerMixins` 的 `IllegalClassLoadError`）：飞行数据包处理不再调用 mixin 包内的类。
 - 修复 1.20.1 进入世界时提示"无效的玩家数据"：穿墙视角高度的判断不再在玩家创建完成之前执行。
 - 修复 1.20.1 自定义数据包超出大小时报类加载错误，而不是预期的"Packet limit exceeded"提示。
 - 1.21.1 中 KineticCore 数据包不再显示为不兼容。
-- 构建时还会检查代码是否引用了 mixin 包内的类（Mixin 运行时无法加载这类引用），发现即构建失败。
 
 ---
 
 2026年10月02日 23时00分
 
-- KineticCore now builds for Forge 1.20.1 and NeoForge 1.21.1 from one source tree. Jars are named `kineticcore-<loader>-<minecraft>-<version>.jar`, for example `kineticcore-forge-1.20.1-26.10.2.jar`.
+- KineticCore now supports Forge 1.20.1 and NeoForge 1.21.1. Jars are named `kineticcore-<loader>-<minecraft>-<version>.jar`, for example `kineticcore-forge-1.20.1-26.10.2.jar`.
 - On 1.21.1, items written as text use the `/give` syntax: `1x minecraft:diamond_sword[enchantments={levels:{"minecraft:sharpness":5}}]` instead of `{NBT}`. This affects `config/kineticcore/player.toml` (`first_join.items` and `first_join.armor.*`); existing entries with `{...}` data need rewriting on 1.21.1. Copied items are also output in this syntax there.
-- Fixed four hooks that never took effect because they pointed at methods the target classes do not have:
+- Fixed four previously ineffective behaviors:
   - Bees placed by spawn egg or command, or spawned naturally, now get no gravity, the same as bred bees.
   - Noclip in creative now keeps the standing eye height in any pose.
   - Mobs removed without dying (despawned or discarded by another mod) now drop the equipment they picked up. Mobs that are killed, unloaded or change dimension are not affected.
   - Once the server is running, the world spawn position reports the exact custom spawn.
 - Fixed vanilla structures such as trial chambers failing to load on 1.21.1 ("Tried to read NBT tag that was too big"): the network NBT limit no longer applies to unlimited reads such as structures, level and player data.
 - Removed log deduplication. The log cleaner now only filters logs (errors-only mode and keywords); the old `log_cleaner.deduplication` entry is removed from the config automatically. Note that errors-only mode is on by default on clients and hides all logs below ERROR.
-- The build now checks every mixin target, injection point and shadowed member against the game code and fails on any mismatch, so hooks that silently do nothing are caught before release.
 
-- KineticCore 现在由同一份源码构建 Forge 1.20.1 和 NeoForge 1.21.1 两个版本。文件名为 `kineticcore-<加载器>-<游戏版本>-<版本>.jar`，例如 `kineticcore-forge-1.20.1-26.10.2.jar`。
+- KineticCore 现在支持 Forge 1.20.1 和 NeoForge 1.21.1。文件名为 `kineticcore-<加载器>-<游戏版本>-<版本>.jar`，例如 `kineticcore-forge-1.20.1-26.10.2.jar`。
 - 1.21.1 中以文本表示的物品改用与 `/give` 一致的写法：`1x minecraft:diamond_sword[enchantments={levels:{"minecraft:sharpness":5}}]`，不再使用 `{NBT}`。涉及 `config/kineticcore/player.toml`（`first_join.items` 与 `first_join.armor.*`）；在 1.21.1 上，已有的带 `{...}` 数据的条目需要改写。复制物品功能在该版本也输出这种写法。
-- 修复四个因目标方法不在对应类中而一直未生效的钩子：
+- 修复四项此前未生效的行为：
   - 通过刷怪蛋、指令或自然生成的蜜蜂现在会和繁殖出的蜜蜂一样无重力。
   - 创造模式穿墙时，任何姿态下都保持站立视角高度。
   - 生物在非死亡情况下被移除（自然消失或被其他模组清除）时，会掉落其捡起的装备。被击杀、随区块卸载或切换维度的生物不受影响。
   - 服务器启动完成后，世界出生点会返回精确的自定义出生点。
 - 修复 1.21.1 中试炼密室等原版结构加载失败（"Tried to read NBT tag that was too big"）的问题：网络 NBT 大小限制不再作用于结构、存档和玩家数据等不限大小的读取。
 - 移除日志去重功能。日志清理现在只保留过滤（仅错误日志模式和关键词屏蔽）；旧的 `log_cleaner.deduplication` 配置项会自动删除。注意：客户端默认开启仅错误日志模式，会隐藏 ERROR 以下的全部日志。
-- 构建时会对照游戏代码检查每个 mixin 的目标、注入点和影子成员，不匹配即构建失败，发布前就能发现静默失效的钩子。
-
----
-
-2026年10月02日 13时53分
-
-- Fixed a development-client startup crash caused by reading client settings before Forge loaded their configuration.
-- Client settings now use their in-memory defaults or edits until loading completes, then read and write the loaded configuration.
-- Added a regression test covering startup defaults, preload edits, loaded values, and native writes. All core verification suites and the final-JAR API check pass.
-
-- 修复 Forge 尚未加载客户端配置时提前读取设置，导致开发客户端启动崩溃的问题。
-- 配置加载前使用内存默认值或编辑值；加载完成后正常读写已加载的配置。
-- 新增回归测试，覆盖启动默认值、加载前编辑、加载后读取和原生写入。核心验证套件及最终 JAR API 检查全部通过。
 
 ---
 
 历史记录（原记录未标注时间）
 
-- Added the KineticGui.findPage API: addons can find a page in the current screen's back-navigation chain, so data can still reach a parent page while one of its child pages is open.
 - Fixed command suggestions in text fields drifting out of line with long commands; suggestions and usage hints now follow the scrolled text.
 - Drop-down and context menus now show at most 10 rows; longer menus scroll with the mouse wheel or a scrollbar you can drag or click.
 
-- 新增 KineticGui.findPage 接口：附属模组可以在当前界面的返回链中查找页面，打开子页面时数据仍能更新到下层的父页面。
 - 修复文本框中命令较长时，命令补全弹窗与文字错位的问题；补全和用法提示现在跟随滚动后的文字对齐。
 - 下拉菜单和右键菜单最多显示 10 行，更长的菜单可用滚轮、拖动或点击滚动条浏览。
