@@ -36,6 +36,7 @@ import dev.xyat.kineticcore.internal.config.client.KineticConfigStartupRegressio
 import dev.xyat.kineticcore.internal.config.client.KineticNativeSetRollbackRegression;
 import dev.xyat.kineticcore.internal.network.ForgeNetworkUtf8Regression;
 import dev.xyat.kineticcore.internal.runtime.FeatureSwitchPersistenceRegression;
+import dev.xyat.kineticcore.feature.logcleaner.LogFilterRegression;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -102,6 +103,7 @@ public final class MinecraftRegressionSuite {
         run("ForgeNetworkUtf8Regression", () -> ForgeNetworkUtf8Regression.main(NO_ARGS));
         runIsolated(FeatureSwitchPersistenceRegression.class, "invalid");
         runIsolated(FeatureSwitchPersistenceRegression.class, "saveFailure");
+        runIsolated(LogFilterRegression.class, "filterAndMigration");
         if (!FAILED.isEmpty()) {
             throw new AssertionError(FAILED.size() + " regression checks failed: " + String.join(", ", FAILED));
         }

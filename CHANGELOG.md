@@ -1,3 +1,11 @@
+2026年10月08日 00时55分
+
+- Removed log deduplication and repeat-count summaries. Repeated messages are logged individually; keyword filtering, errors-only mode and old-log cleanup are preserved. The obsolete `log_cleaner.deduplication` setting and its configuration control are removed automatically.
+
+- 移除日志去重与重复次数汇总，重复日志逐条输出；保留关键词过滤、仅错误日志模式和旧日志清理。自动移除旧的 `log_cleaner.deduplication` 配置项及对应界面开关。
+
+---
+
 2026年10月07日 17时30分
 
 - Horizontal tab bars keep 2 px between their tabs, the same spacing as vertical tab bars, instead of tabs touching each other.

@@ -26,7 +26,6 @@ import dev.xyat.kineticcore.internal.client.screen.KineticControlRegistrationCon
 import dev.xyat.kineticcore.internal.client.screen.KineticControlUnregistrationContractRegression;
 import dev.xyat.kineticcore.internal.client.search.SupplementarySearchRegression;
 import dev.xyat.kineticcore.internal.config.ServerConfigPacketLimitRegression;
-import dev.xyat.kineticcore.feature.logcleaner.ConsecutiveLogStateRegression;
 import dev.xyat.kineticcore.internal.network.NetworkUtf8Regression;
 
 /**
@@ -41,7 +40,6 @@ public final class HeadlessRegressionSuite {
     }
 
     public static void main(String[] args) throws Exception {
-        run("ConsecutiveLogStateRegression", () -> ConsecutiveLogStateRegression.main(NO_ARGS));
         run("GuiContractRegression", () -> GuiContractRegression.main(NO_ARGS));
         run("GuiLayoutBoundsRegression", () -> GuiLayoutBoundsRegression.main(NO_ARGS));
         run("GuiLayoutCanvasCapRegression", () -> GuiLayoutCanvasCapRegression.main(NO_ARGS));

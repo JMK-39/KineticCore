@@ -38,14 +38,6 @@ public final class LogCleanerConfigGui {
                         false,
                         KineticI18n.translatable("cfg.kineticcore.logcleaner.errors_only.tooltip")
                 )
-                .booleanValue(
-                        "deduplication",
-                        KineticI18n.translatable("cfg.kineticcore.logcleaner.deduplication"),
-                        () -> LogCleanerConfig.enableLogDeduplication,
-                        value -> LogCleanerConfig.enableLogDeduplication = value,
-                        true,
-                        KineticI18n.translatable("cfg.kineticcore.logcleaner.deduplication.tooltip")
-                )
                 .longTextValue(
                         "filtered_keywords",
                         KineticI18n.translatable("cfg.kineticcore.logcleaner.filtered_keywords"),

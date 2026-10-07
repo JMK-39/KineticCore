@@ -17,7 +17,6 @@ public class LogCleanerConfig {
 
     public static boolean enableCleanup = true;
     public static boolean errorsOnly = false;
-    public static boolean enableLogDeduplication = true;
     public static int maxCrashReports = 3;
     public static int maxLogs = 3;
     public static int maxDebugLogs = 3;
@@ -51,8 +50,7 @@ public class LogCleanerConfig {
         define("log_cleaner.errors_only", false,
                 "仅保留 ERROR/FATAL 错误日志，其余日志都不输出。默认关闭。\nOnly ERROR/FATAL logs are kept and all other logs are dropped. Off by default.");
 
-        define("log_cleaner.deduplication", true,
-                "连续重复的日志只输出一次，并在下一条不同日志前输出重复次数。\nConsecutive duplicate logs are output once, followed by their repeat count before the next different log.");
+        configData.remove("log_cleaner.deduplication");
 
         define("log_cleaner.filtered_keywords", "Tried to load a block entity for block",
                 """
@@ -80,7 +78,6 @@ public class LogCleanerConfig {
     private static void readValues() {
         enableCleanup = configData.getOrElse("log_cleaner.enable", true);
         errorsOnly = configData.getOrElse("log_cleaner.errors_only", false);
-        enableLogDeduplication = configData.getOrElse("log_cleaner.deduplication", true);
 
         rawFilteredKeywords = configData.getOrElse("log_cleaner.filtered_keywords", "Tried to load a block entity for block");
         List<String> keywords = new ArrayList<>();
@@ -103,7 +100,7 @@ public class LogCleanerConfig {
         if (configData == null) return;
         configData.set("log_cleaner.enable", enableCleanup);
         configData.set("log_cleaner.errors_only", errorsOnly);
-        configData.set("log_cleaner.deduplication", enableLogDeduplication);
+        configData.remove("log_cleaner.deduplication");
         configData.set("log_cleaner.filtered_keywords", rawFilteredKeywords);
         configData.set("log_cleaner.max_crash_reports", Math.max(1, maxCrashReports));
         configData.set("log_cleaner.max_logs", Math.max(1, maxLogs));

@@ -20,7 +20,7 @@ public class LogCleanerModule {
     public static void load() {
         LOAD_SEQUENCE.runSequential(
                 LogCleanerConfig::load,
-                DuplicateLogFilter::inject,
+                LogFilter::inject,
                 LogCleanerModule::installShutdownHook
         );
     }
