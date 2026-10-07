@@ -347,7 +347,7 @@ public final class KineticButtons {
                 if (invertedFlash) GuiTheme.selectionFlash(graphics, getX(), getY(), getWidth(), getHeight());
             } finally {
                 if (storedText != null) setMessage(storedText);
-                if (clipEnabled) graphics.disableScissor();
+                if (clipEnabled) dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime.disableScissor(graphics);
             }
         }
 

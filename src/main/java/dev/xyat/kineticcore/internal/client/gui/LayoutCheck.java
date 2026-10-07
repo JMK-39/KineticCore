@@ -69,6 +69,7 @@ public final class LayoutCheck {
                 if (!overlaps) continue;
                 // Drawn later over a text or page-drawn button: a popup covering it. Controls draw after the page.
                 if (f > i && item.kind() != LayoutFrameRecorder.Kind.CONTROL) continue;
+                if (insidePopupOver(boxes, f, i)) continue;
                 if (item.x() <= frame.x() && item.y() <= frame.y() && item.right() >= frame.right() && item.bottom() >= frame.bottom()
                         && item.kind() != LayoutFrameRecorder.Kind.TEXT) continue;
                 String problem;
@@ -103,6 +104,21 @@ public final class LayoutCheck {
             }
         }
         return problems;
+    }
+
+    // True when the item lies in a popup drawn after the frame: a later frame that holds the item and crosses the
+    // frame's lines (a dropdown hanging over a panel edge). Boxes nested inside the frame do not count.
+    private static boolean insidePopupOver(List<LayoutFrameRecorder.Box> boxes, int frameIndex, int itemIndex) {
+        LayoutFrameRecorder.Box frame = boxes.get(frameIndex);
+        LayoutFrameRecorder.Box item = boxes.get(itemIndex);
+        for (int p = frameIndex + 1; p < itemIndex; p++) {
+            LayoutFrameRecorder.Box popup = boxes.get(p);
+            if (popup.kind() != LayoutFrameRecorder.Kind.FRAME) continue;
+            if (!item.inside(popup.x(), popup.y(), popup.right(), popup.bottom())) continue;
+            boolean overlaps = popup.x() < frame.right() && popup.right() > frame.x() && popup.y() < frame.bottom() && popup.bottom() > frame.y();
+            if (overlaps && !popup.inside(frame.x(), frame.y(), frame.right(), frame.bottom())) return true;
+        }
+        return false;
     }
 
     // True when a frame drawn between the two items covers the earlier one and holds the later one: a popup over the page.

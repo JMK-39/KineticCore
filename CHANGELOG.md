@@ -1,3 +1,13 @@
+2026年10月07日 17时30分
+
+- Horizontal tab bars keep 2 px between their tabs, the same spacing as vertical tab bars, instead of tabs touching each other.
+- GUI validation: the layout check also understands dropdowns hanging over a panel edge and rows clipped by a scroll viewport, so neither is reported against frames or controls they do not visibly touch.
+
+- 横向标签栏的标签之间保持 2 像素，与纵向标签栏的间距一致，不再相互紧贴。
+- 界面验证：布局检查也能识别越过面板边缘的下拉框，以及被滚动视口裁掉的行，不再把它们与实际上没有碰到的边框或控件比较。
+
+---
+
 2026年10月07日 00时40分
 
 - Screens keep the same layout in every language: config controls have one width per type (numbers, text, choices) instead of growing with their value or option names, tab strip tabs have one width instead of growing with their labels, and the item selector's filter label no longer moves with the length of the item count before it. Text that does not fit scrolls.

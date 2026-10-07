@@ -201,14 +201,12 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
 
     @Override
     public void scissor(int left, int top, int right, int bottom) {
-        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.pushClip(graphics, left, top, right, bottom);
         dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime.enableScissor(graphics, left, top, right, bottom);
     }
 
     @Override
     public void endScissor() {
-        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.popClip();
-        graphics.disableScissor();
+        dev.xyat.kineticcore.internal.client.render.KineticRenderRuntime.disableScissor(graphics);
     }
 
     @Override

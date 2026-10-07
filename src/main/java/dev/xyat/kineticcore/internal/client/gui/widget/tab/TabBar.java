@@ -36,7 +36,9 @@ public final class TabBar implements TabBarButtons {
             return;
         }
         selectedIndex = Math.max(0, Math.min(labels.size() - 1, selected));
-        int baseWidth = vertical ? totalWidth : Math.max(1, totalWidth / labels.size());
+        // Horizontal tabs keep 2 px between them, like the 2 px between vertical tabs.
+        int gap = 2;
+        int baseWidth = vertical ? totalWidth : Math.max(1, (totalWidth - gap * (labels.size() - 1)) / labels.size());
         int used = 0;
         for (int index = 0; index < labels.size(); index++) {
             int width = vertical || index != labels.size() - 1 ? baseWidth : totalWidth - used;
@@ -54,7 +56,7 @@ public final class TabBar implements TabBarButtons {
                     );
             button.setSelected(index == selectedIndex);
             buttons.add(button);
-            if (!vertical) used += width;
+            if (!vertical) used += width + gap;
         }
     }
 

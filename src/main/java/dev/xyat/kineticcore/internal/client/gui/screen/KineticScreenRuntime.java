@@ -289,8 +289,11 @@ public final class KineticScreenRuntime {
             KineticRenderRuntime.enableScissor(graphics, left, top, right, bottom);
             return;
         }
-        KineticRenderRuntime.enableScissor(graphics,
-                canvas.toScreenX(left), canvas.toScreenY(top), canvas.toScreenRight(right), canvas.toScreenBottom(bottom));
+        int screenLeft = canvas.toScreenX(left);
+        int screenTop = canvas.toScreenY(top);
+        int screenRight = canvas.toScreenRight(right);
+        int screenBottom = canvas.toScreenBottom(bottom);
+        KineticRenderRuntime.enableScissor(graphics, screenLeft, screenTop, screenRight, screenBottom);
     }
 
     /** Ends a scissor rectangle started with {@link #enableUiScissor}. */
