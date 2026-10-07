@@ -1,3 +1,13 @@
+2026年10月07日 00时40分
+
+- Screens keep the same layout in every language: config controls have one width per type (numbers, text, choices) instead of growing with their value or option names, tab strip tabs have one width instead of growing with their labels, and the item selector's filter label no longer moves with the length of the item count before it. Text that does not fit scrolls.
+- GUI validation: the layout check understands popups. Text drawn under a dialog or dropdown that covers it is no longer reported against the dialog's frame lines or the dialog's own text, and a list control holding its row buttons is not reported as overlapping them.
+
+- 所有语言下界面排版相同：配置页的控件按类型（数字、文字、选项）使用固定宽度，不再随数值或选项名称变宽；标签栏中的标签使用统一宽度，不再随文字变宽；物品选择器的筛选标签不再随前面物品数量文字的长度移动。放不下的文字滚动显示。
+- 界面验证：布局检查能识别弹出层。被对话框或下拉框遮住的文字不再与对话框边框线或对话框自身文字比较；列表控件包含自己的行按钮也不再报告为重叠。
+
+---
+
 2026年10月06日 23时27分
 
 - Text that is too long for its space scrolls at about three characters a second (18 GUI pixels a second) instead of about one, still pausing half a second at each end.

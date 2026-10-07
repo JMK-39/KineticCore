@@ -33,8 +33,7 @@ public final class TabStripWidget extends VanillaWidget implements KineticTabStr
     private static final int EDGE_PADDING = 2;
     private static final int SCROLLBAR_GAP = 5;
     private static final int SCROLLBAR_HEIGHT = 4;
-    private static final int MIN_TAB_WIDTH = 36;
-    private static final int MAX_TAB_WIDTH = 126;
+    private static final int TAB_WIDTH = 80;
     private static final int MIN_THUMB_WIDTH = 24;
 
     private final FactoryAccess factoryAccess;
@@ -406,10 +405,8 @@ public final class TabStripWidget extends VanillaWidget implements KineticTabStr
     }
 
     private int tabWidth(TabStripItem tab) {
-        Component normal = tab == null || tab.label() == null ? Component.empty() : tab.label();
-        Component selected = tab == null || tab.selectedLabel() == null ? normal : tab.selectedLabel();
-        int textWidth = Math.max(font.width(normal), font.width(selected));
-        return Math.max(MIN_TAB_WIDTH, Math.min(MAX_TAB_WIDTH, textWidth + 18));
+        // Every tab has the same width in every language; longer labels scroll inside it.
+        return TAB_WIDTH;
     }
 
     private Component displayLabel(TabStripItem tab, boolean selected) {

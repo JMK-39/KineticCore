@@ -49,21 +49,26 @@ public final class LayoutCheck {
     /**
      * Text, page-drawn buttons and controls against the frame lines drawn in the same page frame: nothing may cross
      * or cover a frame line, and anything inside a frame keeps {@link #MIN_GAP} px from it. A text box that lies inside
-     * a button or control is that control's label and is not compared with it.
+     * a button or control is that control's label and is not compared with it. The boxes are in drawing order: a frame
+     * drawn after an item that it overlaps is a popup or dialog covering that item, so the item is not compared with
+     * that frame, nor with what the popup draws inside it.
      */
     static List<String> frameProblems(List<LayoutFrameRecorder.Box> boxes) {
         List<String> problems = new ArrayList<>();
-        List<LayoutFrameRecorder.Box> frames = new ArrayList<>();
-        List<LayoutFrameRecorder.Box> items = new ArrayList<>();
-        for (LayoutFrameRecorder.Box box : boxes) (box.kind() == LayoutFrameRecorder.Kind.FRAME ? frames : items).add(box);
         java.util.Set<String> seen = new java.util.HashSet<>();
-        for (LayoutFrameRecorder.Box item : items) {
-            for (LayoutFrameRecorder.Box frame : frames) {
+        for (int i = 0; i < boxes.size(); i++) {
+            LayoutFrameRecorder.Box item = boxes.get(i);
+            if (item.kind() == LayoutFrameRecorder.Kind.FRAME) continue;
+            for (int f = 0; f < boxes.size(); f++) {
+                LayoutFrameRecorder.Box frame = boxes.get(f);
+                if (frame.kind() != LayoutFrameRecorder.Kind.FRAME) continue;
                 // A frame drawn as a control's own background, or the control's own outline.
                 if (Math.abs(frame.x() - item.x()) <= 1 && Math.abs(frame.y() - item.y()) <= 1
                         && Math.abs(frame.right() - item.right()) <= 1 && Math.abs(frame.bottom() - item.bottom()) <= 1) continue;
                 boolean overlaps = item.x() < frame.right() && item.right() > frame.x() && item.y() < frame.bottom() && item.bottom() > frame.y();
                 if (!overlaps) continue;
+                // Drawn later over a text or page-drawn button: a popup covering it. Controls draw after the page.
+                if (f > i && item.kind() != LayoutFrameRecorder.Kind.CONTROL) continue;
                 if (item.x() <= frame.x() && item.y() <= frame.y() && item.right() >= frame.right() && item.bottom() >= frame.bottom()
                         && item.kind() != LayoutFrameRecorder.Kind.TEXT) continue;
                 String problem;
@@ -78,10 +83,12 @@ public final class LayoutCheck {
                 if (seen.add(problem)) problems.add(problem);
             }
         }
-        for (int i = 0; i < items.size(); i++) {
-            for (int j = i + 1; j < items.size(); j++) {
-                LayoutFrameRecorder.Box a = items.get(i);
-                LayoutFrameRecorder.Box b = items.get(j);
+        for (int i = 0; i < boxes.size(); i++) {
+            LayoutFrameRecorder.Box a = boxes.get(i);
+            if (a.kind() == LayoutFrameRecorder.Kind.FRAME) continue;
+            for (int j = i + 1; j < boxes.size(); j++) {
+                LayoutFrameRecorder.Box b = boxes.get(j);
+                if (b.kind() == LayoutFrameRecorder.Kind.FRAME) continue;
                 if (a.kind() == LayoutFrameRecorder.Kind.CONTROL && b.kind() == LayoutFrameRecorder.Kind.CONTROL) continue;
                 boolean overlaps = a.x() < b.right() && a.right() > b.x() && a.y() < b.bottom() && a.bottom() > b.y();
                 if (!overlaps) continue;
@@ -90,11 +97,26 @@ public final class LayoutCheck {
                         && (a.kind() == LayoutFrameRecorder.Kind.TEXT || b.kind() == LayoutFrameRecorder.Kind.CONTROL)) continue;
                 if (b.inside(a.x(), a.y(), a.right(), a.bottom())
                         && (b.kind() == LayoutFrameRecorder.Kind.TEXT || a.kind() == LayoutFrameRecorder.Kind.CONTROL)) continue;
+                if (coveredBetween(boxes, i, j)) continue;
                 String problem = "overlap: " + describe(a) + " / " + describe(b);
                 if (seen.add(problem)) problems.add(problem);
             }
         }
         return problems;
+    }
+
+    // True when a frame drawn between the two items covers the earlier one and holds the later one: a popup over the page.
+    private static boolean coveredBetween(List<LayoutFrameRecorder.Box> boxes, int earlier, int later) {
+        LayoutFrameRecorder.Box a = boxes.get(earlier);
+        LayoutFrameRecorder.Box b = boxes.get(later);
+        if (a.kind() == LayoutFrameRecorder.Kind.CONTROL) return false;
+        for (int f = earlier + 1; f < later; f++) {
+            LayoutFrameRecorder.Box frame = boxes.get(f);
+            if (frame.kind() != LayoutFrameRecorder.Kind.FRAME) continue;
+            boolean coversA = a.x() < frame.right() && a.right() > frame.x() && a.y() < frame.bottom() && a.bottom() > frame.y();
+            if (coversA && b.inside(frame.x(), frame.y(), frame.right(), frame.bottom())) return true;
+        }
+        return false;
     }
 
     private static String describe(LayoutFrameRecorder.Box box) {
@@ -103,6 +125,8 @@ public final class LayoutCheck {
     }
 
     private static String compare(AbstractWidget a, AbstractWidget b) {
+        // A control holding another one (a list and its row buttons) is one element, not an overlap.
+        if (contains(a, b) || contains(b, a)) return null;
         int aRight = a.getX() + a.getWidth();
         int aBottom = a.getY() + a.getHeight();
         int bRight = b.getX() + b.getWidth();
@@ -114,6 +138,12 @@ public final class LayoutCheck {
         if (verticalGap < 0 && horizontalGap < MIN_GAP) return "gap " + horizontalGap + " px: " + describe(a) + " and " + describe(b);
         if (horizontalGap < 0 && verticalGap < MIN_GAP) return "gap " + verticalGap + " px: " + describe(a) + " and " + describe(b);
         return null;
+    }
+
+    private static boolean contains(AbstractWidget outer, AbstractWidget inner) {
+        return inner.getX() >= outer.getX() && inner.getY() >= outer.getY()
+                && inner.getX() + inner.getWidth() <= outer.getX() + outer.getWidth()
+                && inner.getY() + inner.getHeight() <= outer.getY() + outer.getHeight();
     }
 
     private static String describe(AbstractWidget widget) {

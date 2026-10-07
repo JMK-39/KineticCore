@@ -33,6 +33,7 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 
 public class ItemSelectorScreen extends KineticScreen {
+    private static final int COUNT_TEXT_WIDTH = 90;
 
     public enum SelectionType {
         ITEM,
@@ -752,23 +753,12 @@ public class ItemSelectorScreen extends KineticScreen {
                 Component.literal(String.format("%,d", displayList.size())),
                 Component.literal(String.format("%,d", src.size()))
         );
-        if (infoX + font.width(countText) >= maxInfoX) {
-            return;
-        }
+        // The count has a fixed area in every language and scrolls inside it, so the filter label after it never moves.
+        int countWidth = Math.min(COUNT_TEXT_WIDTH, Math.max(0, maxInfoX - infoX));
+        dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
+                .scrollingText(countText, infoX, infoY, countWidth, 0xFFFFFF, true);
 
-        VanillaGuiDraw.text(graphics, 
-                font,
-                countText,
-                infoX,
-                infoY,
-                0xFFFFFF,
-                true
-        );
-
-        int nextX =
-                infoX
-                        + font.width(countText)
-                        + 8;
+        int nextX = infoX + COUNT_TEXT_WIDTH + 8;
 
         if (activeFilterType == 0 || activeFilterValue == null || nextX >= maxInfoX) return;
         String prefix = activeFilterType == 1 ? "@" : "#";
@@ -1077,7 +1067,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 Component.literal(String.format("%,d", displayList.size())),
                 Component.literal(String.format("%,d", src.size()))
         );
-        int nextX = infoX + this.font.width(countText) + 8;
+        int nextX = infoX + COUNT_TEXT_WIDTH + 8;
         int maxInfoX = btnAreaStartX - 6;
         if (nextX >= maxInfoX) return false;
 
