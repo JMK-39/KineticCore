@@ -1,3 +1,11 @@
+2026年10月08日 01时41分 — Item selector grid / 物品选择器网格
+
+- The item selector repeats a single-slot texture for each cell, with 2 px between cells and 2 px of inner padding. The existing panel shows 19 columns and 12 visible rows; scroll to browse the remaining items. Forge 1.20.1, NeoForge 1.21.1 and NeoForge 26.1.2 use the same layout.
+
+- 物品选择器重复使用单格贴图，格子之间以及网格内边距均为 2 像素。原有面板内显示 19 列、12 行，剩余物品通过滚动浏览。Forge 1.20.1、NeoForge 1.21.1 与 NeoForge 26.1.2 的排版相同。
+
+---
+
 2026年10月08日 00时55分
 
 - Removed log deduplication and repeat-count summaries. Repeated messages are logged individually; keyword filtering, errors-only mode and old-log cleanup are preserved. The obsolete `log_cleaner.deduplication` setting and its configuration control are removed automatically.
