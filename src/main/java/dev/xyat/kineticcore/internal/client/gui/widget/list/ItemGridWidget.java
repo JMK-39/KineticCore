@@ -73,31 +73,18 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
 
     @Override
     public int columns() {
-        int available = Math.max(1, contentWidth() - density.padding() * 2);
-        return Math.max(1, (available + density.gap()) / density.cellPitch());
+        return gridLayout().columns();
     }
 
     @Override
     public int visibleRows() {
-        int available = Math.max(density.slotSize(), getHeight() - density.padding() * 2);
-        return Math.max(1, (available + density.gap()) / density.cellPitch());
+        return gridLayout().visibleRows();
     }
 
     @Override
     public int itemAt(double mouseX, double mouseY) {
-        if (!visible || mouseX < gridX() || mouseX >= gridRight()
-                || mouseY < getY() || mouseY >= getY() + getHeight()) return -1;
-        int shift = scroll.visualShift(density.cellPitch());
-        double localX = mouseX - gridX();
-        double localY = mouseY - gridY() + shift;
-        if (localX < 0 || localY < 0) return -1;
-        int col = (int) (localX / density.cellPitch());
-        int row = (int) (localY / density.cellPitch());
-        if (col < 0 || col >= columns()) return -1;
-        if (localX - col * density.cellPitch() >= density.slotSize()
-                || localY - row * density.cellPitch() >= density.slotSize()) return -1;
-        int index = (scroll.smoothIndexOffset() + row) * columns() + col;
-        return index >= 0 && index < items.size() ? index : -1;
+        return visible ? gridLayout().itemAt(mouseX, mouseY, scroll.smoothIndexOffset(),
+                scroll.visualShift(density.cellPitch()), items.size()) : -1;
     }
 
     @Override
@@ -124,20 +111,22 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
         VanillaGuiDraw.push(graphics);
         VanillaGuiDraw.translate(graphics, 0, 0, zLevel);
         try {
-            KineticRenderRuntime.enableScissor(graphics, getX(), getY(), getX() + contentWidth(), getY() + getHeight());
+            ItemGridLayout layout = gridLayout();
+            KineticRenderRuntime.enableScissor(graphics, layout.clipLeft(), layout.clipTop(), layout.clipRight(), layout.clipBottom());
             try {
                 int cols = columns();
                 int startRow = scroll.smoothIndexOffset();
                 int shift = scroll.visualShift(density.cellPitch());
                 int start = startRow * cols;
-                int end = Math.min(items.size(), start + cols * (visibleRows() + 1));
+                int end = layout.renderEndIndex(startRow, shift, items.size());
                 for (int index = start; index < end; index++) {
-                    int local = index - start;
-                    int x = gridX() + (local % cols) * density.cellPitch();
-                    int y = gridY() + (local / cols) * density.cellPitch() - shift;
+                    int x = layout.slotX(index);
+                    int y = layout.slotY(index, startRow, shift);
+                    if (!layout.rowIntersects(index, startRow, shift)) continue;
                     ItemGridItem item = items.get(index);
                     if (item == null) continue;
-                    boolean hover = GuiTheme.hovering(mouseX, mouseY, x, y, density.slotSize(), density.slotSize());
+                    boolean hover = layout.insideClip(mouseX, mouseY)
+                            && GuiTheme.hovering(mouseX, mouseY, x, y, density.slotSize(), density.slotSize());
                     GuiTheme.itemSlot(
                             graphics, x, y, density.slotSize(), density.slotSize(), 4,
                             false, false, false
@@ -199,16 +188,8 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
         if (!stack.isEmpty()) output.add(NarratedElementType.TITLE, stack.getHoverName());
     }
 
-    private int gridX() {
-        return getX() + density.padding();
-    }
-
-    private int gridY() {
-        return getY() + density.padding();
-    }
-
-    private int gridRight() {
-        return gridX() + columns() * density.cellPitch() - density.gap();
+    private ItemGridLayout gridLayout() {
+        return new ItemGridLayout(getX(), getY(), contentWidth(), getHeight(), density);
     }
 
     private int findSelectedItem() {

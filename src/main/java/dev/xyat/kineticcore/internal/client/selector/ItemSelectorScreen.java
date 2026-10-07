@@ -11,6 +11,8 @@ import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors.ItemSelecto
 import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors.ItemSelectorPreset;
 import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors.ItemSource;
 import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
+import dev.xyat.kineticcore.api.client.gui.widget.list.ItemGridDensity;
+import dev.xyat.kineticcore.internal.client.gui.widget.list.ItemGridLayout;
 import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticAutoComplete;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
@@ -108,11 +110,15 @@ public class ItemSelectorScreen extends KineticScreen {
     private final GridScrollController mainScroll =
             new GridScrollController();
 
-    private static final int SLOT_SIZE = 18;
-    private static final int SLOT_GAP = 1;
-    private static final int CELL_SIZE = SLOT_SIZE + SLOT_GAP;
-    private static final int FIXED_GRID_COLS = 25;
-    private static final int FIXED_GRID_ROWS = 16;
+    private static final ItemGridDensity GRID_DENSITY = ItemGridDensity.COMPACT;
+    private static final int SLOT_SIZE = GRID_DENSITY.slotSize();
+    private static final int CELL_SIZE = GRID_DENSITY.cellPitch();
+    private static final int GRID_VIEWPORT_WIDTH = 475;
+    private static final int GRID_VIEWPORT_HEIGHT = 304;
+    // Category origins remain where they were, independently of the item grid density.
+    private static final int CATEGORY_CELL_SIZE = 19;
+    private static final int CATEGORY_BUTTON_HEIGHT = 17;
+    private static final int CATEGORY_ROWS_VISIBLE = 16;
     private static final int CATEGORY_WIDTH = 132;
     private static final int CATEGORY_BUTTON_SHIFT_X = -4;
     private static final int CATEGORY_BUTTON_WIDTH = 140;
@@ -128,6 +134,7 @@ public class ItemSelectorScreen extends KineticScreen {
     private int gridY;
     private int gridCols;
     private int gridRowsVisible;
+    private ItemGridLayout itemGrid;
     private int categoryX;
     private int categoryY;
     private int topInfoY;
@@ -264,7 +271,7 @@ public class ItemSelectorScreen extends KineticScreen {
         for (String modId : allMods) {
             categoryEntries.add(new CategoryEntry(CategoryType.MOD, 0, modId, Component.literal("@" + modId)));
         }
-        categoryScroll.update(categoryEntries.size(), FIXED_GRID_ROWS);
+        categoryScroll.update(categoryEntries.size(), CATEGORY_ROWS_VISIBLE);
     }
 
     @Override
@@ -279,8 +286,6 @@ public class ItemSelectorScreen extends KineticScreen {
             return;
         }
 
-        gridCols = FIXED_GRID_COLS;
-        gridRowsVisible = FIXED_GRID_ROWS;
         gridY = 34;
         categoryY = gridY;
 
@@ -294,6 +299,9 @@ public class ItemSelectorScreen extends KineticScreen {
 
         categoryX = Math.max(8, (canvasWidth() - totalWidth) / 2);
         gridX = categoryX + CATEGORY_WIDTH + CATEGORY_SCROLLBAR_WIDTH + CATEGORY_GAP - GRID_SHIFT_LEFT;
+        itemGrid = new ItemGridLayout(gridX, gridY, GRID_VIEWPORT_WIDTH, GRID_VIEWPORT_HEIGHT, GRID_DENSITY);
+        gridCols = itemGrid.columns();
+        gridRowsVisible = itemGrid.visibleRows();
 
         int gap = 4;
         int topY = 5;
@@ -339,7 +347,7 @@ public class ItemSelectorScreen extends KineticScreen {
         searchBox.setSelectionResponder(this::applySelectedSuggestion);
         searchBox.setValue(searchText);
 
-        categoryScroll.update(categoryEntries.size(), FIXED_GRID_ROWS);
+        categoryScroll.update(categoryEntries.size(), CATEGORY_ROWS_VISIBLE);
         createCategoryButtons();
         refreshDisplay();
     }
@@ -798,7 +806,7 @@ public class ItemSelectorScreen extends KineticScreen {
             int categoryIndex = index;
             StateButton button = addCompactScrollableButton(
                     categoryButtonX(),
-                    categoryY + index * CELL_SIZE,
+                    categoryY + index * CATEGORY_CELL_SIZE,
                     CATEGORY_BUTTON_WIDTH,
                     Component.empty(),
                     null,
@@ -807,15 +815,16 @@ public class ItemSelectorScreen extends KineticScreen {
                     categoryY,
                     categoryButtonX() + CATEGORY_BUTTON_WIDTH,
                     categoryY + gridContentHeight(),
-                    () -> categoryScroll.smoothOffset() * CELL_SIZE
+                    () -> categoryScroll.smoothOffset() * CATEGORY_CELL_SIZE
             );
+            button.setHeight(CATEGORY_BUTTON_HEIGHT);
             categoryButtons.add(button);
         }
         syncCategoryButtons();
     }
 
     private void syncCategoryButtons() {
-        categoryScroll.update(categoryEntries.size(), FIXED_GRID_ROWS);
+        categoryScroll.update(categoryEntries.size(), CATEGORY_ROWS_VISIBLE);
         for (int index = 0; index < categoryButtons.size(); index++) {
             StateButton button = categoryButtons.get(index);
             if (index >= categoryEntries.size()) {
@@ -879,7 +888,7 @@ public class ItemSelectorScreen extends KineticScreen {
             return false;
         }
 
-        categoryScroll.update(categoryEntries.size(), FIXED_GRID_ROWS);
+        categoryScroll.update(categoryEntries.size(), CATEGORY_ROWS_VISIBLE);
         if (categoryScroll.beginDrag(
                 mouseX,
                 mouseY,
@@ -896,10 +905,10 @@ public class ItemSelectorScreen extends KineticScreen {
                 && mouseX < categoryButtonX() + CATEGORY_BUTTON_WIDTH
                 && mouseY >= categoryY
                 && mouseY < categoryY + gridContentHeight()) {
-            double contentY = mouseY - categoryY + categoryScroll.smoothOffset() * CELL_SIZE;
-            int index = (int) Math.floor(contentY / CELL_SIZE);
-            int within = (int) Math.floor(contentY - index * CELL_SIZE);
-            if (within < SLOT_SIZE) {
+            double contentY = mouseY - categoryY + categoryScroll.smoothOffset() * CATEGORY_CELL_SIZE;
+            int index = (int) Math.floor(contentY / CATEGORY_CELL_SIZE);
+            int within = (int) Math.floor(contentY - index * CATEGORY_CELL_SIZE);
+            if (within < CATEGORY_BUTTON_HEIGHT) {
                 selectCategoryIndex(index);
                 return true;
             }
@@ -923,20 +932,17 @@ public class ItemSelectorScreen extends KineticScreen {
         ensureVisibleSlotCache();
         enableUiScissor(
                 graphics,
-                gridX,
-                gridY,
-                gridX + gridContentWidth(),
-                gridY + gridContentHeight()
+                itemGrid.clipLeft(),
+                itemGrid.clipTop(),
+                itemGrid.clipRight(),
+                itemGrid.clipBottom()
         );
         try {
-            boolean mouseInGrid = mouseX >= gridX
-                    && mouseX < gridX + gridContentWidth()
-                    && mouseY >= gridY
-                    && mouseY < gridY + gridContentHeight();
+            boolean mouseInGrid = itemGrid.insideClip(mouseX, mouseY);
             for (VisibleSlot slot : visibleSlotCache) {
                 boolean hovered = mouseInGrid && slot.contains(mouseX, mouseY);
                 GuiTheme.itemSlot(graphics, slot.x(), slot.y(), SLOT_SIZE, SLOT_SIZE, 4, false, hovered, false);
-                VanillaGuiDraw.item(graphics, slot.stack(), slot.x() + 1, slot.y() + 1);
+                GuiTheme.item(graphics, this.font, slot.stack(), slot.x(), slot.y(), SLOT_SIZE, 1.0F, false);
             }
         } finally {
             disableUiScissor(graphics);
@@ -950,18 +956,12 @@ public class ItemSelectorScreen extends KineticScreen {
         int firstRow = mainScroll.smoothIndexOffset();
         int shiftY = mainScroll.visualShift(CELL_SIZE);
         int startIndex = firstRow * gridCols;
-        int endIndex = Math.min(
-                startIndex + (gridRowsVisible + 1) * gridCols,
-                displayList.size()
-        );
+        int endIndex = itemGrid.renderEndIndex(firstRow, shiftY, displayList.size());
 
         for (int index = startIndex; index < endIndex; index++) {
-            int localIndex = index - startIndex;
-            int column = localIndex % gridCols;
-            int row = localIndex / gridCols;
-            int x = gridX + column * CELL_SIZE;
-            int y = gridY + row * CELL_SIZE - shiftY;
-            if (y + SLOT_SIZE <= gridY || y >= gridY + gridContentHeight()) continue;
+            int x = itemGrid.slotX(index);
+            int y = itemGrid.slotY(index, firstRow, shiftY);
+            if (!itemGrid.rowIntersects(index, firstRow, shiftY)) continue;
             ItemStack stack = displayList.get(index).stack();
             visibleSlotCache.add(new VisibleSlot(index, stack, x, y));
         }
@@ -977,11 +977,11 @@ public class ItemSelectorScreen extends KineticScreen {
     }
 
     private int gridContentWidth() {
-        return gridCols * CELL_SIZE;
+        return GRID_VIEWPORT_WIDTH;
     }
 
     private int gridContentHeight() {
-        return gridRowsVisible * CELL_SIZE;
+        return GRID_VIEWPORT_HEIGHT;
     }
 
     private int totalDisplayRows() {
@@ -989,15 +989,15 @@ public class ItemSelectorScreen extends KineticScreen {
     }
 
     private VisibleSlot findVisibleSlot(double mouseX, double mouseY) {
-        if (mouseX < gridX
-                || mouseX >= gridX + gridContentWidth()
-                || mouseY < gridY
-                || mouseY >= gridY + gridContentHeight()) {
+        if (itemGrid == null || !itemGrid.insideClip(mouseX, mouseY)) {
             return null;
         }
+        int index = itemGrid.itemAt(mouseX, mouseY, mainScroll.smoothIndexOffset(),
+                mainScroll.visualShift(CELL_SIZE), displayList.size());
+        if (index < 0) return null;
         ensureVisibleSlotCache();
         for (VisibleSlot slot : visibleSlotCache) {
-            if (slot.contains(mouseX, mouseY)) {
+            if (slot.displayIndex() == index) {
                 return slot;
             }
         }
@@ -1167,7 +1167,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 && mouseX < categoryScrollbarX() + CATEGORY_SCROLLBAR_WIDTH + 2
                 && mouseY >= categoryY
                 && mouseY < categoryY + gridContentHeight()) {
-            categoryScroll.update(categoryEntries.size(), FIXED_GRID_ROWS);
+            categoryScroll.update(categoryEntries.size(), CATEGORY_ROWS_VISIBLE);
             if (categoryScroll.scroll(delta, 1.0D)) {
                 return true;
             }

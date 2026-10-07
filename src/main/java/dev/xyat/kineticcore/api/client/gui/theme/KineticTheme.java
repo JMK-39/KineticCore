@@ -260,7 +260,7 @@ public final class KineticTheme {
         GuiTheme.itemGrid(GuiGraphicsAdapter.unwrap(graphics), x, y, width, height);
     }
 
-    /** Draws an item-selector grid with explicit column and row counts. */
+    /** Repeats compact item slots with the preset gaps and outer padding, for explicit column and row counts. */
     public static void itemSelectorGrid(KineticGraphics graphics, int x, int y, int columns, int rows) {
         GuiTheme.itemSelectorGrid(GuiGraphicsAdapter.unwrap(graphics), x, y, columns, rows);
     }

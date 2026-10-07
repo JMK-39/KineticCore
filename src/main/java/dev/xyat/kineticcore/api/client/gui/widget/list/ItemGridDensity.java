@@ -7,8 +7,8 @@ package dev.xyat.kineticcore.api.client.gui.widget.list;
  * add-ons pick a preset instead of hard-coding pixel sizes.
  */
 public enum ItemGridDensity {
-    /** Vanilla-sized 18px slots with a 1px gap and no padding, for dense pickers. */
-    COMPACT(18, 1, 0, 1.0F, false),
+    /** Native 16px icons in 22px slots, with 2px gaps and 2px viewport padding. */
+    COMPACT(22, 2, 2, 1.0F, false),
     /** Default 24px slots with comfortable spacing. */
     STANDARD(24, 5, 4, 1.0F, false),
     /** 26px slots with extra spacing, for touch-friendly or sparse grids. */

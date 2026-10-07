@@ -56,7 +56,7 @@ public final class GuiContractRegression {
     }
 
     private static void verifyItemGridDensity() {
-        check(ItemGridDensity.COMPACT.slotSize() == 18, "compact density keeps the vanilla 18px slot");
+        check(ItemGridDensity.COMPACT.slotSize() == 22, "compact slots leave two pixels inside the border around a native icon");
         int previousSlot = 0;
         for (ItemGridDensity density : ItemGridDensity.values()) {
             check(density.slotSize() > 0 && density.gap() >= 0 && density.padding() >= 0

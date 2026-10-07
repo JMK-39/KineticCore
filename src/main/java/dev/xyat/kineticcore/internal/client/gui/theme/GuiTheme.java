@@ -6,6 +6,7 @@ import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme.Indicator;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme.Palette;
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme.Surface;
+import dev.xyat.kineticcore.api.client.gui.widget.list.ItemGridDensity;
 
 import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
@@ -43,9 +44,8 @@ public final class GuiTheme {
     private static final int FIELD_MODIFIED_TEXT = 0xFF55FF55;
     private static final int FIELD_ERROR_TEXT = 0xFFFF5555;
 
-    private static final ResourceLocation ITEM_GRID_TEXTURE = KineticResourceIds.of("kineticcore", "textures/gui/item_selector_checkerboard.png");
-    private static final int ITEM_GRID_TEXTURE_WIDTH = 475;
-    private static final int ITEM_GRID_TEXTURE_HEIGHT = 304;
+    private static final ResourceLocation ITEM_SLOT_TEXTURE = KineticResourceIds.of("kineticcore", "textures/gui/item_slot.png");
+    private static final int ITEM_SLOT_TEXTURE_SIZE = 18;
 
     private GuiTheme() {
     }
@@ -496,7 +496,10 @@ public final class GuiTheme {
             boolean error
     ) {
         if (graphics == null || width <= 0 || height <= 0) return;
-        drawItemGridTexture(graphics, x, y, width, height, 0, 0, 18, 18);
+        // Keep the border exactly one GUI pixel even when the source tile is resized.
+        if (width > 2 && height > 2) {
+            drawItemGridTexture(graphics, x + 1, y + 1, width - 2, height - 2, 1, 1, 16, 16);
+        }
         stateOutline(graphics, x, y, width, height, selected, hovered, error);
     }
 
@@ -506,23 +509,16 @@ public final class GuiTheme {
         drawItemGridTexture(graphics, x, y, width, height, 1, 1, 16, 16);
     }
 
-    /** Draws an item-selector grid with explicit column and row counts. */
+    /** Repeats compact slots with their preset gaps and outer padding. */
     public static void itemSelectorGrid(GuiGraphics graphics, int x, int y, int columns, int rows) {
         if (graphics == null || columns <= 0 || rows <= 0) return;
-        int width = Math.min(ITEM_GRID_TEXTURE_WIDTH, columns * 19);
-        int height = Math.min(ITEM_GRID_TEXTURE_HEIGHT, rows * 19);
-        VanillaGuiDraw.texture(
-                graphics,
-                ITEM_GRID_TEXTURE,
-                x,
-                y,
-                0,
-                0,
-                width,
-                height,
-                ITEM_GRID_TEXTURE_WIDTH,
-                ITEM_GRID_TEXTURE_HEIGHT
-        );
+        ItemGridDensity density = ItemGridDensity.COMPACT;
+        for (int row = 0; row < rows; row++) {
+            for (int column = 0; column < columns; column++) {
+                itemSlot(graphics, x + density.padding() + column * density.cellPitch(),
+                        y + density.padding() + row * density.cellPitch(), density.slotSize(), false);
+            }
+        }
     }
 
     /** Renders an item stack using the standard Kinetic slot sizing and decoration rules. */
@@ -565,15 +561,15 @@ public final class GuiTheme {
         VanillaGuiDraw.scale(graphics, width / (float) sourceWidth, height / (float) sourceHeight, 1f);
         VanillaGuiDraw.texture(
                 graphics,
-                ITEM_GRID_TEXTURE,
+                ITEM_SLOT_TEXTURE,
                 0,
                 0,
                 sourceX,
                 sourceY,
                 sourceWidth,
                 sourceHeight,
-                ITEM_GRID_TEXTURE_WIDTH,
-                ITEM_GRID_TEXTURE_HEIGHT
+                ITEM_SLOT_TEXTURE_SIZE,
+                ITEM_SLOT_TEXTURE_SIZE
         );
         VanillaGuiDraw.pop(graphics);
     }

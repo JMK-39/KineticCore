@@ -20,6 +20,7 @@ import dev.xyat.kineticcore.api.network.KineticCompressionUtf8Regression;
 import dev.xyat.kineticcore.internal.client.DefaultOptionsRecoveryRegression;
 import dev.xyat.kineticcore.internal.client.config.ServerConfigSubscriptionRegression;
 import dev.xyat.kineticcore.internal.client.gui.widget.WidgetLifecycleRegression;
+import dev.xyat.kineticcore.internal.client.gui.widget.list.ItemGridLayoutRegression;
 import dev.xyat.kineticcore.internal.client.gui.widget.input.AutoCompletePopupClickRegression;
 import dev.xyat.kineticcore.internal.client.gui.widget.input.AutoCompleteRoutingContractRegression;
 import dev.xyat.kineticcore.internal.client.screen.KineticControlRegistrationContractRegression;
@@ -41,6 +42,7 @@ public final class HeadlessRegressionSuite {
 
     public static void main(String[] args) throws Exception {
         run("GuiContractRegression", () -> GuiContractRegression.main(NO_ARGS));
+        run("ItemGridLayoutRegression", () -> ItemGridLayoutRegression.main(NO_ARGS));
         run("GuiLayoutBoundsRegression", () -> GuiLayoutBoundsRegression.main(NO_ARGS));
         run("GuiLayoutCanvasCapRegression", () -> GuiLayoutCanvasCapRegression.main(NO_ARGS));
         run("GuiLayoutCoordinateOperationsRegression", () -> GuiLayoutCoordinateOperationsRegression.main(NO_ARGS));
