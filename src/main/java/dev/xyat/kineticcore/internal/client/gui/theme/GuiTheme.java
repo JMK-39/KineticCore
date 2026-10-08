@@ -45,7 +45,8 @@ public final class GuiTheme {
     private static final int FIELD_ERROR_TEXT = 0xFFFF5555;
 
     private static final ResourceLocation ITEM_SLOT_TEXTURE = KineticResourceIds.of("kineticcore", "textures/gui/item_slot.png");
-    private static final int ITEM_SLOT_TEXTURE_SIZE = 18;
+    private static final int ITEM_SLOT_TEXTURE_SIZE = 8;
+    private static final int ITEM_CHECKER_CELL_SIZE = 8;
 
     private GuiTheme() {
     }
@@ -469,13 +470,13 @@ public final class GuiTheme {
 
     /** Draws a standard-size themed item slot. */
     public static void itemSlot(GuiGraphics graphics, int x, int y, boolean hovered) {
-        itemSlot(graphics, x, y, 18, 18, 4, false, hovered, false);
+        itemSlot(graphics, x, y, 18, 18, ITEM_CHECKER_CELL_SIZE, false, hovered, false);
     }
 
 
     /** Draws a square item slot using the standard checker cell size. */
     public static void itemSlot(GuiGraphics graphics, int x, int y, int size, boolean hovered) {
-        itemSlot(graphics, x, y, size, 4, hovered);
+        itemSlot(graphics, x, y, size, ITEM_CHECKER_CELL_SIZE, hovered);
     }
 
     /** Draws a themed item slot with explicit slot and cell sizes. */
@@ -496,9 +497,9 @@ public final class GuiTheme {
             boolean error
     ) {
         if (graphics == null || width <= 0 || height <= 0) return;
-        // Keep the border exactly one GUI pixel even when the source tile is resized.
+        // The complete checker tile is scaled uniformly; the border remains one GUI pixel.
         if (width > 2 && height > 2) {
-            drawItemGridTexture(graphics, x + 1, y + 1, width - 2, height - 2, 1, 1, 16, 16);
+            drawItemGridTexture(graphics, x + 1, y + 1, width - 2, height - 2, cellSize);
         }
         stateOutline(graphics, x, y, width, height, selected, hovered, error);
     }
@@ -506,7 +507,7 @@ public final class GuiTheme {
     /** Draws the standard item-grid background for the exact bounds. */
     public static void itemGrid(GuiGraphics graphics, int x, int y, int width, int height) {
         if (graphics == null || width <= 0 || height <= 0) return;
-        drawItemGridTexture(graphics, x, y, width, height, 1, 1, 16, 16);
+        drawItemGridTexture(graphics, x, y, width, height, ITEM_CHECKER_CELL_SIZE);
     }
 
     /** Repeats compact slots with their preset gaps and outer padding. */
@@ -551,26 +552,32 @@ public final class GuiTheme {
             int y,
             int width,
             int height,
-            int sourceX,
-            int sourceY,
-            int sourceWidth,
-            int sourceHeight
+            int cellSize
     ) {
+        // Draw only complete square tiles. Padding absorbs any remainder, so neither
+        // a non-square region nor its final row/column distorts or crops the texture.
+        int preferredSize = (int) Math.min(Integer.MAX_VALUE, Math.max(4L, cellSize) * 2L);
+        int tileSize = Math.min(preferredSize, Math.min(width, height));
+        if (tileSize < ITEM_SLOT_TEXTURE_SIZE) return;
+        int columns = width / tileSize;
+        int rows = height / tileSize;
+        int left = x + (width - columns * tileSize) / 2;
+        int top = y + (height - rows * tileSize) / 2;
+        float scale = tileSize / (float) ITEM_SLOT_TEXTURE_SIZE;
         VanillaGuiDraw.push(graphics);
-        VanillaGuiDraw.translate(graphics, x, y, 0);
-        VanillaGuiDraw.scale(graphics, width / (float) sourceWidth, height / (float) sourceHeight, 1f);
-        VanillaGuiDraw.texture(
-                graphics,
-                ITEM_SLOT_TEXTURE,
-                0,
-                0,
-                sourceX,
-                sourceY,
-                sourceWidth,
-                sourceHeight,
-                ITEM_SLOT_TEXTURE_SIZE,
-                ITEM_SLOT_TEXTURE_SIZE
-        );
-        VanillaGuiDraw.pop(graphics);
+        try {
+            VanillaGuiDraw.translate(graphics, left, top, 0);
+            VanillaGuiDraw.scale(graphics, scale, scale, 1f);
+            for (int row = 0; row < rows; row++) {
+                for (int column = 0; column < columns; column++) {
+                    VanillaGuiDraw.texture(graphics, ITEM_SLOT_TEXTURE,
+                            column * ITEM_SLOT_TEXTURE_SIZE, row * ITEM_SLOT_TEXTURE_SIZE, 0, 0,
+                            ITEM_SLOT_TEXTURE_SIZE, ITEM_SLOT_TEXTURE_SIZE,
+                            ITEM_SLOT_TEXTURE_SIZE, ITEM_SLOT_TEXTURE_SIZE);
+                }
+            }
+        } finally {
+            VanillaGuiDraw.pop(graphics);
+        }
     }
 }

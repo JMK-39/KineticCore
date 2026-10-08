@@ -2,8 +2,6 @@ package dev.xyat.kineticcore.internal.client.gui.widget.list;
 
 import dev.xyat.kineticcore.api.client.gui.widget.list.ItemGridDensity;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.util.HexFormat;
 import javax.imageio.ImageIO;
 
 /** Exercises the geometry used for drawing and picking, including fractional scroll and clipped rows. */
@@ -60,17 +58,13 @@ public final class ItemGridLayoutRegression {
             check(other.itemAt(x + 0.5, y + 0.5, 0, 0, 1000) == index, density + " keeps placement and picking aligned");
         }
         var tile = ImageIO.read(Path.of("src/main/resources/assets/kineticcore/textures/gui/item_slot.png").toFile());
-        check(tile.getWidth() == 18 && tile.getHeight() == 18, "asset contains one reusable tile");
-        MessageDigest pixels = MessageDigest.getInstance("SHA-256");
-        for (int y = 0; y < 18; y++) {
-            for (int x = 0; x < 18; x++) {
-                int argb = tile.getRGB(x, y);
-                for (int shift = 24; shift >= 0; shift -= 8) pixels.update((byte) (argb >>> shift));
+        check(tile.getWidth() == 8 && tile.getHeight() == 8, "asset is one complete 8x8 reusable checker tile");
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                int expected = ((x / 4 + y / 4) & 1) == 0 ? 0xFFCFCFCF : 0xFFBBBBBB;
+                check(tile.getRGB(x, y) == expected, "tile repeats without seams and retains the original two colours");
             }
         }
-        check(HexFormat.of().formatHex(pixels.digest()).equals(
-                "e43526b98413bf53e1f369e795f4aadaced93a4ec75c0a8d99816f8604a92b40"),
-                "cropped tile preserves all original first-tile pixels");
         System.out.println("PASS: " + checks + " item grid placement, hit and clipping checks");
     }
 

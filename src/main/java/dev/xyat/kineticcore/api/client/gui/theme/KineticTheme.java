@@ -240,7 +240,7 @@ public final class KineticTheme {
         GuiTheme.itemSlot(GuiGraphicsAdapter.unwrap(graphics), x, y, hovered);
     }
 
-    /** Draws a square item slot using the standard checker cell size. */
+    /** Draws a square item slot with complete checker tiles, uniformly scaled on both axes. */
     public static void itemSlot(KineticGraphics graphics, int x, int y, int size, boolean hovered) {
         GuiTheme.itemSlot(GuiGraphicsAdapter.unwrap(graphics), x, y, size, hovered);
     }
@@ -255,7 +255,7 @@ public final class KineticTheme {
         GuiTheme.itemSlot(GuiGraphicsAdapter.unwrap(graphics), x, y, width, height, cellSize, selected, hovered, error);
     }
 
-    /** Draws the standard item-grid background for the exact bounds. */
+    /** Repeats complete, uniformly scaled checker tiles inside the bounds; never stretches or crops a tile. */
     public static void itemGrid(KineticGraphics graphics, int x, int y, int width, int height) {
         GuiTheme.itemGrid(GuiGraphicsAdapter.unwrap(graphics), x, y, width, height);
     }

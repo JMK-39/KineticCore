@@ -62,7 +62,7 @@ public final class AutoCompleteRoutingContractRegression {
     }
 
     private static String source(String relativePath) throws Exception {
-        return Files.readString(SOURCE.resolve(relativePath));
+        return Files.readString(SOURCE.resolve(relativePath)).replace("\r\n", "\n");
     }
 
     private static void check(boolean condition, String message) {

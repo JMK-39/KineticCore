@@ -219,7 +219,7 @@ public final class ItemListEditorScreen extends KineticScreen {
                 graphics.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, GuiTheme.current().panel());
                 GuiTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, false, hovered, true);
             } else {
-                GuiTheme.itemSlot(graphics, x, y, SLOT_SIZE, SLOT_SIZE, 4, false, hovered, false);
+                GuiTheme.itemSlot(graphics, x, y, SLOT_SIZE, SLOT_SIZE, 8, false, hovered, false);
             }
             if (!stack.isEmpty()) {
                 GuiTheme.item(

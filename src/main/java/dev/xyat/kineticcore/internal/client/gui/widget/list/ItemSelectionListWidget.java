@@ -207,7 +207,7 @@ public final class ItemSelectionListWidget extends VerticalScrollListWidget impl
         int slotY = button.getY() + Math.max(0, (ROW_HEIGHT - ITEM_SLOT_SIZE) / 2);
         boolean slotHovered = GuiTheme.hovering(mouseX, mouseY, slotX, slotY, ITEM_SLOT_SIZE, ITEM_SLOT_SIZE);
         ItemStack stack = safeStack(item);
-        GuiTheme.itemSlot(graphics, slotX, slotY, ITEM_SLOT_SIZE, ITEM_SLOT_SIZE, 4, false, slotHovered, item.error());
+        GuiTheme.itemSlot(graphics, slotX, slotY, ITEM_SLOT_SIZE, ITEM_SLOT_SIZE, 8, false, slotHovered, item.error());
         GuiTheme.item(graphics, font, stack, slotX, slotY, ITEM_SLOT_SIZE, 1.0F, false);
 
         int textX = button.getX() + TEXT_LEFT_PADDING;
