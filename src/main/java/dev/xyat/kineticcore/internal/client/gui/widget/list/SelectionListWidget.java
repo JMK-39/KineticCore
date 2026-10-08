@@ -21,8 +21,9 @@ import net.minecraft.network.chat.Component;
 /** Smooth scrolling list control behind the public {@code Kinetic*List} API; created only through {@code KineticWidgets}. */
 public final class SelectionListWidget extends VerticalScrollListWidget implements KineticSelectionList {
     private static final int BUTTON_ROW_HEIGHT = KineticScreen.STANDARD_CONTROL_HEIGHT;
-    // Plain text rows: 8 px glyphs with 3 px above and below, packed without gaps.
+    // Plain text rows: 8 px glyphs with 3 px above and below, separated by 2 px.
     private static final int TEXT_ROW_HEIGHT = 14;
+    private static final int TEXT_ROW_GAP = 2;
     private boolean textRows;
     private int rowHeight = BUTTON_ROW_HEIGHT;
     private int rowStep = BUTTON_ROW_HEIGHT + 5;
@@ -249,7 +250,7 @@ public final class SelectionListWidget extends VerticalScrollListWidget implemen
     public void setTextRows(boolean textRows) {
         this.textRows = textRows;
         rowHeight = textRows ? TEXT_ROW_HEIGHT : BUTTON_ROW_HEIGHT;
-        rowStep = textRows ? TEXT_ROW_HEIGHT : BUTTON_ROW_HEIGHT + 5;
+        rowStep = textRows ? TEXT_ROW_HEIGHT + TEXT_ROW_GAP : BUTTON_ROW_HEIGHT + 5;
         rowTopPadding = textRows ? 0 : 2;
         for (int index = 0; index < rowButtons.size(); index++) {
             StateButton button = rowButtons.get(index);

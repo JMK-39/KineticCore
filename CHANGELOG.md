@@ -1,3 +1,11 @@
+2026年10月08日 — Identifier list spacing / ID 列表间距
+
+- Plain text identifier lists keep 2 px between their striped rows in both single-selection and multi-selection views. Clicking the gaps does not select a neighbouring row.
+
+- 单选、多选的纯文本 ID 列表统一在深浅条纹行之间保留 2 像素间隔，点击间隔不会误选相邻条目。
+
+---
+
 2026年10月08日 — Checkerboard item backgrounds / 棋盘格物品背景
 
 - Item backgrounds use one complete 8×8-pixel texture containing 8 rows and 8 columns of alternating colour. It fills square slot interiors with equal horizontal and vertical scaling, without an extra black inset. Rectangular areas repeat complete tiles; borders and item positions are preserved.

@@ -18,7 +18,7 @@ public interface KineticSelectionList extends KineticControl {
 
     /**
      * Draws the rows as plain text rows (striped background, no button frames), for lists of identifiers such as
-     * biomes, damage types or attributes. Rows are 14 px high and packed without gaps.
+     * biomes, damage types or attributes. Rows are 14 px high with 2 px between rows.
      */
     void setTextRows(boolean textRows);
 
