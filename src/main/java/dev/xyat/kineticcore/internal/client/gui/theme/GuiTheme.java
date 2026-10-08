@@ -556,8 +556,7 @@ public final class GuiTheme {
     ) {
         // Draw only complete square tiles. Padding absorbs any remainder, so neither
         // a non-square region nor its final row/column distorts or crops the texture.
-        int preferredSize = (int) Math.min(Integer.MAX_VALUE, Math.max(1L, cellSize) * ITEM_SLOT_TEXTURE_SIZE);
-        int tileSize = Math.min(preferredSize, Math.min(width, height));
+        int tileSize = Math.min(width, height);
         if (tileSize < ITEM_SLOT_TEXTURE_SIZE) return;
         int columns = width / tileSize;
         int rows = height / tileSize;

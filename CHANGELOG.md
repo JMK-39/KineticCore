@@ -1,8 +1,8 @@
 2026年10月08日 — Checkerboard item backgrounds / 棋盘格物品背景
 
-- Item backgrounds repeat one complete 8×8-pixel texture containing 8 rows and 8 columns of alternating colour. Horizontal and vertical scaling are equal. Rectangular areas no longer stretch the pattern or cut off partial tiles; borders and item positions are preserved.
+- Item backgrounds use one complete 8×8-pixel texture containing 8 rows and 8 columns of alternating colour. It fills square slot interiors with equal horizontal and vertical scaling, without an extra black inset. Rectangular areas repeat complete tiles; borders and item positions are preserved.
 
-- 物品背景重复使用一张完整的 8×8 像素贴图，包含 8 行、8 列交替色块，横纵方向使用相同缩放倍率。长方形区域不再拉伸图案或截取半张贴图，保留边框及物品位置。
+- 物品背景使用一张完整的 8×8 像素贴图，包含 8 行、8 列交替色块，等比铺满正方形格子的内部，不再保留额外黑色内衬。长方形区域重复拼接完整贴图，保留边框及物品位置。
 
 ---
 
