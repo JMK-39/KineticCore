@@ -46,7 +46,7 @@ public final class GuiTheme {
 
     private static final ResourceLocation ITEM_SLOT_TEXTURE = KineticResourceIds.of("kineticcore", "textures/gui/item_slot.png");
     private static final int ITEM_SLOT_TEXTURE_SIZE = 8;
-    private static final int ITEM_CHECKER_CELL_SIZE = 8;
+    private static final int ITEM_CHECKER_CELL_SIZE = 2;
 
     private GuiTheme() {
     }
@@ -556,7 +556,7 @@ public final class GuiTheme {
     ) {
         // Draw only complete square tiles. Padding absorbs any remainder, so neither
         // a non-square region nor its final row/column distorts or crops the texture.
-        int preferredSize = (int) Math.min(Integer.MAX_VALUE, Math.max(4L, cellSize) * 2L);
+        int preferredSize = (int) Math.min(Integer.MAX_VALUE, Math.max(1L, cellSize) * ITEM_SLOT_TEXTURE_SIZE);
         int tileSize = Math.min(preferredSize, Math.min(width, height));
         if (tileSize < ITEM_SLOT_TEXTURE_SIZE) return;
         int columns = width / tileSize;

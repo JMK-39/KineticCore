@@ -128,7 +128,7 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
                     boolean hover = layout.insideClip(mouseX, mouseY)
                             && GuiTheme.hovering(mouseX, mouseY, x, y, density.slotSize(), density.slotSize());
                     GuiTheme.itemSlot(
-                            graphics, x, y, density.slotSize(), density.slotSize(), 8,
+                            graphics, x, y, density.slotSize(), density.slotSize(), 2,
                             false, false, false
                     );
                     ItemStack stack = safeStack(item);

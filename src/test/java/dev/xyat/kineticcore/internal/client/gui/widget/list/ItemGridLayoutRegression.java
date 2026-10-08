@@ -61,7 +61,7 @@ public final class ItemGridLayoutRegression {
         check(tile.getWidth() == 8 && tile.getHeight() == 8, "asset is one complete 8x8 reusable checker tile");
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
-                int expected = ((x / 4 + y / 4) & 1) == 0 ? 0xFFCFCFCF : 0xFFBBBBBB;
+                int expected = ((x + y) & 1) == 0 ? 0xFFCFCFCF : 0xFFBBBBBB;
                 check(tile.getRGB(x, y) == expected, "tile repeats without seams and retains the original two colours");
             }
         }

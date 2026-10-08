@@ -941,7 +941,7 @@ public class ItemSelectorScreen extends KineticScreen {
             boolean mouseInGrid = itemGrid.insideClip(mouseX, mouseY);
             for (VisibleSlot slot : visibleSlotCache) {
                 boolean hovered = mouseInGrid && slot.contains(mouseX, mouseY);
-                GuiTheme.itemSlot(graphics, slot.x(), slot.y(), SLOT_SIZE, SLOT_SIZE, 8, false, hovered, false);
+                GuiTheme.itemSlot(graphics, slot.x(), slot.y(), SLOT_SIZE, SLOT_SIZE, 2, false, hovered, false);
                 GuiTheme.item(graphics, this.font, slot.stack(), slot.x(), slot.y(), SLOT_SIZE, 1.0F, false);
             }
         } finally {
