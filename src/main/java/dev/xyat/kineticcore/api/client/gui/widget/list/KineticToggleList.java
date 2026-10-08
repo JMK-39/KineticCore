@@ -21,6 +21,7 @@ public interface KineticToggleList extends KineticControl {
     /**
      * Draws the rows as plain text rows (striped background, no button frames), for lists of identifiers such as
      * biomes, damage types or attributes. Rows are 14 px high with 2 px between rows.
+     * Selection changes the outline only; component text colors are preserved.
      */
     void setTextRows(boolean textRows);
 

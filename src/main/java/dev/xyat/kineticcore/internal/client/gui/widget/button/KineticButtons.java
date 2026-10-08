@@ -353,7 +353,7 @@ public final class KineticButtons {
 
         /**
          * Plain list row: striped background; the hovered row is outlined, the current choice is yellow and picked
-         * rows of a multi-select list are green. The label is vertically centered, keeps its padding and scrolls
+         * rows of a multi-select list have green borders. Text retains its component colors. The label is vertically centered, keeps its padding and scrolls
          * when it is too long.
          */
         private void renderTextRow(GuiGraphics graphics) {
@@ -370,7 +370,7 @@ public final class KineticButtons {
             }
             if (textVisible) {
                 var font = KineticClientRuntime.font();
-                int color = !active ? 0xFFA0A0A0 : error ? 0xFFFF5555 : selected ? 0xFFFFAA00 : picked ? 0xFF55DD88 : theme.text();
+                int color = !active ? 0xFFA0A0A0 : theme.text();
                 // Glyphs occupy the top 8 px of the font's line, so center that block in the row.
                 int textY = y + (height - 8 + 1) / 2;
                 KineticText.drawScrollingLeft(graphics, font, getMessage(), x + TEXT_ROW_PADDING, textY,

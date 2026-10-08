@@ -1,3 +1,11 @@
+2026年10月08日 — Identifier list colors / ID 列表颜色
+
+- Plain text lists preserve their text colors when selected; selection changes the row outline only.
+
+- 纯文本列表选中时保留原有文字颜色，仅改变行边框颜色。
+
+---
+
 2026年10月08日 — Identifier list spacing / ID 列表间距
 
 - Plain text identifier lists keep 2 px between their striped rows in both single-selection and multi-selection views. Clicking the gaps does not select a neighbouring row.
