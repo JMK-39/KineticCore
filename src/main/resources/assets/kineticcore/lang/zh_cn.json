@@ -667,5 +667,8 @@
   "gui.kineticcore.entity_selector.filter.mods": "筛选模组（已选 %s）",
   "gui.kineticcore.entity_selector.filter.next": "下一页",
   "gui.kineticcore.entity_selector.filter.previous": "上一页",
-  "gui.kineticcore.entity_selector.filter.reset": "重置筛选"
+  "gui.kineticcore.entity_selector.filter.reset": "重置筛选",
+  "msg.kineticcore.flying.tips.close": "[点击关闭提示]",
+  "msg.kineticcore.flying.tips.close.hover": "不再向你发送当前存档的飞行教程，不影响其他玩家和其他存档。",
+  "msg.kineticcore.flying.tips.disabled": "已关闭你在当前存档中的飞行教程提示。"
 }

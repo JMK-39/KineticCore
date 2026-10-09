@@ -1,0 +1,35 @@
+// Opt-in installed-runtime fixture. It is never included in a release JAR.
+def metadata = layout.buildDirectory.dir('flight-validation')
+def writeMetadata = tasks.register('writeFlightValidationMetadata') {
+    inputs.property 'packFormat', project.findProperty('pack_format') ?: 15
+    outputs.dir metadata
+    doLast {
+        String name = project.property('loader') == 'forge' ? 'mods.toml' : 'neoforge.mods.toml'
+        File target = new File(metadata.get().asFile, "META-INF/${name}")
+        target.parentFile.mkdirs()
+        target.setText('modLoader="javafml"\nloaderVersion="[1,)"\nlicense="LGPLv3"\n[[mods]]\nmodId="kineticcore_flight_validation"\nversion="1.0.0"\ndisplayName="Flight tutorial validation"\n', 'UTF-8')
+        if (project.property('loader') == 'forge') {
+            new File(metadata.get().asFile, 'pack.mcmeta').setText('{"pack":{"description":"Flight tutorial fixture","pack_format":15}}', 'UTF-8')
+        }
+    }
+}
+def fixture = tasks.register('flightValidationJar', Jar) {
+    dependsOn 'testClasses', writeMetadata
+    from(sourceSets.test.output) { include 'dev/xyat/kineticcoreflightvalidation/*.class' }
+    from metadata
+    archiveFileName = 'kineticcore-flight-validation.jar'
+}
+if (project.property('loader') == 'forge') {
+    afterEvaluate {
+        def shipped = tasks.named('reobfJar').get()
+        tasks.register('reobfFlightValidationJar', shipped.getClass().superclass) {
+            dependsOn fixture
+            input.set(fixture.flatMap { it.archiveFile })
+            libraries.from(shipped.libraries, sourceSets.main.output)
+            remapOperation.toolType.set(shipped.remapOperation.toolType)
+            remapOperation.toolClasspath.from(shipped.remapOperation.toolClasspath)
+            remapOperation.mappings.from(shipped.remapOperation.mappings)
+            archiveFileName = 'kineticcore-flight-validation-reobf.jar'
+        }
+    }
+}

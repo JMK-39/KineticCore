@@ -7,6 +7,7 @@ import dev.xyat.kineticcore.api.hook.CommonHooks;
 import dev.xyat.kineticcore.api.player.KineticCrawling;
 import dev.xyat.kineticcore.api.player.KineticPlayerPose;
 import dev.xyat.kineticcore.api.text.KineticI18n;
+import dev.xyat.kineticcore.api.command.CommandText;
 import dev.xyat.kineticcore.api.event.KineticEventPriority;
 import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.kineticcore.feature.flight.FlightState;
@@ -38,7 +39,7 @@ public class FlightEvents {
         if (newMode != GameType.CREATIVE) {
             player.level().getServer().execute(() -> FlightNetwork.applyServerNoclip(player, false));
         }
-        if (newMode == GameType.CREATIVE) {
+        if (newMode == GameType.CREATIVE && !FlightState.tutorialDisabled(player)) {
             boolean noclip = player.getPersistentData().getBoolean("kt_noclip");
             MutableComponent statusText = KineticI18n.translatable(
                     noclip ? "msg.kineticcore.flying.on" : "msg.kineticcore.flying.off"
@@ -56,7 +57,12 @@ public class FlightEvents {
                     false
             );
             player.sendSystemMessage(
-                    KineticI18n.translatable("msg.kineticcore.flying.noclip.status", statusText, noclipKey),
+                    KineticI18n.translatable("msg.kineticcore.flying.noclip.status", statusText, noclipKey)
+                            .append(" ")
+                            .append(CommandText.clickToRun(
+                                    KineticI18n.translatable("msg.kineticcore.flying.tips.close").withStyle(net.minecraft.ChatFormatting.GOLD),
+                                    "/kt flight tips off",
+                                    KineticI18n.translatable("msg.kineticcore.flying.tips.close.hover"))),
                     false
             );
         }

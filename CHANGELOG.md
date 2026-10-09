@@ -1,3 +1,11 @@
+2026年10月09日 — Dismiss flight tutorials / 关闭飞行教程
+
+- Creative flight tutorials include a clickable dismiss action. Your choice is remembered for this player in the current world, including after respawning or rejoining; other players and worlds keep their tutorials.
+
+- 创造飞行教程新增“点击关闭提示”，当前存档会记住这个玩家的选择，重生或重新进入存档后仍然生效；其他玩家和其他存档不受影响。
+
+---
+
 2026年10月08日 — Identifier list colors / ID 列表颜色
 
 - Plain text lists preserve their text colors when selected; selection changes the row outline only.

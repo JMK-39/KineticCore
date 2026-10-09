@@ -1,5 +1,7 @@
 import java.text.SimpleDateFormat
 
+apply from: rootProject.file('gradle/kinetic-flight-validation.gradle')
+
 // Build logic shared by every Minecraft version node (versions/<node>/).
 // build.<loader>.gradle applies this right after its loader plugin, then hands the task that produces
 // the shipped JAR to kineticConfigureReleaseJar.

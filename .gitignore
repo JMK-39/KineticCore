@@ -40,3 +40,7 @@ forge*changelog.txt
 .授权加密工具/
 *.7z
 /wiki/
+
+# Local notes, wiki checkouts and archives
+/.superpowers/
+/.worktrees/

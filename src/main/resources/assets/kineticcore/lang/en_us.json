@@ -667,5 +667,8 @@
   "gui.kineticcore.entity_selector.filter.mods": "Filter Mods (%s Selected)",
   "gui.kineticcore.entity_selector.filter.next": "Next Page",
   "gui.kineticcore.entity_selector.filter.previous": "Previous Page",
-  "gui.kineticcore.entity_selector.filter.reset": "Reset Filters"
+  "gui.kineticcore.entity_selector.filter.reset": "Reset Filters",
+  "msg.kineticcore.flying.tips.close": "[Click to dismiss tips]",
+  "msg.kineticcore.flying.tips.close.hover": "Stop sending flight tutorials to you in this world. Other players and worlds are unaffected.",
+  "msg.kineticcore.flying.tips.disabled": "Flight tutorials are now disabled for you in this world."
 }
