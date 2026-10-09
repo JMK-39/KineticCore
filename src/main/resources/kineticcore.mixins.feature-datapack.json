@@ -1,0 +1,29 @@
+{
+    "plugin":  "dev.xyat.kineticcore.internal.mixin.KineticMixinPlugin",
+    "mixins":  [
+                   "PackLoadDiagnosticsMixin",
+                   "RegistryDiagnosticsMixin",
+                   "ServerPackPathMixin",
+                   "WorldPackSaveMixin",
+                   "RecoveryRepositoryMixin",
+                   "ResourceOriginsMixin",
+                   "ResourceReadContextMixin",
+                   "RegistryReferenceMixin",
+                   "HolderSetReferenceMixin",
+                   "RegistryFixedReferenceMixin",
+                   "ReferenceLifecycleMixin"
+               ],
+    "injectors":  {
+                      "defaultRequire":  1
+                  },
+    "client":  [
+                   "client.DatapackFailureCallbacksMixin",
+                   "client.MinecraftRecoveryScreenMixin",
+                   "client.WorldOpenRecoveryMixin"
+               ],
+    "package":  "dev.xyat.kineticcore.feature.datapack.mixin",
+    "refmap":  "kineticcore.mixins.refmap.json",
+    "compatibilityLevel":  "JAVA_17",
+    "minVersion":  "0.8",
+    "required":  true
+}

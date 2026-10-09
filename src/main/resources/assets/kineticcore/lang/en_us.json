@@ -670,5 +670,21 @@
   "gui.kineticcore.entity_selector.filter.reset": "Reset Filters",
   "msg.kineticcore.flying.tips.close": "[Click to dismiss tips]",
   "msg.kineticcore.flying.tips.close.hover": "Stop sending flight tutorials to you in this world. Other players and worlds are unaffected.",
-  "msg.kineticcore.flying.tips.disabled": "Flight tutorials are now disabled for you in this world."
+  "msg.kineticcore.flying.tips.disabled": "Flight tutorials are now disabled for you in this world.",
+  "gui.kineticcore.datapack_recovery.back": "Return to Title",
+  "gui.kineticcore.datapack_recovery.core_folder": "Open Core Data Packs",
+  "gui.kineticcore.datapack_recovery.file": "File: %s",
+  "gui.kineticcore.datapack_recovery.locate": "Locate File",
+  "gui.kineticcore.datapack_recovery.locate_hint": "Locate the reported file. For ZIP packs, locate the archive; its internal file path is shown above.",
+  "gui.kineticcore.datapack_recovery.pack": "Data pack: %s",
+  "gui.kineticcore.datapack_recovery.reason": "Cause: %s",
+  "gui.kineticcore.datapack_recovery.retry": "Temporarily Skip and Retry",
+  "gui.kineticcore.datapack_recovery.retry_hint": "Retry normal loading without the identified faulty local packs. This applies only to this session; files and saved pack choices stay unchanged. More errors may appear after retrying.",
+  "gui.kineticcore.datapack_recovery.summary": "%s loading problem(s). Select an entry to inspect its file and cause.",
+  "gui.kineticcore.datapack_recovery.temporary_hint": "Temporary skipping ends when you reopen the world. Fix the files before the next load.",
+  "gui.kineticcore.datapack_recovery.title": "Data Pack Loading Failed",
+  "gui.kineticcore.datapack_recovery.unknown_file": "No exact file reported",
+  "gui.kineticcore.datapack_recovery.unknown_pack": "Unresolved source",
+  "gui.kineticcore.datapack_recovery.unresolved_hint": "The faulty local pack could not be identified. Repair the reported error before retrying; no unrelated packs will be disabled.",
+  "gui.kineticcore.datapack_recovery.world_folder": "Open World Data Packs"
 }

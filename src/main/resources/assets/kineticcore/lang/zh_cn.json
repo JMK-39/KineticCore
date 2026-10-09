@@ -670,5 +670,21 @@
   "gui.kineticcore.entity_selector.filter.reset": "重置筛选",
   "msg.kineticcore.flying.tips.close": "[点击关闭提示]",
   "msg.kineticcore.flying.tips.close.hover": "不再向你发送当前存档的飞行教程，不影响其他玩家和其他存档。",
-  "msg.kineticcore.flying.tips.disabled": "已关闭你在当前存档中的飞行教程提示。"
+  "msg.kineticcore.flying.tips.disabled": "已关闭你在当前存档中的飞行教程提示。",
+  "gui.kineticcore.datapack_recovery.back": "返回标题界面",
+  "gui.kineticcore.datapack_recovery.core_folder": "打开核心数据包目录",
+  "gui.kineticcore.datapack_recovery.file": "文件：%s",
+  "gui.kineticcore.datapack_recovery.locate": "定位文件",
+  "gui.kineticcore.datapack_recovery.locate_hint": "定位报告的文件。ZIP 数据包会定位压缩包，内部文件路径显示在上方。",
+  "gui.kineticcore.datapack_recovery.pack": "数据包：%s",
+  "gui.kineticcore.datapack_recovery.reason": "原因：%s",
+  "gui.kineticcore.datapack_recovery.retry": "暂时跳过错误包并重试",
+  "gui.kineticcore.datapack_recovery.retry_hint": "使用正常加载模式重试，暂时跳过已定位的本地错误包。仅本次会话生效，不修改文件和存档中的数据包启用选择。重试后可能出现其他错误。",
+  "gui.kineticcore.datapack_recovery.summary": "发现 %s 项加载问题。选择条目查看文件和原因。",
+  "gui.kineticcore.datapack_recovery.temporary_hint": "临时跳过状态将在重新进入存档时清除。请在下次加载前修复文件。",
+  "gui.kineticcore.datapack_recovery.title": "数据包加载失败",
+  "gui.kineticcore.datapack_recovery.unknown_file": "未报告具体文件",
+  "gui.kineticcore.datapack_recovery.unknown_pack": "来源未确定",
+  "gui.kineticcore.datapack_recovery.unresolved_hint": "无法确定错误来自哪个本地数据包。请先修复报告的错误；不会禁用无关数据包。",
+  "gui.kineticcore.datapack_recovery.world_folder": "打开存档数据包目录"
 }

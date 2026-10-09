@@ -1,0 +1,34 @@
+// Opt-in installed-runtime validation; these classes are excluded from release JARs.
+def metadata = layout.buildDirectory.dir('datapack-validation')
+def writeMetadata = tasks.register('writeDatapackValidationMetadata') {
+    outputs.dir metadata
+    doLast {
+        String name = project.property('loader') == 'forge' ? 'mods.toml' : 'neoforge.mods.toml'
+        File target = new File(metadata.get().asFile, "META-INF/${name}")
+        target.parentFile.mkdirs()
+        target.setText('modLoader="javafml"\nloaderVersion="[1,)"\nlicense="LGPLv3"\n[[mods]]\nmodId="kineticcore_datapack_validation"\nversion="1.0.0"\ndisplayName="Datapack recovery validation"\n', 'UTF-8')
+        if (project.property('loader') == 'forge') {
+            new File(metadata.get().asFile, 'pack.mcmeta').setText('{"pack":{"description":"Datapack recovery fixture","pack_format":15}}', 'UTF-8')
+        }
+    }
+}
+def fixture = tasks.register('datapackValidationJar', Jar) {
+    dependsOn 'testClasses', writeMetadata
+    from(sourceSets.test.output) { include 'dev/xyat/kineticcoredatapackvalidation/*.class' }
+    from metadata
+    archiveFileName = 'kineticcore-datapack-validation.jar'
+}
+if (project.property('loader') == 'forge') {
+    afterEvaluate {
+        def shipped = tasks.named('reobfJar').get()
+        tasks.register('reobfDatapackValidationJar', shipped.getClass().superclass) {
+            dependsOn fixture
+            input.set(fixture.flatMap { it.archiveFile })
+            libraries.from(shipped.libraries, sourceSets.main.output)
+            remapOperation.toolType.set(shipped.remapOperation.toolType)
+            remapOperation.toolClasspath.from(shipped.remapOperation.toolClasspath)
+            remapOperation.mappings.from(shipped.remapOperation.mappings)
+            archiveFileName = 'kineticcore-datapack-validation-reobf.jar'
+        }
+    }
+}

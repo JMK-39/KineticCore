@@ -66,6 +66,7 @@ public final class MinecraftRegressionSuite {
     }
 
     public static void main(String[] args) {
+        run("DatapackDiagnosticsRegression", () -> dev.xyat.kineticcore.feature.datapack.DatapackDiagnosticsRegression.main(NO_ARGS));
         run("SearchComparatorRecoveryRegression", () -> SearchComparatorRecoveryRegression.main(NO_ARGS));
         run("SearchModelAtomicRegression", () -> SearchModelAtomicRegression.main(NO_ARGS));
         run("KTClientConfigDecimalMetadataRegression", () -> KTClientConfigDecimalMetadataRegression.main(NO_ARGS));
