@@ -67,8 +67,8 @@ final class CommandEditorScreen extends KineticScreen {
                 this::saveCommand
         );
         addButton(
-                336,
-                314,
+                44,
+                24,
                 96,
                 KineticText.translatable("gui.kineticcore.command_edit.back"),
                 null,
@@ -80,7 +80,8 @@ final class CommandEditorScreen extends KineticScreen {
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fillGradient(0, 0, canvasWidth(), canvasHeight(), 0xFF171717, 0xFF0E0E0E);
         GuiTheme.panel(graphics, 24, 18, 592, 324);
-        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 30, 0xFFFFFF);
+        dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
+                .scrollingTextCentered(title, canvasWidth() / 2, 30, 352, 0xFFFFFF, true);
         VanillaGuiDraw.text(graphics, 
                 font,
                 KineticText.translatable("gui.kineticcore.command_edit.hint"),

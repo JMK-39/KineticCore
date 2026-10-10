@@ -119,7 +119,7 @@ public final class CommandListEditorScreen extends KineticScreen {
                 () -> openEditor(-1)
         );
         addButton(
-                472, 314, 110,
+                LIST_X, 24, 110,
                 KineticText.translatable("gui.kineticcore.command_list.back"),
                 null,
                 this::closeToParent
@@ -207,7 +207,8 @@ public final class CommandListEditorScreen extends KineticScreen {
         graphics.fillGradient(0, 0, canvasWidth(), canvasHeight(), 0xFF171717, 0xFF0E0E0E);
         GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_W, PANEL_H);
         GuiTheme.panelAlt(graphics, LIST_X - 4, LIST_Y - 4, LIST_W + 8, LIST_H + 8);
-        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 30, 0xFFFFFF);
+        dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
+                .scrollingTextCentered(title, canvasWidth() / 2, 30, 324, 0xFFFFFF, true);
 
         renderRows(graphics, mouseX, mouseY);
         scroll.render(graphics, mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18);

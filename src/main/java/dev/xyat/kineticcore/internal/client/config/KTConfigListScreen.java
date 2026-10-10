@@ -109,7 +109,7 @@ final class KTConfigListScreen extends KineticScreen {
 
         int footerY = 326;
         addButton(166, footerY, 92, KineticText.translatable("gui.kineticcore.config.add"), null, this::add);
-        addButton(274, footerY, 92, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
+        addButton(LIST_X, 18, 92, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
         addButton(382, footerY, 92, KineticText.translatable("gui.done"), null, this::finish);
     }
 
@@ -331,7 +331,8 @@ final class KTConfigListScreen extends KineticScreen {
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         GuiTheme.panel(graphics, 20, 12, 600, 342);
-        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 23, GuiTheme.current().accentHover());
+        dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
+                .scrollingTextCentered(title, canvasWidth() / 2, 23, 360, GuiTheme.current().accentHover(), true);
 
         if (description != null) {
             List<FormattedCharSequence> lines = font.split(description, 548);

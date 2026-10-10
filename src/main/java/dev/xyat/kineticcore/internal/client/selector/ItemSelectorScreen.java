@@ -113,7 +113,7 @@ public class ItemSelectorScreen extends KineticScreen {
     private static final ItemGridDensity GRID_DENSITY = ItemGridDensity.COMPACT;
     private static final int SLOT_SIZE = GRID_DENSITY.slotSize();
     private static final int CELL_SIZE = GRID_DENSITY.cellPitch();
-    private static final int GRID_VIEWPORT_WIDTH = 499;
+    private static final int GRID_VIEWPORT_WIDTH = 491;
     // Exactly thirteen complete rows, including the two-pixel viewport inset. No partial stationary row.
     private static final int GRID_VIEWPORT_HEIGHT = 314;
     // Category origins remain where they were, independently of the item grid density.
@@ -121,9 +121,9 @@ public class ItemSelectorScreen extends KineticScreen {
     private static final int CATEGORY_BUTTON_HEIGHT = 17;
     private static final int CATEGORY_ROWS_VISIBLE = 17;
     private static final int CATEGORY_VIEWPORT_HEIGHT = CATEGORY_ROWS_VISIBLE * CATEGORY_CELL_SIZE;
-    private static final int CATEGORY_WIDTH = 108;
+    private static final int CATEGORY_WIDTH = 116;
     private static final int CATEGORY_BUTTON_SHIFT_X = -4;
-    private static final int CATEGORY_BUTTON_WIDTH = 116;
+    private static final int CATEGORY_BUTTON_WIDTH = 124;
     private static final int CATEGORY_SCROLL_GAP = 2;
     private static final int CATEGORY_GAP = 5;
     private static final int GRID_SHIFT_LEFT = -5;
@@ -311,8 +311,8 @@ public class ItemSelectorScreen extends KineticScreen {
         int applyBtnW = 45;
         int rightEdge = gridX + contentW + SCROLLBAR_WIDTH + 4;
 
-        int backBtnX = rightEdge - backBtnW - 2;
-        int applyBtnX = backBtnX - gap - applyBtnW;
+        int backBtnX = categoryButtonX();
+        int applyBtnX = rightEdge - applyBtnW - 2;
         btnAreaStartX = applyBtnX;
         topInfoY = topY + 6;
 

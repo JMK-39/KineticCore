@@ -221,7 +221,7 @@ final class KTConfigScreen extends KineticScreen {
         resetAllButton.active = editable;
 
         addButton(
-                274, footerY, 92,
+                26, 14, 92,
                 KineticText.translatable("gui.kineticcore.config.back"),
                 null,
                 this::onClose
@@ -838,7 +838,8 @@ final class KTConfigScreen extends KineticScreen {
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         GuiTheme.panel(graphics, 18, 12, 604, 342);
-        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 24, 0xFFFFAA00);
+        dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
+                .scrollingTextCentered(title, canvasWidth() / 2, 24, 396, 0xFFFFAA00, true);
 
         hoveredEntry = null;
         double pixelOffset = entryPixelOffset();

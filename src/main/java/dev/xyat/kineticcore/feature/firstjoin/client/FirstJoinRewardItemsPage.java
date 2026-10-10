@@ -95,10 +95,10 @@ public final class FirstJoinRewardItemsPage extends KineticPage {
                 .allowNegative(false).range(1, 999).onChange(this::updateCount).build();
         countField.limitTextLength(3);
         countField.setActive(false);
-        ui.button(118, 317, 136).text(KineticI18n.translatable("gui.kineticcore.firstjoin.import_inventory"))
+        ui.button(230, 317, 136).text(KineticI18n.translatable("gui.kineticcore.firstjoin.import_inventory"))
                 .tooltip(KineticI18n.translatable("gui.kineticcore.firstjoin.import_inventory.tooltip"))
                 .onClick(this::importInventory).build();
-        ui.button(269, 317, 100).text(KineticI18n.translatable("gui.kineticcore.config.back"))
+        ui.button(118, 317, 100).text(KineticI18n.translatable("gui.kineticcore.config.back"))
                 .tooltip(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.back.tooltip"))
                 .onClick(this::requestClose).build();
         ui.button(384, 317, 136).text(KineticI18n.translatable("gui.kineticcore.config.save"))

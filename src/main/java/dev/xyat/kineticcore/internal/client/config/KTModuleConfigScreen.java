@@ -207,7 +207,7 @@ final class KTModuleConfigScreen extends KineticScreen {
         addButton(166, footerY, 92,
                 KineticText.translatable("gui.kineticcore.config.reset_all"),
                 null, this::resetAll);
-        addButton(274, footerY, 92,
+        addButton(26, 14, 92,
                 KineticText.translatable("gui.kineticcore.config.back"),
                 null, this::onClose);
         addButton(382, footerY, 92,
@@ -783,7 +783,8 @@ final class KTModuleConfigScreen extends KineticScreen {
             float partialTick
     ) {
         GuiTheme.panel(graphics, 18, 12, 604, 342);
-        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 24, 0xFFFFAA00);
+        dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
+                .scrollingTextCentered(title, canvasWidth() / 2, 24, 396, 0xFFFFAA00, true);
 
         hoveredRow = null;
         double pixelOffset = rowPixelOffset();

@@ -72,7 +72,7 @@ public class SetSpawnPage extends KineticPage {
         int startX = 20;
         int topY = 16;
 
-        ui.tabBar(startX, topY, 250, List.of(
+        ui.tabBar(startX + 64, topY, 250, List.of(
                         KineticI18n.translatable("gui.kineticcore.setspawn.dim"),
                         KineticI18n.translatable("gui.kineticcore.setspawn.biome"),
                         KineticI18n.translatable("gui.kineticcore.setspawn.struct")))
@@ -90,7 +90,7 @@ public class SetSpawnPage extends KineticPage {
                         globalEnable, dimEnable, dims, biomeEnable, biomes, structEnable, structs
                 )))
                 .build();
-        ui.button(startX + panelW - 60, topY, 60)
+        ui.button(startX, topY, 60)
                 .text(KineticI18n.translatable("gui.kineticcore.config.back"))
                 .onClick(this::close)
                 .build();

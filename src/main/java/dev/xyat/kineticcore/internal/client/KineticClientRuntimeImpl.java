@@ -75,19 +75,23 @@ public final class KineticClientRuntimeImpl {
     }
 
     public static Screen currentScreen() {
-        return Minecraft.getInstance().screen;
+        var minecraft = Minecraft.getInstance();
+        return minecraft == null ? null : minecraft.screen;
     }
 
     public static ClientLevel currentLevel() {
-        return Minecraft.getInstance().level;
+        var minecraft = Minecraft.getInstance();
+        return minecraft == null ? null : minecraft.level;
     }
 
     public static boolean connected() {
-        return Minecraft.getInstance().getConnection() != null;
+        var minecraft = Minecraft.getInstance();
+        return minecraft != null && minecraft.getConnection() != null;
     }
 
     public static String currentServerAddress() {
-        var serverData = Minecraft.getInstance().getCurrentServer();
+        var minecraft = Minecraft.getInstance();
+        var serverData = minecraft == null ? null : minecraft.getCurrentServer();
         return serverData == null ? null : serverData.ip;
     }
 
@@ -105,7 +109,8 @@ public final class KineticClientRuntimeImpl {
     }
 
     public static LocalPlayer localPlayer() {
-        return Minecraft.getInstance().player;
+        var minecraft = Minecraft.getInstance();
+        return minecraft == null ? null : minecraft.player;
     }
 
     public static void displayClientMessage(Component message, boolean overlay) {
@@ -168,7 +173,8 @@ public final class KineticClientRuntimeImpl {
     }
 
     public static synchronized long connectionRevision() {
-        Object currentConnection = Minecraft.getInstance().getConnection();
+        var minecraft = Minecraft.getInstance();
+        Object currentConnection = minecraft == null ? null : minecraft.getConnection();
         if (currentConnection != connectionRevisionOwner) {
             connectionRevisionOwner = currentConnection;
             connectionRevision++;

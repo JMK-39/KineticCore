@@ -139,7 +139,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                 this::showFilterMenu);
 
         addButton(166, 325, 92, KineticText.translatable("gui.kineticcore.entity_selector.clear"), null, selectedIds::clear);
-        addButton(274, 325, 92, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
+        addButton(GRID_X, 16, 92, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
         addButton(382, 325, 92, KineticText.translatable("gui.kineticcore.entity_selector.apply"), null, this::applyAndReturn);
 
         updateSearch(searchQuery);
@@ -304,7 +304,8 @@ public final class EntitySelectorScreen extends KineticScreen {
             @NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         deferredTooltip = null;
         GuiTheme.panel(graphics, 20, 12, 600, 342);
-        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 22, 0xFFFFAA00);
+        dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
+                .scrollingTextCentered(title, canvasWidth() / 2, 22, 364, 0xFFFFAA00, true);
         GuiTheme.panelAlt(graphics, GRID_X - 3, GRID_Y - 3, GRID_W + 6, GRID_H + 6);
         renderGrid(graphics, mouseX, mouseY);
         scroll.render(graphics, mouseX, mouseY,

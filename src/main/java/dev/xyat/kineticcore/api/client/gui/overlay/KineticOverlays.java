@@ -285,7 +285,7 @@ public final class KineticOverlays {
     }
 
     /**
-     * Shows a toast, replacing an active toast with the same id at the same position.
+     * Shows a toast, updating an active toast with the same id at the same position without restarting its animation.
      *
      * @param id identity used for replacement and {@link #removeToast(String)}; {@code null} never replaces
      * @param message toast text; {@code null} does nothing

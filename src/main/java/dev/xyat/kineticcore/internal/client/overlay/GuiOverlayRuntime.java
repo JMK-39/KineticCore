@@ -67,19 +67,19 @@ public final class GuiOverlayRuntime {
 
     private static final class Toast {
         private final String id;
-        private final Component message;
+        private Component message;
         private final long startTime;
-        private final int duration;
+        private long expiresAt;
         private final Position position;
-        private final int offsetX;
-        private final int offsetY;
+        private int offsetX;
+        private int offsetY;
         private float currentY = -1000f;
 
         private Toast(String id, Component message, int duration, Position position, int offsetX, int offsetY) {
             this.id = id;
             this.message = message;
             this.startTime = System.currentTimeMillis();
-            this.duration = duration;
+            this.expiresAt = startTime + duration;
             this.position = position;
             this.offsetX = offsetX;
             this.offsetY = offsetY;
@@ -681,6 +681,16 @@ public final class GuiOverlayRuntime {
         if (message == null) return;
         Position safePosition = position == null ? Position.BOTTOM_CENTER : position;
         if (id != null) {
+            long now = System.currentTimeMillis();
+            for (Toast toast : ACTIVE_TOASTS) {
+                if (id.equals(toast.id) && toast.position == safePosition && toast.expiresAt > now) {
+                    toast.message = message;
+                    toast.expiresAt = now + Math.max(1, durationMs);
+                    toast.offsetX = offsetX;
+                    toast.offsetY = offsetY;
+                    return;
+                }
+            }
             ACTIVE_TOASTS.removeIf(toast -> id.equals(toast.id) && toast.position == safePosition);
         }
         ACTIVE_TOASTS.add(new Toast(id, message, Math.max(1, durationMs), safePosition, offsetX, offsetY));
@@ -704,7 +714,7 @@ public final class GuiOverlayRuntime {
         // during rendering. Remove expired entries by identity, never by a stale index.
         for (Toast toast : ACTIVE_TOASTS) {
             long elapsed = currentTime - toast.startTime;
-            if (elapsed > toast.duration) {
+            if (currentTime >= toast.expiresAt) {
                 ACTIVE_TOASTS.remove(toast);
                 continue;
             }
@@ -756,7 +766,7 @@ public final class GuiOverlayRuntime {
             }
             toast.currentY += (targetY - toast.currentY) * 0.25f;
 
-            long remaining = toast.duration - elapsed;
+            long remaining = toast.expiresAt - currentTime;
             float alpha = 1f;
             if (remaining < 1200) alpha = remaining / 1200f;
             else if (elapsed < 300) alpha = elapsed / 300f;

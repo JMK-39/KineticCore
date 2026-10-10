@@ -83,7 +83,7 @@ public final class ItemListEditorScreen extends KineticScreen {
         updateScrollRange();
 
         addButton(158, 316, 96, KineticText.translatable("gui.kineticcore.items.list_editor.add"), null, this::openSelector);
-        addButton(272, 316, 96, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
+        addButton(PANEL_X + 7, PANEL_Y + 6, 96, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
         addButton(386, 316, 96, KineticText.translatable("gui.kineticcore.hud_editor.save"), null, this::save);
     }
 
@@ -148,7 +148,8 @@ public final class ItemListEditorScreen extends KineticScreen {
             float partialTick
     ) {
         GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
-        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 30, 0xFFFFAA00);
+        dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
+                .scrollingTextCentered(title, canvasWidth() / 2, 30, 342, 0xFFFFAA00, true);
         graphics.fill(
                 GRID_X,
                 GRID_Y,

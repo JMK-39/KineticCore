@@ -166,6 +166,7 @@ public final class ItemSearchIndex {
             isCaching = false;
             cacheReady = false;
             lastProgress = -1;
+            KineticOverlays.removeToast(CACHE_TOAST_ID);
         }
     }
 
@@ -217,6 +218,7 @@ public final class ItemSearchIndex {
         isCaching = false;
         cacheReady = false;
         lastProgress = -1;
+        KineticOverlays.removeToast(CACHE_TOAST_ID);
         cacheLanguage = currentLanguage;
         cacheConnectionToken = currentConnection;
         cacheLevelToken = currentLevel;
@@ -416,9 +418,9 @@ public final class ItemSearchIndex {
             if (isStaleGeneration(generation) || !isCaching) return;
             KineticOverlays.toast(
                     CACHE_TOAST_ID,
-                    KineticText.translatable("gui.kineticcore.items.cache.building", Component.literal(progress + "%")),
+                    KineticText.translatable("gui.kineticcore.items.cache.building", Component.literal(Math.max(progress, lastProgress) + "%")),
                     KineticOverlays.Position.BOTTOM_CENTER,
-                    3000,
+                    Integer.MAX_VALUE,
                     0,
                     -30
             );
@@ -441,7 +443,7 @@ public final class ItemSearchIndex {
         try {
             KineticOverlays.toast(
                     CACHE_TOAST_ID,
-                    KineticText.translatable("gui.kineticcore.items.cache.done", Component.literal(String.valueOf(tempCache.size()))),
+                    Component.literal("100% · ").append(KineticText.translatable("gui.kineticcore.items.cache.done", Component.literal(String.valueOf(tempCache.size())))),
                     KineticOverlays.Position.BOTTOM_CENTER,
                     2500,
                     0,
