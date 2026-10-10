@@ -443,7 +443,7 @@ public final class ItemSearchIndex {
         try {
             KineticOverlays.toast(
                     CACHE_TOAST_ID,
-                    Component.literal("100% · ").append(KineticText.translatable("gui.kineticcore.items.cache.done", Component.literal(String.valueOf(tempCache.size())))),
+                    KineticText.translatable("gui.kineticcore.items.cache.done", Component.literal(String.valueOf(tempCache.size()))),
                     KineticOverlays.Position.BOTTOM_CENTER,
                     2500,
                     0,

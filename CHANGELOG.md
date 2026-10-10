@@ -1,15 +1,15 @@
-2026年10月10日 — 26.10.10.2 — Item browser and editor navigation / 物品搜索器与编辑页导航
+2026年10月10日 — 26.10.10.3 — Item browser and editor navigation / 物品搜索器与编辑页导航
 
 - The item browser has a narrower category column, an extra item column and category row, and thirteen complete item rows. Scrolling to the bottom keeps the final row visible without an extra blank row.
 - Numeric configuration fields and list-edit buttons are shorter. Add-ons can open their visual rule editors from both individual configuration pages and the mod's combined page.
 - Use the item browser's spare horizontal space for wider category buttons while retaining twenty item columns. Back buttons are at the upper left of core editors; the inventory-style first-join editor uses the lower left.
-- Item search indexing updates the percentage in one notification without flashing between messages, then shows 100% on completion.
+- Item search indexing updates the percentage at the end of one notification without flashing between messages. Completion replaces the progress with the indexed item count.
 - Fix a startup crash when an add-on checks client world, player or connection state before Minecraft has initialized.
 
 - 物品搜索器缩短左侧分类，增加一列物品和一行分类按钮，完整显示十三行物品；滚动到底部时保留完整的最后一行，不再多出空行。
 - 缩短数字配置输入框和列表编辑按钮；附属可在单独配置页和模组总配置页中打开自己的可视化规则编辑器。
 - 利用物品搜索器的横向余量加宽分类按钮，同时保持二十列物品；核心编辑页的返回按钮统一放在左上角，首次加入奖励的背包式编辑页放在左下角。
-- 物品搜索索引在同一条提示中持续更新百分比，不再反复闪烁；构建完成时显示 100%。
+- 物品搜索索引在同一条提示的末尾持续更新百分比，不再反复闪烁；构建完成后改为显示完成提示与物品数量，不再显示百分比。
 - 修复附属在 Minecraft 初始化前查询客户端世界、玩家或连接状态时可能导致的启动崩溃。
 
 ---
