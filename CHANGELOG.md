@@ -20,9 +20,9 @@
 
 2026年10月10日 — Data pack loading recovery / 数据包加载防护
 
-- Singleplayer data pack loading errors now show the failing pack, resource file and cause. Locate the file or archive, open the data pack directories, or temporarily skip identified faulty local packs and retry. The skip lasts only for the current session; saved pack choices and pack files are preserved. Dedicated servers report the diagnostics in their logs.
+- Singleplayer data pack loading errors now show the failing pack, resource file and cause. Locate the file or archive, open the data pack directories, or temporarily skip identified faulty local packs and retry. Skipping applies to whole packs for this world-opening session; leaving and reopening the world loads the original packs again. Saved pack choices and pack files are preserved. Dedicated servers report the diagnostics in their logs.
 
-- 单人存档加载数据包失败时，显示错误数据包、资源文件和原因。可定位文件或压缩包、打开数据包目录，或暂时跳过已定位的错误本地包并重试。跳过仅在当前会话生效，保留存档的数据包选择和包内文件；专用服务器在日志中记录诊断信息。
+- 单人存档加载数据包失败时，显示错误数据包、资源文件和原因。可定位文件或压缩包、打开数据包目录，或暂时跳过已定位的错误本地包并重试。跳过整个数据包，仅在本次打开存档期间生效；退出后重新进入仍加载原来的包，保留存档的数据包选择和包内文件。专用服务器在日志中记录诊断信息。
 
 ---
 

@@ -26,7 +26,7 @@ One JAR per Minecraft version: `kineticcore-<loader>-<minecraft>-<version>.jar`,
 - **Flight**: flight permission, Superman-style high-speed flight, creative noclip, and crawling.
 - **Custom world spawn**: pick the spawn of new worlds by dimension, biome or structure (villages by default).
 - **First-join rewards**: items, equipment and commands for new players; **world init commands** for a new save.
-- **Data pack loading recovery**: diagnose singleplayer loading errors, locate faulty files, and temporarily retry without the identified local packs. See [Data pack recovery](https://github.com/JMK-39/KineticCore/wiki/Data-Pack-Recovery).
+- **Data pack loading recovery**: diagnose singleplayer loading errors, locate faulty files or ZIP packs, and temporarily retry without the identified local packs. Reopening the world restores the original pack selection. Dedicated servers report the diagnosis in their logs. See [Data pack recovery](https://github.com/JMK-39/KineticCore/wiki/Data-Pack-Recovery).
 - **Client**: compact potion-effect display (JEI keeps clear of it), FPS and TPS/MSPT HUD, copy item IDs and details, log cleaning and filtering, default options for new installs.
 - **Gameplay tweaks**: PVP protection, mobs that picked up items can still despawn, percentage void damage, creative void immunity, throwable spawn eggs, farmland protection, faster cobweb breaking, attribute range limits, larger network limits, recipe book removal, bee fixes.
 - **Addon API**: page-based GUI, F6 config pages, networking and compression, key bindings and events, hooks, `/kt` command extensions, selectors and registry helpers. See [Addon development](https://github.com/JMK-39/KineticCore/wiki/附属开发入门).
@@ -54,7 +54,7 @@ KineticCore 是 Kinetic 系列的核心模组：自带一组玩法与客户端�
 ### 功能
 
 - **配置中心（F6）**：所有设置集中在一处，客户端与服务端设置分开，每项功能都可以关闭。
-- **数据包加载防护**：显示单人存档的加载错误，定位错误文件，并允许暂时跳过已定位的本地错误包重试。详见 [数据包加载防护](https://github.com/JMK-39/KineticCore/wiki/数据包加载防护)。
+- **数据包加载防护**：显示单人存档的加载错误，定位错误文件或 ZIP 包，并允许暂时跳过已定位的本地错误包重试；重新进入存档仍加载原来的包，专用服务器仅在日志中报告诊断。详见 [数据包加载防护](https://github.com/JMK-39/KineticCore/wiki/数据包加载防护)。
 - **飞行**：飞行权限、超人式高速飞行、创造模式穿墙，以及主动爬行。
 - **自定义出生点**：按维度、群系或结构选择新世界的出生点（默认村庄）。
 - **首次进入奖励**：为新玩家发放物品、装备并执行指令；**世界初始化指令**在新存档首次加载时执行。
