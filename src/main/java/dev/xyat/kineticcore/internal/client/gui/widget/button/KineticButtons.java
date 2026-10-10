@@ -367,6 +367,8 @@ public final class KineticButtons {
                 GuiTheme.stateOutline(graphics, x, y, width, height, selected, isHovered(), error);
             } else if (picked) {
                 GuiTheme.indicatorOutline(graphics, x, y, width, height, KineticTheme.Indicator.SUCCESS);
+            } else {
+                GuiTheme.stateOutline(graphics, x, y, width, height, false, false, false);
             }
             if (textVisible) {
                 var font = KineticClientRuntime.font();
@@ -404,16 +406,17 @@ public final class KineticButtons {
             return icon.copy();
         }
 
-        // The icon is drawn 8 px in and is 16 px wide.
+        // The 20 px slot starts 6 px in; labels retain their extra 2 px padding.
         @Override
         protected int labelLeftInset() {
-            return icon.isEmpty() ? 0 : 8 + 16;
+            return icon.isEmpty() ? 0 : 6 + 20;
         }
 
         @Override
         public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             super.renderButton(graphics, mouseX, mouseY, partialTick);
             if (!icon.isEmpty()) {
+                GuiTheme.itemSlot(graphics, getX() + 6, getY() + (getHeight() - 20) / 2, 20, false);
                 VanillaGuiDraw.fakeItem(graphics, icon, getX() + 8, getY() + (getHeight() - 16) / 2);
             }
         }

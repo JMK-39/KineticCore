@@ -460,7 +460,7 @@
   "gui.kineticcore.fps.label.average": "§f | §bAverage ",
   "gui.kineticcore.fps.label.fps": "§fFPS ",
   "gui.kineticcore.fps.label.minimum": "§f | §eMinimum ",
-  "gui.kineticcore.hud_editor.cancel": "§cBack",
+  "gui.kineticcore.hud_editor.cancel": "Back",
   "gui.kineticcore.hud_editor.reset": "§eReset",
   "gui.kineticcore.hud_editor.save": "§aSave",
   "gui.kineticcore.items.autocomplete.entry": "%s%s",

@@ -460,7 +460,7 @@
   "gui.kineticcore.fps.label.average": "§f | §b平均 ",
   "gui.kineticcore.fps.label.fps": "§fFPS ",
   "gui.kineticcore.fps.label.minimum": "§f | §e最低 ",
-  "gui.kineticcore.hud_editor.cancel": "§c返回",
+  "gui.kineticcore.hud_editor.cancel": "返回",
   "gui.kineticcore.hud_editor.reset": "§e恢复默认",
   "gui.kineticcore.hud_editor.save": "§a保存",
   "gui.kineticcore.items.autocomplete.entry": "%s%s",
