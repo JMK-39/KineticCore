@@ -13,7 +13,7 @@ final class KTConfigControlMetrics {
 
     // Each control type has one width in every language and for every value, so the value column always lines up;
     // values and option names longer than the control scroll inside it.
-    private static final int NUMERIC_WIDTH = 90;
+    private static final int NUMERIC_WIDTH = 60;
     private static final int STRING_WIDTH = 132;
     private static final int CHOICE_WIDTH = 120;
 
@@ -34,7 +34,7 @@ final class KTConfigControlMetrics {
             case INTEGER, LONG, DOUBLE -> NUMERIC_WIDTH;
             case STRING -> STRING_WIDTH;
             case CHOICE -> CHOICE_WIDTH;
-            case STRING_LIST, ITEM_LIST, ITEM_RULE_LIST, ENTITY_LIST, INTEGER_LIST -> 120;
+            case STRING_LIST, ITEM_LIST, ITEM_RULE_LIST, ENTITY_LIST, INTEGER_LIST -> 90;
             case COLOR -> 104;
             default -> 132;
         };

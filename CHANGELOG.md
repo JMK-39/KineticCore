@@ -1,3 +1,13 @@
+2026年10月10日 — 26.10.10.1 — Item browser and visual rule editors / 物品搜索器与可视化规则编辑
+
+- The item browser has a narrower category column, an extra item column and category row, and thirteen complete item rows. Scrolling to the bottom keeps the final row visible without an extra blank row.
+- Numeric configuration fields and list-edit buttons are shorter. Add-ons can open their visual rule editors from both individual configuration pages and the mod's combined page.
+
+- 物品搜索器缩短左侧分类，增加一列物品和一行分类按钮，完整显示十三行物品；滚动到底部时保留完整的最后一行，不再多出空行。
+- 缩短数字配置输入框和列表编辑按钮；附属可在单独配置页和模组总配置页中打开自己的可视化规则编辑器。
+
+---
+
 2026年10月10日 — Data pack loading recovery / 数据包加载防护
 
 - Singleplayer data pack loading errors now show the failing pack, resource file and cause. Locate the file or archive, open the data pack directories, or temporarily skip identified faulty local packs and retry. The skip lasts only for the current session; saved pack choices and pack files are preserved. Dedicated servers report the diagnostics in their logs.

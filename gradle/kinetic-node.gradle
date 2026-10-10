@@ -11,7 +11,13 @@ apply from: rootProject.file('gradle/kinetic-datapack-validation.gradle')
 def getDynamicVersion() {
     def useAuto = project.findProperty('use_auto_version')?.toString() ?: 'false'
     if (useAuto.toBoolean()) {
-        return new SimpleDateFormat("yy.M.d").format(new Date())
+        def format = new SimpleDateFormat("yy.M.d")
+        format.setTimeZone(TimeZone.getTimeZone('Asia/Shanghai'))
+        def date = format.format(new Date())
+        def revision = project.findProperty('release_revision')?.toString() ?: '0'
+        if (!(revision ==~ /0|[1-9]\d*/)) throw new GradleException('release_revision must be a non-negative integer')
+        return date == project.findProperty('release_revision_date')?.toString() && revision != '0'
+                ? "${date}.${revision}" : date
     } else {
         return project.findProperty('mod_version')?.toString() ?: "0.0.0"
     }

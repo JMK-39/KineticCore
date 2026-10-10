@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mod_version:
-        description: Release version in YY.M.D format (for example, 26.9.25)
+        description: Release version in YY.M.D or YY.M.D.revision format
         required: true
         type: string
 
@@ -40,9 +40,9 @@ jobs:
           import os
           import re
           version = os.environ["VERSION"]
-          if not re.fullmatch(r"\d{2}\.(?:[1-9]|1[0-2])\.(?:[1-9]|[12]\d|3[01])", version):
-              raise SystemExit("Version must use YY.M.D without leading zeroes, such as 26.9.25")
-          datetime.strptime(version, "%y.%m.%d")
+          if not re.fullmatch(r"\d{2}\.(?:[1-9]|1[0-2])\.(?:[1-9]|[12]\d|3[01])(?:\.[1-9]\d*)?", version):
+              raise SystemExit("Version must use YY.M.D or YY.M.D.revision without leading zeroes")
+          datetime.strptime(".".join(version.split(".")[:3]), "%y.%m.%d")
           PY
 
       # Builds one JAR per enabled Minecraft version: kineticcore-<loader>-<minecraft>-<version>.jar.

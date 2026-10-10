@@ -523,8 +523,14 @@ final class KTConfigScreen extends KineticScreen {
     }
 
     private void openListEditor(KTConfigEntry<?> entry) {
-        if (KineticClientRuntime.currentScreen() != this) return;
+        if (KineticClientRuntime.currentScreen() != this || rejectUneditablePage()) return;
         List<?> values = listValue(entry.id());
+        KTConfigPage.ListEditor customEditor = configPage.listEditor(entry.id());
+        if (customEditor != null) {
+            customEditor.open(entry.label(), values.stream().map(String::valueOf).toList(),
+                    result -> updateValidationAndRebuild(entry.id(), entry, new ArrayList<>(result)));
+            return;
+        }
         if (entry.type() == KTConfigEntry.Type.ENTITY_LIST) {
             List<String> entityIds = values.stream().map(String::valueOf).toList();
             KineticSelectors.openEntitySelector(

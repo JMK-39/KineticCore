@@ -6,7 +6,9 @@ import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -28,6 +30,12 @@ import java.util.regex.Pattern;
  * run on the client thread while a config screen is open.
  */
 public final class KTConfigPage {
+    /** Opens a visual string-list editor. Apply returns a draft; the config page still owns saving and permissions. */
+    @FunctionalInterface
+    public interface ListEditor {
+        /** Receives an immutable draft and a callback to replace it; cancelling must not call apply. */
+        void open(Component title, List<String> initial, Consumer<List<String>> apply);
+    }
     /**
      * When a saved value takes effect. The screen shows a short badge, a detail tooltip and a saved toast derived
      * from this value unless the page supplies its own {@link Builder#applyNotice(Component) notice}.
@@ -105,6 +113,7 @@ public final class KTConfigPage {
     private final Component applyNotice;
     private final List<KTConfigEntry<?>> entries;
     private final Runnable saver;
+    private final Map<String, ListEditor> listEditors;
 
     private KTConfigPage(Builder builder) {
         this.id = builder.id;
@@ -117,6 +126,7 @@ public final class KTConfigPage {
         this.applyNotice = builder.applyNotice;
         this.entries = List.copyOf(builder.entries);
         this.saver = builder.saver;
+        this.listEditors = Map.copyOf(builder.listEditors);
     }
 
     /**
@@ -192,6 +202,11 @@ public final class KTConfigPage {
         return entries;
     }
 
+    /** Returns the custom visual editor for an entry, or null to use the standard editor. */
+    public ListEditor listEditor(String entryId) {
+        return listEditors.get(entryId);
+    }
+
     /**
      * Returns whether the screen should show when changes take effect.
      *
@@ -235,6 +250,7 @@ public final class KTConfigPage {
         private final Component title;
         private final List<KTConfigEntry<?>> entries = new ArrayList<>();
         private final Set<String> entryIds = new HashSet<>();
+        private final Map<String, ListEditor> listEditors = new HashMap<>();
         private Component description;
         private KTConfigScope scope = KTConfigScope.LOCAL_INSTALLATION;
         private boolean serverManaged;
@@ -247,6 +263,22 @@ public final class KTConfigPage {
         private Builder(String id, Component title) {
             this.id = requirePageId(id);
             this.title = Objects.requireNonNull(title, "title");
+        }
+
+        /**
+         * Replaces a string-list row's text editor with an add-on's visual editor, without changing its
+         * storage format, validation, draft handling or server authorization. Register after the row.
+         * @param entryId an existing string-list row id
+         * @param editor visual editor callback
+         * @return this builder
+         */
+        public Builder listEditor(String entryId, ListEditor editor) {
+            if (entries.stream().noneMatch(entry -> entry.id().equals(entryId)
+                    && entry.type() == KTConfigEntry.Type.STRING_LIST)) {
+                throw new IllegalArgumentException("Visual editor requires a string-list row: " + entryId);
+            }
+            listEditors.put(entryId, Objects.requireNonNull(editor, "editor"));
+            return this;
         }
 
         /**

@@ -113,15 +113,17 @@ public class ItemSelectorScreen extends KineticScreen {
     private static final ItemGridDensity GRID_DENSITY = ItemGridDensity.COMPACT;
     private static final int SLOT_SIZE = GRID_DENSITY.slotSize();
     private static final int CELL_SIZE = GRID_DENSITY.cellPitch();
-    private static final int GRID_VIEWPORT_WIDTH = 475;
-    private static final int GRID_VIEWPORT_HEIGHT = 304;
+    private static final int GRID_VIEWPORT_WIDTH = 499;
+    // Exactly thirteen complete rows, including the two-pixel viewport inset. No partial stationary row.
+    private static final int GRID_VIEWPORT_HEIGHT = 314;
     // Category origins remain where they were, independently of the item grid density.
     private static final int CATEGORY_CELL_SIZE = 19;
     private static final int CATEGORY_BUTTON_HEIGHT = 17;
-    private static final int CATEGORY_ROWS_VISIBLE = 16;
-    private static final int CATEGORY_WIDTH = 132;
+    private static final int CATEGORY_ROWS_VISIBLE = 17;
+    private static final int CATEGORY_VIEWPORT_HEIGHT = CATEGORY_ROWS_VISIBLE * CATEGORY_CELL_SIZE;
+    private static final int CATEGORY_WIDTH = 108;
     private static final int CATEGORY_BUTTON_SHIFT_X = -4;
-    private static final int CATEGORY_BUTTON_WIDTH = 140;
+    private static final int CATEGORY_BUTTON_WIDTH = 116;
     private static final int CATEGORY_SCROLL_GAP = 2;
     private static final int CATEGORY_GAP = 5;
     private static final int GRID_SHIFT_LEFT = -5;
@@ -795,7 +797,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 categoryScrollbarX(),
                 categoryY,
                 CATEGORY_SCROLLBAR_WIDTH,
-                gridContentHeight(),
+                CATEGORY_VIEWPORT_HEIGHT,
                 20
         );
     }
@@ -814,7 +816,7 @@ public class ItemSelectorScreen extends KineticScreen {
                     categoryButtonX(),
                     categoryY,
                     categoryButtonX() + CATEGORY_BUTTON_WIDTH,
-                    categoryY + gridContentHeight(),
+                    categoryY + CATEGORY_VIEWPORT_HEIGHT,
                     () -> categoryScroll.smoothOffset() * CATEGORY_CELL_SIZE
             );
             button.setHeight(CATEGORY_BUTTON_HEIGHT);
@@ -895,7 +897,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 categoryScrollbarX(),
                 categoryY,
                 CATEGORY_SCROLLBAR_WIDTH,
-                gridContentHeight(),
+                CATEGORY_VIEWPORT_HEIGHT,
                 20,
                 0
         )) {
@@ -904,7 +906,7 @@ public class ItemSelectorScreen extends KineticScreen {
         if (mouseX >= categoryButtonX()
                 && mouseX < categoryButtonX() + CATEGORY_BUTTON_WIDTH
                 && mouseY >= categoryY
-                && mouseY < categoryY + gridContentHeight()) {
+                && mouseY < categoryY + CATEGORY_VIEWPORT_HEIGHT) {
             double contentY = mouseY - categoryY + categoryScroll.smoothOffset() * CATEGORY_CELL_SIZE;
             int index = (int) Math.floor(contentY / CATEGORY_CELL_SIZE);
             int within = (int) Math.floor(contentY - index * CATEGORY_CELL_SIZE);
@@ -1147,7 +1149,7 @@ public class ItemSelectorScreen extends KineticScreen {
             double dragX,
             double dragY
     ) {
-        if (categoryScroll.drag(mouseY, categoryY, gridContentHeight(), 20)) {
+        if (categoryScroll.drag(mouseY, categoryY, CATEGORY_VIEWPORT_HEIGHT, 20)) {
             return true;
         }
         if (mainScroll.drag(mouseY, gridY, gridContentHeight(), 20)) {
@@ -1166,7 +1168,7 @@ public class ItemSelectorScreen extends KineticScreen {
         if (mouseX >= categoryButtonX()
                 && mouseX < categoryScrollbarX() + CATEGORY_SCROLLBAR_WIDTH + 2
                 && mouseY >= categoryY
-                && mouseY < categoryY + gridContentHeight()) {
+                && mouseY < categoryY + CATEGORY_VIEWPORT_HEIGHT) {
             categoryScroll.update(categoryEntries.size(), CATEGORY_ROWS_VISIBLE);
             if (categoryScroll.scroll(delta, 1.0D)) {
                 return true;

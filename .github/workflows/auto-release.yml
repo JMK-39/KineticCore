@@ -59,6 +59,12 @@ jobs:
             mod_name="${GITHUB_REPOSITORY##*/}"
           fi
           version="$(TZ=Asia/Shanghai date +'%y.%-m.%-d')"
+          revision_date="$(awk -F= '$1 == "release_revision_date" { print $2; exit }' gradle.properties)"
+          revision="$(awk -F= '$1 == "release_revision" { print $2; exit }' gradle.properties)"
+          if [ "$version" = "$revision_date" ] && [ -n "$revision" ] && [ "$revision" != "0" ]; then
+            [[ "$revision" =~ ^[1-9][0-9]*$ ]] || { echo "Invalid release_revision" >&2; exit 1; }
+            version="$version.$revision"
+          fi
           {
             echo "mod_id=$mod_id"
             echo "mod_name=$mod_name"

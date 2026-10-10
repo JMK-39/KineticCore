@@ -491,6 +491,13 @@ final class KTModuleConfigScreen extends KineticScreen {
         String key = entryKey(page, entry);
         List<?> values = listValue(key);
 
+        KTConfigPage.ListEditor customEditor = page.listEditor(entry.id());
+        if (customEditor != null) {
+            customEditor.open(entry.label(), values.stream().map(String::valueOf).toList(),
+                    result -> updateValidationAndRebuild(key, entry, new ArrayList<>(result)));
+            return;
+        }
+
         if (entry.type() == KTConfigEntry.Type.ENTITY_LIST) {
             List<String> entityIds = values.stream().map(String::valueOf).toList();
             KineticSelectors.openEntitySelector(
