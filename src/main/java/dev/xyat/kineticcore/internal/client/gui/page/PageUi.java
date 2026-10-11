@@ -1,5 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.page;
 
+import dev.xyat.kineticcore.internal.client.widget.KineticControlBridge;
+
 import dev.xyat.kineticcore.api.client.gui.ui.*;
 import dev.xyat.kineticcore.api.client.gui.widget.*;
 import dev.xyat.kineticcore.api.client.gui.widget.list.*;
@@ -399,6 +401,10 @@ public final class PageUi implements KineticUi {
                 KineticItemGrid grid = layer > 0
                         ? host.addHighZScrollableItemGrid(x, y, width, height, density, items, scrollOffset, orNoop(onClick), z(layer))
                         : host.addScrollableItemGrid(x, y, width, height, density, items, scrollOffset, orNoop(onClick));
+                if (decorations != null && KineticControlBridge.widget(grid) instanceof
+                        dev.xyat.kineticcore.internal.client.gui.widget.list.ItemGridWidget widget) {
+                    widget.setDecorations(decorations);
+                }
                 return finishPublic(grid, tooltip, dynamicTooltip, enabled, visible);
             }
         };

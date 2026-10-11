@@ -1,3 +1,15 @@
+2026年10月12日 — 26.10.12 — Searchable selection menus / 可搜索的选择列表
+
+- Expanded choices use framed text rows with two-pixel gaps. IDs are white and translated names are gold; long text has separate clipping regions. Selection changes only the border. Lists with ten or more options have a search field.
+- Add-ons can show item-grid stack counts and durability while keeping the original icon size and grid spacing.
+
+- 展开的选择项统一使用描边文本行，间隔两像素；ID 白色、译名金色，长文本分区显示，选中只改变边框。十项及以上的列表自动提供搜索框。
+- 附属可在物品网格中显示数量与耐久覆盖层，同时保持原有图标比例和格子间距。
+
+---
+
+---
+
 2026年10月10日 — 26.10.10.4 — Item browser and editor navigation / 物品搜索器与编辑页导航
 
 - The item browser has a narrower category column, an extra item column and category row, and thirteen complete item rows. Scrolling to the bottom keeps the final row visible without an extra blank row.

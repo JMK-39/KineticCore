@@ -7,7 +7,12 @@ import java.util.Objects;
 
 /** 下拉选择按钮 / Dropdown selection button. */
 public interface KineticDropdown extends KineticButton {
-    /** 一个下拉选项 / One dropdown option. */
+    /**
+     * 一个下拉选项：value 为白色 ID，translation 只提供名称，不重复 ID。展开行之间间距为两像素；
+     * 英文界面省略翻译列，至少十项时自动显示搜索框。
+     * One option: value is the white ID, translation is only the gold display name. Expanded rows have two-pixel
+     * gaps; English omits the translation column. Menus with at least ten options offer search.
+     */
     record Option(String value, Component translation, Component tooltip) {
         /** 规范化选项：值去空白且不能为空，显示元数据可为空 / Trims the value (must not be blank); display metadata may be null. */
         public Option {

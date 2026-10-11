@@ -42,6 +42,7 @@ public final class HeadlessRegressionSuite {
 
     public static void main(String[] args) throws Exception {
         run("GuiContractRegression", () -> GuiContractRegression.main(NO_ARGS));
+        run("SelectionMenuLayoutRegression", () -> dev.xyat.kineticcore.internal.client.overlay.SelectionMenuLayoutRegression.main(NO_ARGS));
         run("ItemGridLayoutRegression", () -> ItemGridLayoutRegression.main(NO_ARGS));
         run("GuiLayoutBoundsRegression", () -> GuiLayoutBoundsRegression.main(NO_ARGS));
         run("GuiLayoutCanvasCapRegression", () -> GuiLayoutCanvasCapRegression.main(NO_ARGS));

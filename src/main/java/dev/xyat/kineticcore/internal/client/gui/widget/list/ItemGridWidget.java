@@ -28,6 +28,7 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
     private final ItemGridDensity density;
     private final Consumer<Integer> responder;
     private final int zLevel;
+    private boolean decorations;
     private List<ItemGridItem> items = List.of();
     private int hoveredIndex = -1;
     private int selectedIndex = -1;
@@ -49,9 +50,15 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
         super(access, x, y, width, height, initialScrollOffset);
         this.font = font;
         this.density = density == null ? ItemGridDensity.STANDARD : density;
+        this.decorations = this.density.decorations();
         this.responder = responder;
         this.zLevel = zLevel;
         setItems(items);
+    }
+
+    /** Overrides item count/durability rendering while retaining the density's geometry. */
+    public void setDecorations(boolean shown) {
+        this.decorations = shown;
     }
 
     @Override
@@ -133,7 +140,7 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
                     );
                     ItemStack stack = safeStack(item);
                     if (!stack.isEmpty()) {
-                        GuiTheme.item(graphics, font, stack, x, y, density.slotSize(), density.renderScale(), density.decorations());
+                        GuiTheme.item(graphics, font, stack, x, y, density.slotSize(), density.renderScale(), decorations);
                     }
                     KineticTheme.Indicator outline = outlineIndicator(item.outline());
                     if (item.error()) {

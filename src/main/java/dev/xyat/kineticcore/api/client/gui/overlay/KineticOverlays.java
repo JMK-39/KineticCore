@@ -91,7 +91,7 @@ public final class KineticOverlays {
          * @param label row text; {@code null} becomes empty
          * @param detail secondary text shown to the right of the label; {@code null} becomes empty
          * @param tooltip hover text; {@code null} becomes empty
-         * @param checked check mark state for toggle rows, or {@code null} for rows without a check mark
+         * @param checked selection border state for plain text rows, or {@code null} for actionable buttons
          * @param action run when the row is clicked; {@code null} does nothing
          * @param enabled whether the row can be clicked; separators are always disabled
          * @param style row style; {@code null} means {@link MenuItemStyle#NORMAL}
@@ -121,7 +121,7 @@ public final class KineticOverlays {
 
         /**
          * Creates an on/off row of a menu whose rows are switched independently (a multi-selection); a checked row
-         * is drawn green.
+         * changes its border when checked and preserves its text color.
          */
         public static MenuItem toggle(Component label, Component tooltip, boolean checked, Runnable action) {
             return new MenuItem(label, Component.empty(), tooltip, checked, action, true, MenuItemStyle.NORMAL);
@@ -129,7 +129,7 @@ public final class KineticOverlays {
 
         /**
          * Creates a row of a menu that picks exactly one of several options (such as a mode or a profile); the
-         * current option is drawn yellow.
+         * current option changes its border and preserves its text color.
          */
         public static MenuItem choice(Component label, Component tooltip, boolean current, Runnable action) {
             return new MenuItem(label, Component.empty(), tooltip, current, true, action, true, MenuItemStyle.NORMAL);

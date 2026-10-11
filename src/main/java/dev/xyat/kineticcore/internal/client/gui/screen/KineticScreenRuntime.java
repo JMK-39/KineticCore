@@ -380,7 +380,7 @@ public final class KineticScreenRuntime {
      */
     public boolean keyPressed(int keyCode, int scanCode, int modifiers, KeyHandler business, KeyHandler fallback) {
         focus.synchronizeControlState();
-        if (overlays.keyPressed(keyCode)) return true;
+        if (overlays.keyPressed(keyCode, scanCode, modifiers)) return true;
         if (controls.handleAutoCompleteKey(keyCode, scanCode, modifiers)) return true;
         if (business.handle(keyCode, scanCode, modifiers)) return true;
         if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.ESCAPE, keyCode)) {
@@ -400,6 +400,7 @@ public final class KineticScreenRuntime {
     /** Character input: swallowed while an overlay blocks input. */
     public boolean charTyped(char codePoint, int modifiers, CharHandler host) {
         focus.synchronizeControlState();
+        if (overlays.charTyped(codePoint, modifiers)) return true;
         if (overlays.blocksInput()) return true;
         return host.handle(codePoint, modifiers);
     }

@@ -16,6 +16,10 @@ import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticContainerScreen;
 import dev.xyat.kineticcore.internal.client.gui.screen.KineticNativeScreen;
 import dev.xyat.kineticcore.internal.client.gui.widget.KineticWidgets;
+import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticTextFields.KineticEditBox;
+import dev.xyat.kineticcore.internal.client.gui.GuiInputCompat;
+import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
+import dev.xyat.kineticcore.internal.client.search.KineticSearchRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -50,7 +54,7 @@ public final class GuiOverlayRuntime {
     private record MenuControl(MenuItem item, MenuButton button) {
     }
 
-    private record ContextMenu(int x, int y, List<MenuControl> controls, int preferredWidth) {
+    private record ContextMenu(int x, int y, List<MenuControl> controls, int preferredWidth, KineticEditBox search) {
     }
 
     private record Dialog(
@@ -218,7 +222,18 @@ public final class GuiOverlayRuntime {
         }
         menuScroll = 0;
         draggingMenuThumb = false;
-        contextMenu = new ContextMenu(screenX, screenY, List.copyOf(controls), preferredWidth);
+        // Large selection menus offer search without requiring addons to draw a second popup or label.
+        KineticEditBox search = null;
+        if (controls.size() >= MAX_VISIBLE_MENU_ITEMS
+                && controls.stream().allMatch(control -> control.item().checked() != null)) {
+            search = KineticWidgets.createTextField(Minecraft.getInstance().font, 0, 0, 126,
+                    Component.translatable("gui.kineticcore.search"),
+                    Component.translatable("gui.kineticcore.search_hint"), null, null);
+            search.setMaxLength(256);
+            search.setResponder(value -> { menuScroll = 0; draggingMenuThumb = false; });
+            search.setFocused(true);
+        }
+        contextMenu = new ContextMenu(screenX, screenY, List.copyOf(controls), preferredWidth, search);
         dialog = null;
     }
 
@@ -309,7 +324,13 @@ public final class GuiOverlayRuntime {
             contextMenu = null;
             return true;
         }
-        if (bounds.scrollable() && mouseX >= bounds.scrollbarX()) {
+        if (contextMenu.search() != null) {
+            KineticEditBox search = contextMenu.search();
+            if (GuiInputCompat.mouseClicked(search, mouseX, mouseY, button)) return true;
+            search.setFocused(false);
+        }
+        if (bounds.scrollable() && mouseX >= bounds.scrollbarX()
+                && mouseY >= bounds.viewportTop() && mouseY < bounds.viewportTop() + bounds.viewportHeight()) {
             int thumbY = menuThumbY(bounds);
             int thumbHeight = menuThumbHeight(bounds);
             menuThumbGrab = mouseY >= thumbY && mouseY < thumbY + thumbHeight ? mouseY - thumbY : thumbHeight / 2.0D;
@@ -329,6 +350,10 @@ public final class GuiOverlayRuntime {
     }
 
     public boolean keyPressed(int keyCode) {
+        return keyPressed(keyCode, 0, 0);
+    }
+
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (dialog != null) {
             if (keyCode == 256) {
                 // ESC is a cancellation, just like clicking the dialog's cancel button.
@@ -341,9 +366,20 @@ public final class GuiOverlayRuntime {
         }
         if (contextMenu != null) {
             if (keyCode == 256) contextMenu = null;
+            else if (contextMenu.search() != null) {
+                if (keyCode == 70 && (modifiers & 2) != 0) contextMenu.search().setFocused(true);
+                else GuiInputCompat.keyPressed(contextMenu.search(), keyCode, scanCode, modifiers);
+            }
             return true;
         }
         return false;
+    }
+
+    /** Sends typed characters to the modal search field, keeping the page behind it untouched. */
+    public boolean charTyped(char codePoint, int modifiers) {
+        if (contextMenu == null || contextMenu.search() == null) return false;
+        GuiInputCompat.charTyped(contextMenu.search(), codePoint, modifiers);
+        return true;
     }
 
     /** 菜单打开时滚轮滚动菜单内容；返回 true 表示已处理 / Scrolls an open menu; true when handled. */
@@ -474,6 +510,7 @@ public final class GuiOverlayRuntime {
         try {
             VanillaGuiDraw.translate(graphics, 0, 0, 900);
             GuiTheme.panel(graphics, bounds.x, bounds.y, bounds.width, bounds.height);
+            if (contextMenu.search() != null) VanillaGuiDraw.render(contextMenu.search(), graphics, mouseX, mouseY, 0f);
             graphics.enableScissor(bounds.x, viewportTop, rowRight, viewportBottom);
             try {
                 for (MenuRow row : bounds.rows()) {
@@ -487,8 +524,10 @@ public final class GuiOverlayRuntime {
                     }
                     MenuButton button = control.button();
                     if (button == null) continue;
-                    VanillaGuiDraw.render(button, graphics, mouseX, rowMouseY, 0f);
-                    if (!item.detail().getString().isBlank()) {
+                    if (item.checked() != null) renderSelectionRow(graphics, font, row,
+                            button.isMouseOver(mouseX, rowMouseY));
+                    else VanillaGuiDraw.render(button, graphics, mouseX, rowMouseY, 0f);
+                    if (item.checked() == null && !item.detail().getString().isBlank()) {
                         int detailX = rowRight - 7 - font.width(item.detail());
                         int detailY = row.y() + (row.height() - 8) / 2;
                         VanillaGuiDraw.text(graphics, font, item.detail(), detailX, detailY, GuiTheme.current().text(), false);
@@ -521,12 +560,36 @@ public final class GuiOverlayRuntime {
     }
 
     private void layoutMenuButtons(MenuBounds bounds) {
+        if (contextMenu.search() != null) {
+            contextMenu.search().setX(bounds.x() + 3);
+            contextMenu.search().setY(bounds.y() + 3);
+            contextMenu.search().setWidth(bounds.width() - 6);
+        }
         for (MenuRow row : bounds.rows()) {
             MenuButton button = row.control().button();
             if (button == null) continue;
             int scrollbarSpace = bounds.scrollable() ? MENU_SCROLLBAR_WIDTH + 2 : 0;
             button.setBounds(bounds.x + 3, row.y(), bounds.width - 6 - scrollbarSpace, row.height());
         }
+    }
+
+    private void renderSelectionRow(GuiGraphics graphics, Font font, MenuRow row, boolean hovered) {
+        MenuItem item = row.control().item();
+        MenuButton button = row.control().button();
+        int x = button.getX();
+        int width = button.getWidth();
+        graphics.fill(x, row.y(), x + width, row.y() + row.height(), GuiTheme.current().panel());
+        GuiTheme.stateOutline(graphics, x, row.y(), width, row.height(),
+                Boolean.TRUE.equals(item.checked()), hovered, false);
+        // The caller owns both strings. Allocate independent clipping regions so long IDs cannot cover translations.
+        Component label = Component.literal(item.label().getString());
+        Component detail = Component.literal(item.detail().getString());
+        SelectionMenuLayout.Columns columns = SelectionMenuLayout.columns(width - 8, font.width(label), font.width(detail));
+        int textY = row.y() + (row.height() - font.lineHeight) / 2;
+        KineticText.drawScrollingLeft(graphics, font, label, x + 4, textY, columns.labelWidth(),
+                item.enabled() ? 0xFFFFFFFF : 0xFFAAAAAA, false);
+        KineticText.drawScrollingLeft(graphics, font, detail, x + 4 + columns.labelWidth() + columns.gap(),
+                textY, columns.detailWidth(), 0xFFFFAA00, false);
     }
 
     private void renderDialog(
@@ -586,20 +649,26 @@ public final class GuiOverlayRuntime {
         int separatorHeight = 5;
         int width = 126;
         int contentHeight = 0;
+        String query = menu.search() == null ? "" : menu.search().getValue();
+        List<MenuControl> controls = menu.controls().stream().filter(control -> query.isBlank()
+                || KineticSearchRuntime.match(control.item().label().getString() + " "
+                + control.item().detail().getString(), query)).toList();
+        int searchHeight = menu.search() == null ? 0 : itemHeight + 2;
+        // Keep the popup/search width stable while filtering.
         for (MenuControl control : menu.controls()) {
             MenuItem item = control.item();
-            if (item.style() == MenuItemStyle.SEPARATOR) {
-                contentHeight += separatorHeight;
-                continue;
-            }
+            if (item.style() == MenuItemStyle.SEPARATOR) continue;
             int rowWidth = font.width(displayMenuLabel(item)) + 20;
             if (!item.detail().getString().isBlank()) {
                 rowWidth += font.width(item.detail()) + 12;
             }
             width = Math.max(width, rowWidth);
-            contentHeight += itemHeight;
         }
-        int viewportHeight = Math.min(contentHeight, Math.min(MAX_VISIBLE_MENU_ITEMS * itemHeight, Math.max(6, screenHeight - 14)));
+        for (MenuControl control : controls) contentHeight += control.item().style() == MenuItemStyle.SEPARATOR
+                ? separatorHeight : itemHeight + SelectionMenuLayout.gap(control.item().checked() != null);
+        if (!controls.isEmpty()) contentHeight -= SelectionMenuLayout.gap(controls.get(controls.size() - 1).item().checked() != null);
+        int viewportHeight = Math.min(Math.max(itemHeight, contentHeight),
+                Math.min(MAX_VISIBLE_MENU_ITEMS * (itemHeight + 2) - 2, Math.max(6, screenHeight - 14 - searchHeight)));
         boolean scrollable = contentHeight > viewportHeight;
         if (menu.preferredWidth() > 0) {
             width = menu.preferredWidth();
@@ -607,27 +676,24 @@ public final class GuiOverlayRuntime {
             width += MENU_SCROLLBAR_WIDTH + 2;
         }
         width = Math.min(width, Math.max(20, screenWidth - 8));
-        int height = viewportHeight + 6;
+        int height = viewportHeight + searchHeight + 6;
         int x = Math.max(4, Math.min(menu.x(), screenWidth - width - 4));
         int y = Math.max(4, Math.min(menu.y(), screenHeight - height - 4));
         int maxScroll = Math.max(0, contentHeight - viewportHeight);
         int safeScroll = Math.max(0, Math.min(scroll, maxScroll));
 
         List<MenuRow> rows = new ArrayList<>();
-        int cursorY = y + 3 - safeScroll;
-        for (MenuControl control : menu.controls()) {
+        int cursorY = y + 3 + searchHeight - safeScroll;
+        for (MenuControl control : controls) {
             int rowHeight = control.item().style() == MenuItemStyle.SEPARATOR ? separatorHeight : itemHeight;
             rows.add(new MenuRow(control, cursorY, rowHeight));
-            cursorY += rowHeight;
+            cursorY += rowHeight + SelectionMenuLayout.gap(control.item().checked() != null);
         }
-        return new MenuBounds(x, y, width, height, List.copyOf(rows), y + 3, viewportHeight, contentHeight, maxScroll,
+        return new MenuBounds(x, y, width, height, List.copyOf(rows), y + 3 + searchHeight, viewportHeight, contentHeight, maxScroll,
                 x + width - 3 - MENU_SCROLLBAR_WIDTH);
     }
 
     private static Component displayMenuLabel(MenuItem item) {
-        if (Boolean.TRUE.equals(item.checked())) {
-            return Component.translatable("gui.kineticcore.symbol.checked").append(item.label());
-        }
         return item.label();
     }
 
