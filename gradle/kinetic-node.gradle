@@ -108,6 +108,18 @@ tasks.named('processResources', ProcessResources).configure {
         ]
     }
 
+    // Item data uses components on newer nodes; keep the Forge language unchanged.
+    def languageOverrides = rootProject.file("versions/${project.name}/lang")
+    inputs.files(fileTree(languageOverrides) { include '*.json' })
+    doLast {
+        fileTree(languageOverrides) { include '*.json' }.each { File overrides ->
+            File target = new File(destinationDir, "assets/${pModId}/lang/${overrides.name}")
+            def entries = new groovy.json.JsonSlurper().parse(target, 'UTF-8')
+            entries.putAll(new groovy.json.JsonSlurper().parse(overrides, 'UTF-8'))
+            target.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(entries)), 'UTF-8')
+        }
+    }
+
     // The Mixin configs in src/ declare JAVA_17, which NeoForge nodes raise to their Java version in the
     // packaged copy. Forge 1.20.1 ships Mixin 0.8.5, which does not know JAVA_21 and only requires that its
     // ASM can read the mixin classes, so Forge nodes keep JAVA_17.

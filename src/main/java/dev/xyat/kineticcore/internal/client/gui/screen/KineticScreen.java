@@ -822,7 +822,15 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
     }
 
     private boolean vanillaMouseClicked(double mouseX, double mouseY, int button) {
-        return super.mouseClicked(mouseEventAt(mouseX, mouseY, button), currentDoubleClick);
+        // The newer vanilla container consumes every click over a child, even when that child returns false.
+        // Pages must still receive unhandled clicks over custom drawing/scroll regions.
+        var child = getChildAt(mouseX, mouseY);
+        if (child.isEmpty() || !child.get().mouseClicked(mouseEventAt(mouseX, mouseY, button), currentDoubleClick)) return false;
+        if (child.get().shouldTakeFocusAfterInteraction()) {
+            setFocused(child.get());
+            if (button == 0) setDragging(true);
+        }
+        return true;
     }
 
     private boolean vanillaMouseReleased(double mouseX, double mouseY, int button) {

@@ -1,0 +1,14 @@
+{
+  "cmd.kineticcore.nbt.desc": "§6Data Editor",
+  "cmd.kineticcore.nbt.hand.desc": "§eOpen the held item's data-component editor.",
+  "gui.kineticcore.firstjoin.equipment.hint": "§eLeft-click to select an item, right-click to edit data components, middle-click to clear the slot.",
+  "cfg.kineticcore.join.equipment.editor.tooltip": "Open the item-slot editor with item selection and data components.",
+  "cfg.kineticcore.join.equipment.tooltip": "Supports item IDs and data components. Leave empty to give no item in this slot.",
+  "cfg.kineticcore.nbt": "Data Editor",
+  "cfg.kineticcore.nbt.edit_hand": "Edit Held Item Components",
+  "cfg.kineticcore.nbt.edit_hand.tooltip": "Edit the data components of the item held in your main hand. The server verifies the same stack again when saving.",
+  "gui.kineticcore.nbt.editor.invalid": "§cInvalid data format!",
+  "gui.kineticcore.nbt.error.permission": "§cEditing data requires server permission level 2.",
+  "gui.kineticcore.nbt.success.hand": "§aHeld item components updated.",
+  "screen.kineticcore.nbt_editor": "Data Editor"
+}

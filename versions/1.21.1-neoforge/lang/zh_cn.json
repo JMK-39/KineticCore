@@ -1,0 +1,14 @@
+{
+  "cmd.kineticcore.nbt.desc": "§6数据编辑",
+  "cmd.kineticcore.nbt.hand.desc": "§e打开主手物品的数据组件编辑器。",
+  "gui.kineticcore.firstjoin.equipment.hint": "§e左键选择物品，右键打开数据组件编辑器，中键清空槽位",
+  "cfg.kineticcore.join.equipment.editor.tooltip": "打开物品格子编辑器，支持物品选择和数据组件。",
+  "cfg.kineticcore.join.equipment.tooltip": "支持物品 ID 和数据组件；留空表示该槽位不发放物品。",
+  "cfg.kineticcore.nbt": "数据编辑器",
+  "cfg.kineticcore.nbt.edit_hand": "编辑主手物品数据组件",
+  "cfg.kineticcore.nbt.edit_hand.tooltip": "编辑当前主手物品的数据组件；保存时服务端会再次确认仍是同一物品堆。",
+  "gui.kineticcore.nbt.editor.invalid": "§c无效的数据格式！",
+  "gui.kineticcore.nbt.error.permission": "§c编辑数据需要服务端 OP 2 级权限。",
+  "gui.kineticcore.nbt.success.hand": "§a已更新主手物品数据组件。",
+  "screen.kineticcore.nbt_editor": "数据编辑器"
+}

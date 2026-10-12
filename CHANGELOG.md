@@ -2,9 +2,13 @@
 
 - Expanded choices use framed text rows with two-pixel gaps. IDs are white and translated names are gold; long text has separate clipping regions. Selection changes only the border. Lists with ten or more options have a search field.
 - Add-ons can show item-grid stack counts and durability while keeping the original icon size and grid spacing.
+- Item-editing labels use data components on 1.21.1 and 26.1.2; 1.20.1 keeps item NBT terminology.
+- On 26.1.2, unhandled clicks over custom drawing regions reach the page, allowing recipe slots to be selected while preserving scrollbar input.
 
 - 展开的选择项统一使用描边文本行，间隔两像素；ID 白色、译名金色，长文本分区显示，选中只改变边框。十项及以上的列表自动提供搜索框。
 - 附属可在物品网格中显示数量与耐久覆盖层，同时保持原有图标比例和格子间距。
+- 1.21.1 和 26.1.2 的物品编辑文字改为数据组件；1.20.1 保留物品 NBT 称呼。
+- 修复 26.1.2 自绘区域吞掉未处理点击的问题，配方槽位可以正常选中，滑块输入继续由控件处理。
 
 ---
 
