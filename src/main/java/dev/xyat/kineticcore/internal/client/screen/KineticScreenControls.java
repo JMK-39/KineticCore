@@ -1120,14 +1120,13 @@ public final class KineticScreenControls {
                         Component label = Component.literal(option.value());
                         Component detail = showTranslations ? option.translation() : Component.empty();
                         Component optionTooltip = option.tooltip().getString().isBlank() ? label : option.tooltip();
-                        entries.add(KineticOverlays.MenuItem.create(
+                        // A dropdown picks exactly one value: buttons when short, framed text rows once it is searchable.
+                        entries.add(KineticOverlays.MenuItem.choice(
                                 label,
                                 detail,
                                 optionTooltip,
                                 optionIndex == dropdown.selectedIndex(),
-                                () -> dropdown.choose(optionIndex),
-                                true,
-                                KineticOverlays.MenuItemStyle.NORMAL
+                                () -> dropdown.choose(optionIndex)
                         ));
                     }
                     openContextMenu(dropdown.getX(), dropdown.getY() + dropdown.getHeight(), entries);

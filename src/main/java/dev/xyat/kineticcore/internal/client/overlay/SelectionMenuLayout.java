@@ -4,6 +4,17 @@ package dev.xyat.kineticcore.internal.client.overlay;
 final class SelectionMenuLayout {
     private SelectionMenuLayout() { }
 
+    /**
+     * Framed text rows are for picking from lists: multi-selections (two or more toggles in one menu) and menus long
+     * enough to have a search field. A short single choice, such as a dropdown that switches pages or modes, and a
+     * lone on/off toggle among actions open as ordinary menu buttons (current option yellow, switched-on toggle
+     * green); plain actions are always buttons.
+     */
+    static boolean textRows(boolean selectable, boolean singleChoice, int togglesInMenu, boolean searchable) {
+        if (!selectable) return false;
+        return searchable || !singleChoice && togglesInMenu >= 2;
+    }
+
     static int gap(boolean selectionRow) {
         return selectionRow ? 2 : 0;
     }

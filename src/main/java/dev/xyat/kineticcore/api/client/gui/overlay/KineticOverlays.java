@@ -128,11 +128,21 @@ public final class KineticOverlays {
         }
 
         /**
-         * Creates a row of a menu that picks exactly one of several options (such as a mode or a profile); the
-         * current option changes its border and preserves its text color.
+         * Creates a row of a menu that picks exactly one of several options (such as a mode, a page or a profile).
+         * Short single-choice menus open as buttons with the current option in yellow; menus long enough to get a
+         * search field use framed text rows. Multi-selections use {@link #toggle}.
          */
         public static MenuItem choice(Component label, Component tooltip, boolean current, Runnable action) {
             return new MenuItem(label, Component.empty(), tooltip, current, true, action, true, MenuItemStyle.NORMAL);
+        }
+
+        /**
+         * 单选菜单行，带右侧的次要文字（例如译名），显示规则同 {@link #choice(Component, Component, boolean, Runnable)}。
+         * A single-choice row with secondary text on the right, such as a translation; shown like
+         * {@link #choice(Component, Component, boolean, Runnable)}.
+         */
+        public static MenuItem choice(Component label, Component detail, Component tooltip, boolean current, Runnable action) {
+            return new MenuItem(label, detail, tooltip, current, true, action, true, MenuItemStyle.NORMAL);
         }
 
         /** Creates a destructive-action context-menu item without a tooltip. */

@@ -5,6 +5,15 @@ public final class SelectionMenuLayoutRegression {
     public static void main(String[] args) {
         if (SelectionMenuLayout.gap(true) != 2) throw new AssertionError("Selection rows must have a 2-pixel gap");
         if (SelectionMenuLayout.gap(false) != 0) throw new AssertionError("Action menu spacing must stay unchanged");
+        if (SelectionMenuLayout.textRows(true, true, 0, false))
+            throw new AssertionError("A short single-choice menu, such as a page or mode dropdown, opens as buttons");
+        if (!SelectionMenuLayout.textRows(true, true, 0, true))
+            throw new AssertionError("A searchable single-choice list uses framed text rows");
+        if (!SelectionMenuLayout.textRows(true, false, 3, false))
+            throw new AssertionError("Multi-select menus use framed text rows");
+        if (SelectionMenuLayout.textRows(true, false, 1, false))
+            throw new AssertionError("A lone on/off toggle among actions stays a button");
+        if (SelectionMenuLayout.textRows(false, false, 3, true)) throw new AssertionError("Plain actions stay buttons");
         check(200, 160, 72);
         check(90, 160, 72);
         check(18, 160, 72);

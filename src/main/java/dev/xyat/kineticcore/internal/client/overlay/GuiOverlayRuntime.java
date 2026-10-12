@@ -524,10 +524,10 @@ public final class GuiOverlayRuntime {
                     }
                     MenuButton button = control.button();
                     if (button == null) continue;
-                    if (item.checked() != null) renderSelectionRow(graphics, font, row,
+                    if (textRow(item, contextMenu)) renderSelectionRow(graphics, font, row,
                             button.isMouseOver(mouseX, rowMouseY));
                     else VanillaGuiDraw.render(button, graphics, mouseX, rowMouseY, 0f);
-                    if (item.checked() == null && !item.detail().getString().isBlank()) {
+                    if (!textRow(item, contextMenu) && !item.detail().getString().isBlank()) {
                         int detailX = rowRight - 7 - font.width(item.detail());
                         int detailY = row.y() + (row.height() - 8) / 2;
                         VanillaGuiDraw.text(graphics, font, item.detail(), detailX, detailY, GuiTheme.current().text(), false);
@@ -573,14 +573,28 @@ public final class GuiOverlayRuntime {
         }
     }
 
+    private static boolean textRow(MenuItem item, ContextMenu menu) {
+        if (menu == null) return false;
+        int toggles = 0;
+        for (MenuControl control : menu.controls()) {
+            if (control.item().checked() != null && !control.item().isChoice()) toggles++;
+        }
+        return SelectionMenuLayout.textRows(item.checked() != null, item.isChoice(), toggles, menu.search() != null);
+    }
+
     private void renderSelectionRow(GuiGraphics graphics, Font font, MenuRow row, boolean hovered) {
         MenuItem item = row.control().item();
         MenuButton button = row.control().button();
         int x = button.getX();
         int width = button.getWidth();
         graphics.fill(x, row.y(), x + width, row.y() + row.height(), GuiTheme.current().panel());
-        GuiTheme.stateOutline(graphics, x, row.y(), width, row.height(),
-                Boolean.TRUE.equals(item.checked()), hovered, false);
+        // The current option of a single choice is yellow; switched-on rows of a multi-selection are green.
+        boolean checked = Boolean.TRUE.equals(item.checked());
+        if (checked && !item.isChoice() && !hovered) {
+            GuiTheme.indicatorOutline(graphics, x, row.y(), width, row.height(), KineticTheme.Indicator.SUCCESS);
+        } else {
+            GuiTheme.stateOutline(graphics, x, row.y(), width, row.height(), checked && item.isChoice(), hovered, false);
+        }
         // The caller owns both strings. Allocate independent clipping regions so long IDs cannot cover translations.
         Component label = Component.literal(item.label().getString());
         Component detail = Component.literal(item.detail().getString());
@@ -665,8 +679,8 @@ public final class GuiOverlayRuntime {
             width = Math.max(width, rowWidth);
         }
         for (MenuControl control : controls) contentHeight += control.item().style() == MenuItemStyle.SEPARATOR
-                ? separatorHeight : itemHeight + SelectionMenuLayout.gap(control.item().checked() != null);
-        if (!controls.isEmpty()) contentHeight -= SelectionMenuLayout.gap(controls.get(controls.size() - 1).item().checked() != null);
+                ? separatorHeight : itemHeight + SelectionMenuLayout.gap(textRow(control.item(), menu));
+        if (!controls.isEmpty()) contentHeight -= SelectionMenuLayout.gap(textRow(controls.get(controls.size() - 1).item(), menu));
         int viewportHeight = Math.min(Math.max(itemHeight, contentHeight),
                 Math.min(MAX_VISIBLE_MENU_ITEMS * (itemHeight + 2) - 2, Math.max(6, screenHeight - 14 - searchHeight)));
         boolean scrollable = contentHeight > viewportHeight;
@@ -687,7 +701,7 @@ public final class GuiOverlayRuntime {
         for (MenuControl control : controls) {
             int rowHeight = control.item().style() == MenuItemStyle.SEPARATOR ? separatorHeight : itemHeight;
             rows.add(new MenuRow(control, cursorY, rowHeight));
-            cursorY += rowHeight + SelectionMenuLayout.gap(control.item().checked() != null);
+            cursorY += rowHeight + SelectionMenuLayout.gap(textRow(control.item(), menu));
         }
         return new MenuBounds(x, y, width, height, List.copyOf(rows), y + 3 + searchHeight, viewportHeight, contentHeight, maxScroll,
                 x + width - 3 - MENU_SCROLLBAR_WIDTH);
