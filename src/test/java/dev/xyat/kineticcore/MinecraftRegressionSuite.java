@@ -66,6 +66,10 @@ public final class MinecraftRegressionSuite {
     }
 
     public static void main(String[] args) {
+        run("ItemCreatorDataRegression", () -> dev.xyat.kineticcore.feature.itemcreator.ItemCreatorDataRegression.main(NO_ARGS));
+        run("SpawnEggCallbackRegression", () -> dev.xyat.kineticcore.api.spawnegg.SpawnEggCallbackRegression.main(NO_ARGS));
+        run("ItemCreatorPacketRegression", () -> dev.xyat.kineticcore.feature.itemcreator.ItemCreatorPacketRegression.main(NO_ARGS));
+        run("ItemCreatorDraftRegression", () -> dev.xyat.kineticcore.feature.itemcreator.ItemCreatorDraftRegression.main(NO_ARGS));
         run("DatapackDiagnosticsRegression", () -> dev.xyat.kineticcore.feature.datapack.DatapackDiagnosticsRegression.main(NO_ARGS));
         run("SearchComparatorRecoveryRegression", () -> SearchComparatorRecoveryRegression.main(NO_ARGS));
         run("SearchModelAtomicRegression", () -> SearchModelAtomicRegression.main(NO_ARGS));

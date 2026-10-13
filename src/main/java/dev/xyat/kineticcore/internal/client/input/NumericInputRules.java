@@ -96,6 +96,7 @@ public final class NumericInputRules {
         if (raw == null) return false;
         if (raw.isEmpty()) return true;
         if (raw.charAt(0) == '-' && !allowNegative) return false;
+        if (raw.equals("-")) return allowNegative;
 
         return switch (type) {
             case INTEGER, LONG -> raw.matches(allowNegative ? "-?\\d*" : "\\d*");

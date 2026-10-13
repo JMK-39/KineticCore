@@ -69,7 +69,8 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
         *///?} else {
         CompoundTag stackTag = stack.getTag();
         //?}
-        if (result instanceof BlockHitResult blockHit && handleSpawnerHit(blockHit, spawnEgg, stack, stackTag)) {
+        if (!dev.xyat.kineticcore.api.itemcreator.ItemCreatorStackData.hasTemplate(stack)
+                && result instanceof BlockHitResult blockHit && handleSpawnerHit(blockHit, spawnEgg, stack, stackTag)) {
             discard();
             return;
         }
@@ -100,6 +101,11 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
                 moveEntityToEntityImpact(serverLevel, entity, result.getLocation());
             }
             applyExtraNbt(entity, stackTag);
+            try {
+                dev.xyat.kineticcore.api.spawnegg.KineticSpawnEggs.notifySpawned(entity, stack, player);
+            } catch (RuntimeException exception) {
+                dev.xyat.kineticcore.api.runtime.KineticRuntime.logger().error("Spawn egg completion callback failed", exception);
+            }
         }
 
         discard();

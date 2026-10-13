@@ -7,6 +7,8 @@ import java.util.List;
 
 /** Smooth vertical single-selection list with one real toggle and one trailing action per row. */
 public interface KineticToggleActionList extends KineticControl {
+    /** Uses outlined plain-text rows; trailing actions remain small buttons. */
+    void setTextRows(boolean textRows);
     /**
      * Replaces every row. Scrolling, clipping and selection rendering stay managed by the list; the selection is
      * kept when its index still exists.

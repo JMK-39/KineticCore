@@ -17,7 +17,7 @@ public class NetworkConfig {
     public static int packetSize = 33554432;
     public static int decoderSize = 67108864;
     public static int chunkPacketData = 16777216;
-    public static long nbtMaxSize = 4194304L;
+    public static long nbtMaxSize = 16777216L;
     public static int stringSize = 262144;
     public static int varInt = 5;
     public static int varLong = 10;
@@ -74,12 +74,12 @@ public class NetworkConfig {
                  [范围：2097152 ~ 2147483647] 填错将自动还原为 16777216。
                  [Range: 2097152 ~ 2147483647] Invalid values will be reset to 16777216.""");
 
-        setIfAbsentAndComment("nbtMaxSize", 4194304L,
+        setIfAbsentAndComment("nbtMaxSize", 16777216L,
                 """
                  NBT 数据最大读取限制（字节）。原版默认 2097152。
                  Max NBT data read limit in bytes. Vanilla default is 2097152.
-                 [范围：2097152 ~ 4194304 (4MB)] 填错将自动还原为 4194304。
-                 [Range: 2097152 ~ 4194304 (4MB)] Invalid values will be reset to 4194304.""");
+                 [默认：16777216 (16MB)，最小：2097152 (2MB)] 可设置更大的值；填错还原为默认值。
+                 [Default: 16777216 (16MB), minimum: 2097152 (2MB)] Larger values are allowed; invalid values reset to the default.""");
 
         setIfAbsentAndComment("stringSize", 262144,
                 """
@@ -125,19 +125,19 @@ public class NetworkConfig {
         Object val = configData.get("nbtMaxSize");
         if (val instanceof Number num) {
             long l = num.longValue();
-            if (l >= 2097152L && l <= 4194304L) {
+            if (l >= 2097152L) {
                 return l;
             }
         } else if (val instanceof String str) {
             try {
                 long l = Long.parseLong(str);
-                if (l >= 2097152L && l <= 4194304L) {
+                if (l >= 2097152L) {
                     return l;
                 }
             } catch (NumberFormatException ignored) {
             }
         }
-        return 4194304L;
+        return 16777216L;
     }
 
     private static void readValues() {

@@ -1,0 +1,59 @@
+// Opt-in actual-client fixture. Test code and metadata never enter release jars.
+def validationMetadata = layout.buildDirectory.dir('itemcreator-validation-metadata')
+def writeValidationMetadata = tasks.register('writeItemCreatorValidationMetadata') {
+    outputs.dir validationMetadata
+    doLast {
+        def name = project.property('loader') == 'forge' ? 'mods.toml' : 'neoforge.mods.toml'
+        def target = new File(validationMetadata.get().asFile, "META-INF/${name}")
+        target.parentFile.mkdirs()
+        target.setText('modLoader="javafml"\nloaderVersion="[1,)"\nlicense="LGPLv3"\n[[mods]]\nmodId="kineticcore_itemcreator_validation"\nversion="1.0.0"\ndisplayName="Item Creator Game Validation"\n', 'UTF-8')
+        def formats = project.findProperty('pack_min_format')
+                ? "\"min_format\":${project.property('pack_min_format')},\"max_format\":${project.property('pack_max_format')}"
+                : "\"pack_format\":${project.findProperty('pack_format') ?: 15}"
+        new File(validationMetadata.get().asFile, 'pack.mcmeta').setText("{\"pack\":{\"description\":\"Item Creator Game Validation\",${formats}}}", 'UTF-8')
+    }
+}
+def fixtureJar = tasks.register('itemCreatorValidationJar', Jar) {
+    dependsOn 'testClasses', writeValidationMetadata
+    from(sourceSets.test.output) { include 'dev/xyat/kineticcoreitemcreatorvalidation/**' }
+    from validationMetadata
+    archiveFileName = 'kineticcore-itemcreator-validation.jar'
+}
+if (project.property('loader') == 'forge') {
+    afterEvaluate {
+        def shipped = tasks.named('reobfJar').get()
+        tasks.register('reobfItemCreatorValidationJar', shipped.getClass().superclass) {
+            dependsOn fixtureJar
+            input.set(fixtureJar.flatMap { it.archiveFile })
+            libraries.from(shipped.libraries, sourceSets.main.output)
+            remapOperation.toolType.set(shipped.remapOperation.toolType)
+            remapOperation.toolClasspath.from(shipped.remapOperation.toolClasspath)
+            remapOperation.mappings.from(shipped.remapOperation.mappings)
+            archiveFileName = 'kineticcore-itemcreator-validation-reobf.jar'
+        }
+    }
+}
+if (project.findProperty('kinetic_itemcreator_validation')?.toString()?.toBoolean()) {
+    def isolatedFixture = sourceSets.create('itemCreatorValidation')
+    isolatedFixture.java.setSrcDirs([])
+    isolatedFixture.resources.srcDir validationMetadata
+    tasks.named('processItemCreatorValidationResources').configure { dependsOn writeValidationMetadata }
+    def fixtureClasses = layout.buildDirectory.dir('itemcreator-validation-classes')
+    def copyFixture = tasks.register('copyItemCreatorValidationClasses', Sync) {
+        dependsOn 'testClasses'
+        from sourceSets.test.output.classesDirs
+        include 'dev/xyat/kineticcoreitemcreatorvalidation/**'
+        into fixtureClasses
+    }
+    isolatedFixture.output.dir([builtBy: copyFixture], fixtureClasses)
+    afterEvaluate {
+        def modding = extensions.getByName(project.property('loader') == 'forge' ? 'legacyForge' : 'neoForge')
+        modding.mods.create('kineticcore_itemcreator_validation') { sourceSet isolatedFixture }
+        modding.runs.named('client') {
+            gameDirectory = rootProject.file(".gradle/itemcreator-validation-20261013/${project.name}/game")
+            systemProperty 'kineticcore.itemCreatorValidation', 'true'
+            systemProperty 'kineticcore.layoutCheck', 'true'
+        }
+        tasks.named('runClient').configure { dependsOn copyFixture, 'processItemCreatorValidationResources' }
+    }
+}

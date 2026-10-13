@@ -42,7 +42,7 @@ public final class ThrowSpawnEggEvent {
         *///?} else {
         player.getCooldowns().removeCooldown(stack.getItem());
         //?}
-        throwSpawnEgg(player, stack);
+        if (!dev.xyat.kineticcore.feature.spawnegg.SpawnEggLauncher.throwByPlayer(player, stack)) return;
 
         if (!player.getAbilities().instabuild) {
             stack.shrink(1);
@@ -56,10 +56,9 @@ public final class ThrowSpawnEggEvent {
         context.cancel();
     }
 
-    private static void throwSpawnEgg(Player player, ItemStack stack) {
-        if (player.level().isClientSide()) return;
-
+    public static ItemStack prepareProjectileStack(ItemStack stack) {
         ItemStack projectileStack = stack.copy();
+        projectileStack.setCount(1);
         if (projectileStack.getItem() instanceof SpawnEggItem spawnEgg
                 //? if >=1.20.5 {
                 /*&& spawnEgg.getType(projectileStack) == EntityType.WARDEN) {
@@ -69,17 +68,7 @@ public final class ThrowSpawnEggEvent {
             addWardenDigCooldown(projectileStack);
         }
 
-        ThrowSpawnEgg projectile = new ThrowSpawnEgg(player.level(), player);
-        projectile.setItem(projectileStack);
-        projectile.shootFromRotation(
-                player,
-                player.getXRot(),
-                player.getYRot(),
-                0.0F,
-                (float) SpawnEggConfig.spawnEggThrowSpeed,
-                (float) SpawnEggConfig.spawnEggThrowInaccuracy
-        );
-        player.level().addFreshEntity(projectile);
+        return projectileStack;
     }
 
     private static void addWardenDigCooldown(ItemStack stack) {

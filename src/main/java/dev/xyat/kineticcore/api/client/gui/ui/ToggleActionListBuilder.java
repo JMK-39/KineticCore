@@ -21,6 +21,8 @@ public abstract class ToggleActionListBuilder extends LayeredControlBuilder<Togg
     protected int toggleWidth = 40;
     /** 行尾按钮宽度 / Action width. */
     protected int actionWidth = 40;
+    /** Plain-text rows with outlines instead of full-width button chrome. */
+    protected boolean textRows;
     /** 选中回调 / Selection callback. */
     protected Consumer<Integer> onSelect = null;
     /** 开关回调 / Toggle callback. */
@@ -63,6 +65,8 @@ public abstract class ToggleActionListBuilder extends LayeredControlBuilder<Togg
         this.actionWidth = width;
         return this;
     }
+    /** Uses outlined plain-text rows with small trailing action buttons. */
+    public final ToggleActionListBuilder textRows(boolean textRows) { this.textRows = textRows; return this; }
 
     /** 选中回调 / Selection callback. */
     public final ToggleActionListBuilder onSelect(Consumer<Integer> onSelect) {

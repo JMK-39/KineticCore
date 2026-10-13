@@ -1,3 +1,17 @@
+2026年10月13日 — 26.10.13 — Spawn egg and potion editors / 生物刷怪蛋与药水编辑器
+
+- Add core editors for special spawn eggs and normal, splash and lingering potions. Edit attributes and multiple effects directly in outlined text lists with small Edit buttons and Reset settings, including modded effects and their icons; saved selected entries move to the top, with vanilla entries first in each group. Spawn eggs use a square checkerboard model preview and a single-entity picker; potions switch forms through three expanded buttons.
+- Custom names and separate saved drafts let players switch between mobs and potions, generate items and keep adjusting each draft. Deselected entries retain their edited parameters, and runtime-added attributes survive world reloads.
+- Special spawn eggs support player throwing and redstone dispensers. Templates apply synchronously at LOWEST completion priority after entity insertion and extra data, without a tick delay; normal dispenser items keep their existing behavior. Add reusable item-creation and spawn-completion APIs.
+- Raise the default network NBT allowance to 16 MiB. Existing configured values are preserved, and larger values remain configurable.
+
+- 核心新增特殊刷怪蛋及普通、喷溅、滞留药水编辑器。右侧文字描边列表直接多选属性和多重效果，每项带小编辑按钮，子页支持重置和保存，包含模组效果与效果图标；保存后的已选项置顶，同组原版项优先。生物预览使用正方形棋盘格与单选生物选择器；药水形态通过展开的三项按钮切换。
+- 支持自定义名称与独立保存的编辑方案，可在多个生物或药水之间切换、生成并继续微调。取消勾选保留参数，运行时新增属性可在重进世界后恢复。
+- 特殊刷怪蛋支持玩家投掷和红石发射器。实体加入世界、附加数据处理完成后，以 LOWEST 完成优先级同步应用模板，不使用 tick 延迟；普通发射器物品保留原行为。新增可复用的物品生成与刷怪完成 API。
+- 网络 NBT 容量默认值提高至 16 MiB，保留已有配置值，并允许继续配置更大的容量。
+
+---
+
 2026年10月12日 — 26.10.12 — Searchable selection menus / 可搜索的选择列表
 
 - Multi-select menus and searchable lists use framed text rows with two-pixel gaps. IDs are white and translated names are gold; long text has separate clipping regions. Selection changes only the border; switched-on rows of a multi-selection are green. Lists with ten or more options have a search field. Short single-choice menus, such as dropdowns that switch pages, modes or categories, open as buttons with the current option in yellow.

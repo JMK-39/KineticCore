@@ -10,6 +10,9 @@ public final class NumericBoundsRegression {
         if (!condition) throw new AssertionError(message);
     }
     public static void main(String[] args) {
+        check(NumericInputRules.isAllowedText("-", dev.xyat.kineticcore.internal.client.gui.widget.input.KineticNumericFields.Type.DECIMAL, true), "negative decimals must accept the first typed minus sign");
+        check(!NumericInputRules.isAllowedText("-", dev.xyat.kineticcore.internal.client.gui.widget.input.KineticNumericFields.Type.DECIMAL, false), "nonnegative decimals reject minus");
+        check(NumericInputRules.doubleValue("-", null, null, null) == null, "incomplete minus must not parse as a value");
         check(NumericInputRules.integerValue("5", 4_294_967_301L, null, null) == null,
                 "long lower limit must not truncate into int range");
         check(Integer.valueOf(5).equals(NumericInputRules.integerValue("5", null, 4_294_967_296L, null)),

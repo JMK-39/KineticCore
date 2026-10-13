@@ -465,6 +465,7 @@ public final class PageUi implements KineticUi {
                         toggleWidth, actionWidth, orNoop(onSelect), orNoop(onToggle), orNoop(onAction), z(layer))
                         : host.addScrollableToggleActionList(x, y, width, height, items, selected, scrollOffset,
                         toggleWidth, actionWidth, orNoop(onSelect), orNoop(onToggle), orNoop(onAction));
+                list.setTextRows(textRows);
                 return finishPublic(list, tooltip, dynamicTooltip, enabled, visible);
             }
         };

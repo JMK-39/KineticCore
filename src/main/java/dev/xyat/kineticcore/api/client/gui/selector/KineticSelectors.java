@@ -291,6 +291,13 @@ public final class KineticSelectors {
         KineticClientRuntime.openScreen(new EntitySelectorScreen(KineticClientRuntimeImpl.currentScreen(), title, initialEntityIds,
                 allowedEntityIds, onApply));
     }
+    /** Opens a restricted entity picker whose selection always contains at most one entity. */
+    public static void openSingleEntitySelector(Component title, String initialEntityId, Collection<String> allowedEntityIds, Consumer<String> onApply) {
+        Objects.requireNonNull(onApply, "onApply");
+        KineticClientRuntime.openScreen(new EntitySelectorScreen(KineticClientRuntimeImpl.currentScreen(), title,
+                initialEntityId == null ? List.of() : List.of(initialEntityId), allowedEntityIds, true,
+                ids -> { if (ids.size() == 1) onApply.accept(ids.get(0)); }));
+    }
 
     /** Opens the standard item-rule list editor using the requested rule mode. */
     public static void openItemListEditor(Component title,

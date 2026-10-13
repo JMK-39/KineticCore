@@ -31,7 +31,7 @@ public final class NetworkConfigGui {
                         KineticI18n.translatable("cfg.kineticcore.network.chunk_packet_data.desc"))
                 .longValue("nbt_max_size", KineticI18n.translatable("cfg.kineticcore.network.nbt_max_size"),
                         () -> NetworkConfig.nbtMaxSize, value -> NetworkConfig.nbtMaxSize = value,
-                        4194304L, 2097152L, 4194304L,
+                        16777216L, 2097152L, Long.MAX_VALUE,
                         KineticI18n.translatable("cfg.kineticcore.network.nbt_max_size.desc"))
                 .intValue("string_size", KineticI18n.translatable("cfg.kineticcore.network.string_size"),
                         () -> NetworkConfig.stringSize, value -> NetworkConfig.stringSize = value,

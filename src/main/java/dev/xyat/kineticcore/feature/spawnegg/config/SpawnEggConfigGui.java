@@ -46,6 +46,9 @@ public final class SpawnEggConfigGui {
                         20.0D,
                         KineticI18n.translatable("cfg.kineticcore.spawnegg.inaccuracy.tooltip")
                 )
+                .action("open_editor", KineticI18n.translatable("gui.kineticcore.item_creator.spawn_title"),
+                        dev.xyat.kineticcore.api.client.gui.editor.KineticItemCreatorEditors::openSpawnEgg,
+                        KineticI18n.translatable("gui.kineticcore.item_creator.egg_hint"))
                 .build());
     }
 }

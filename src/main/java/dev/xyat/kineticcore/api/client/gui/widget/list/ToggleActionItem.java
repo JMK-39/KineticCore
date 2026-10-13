@@ -19,6 +19,7 @@ import net.minecraft.network.chat.Component;
  * @param actionTooltip trailing button tooltip, or {@code null}
  * @param actionActive whether the trailing button can be clicked
  * @param actionError whether the trailing button is drawn in the error state
+ * @param effectIcon optional registered potion-effect icon drawn before the row text
  */
 public record ToggleActionItem(
         Component label,
@@ -34,8 +35,16 @@ public record ToggleActionItem(
         Component actionLabel,
         Component actionTooltip,
         boolean actionActive,
-        boolean actionError
+        boolean actionError,
+        net.minecraft.world.effect.MobEffect effectIcon
 ) {
+    /** Creates a row without a potion-effect icon, preserving the standard text-list layout. */
+    public ToggleActionItem(Component label, Component secondaryLabel, Component tooltip, boolean active, boolean error, boolean toggleValue,
+                            Component toggleOnLabel, Component toggleOffLabel, Component toggleTooltip, boolean toggleActive,
+                            Component actionLabel, Component actionTooltip, boolean actionActive, boolean actionError) {
+        this(label, secondaryLabel, tooltip, active, error, toggleValue, toggleOnLabel, toggleOffLabel, toggleTooltip, toggleActive,
+                actionLabel, actionTooltip, actionActive, actionError, null);
+    }
     /** Creates an active row without a secondary label, with an active toggle and trailing button. */
     public ToggleActionItem(
             Component label,

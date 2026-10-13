@@ -24,8 +24,7 @@ import net.minecraft.network.chat.Component;
 /** Smooth scrolling list control behind the public {@code Kinetic*List} API; created only through {@code KineticWidgets}. */
 public final class ToggleActionListWidget extends VerticalScrollListWidget implements KineticToggleActionList {
     private static final int ROW_HEIGHT = KineticScreen.STANDARD_CONTROL_HEIGHT;
-    private static final int ROW_PITCH = ROW_HEIGHT + 5;
-    private static final int ROW_TOP_PADDING = 2;
+    private boolean textRows;
     private static final int CONTROL_GAP = 4;
 
     private final Consumer<Integer> responder;
@@ -79,13 +78,13 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
             ToggleActionItem item = items.get(index);
             int rowIndex = index;
             StateButton rowButton = new StateButton(
-                    factoryAccess, getX(), getY(), rowWidth(), ROW_HEIGHT, itemLabel(item),
+                    factoryAccess, getX(), getY(), rowWidth(), rowHeight(), itemLabel(item),
                     ignored -> select(rowIndex, true)
             );
             rowButtons.add(rowButton);
 
             ToggleButton toggleButton = new ToggleButton(
-                    factoryAccess, getX(), getY(), this.toggleWidth, ROW_HEIGHT,
+                    factoryAccess, getX(), getY(), this.toggleWidth, rowHeight(),
                     item != null && item.toggleValue(),
                     item == null ? Component.empty() : safe(item.toggleOnLabel()),
                     item == null ? Component.empty() : safe(item.toggleOffLabel()),
@@ -95,7 +94,7 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
             toggleButtons.add(toggleButton);
 
             StateButton actionButton = new StateButton(
-                    factoryAccess, getX(), getY(), this.actionWidth, ROW_HEIGHT,
+                    factoryAccess, getX(), getY(), this.actionWidth, rowHeight(),
                     item == null ? Component.empty() : safe(item.actionLabel()),
                     ignored -> {
                         ToggleActionItem current = rowIndex < items.size() ? items.get(rowIndex) : null;
@@ -111,6 +110,10 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
         refreshState();
         refreshLayout();
     }
+    @Override public void setTextRows(boolean textRows) {
+        this.textRows = textRows; refreshRange(); refreshState(); refreshLayout();
+    }
+    private int rowHeight() { return textRows ? 14 : ROW_HEIGHT; }
 
     @Override
     public List<ToggleActionItem> items() {
@@ -196,6 +199,14 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
                             ? mouseX : Integer.MIN_VALUE;
                     rowButton.setInvertedFlash(scroll.isSelectionFlashInverted(index));
                     VanillaGuiDraw.render(rowButton, graphics, clippedMouseX, mouseY, partialTick);
+                    var item = items.get(index);
+                    if (item.effectIcon() != null) {
+                        VanillaGuiDraw.effectIcon(graphics, item.effectIcon(), rowButton.getX() + 3, rowButton.getY() + (rowHeight() - 10) / 2, 10);
+                        dev.xyat.kineticcore.internal.client.gui.text.KineticText.drawScrollingLeft(graphics,
+                                dev.xyat.kineticcore.api.runtime.KineticClientRuntime.font(), itemLabel(item),
+                                rowButton.getX() + 17, rowButton.getY() + (rowHeight() - 8 + 1) / 2, Math.max(1, rowButton.getWidth() - 21),
+                                dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme.current().text(), false);
+                    }
                     VanillaGuiDraw.render(toggleButtons.get(index), graphics, clippedMouseX, mouseY, partialTick);
                     VanillaGuiDraw.render(actionButtons.get(index), graphics, clippedMouseX, mouseY, partialTick);
                 }
@@ -273,13 +284,18 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
             StateButton rowButton = rowButtons.get(index);
             ToggleButton toggleButton = toggleButtons.get(index);
             StateButton actionButton = actionButtons.get(index);
-            rowButton.setSelected(index == selectedIndex);
+            rowButton.setTextRow(textRows); rowButton.setRowStripe((index & 1) == 1); rowButton.setHeight(rowHeight());
+            rowButton.setPicked(textRows && item != null && item.toggleValue());
+            rowButton.setSelected(!textRows && index == selectedIndex);
             rowButton.setError(item != null && item.error());
             rowButton.setMessage(itemLabel(item));
+            rowButton.setTextVisible(item == null || item.effectIcon() == null);
             rowButton.active = active && item != null && item.active();
             toggleButton.setValue(item != null && item.toggleValue());
+            toggleButton.setTextRow(textRows); toggleButton.setHeight(rowHeight()); toggleButton.setPicked(textRows && item != null && item.toggleValue());
             toggleButton.active = active && item != null && item.toggleActive();
             actionButton.setSelected(false);
+            actionButton.setHeight(rowHeight());
             actionButton.setError(item != null && item.actionError());
             actionButton.setMessage(item == null ? Component.empty() : safe(item.actionLabel()));
             actionButton.active = active && item != null && item.actionActive();
@@ -291,12 +307,12 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
     @Override
     protected void refreshLayout() {
         int start = scroll.smoothIndexOffset();
-        int shift = scroll.visualShift(ROW_PITCH);
+        int shift = scroll.visualShift(rowPitch());
         int end = Math.min(rowButtons.size(), start + visibleRows() + 1);
         for (int index = 0; index < rowButtons.size(); index++) {
             ToggleActionItem item = items.get(index);
             boolean rowVisible = visible && index >= start && index < end;
-            int rowY = getY() + (index - start) * ROW_PITCH - shift + ROW_TOP_PADDING;
+            int rowY = getY() + (index - start) * rowPitch() - shift + (textRows ? 0 : 2);
             StateButton rowButton = rowButtons.get(index);
             ToggleButton toggleButton = toggleButtons.get(index);
             StateButton actionButton = actionButtons.get(index);
@@ -324,15 +340,15 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
     private int rowIndexAt(double mouseX, double mouseY, int control) {
         if (!visible || mouseY < getY() || mouseY >= getY() + getHeight()) return -1;
         int start = scroll.smoothIndexOffset();
-        int shift = scroll.visualShift(ROW_PITCH);
+        int shift = scroll.visualShift(rowPitch());
         int end = Math.min(items.size(), start + visibleRows() + 1);
         for (int index = start; index < end; index++) {
             AbstractWidget widget = control == 1 ? toggleButtons.get(index)
                     : control == 2 ? actionButtons.get(index) : rowButtons.get(index);
             if (!widget.visible) continue;
-            int rowY = getY() + (index - start) * ROW_PITCH - shift + ROW_TOP_PADDING;
+            int rowY = getY() + (index - start) * rowPitch() - shift + (textRows ? 0 : 2);
             if (mouseX >= widget.getX() && mouseX < widget.getX() + widget.getWidth()
-                    && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT) return index;
+                    && mouseY >= rowY && mouseY < rowY + rowHeight()) return index;
         }
         return -1;
     }
@@ -349,7 +365,7 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
         return new ToggleActionItem(
                 item.label(), item.secondaryLabel(), item.tooltip(), item.active(), item.error(), value,
                 item.toggleOnLabel(), item.toggleOffLabel(), item.toggleTooltip(), item.toggleActive(),
-                item.actionLabel(), item.actionTooltip(), item.actionActive(), item.actionError()
+                item.actionLabel(), item.actionTooltip(), item.actionActive(), item.actionError(), item.effectIcon()
         );
     }
 
@@ -372,6 +388,6 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
 
     @Override
     protected int rowPitch() {
-        return ROW_PITCH;
+        return rowHeight() + (textRows ? 2 : 5);
     }
 }

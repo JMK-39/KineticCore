@@ -93,6 +93,7 @@ public final class KineticCoreClientBootstrap {
                 SetSpawnConfigGui::load,
                 SpawnEggClient::register,
                 SpawnEggConfigGui::load,
+                dev.xyat.kineticcore.api.client.gui.editor.KineticItemCreatorEditors::register,
                 StartupClientModule::register,
                 StartupConfigGui::load,
                 TpsRenderer::register,

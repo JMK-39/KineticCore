@@ -67,6 +67,7 @@ public final class EntitySelectorScreen extends KineticScreen {
     private final List<String> availableMods = new ArrayList<>();
     private final Map<String, CategoryFilter> entityCategoryCache = new HashMap<>();
     private final Consumer<List<String>> onApply;
+    private final boolean singleSelection;
     private final List<String> allEntityIds = new ArrayList<>();
     private final List<String> filteredEntityIds = new ArrayList<>();
     private final Set<String> selectedIds = new LinkedHashSet<>();
@@ -93,9 +94,14 @@ public final class EntitySelectorScreen extends KineticScreen {
             Screen parent, Component title, Collection<String> initialEntityIds,
             Collection<String> allowedEntityIds, Consumer<List<String>> onApply
     ) {
+        this(parent, title, initialEntityIds, allowedEntityIds, false, onApply);
+    }
+    public EntitySelectorScreen(Screen parent, Component title, Collection<String> initialEntityIds,
+                                Collection<String> allowedEntityIds, boolean singleSelection, Consumer<List<String>> onApply) {
         super(title);
         setParentScreen(parent);
         this.onApply = onApply;
+        this.singleSelection = singleSelection;
         Set<String> allowed = allowedEntityIds == null ? null : new LinkedHashSet<>(allowedEntityIds);
         KineticRegistries.entityTypes().ids().stream()
                 .map(ResourceLocation::toString)
@@ -111,7 +117,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                 .forEach(availableMods::add);
         if (initialEntityIds != null) {
             for (String value : initialEntityIds) {
-                if (value != null && allEntityIds.contains(value.trim())) selectedIds.add(value.trim());
+                if (value != null && allEntityIds.contains(value.trim()) && (!singleSelection || selectedIds.isEmpty())) selectedIds.add(value.trim());
             }
         }
         originalIds.addAll(selectedIds);
@@ -418,7 +424,8 @@ public final class EntitySelectorScreen extends KineticScreen {
             int index = entityIndex(mouseX, mouseY);
             if (index >= 0 && index < filteredEntityIds.size()) {
                 String id = filteredEntityIds.get(index);
-                if (!selectedIds.add(id)) selectedIds.remove(id);
+                if (singleSelection) { selectedIds.clear(); selectedIds.add(id); }
+                else if (!selectedIds.add(id)) selectedIds.remove(id);
                 return true;
             }
         }
