@@ -1,14 +1,11 @@
 package dev.xyat.kineticcore.feature.flight.mixin.client;
 
-import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.kineticcore.api.client.input.KineticCameraInput;
-import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.xyat.kineticcore.api.flight.KineticFlightClient;
 import dev.xyat.kineticcore.api.flight.KineticSuperFlight;
-import dev.xyat.kineticcore.feature.flight.config.SuperFlightClientConfig;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
@@ -26,7 +23,6 @@ import net.minecraft.world.entity.player.Input;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 //?}
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -223,46 +219,6 @@ public class FlightClientMixins {
             player.setXRot(this.kineticcore$freeLookBeforePitch);
             KineticFlightClient.captureSuperFlightFreeLookDelta(player, yawDelta, pitchDelta);
         }
-
-        @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
-        private void kineticcore$creativeScrollSpeed(long pWindowPointer, double pXOffset, double pYOffset, CallbackInfo ci) {
-            LocalPlayer player = this.kineticcore$getMinecraft().player;
-
-            if (player != null && KineticFlightClient.superFlightActive() && KineticClientRuntime.shiftKeyDown()) {
-                double currentMult = KineticFlightClient.superFlightSelectedSpeedMultiplier();
-                double step = pYOffset > 0.0D ? 1.0D : -1.0D;
-                double newMult = Mth.clamp(currentMult + step,
-                        SuperFlightClientConfig.MIN_SELECTED_SPEED,
-                        SuperFlightClientConfig.MAX_SELECTED_SPEED);
-                if (Double.compare(newMult, currentMult) != 0) {
-                    KineticFlightClient.setSuperFlightSelectedSpeedMultiplier(newMult);
-                    SuperFlightClientConfig.setSelectedSpeed(newMult);
-                    KineticClientRuntime.displayClientMessage(KineticI18n.translatable(
-                            "msg.kineticcore.superflight.speed",
-                            Component.literal(String.valueOf((int) newMult))
-                    ), true);
-                }
-                ci.cancel();
-                return;
-            }
-
-            if (player != null && player.isCreative() && KineticFlightClient.isSpeedModifierDown()) {
-                float currentMult = KineticFlightClient.flightSpeedMultiplier();
-                float step = KineticClientRuntime.altModifierDown() ? ((pYOffset > 0) ? 1.0F : -1.0F) : ((pYOffset > 0) ? 0.1F : -0.1F);
-                float newMult = Mth.clamp(currentMult + step, 0.1F, 100.0F);
-                newMult = Math.round(newMult * 10.0F) / 10.0F;
-
-                if (newMult != currentMult) {
-                    KineticFlightClient.setFlightSpeedMultiplier(newMult);
-                    player.getAbilities().setFlyingSpeed(newMult * 0.05F);
-                    player.onUpdateAbilities();
-
-                    String displayVal = (newMult == (int)newMult) ? String.valueOf((int)newMult) : String.format("%.1f", newMult);
-                    KineticClientRuntime.displayClientMessage(KineticI18n.translatable("gui.kineticcore.flying.speed", Component.literal(displayVal)), true);
-                }
-                ci.cancel();
-            }
-        }
     }
 
     @Mixin(MultiPlayerGameMode.class)
@@ -299,6 +255,23 @@ public class FlightClientMixins {
                 }
                 player.noPhysics = false;
                 player.refreshDimensions();
+            }
+        }
+    }
+
+    /** Super flight borrows the fall-flying pose; while it is on, its own wind replaces the vanilla elytra rush. */
+    @Mixin(net.minecraft.client.resources.sounds.ElytraOnPlayerSoundInstance.class)
+    public static abstract class ElytraSoundTweaks extends net.minecraft.client.resources.sounds.AbstractTickableSoundInstance {
+        protected ElytraSoundTweaks(net.minecraft.sounds.SoundEvent sound, net.minecraft.sounds.SoundSource source,
+                                    net.minecraft.util.RandomSource random) {
+            super(sound, source, random);
+        }
+
+        @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
+        private void kineticcore$silenceDuringSuperFlight(CallbackInfo ci) {
+            if (KineticFlightClient.superFlightActive()) {
+                this.stop();
+                ci.cancel();
             }
         }
     }

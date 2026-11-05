@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.internal.client.screen;
 
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 
@@ -29,6 +30,14 @@ public final class KineticScreenFocus {
             if (current != null) current.setFocused(false);
             screen.setFocused(control);
             control.setFocused(true);
+            // A field focused from code continues where typing left off: caret after the text, nothing selected.
+            // Screens rebuild their search field on every keystroke; the new field starts with its caret and
+            // selection anchor at 0, so moving only the caret selected everything typed so far.
+            if (control instanceof EditBox box) {
+                int end = box.getValue().length();
+                box.setCursorPosition(end);
+                box.setHighlightPos(end);
+            }
         } catch (RuntimeException | Error failure) {
             // Addon-provided widgets may throw after mutating their own focus
             // flag. Restore both the host's reference and each widget's flag.

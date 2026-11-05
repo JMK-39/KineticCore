@@ -121,6 +121,7 @@ public final class KineticButtons {
                     textureHeight,
                     isHoveredOrFocused()
             );
+            if (isHovered()) GuiTheme.stateOutline(graphics, getX(), getY(), getWidth(), getHeight(), false, true, false);
         }
 
         @Override
@@ -134,6 +135,8 @@ public final class KineticButtons {
         /** Smallest gap between a text row's label and its edges. */
         private static final int TEXT_ROW_PADDING = 4;
         private boolean selected;
+        // Opens a menu or list: drawn with a down triangle after the label.
+        private boolean expands;
         private boolean picked;
         private boolean textRow;
         private boolean rowStripe;
@@ -296,6 +299,35 @@ public final class KineticButtons {
             return super.isMouseOver(mouseX, mouseY);
         }
 
+        /** Marks a button that opens a menu or list; it is drawn with a down triangle after its label. */
+        public void setExpands(boolean expands) {
+            this.expands = expands;
+        }
+
+        /**
+         * The label as drawn: Back buttons get a left triangle before it, buttons that expand a down triangle after it
+         * (one shared look for every add-on; the button's own text stays unchanged for lookups and narration).
+         */
+        private Component decoratedLabel(Component label) {
+            if (label == null) return Component.empty();
+            // Labels may carry legacy colour codes (§f返回); compare the visible text.
+            String stripped = net.minecraft.ChatFormatting.stripFormatting(label.getString());
+            String text = stripped == null ? "" : stripped.trim();
+            if (text.isEmpty()) return label;
+            if (isBackLabel(label, text)) return Component.literal("◂ ").append(label);
+            if (text.endsWith("▾") || text.endsWith("▼")) return label;
+            return expands ? label.copy().append(" ▾") : label;
+        }
+
+        /** A Back button: a "back" translation key, or the text 返回 / Back (resource packs may rename gui.back). */
+        private static boolean isBackLabel(Component label, String text) {
+            if (label.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents translation) {
+                String key = translation.getKey();
+                if (key.equals("gui.back") || key.endsWith(".back")) return true;
+            }
+            return text.equals("返回") || text.equalsIgnoreCase("Back") || text.equals(Component.translatable("gui.back").getString());
+        }
+
         @Override
         public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             // Vanilla's nine-slice button renderer divides by the inner tile size. A clipped
@@ -323,13 +355,11 @@ public final class KineticButtons {
                     renderTextRow(graphics);
                     return;
                 }
-                if (!textVisible) {
-                    storedText = getMessage();
-                    setMessage(Component.empty());
-                }
+                storedText = getMessage();
+                setMessage(textVisible ? decoratedLabel(storedText) : Component.empty());
                 renderVanillaButton(graphics, mouseX, mouseY, partialTick);
                 if (storedText != null) setMessage(storedText);
-                if (selected || error) {
+                if (selected || error || isHovered()) {
                     GuiTheme.stateOutline(
                             graphics,
                             getX(),
@@ -362,7 +392,7 @@ public final class KineticButtons {
             int y = getY();
             int width = getWidth();
             int height = getHeight();
-            graphics.fill(x, y, x + width, y + height, rowStripe ? theme.panelAlt() : theme.panel());
+            GuiTheme.fillShape(graphics, x, y, width, height, rowStripe ? theme.panelAlt() : theme.panel());
             if (selected || error || isHovered()) {
                 GuiTheme.stateOutline(graphics, x, y, width, height, selected, isHovered(), error);
             } else if (picked) {
@@ -447,15 +477,12 @@ public final class KineticButtons {
 
         @Override
         public void renderButton(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            renderVanillaButton(graphics, mouseX, mouseY, partialTick);
-            int inset = Math.max(4, Math.min(getWidth(), getHeight()) / 4);
-            graphics.fill(
-                    getX() + inset,
-                    getY() + inset,
-                    getX() + getWidth() - inset,
-                    getY() + getHeight() - inset,
-                    0xFF000000 | rgb
-            );
+            // A flat, right-angled square of the colour (no button frame): a dark 1 px border, white when hovered or
+            // focused, and dimmed while disabled. The same look in every add-on and style.
+            int x = getX(), y = getY(), right = x + getWidth(), bottom = y + getHeight();
+            boolean highlighted = active && (isHoveredOrFocused());
+            graphics.fill(x, y, right, bottom, highlighted ? 0xFFFFFFFF : 0xFF000000);
+            graphics.fill(x + 1, y + 1, right - 1, bottom - 1, active ? 0xFF000000 | rgb : 0xFF000000 | ((rgb >> 1) & 0x7F7F7F));
         }
     }
 

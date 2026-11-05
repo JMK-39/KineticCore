@@ -504,10 +504,13 @@ public class SetSpawnHandler {
         BlockPos safePos = inputSafe ? pos : findHighOpenSpawnAround(level, pos, SAFE_SEARCH_RADIUS, false, FINAL_SAFE_SEARCH_TIMEOUT_MS);
         boolean createdPlatform = false;
 
-        if (safePos == null) {
+        if (safePos == null && SetSpawnConfig.protectPlatform) {
             debug("ensureFinalSafeSpawn: Safe pos not found quickly, creating protected platform");
             safePos = buildProtectedSpawnPlatform(level, pos);
             createdPlatform = true;
+        } else if (safePos == null) {
+            debug("ensureFinalSafeSpawn: Safe pos not found quickly, platform disabled, using the computed position");
+            safePos = normalizePlatformPos(level, pos);
         }
 
         if (createdPlatform) {
@@ -515,7 +518,7 @@ public class SetSpawnHandler {
                 debug("ensureFinalSafeSpawn: Protected platform safety check failed, rebuilding at " + posToString(safePos));
                 safePos = buildProtectedSpawnPlatform(level, safePos);
             }
-        } else if (!isFinalSpawnSafe(level, safePos)) {
+        } else if (SetSpawnConfig.protectPlatform && !isFinalSpawnSafe(level, safePos)) {
             debug("ensureFinalSafeSpawn: Selected safe pos became unsafe, creating protected platform at " + posToString(safePos));
             safePos = buildProtectedSpawnPlatform(level, safePos);
             createdPlatform = true;
@@ -886,7 +889,7 @@ public class SetSpawnHandler {
             }
         } else {
             int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-            if (surfaceY >= minY && surfaceY <= maxY) {
+            if (hasSurfaceGround(level, surfaceY, maxY)) {
                 y = surfaceY;
             } else if (y < minY || y > maxY) {
                 y = defaultSafeY(minY, maxY);
@@ -894,6 +897,12 @@ public class SetSpawnHandler {
         }
 
         return new BlockPos(x, y, z);
+    }
+
+    // Under an open sky, ground at any height counts, down to the bottom layer (a flat world's bedrock floor); a
+    // column whose heightmap sits at the bottom of the world has no block at all.
+    private static boolean hasSurfaceGround(ServerLevel level, int surfaceY, int maxY) {
+        return surfaceY > level.getMinBuildHeight() && surfaceY <= maxY;
     }
 
     private static BlockPos findStructureSpawn(ServerLevel level, List<String> targetStructures) {
@@ -1047,7 +1056,7 @@ public class SetSpawnHandler {
     }
 
     private static BlockPos findHighestSurfaceSpawnInColumn(ServerLevel level, int x, int z, long deadline) {
-        int minY = level.getMinBuildHeight() + 4;
+        int minY = level.getMinBuildHeight() + 1;
         int maxY = Math.min(level.getMaxBuildHeight() - 4, level.getLogicalHeight() - 4);
         int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
 
@@ -1197,7 +1206,7 @@ public class SetSpawnHandler {
             }
         } else {
             int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-            if (surfaceY >= minY && surfaceY <= maxY) {
+            if (hasSurfaceGround(level, surfaceY, maxY)) {
                 y = surfaceY;
             } else if (y < minY || y > maxY) {
                 y = defaultSafeY(minY, maxY);

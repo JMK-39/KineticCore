@@ -111,7 +111,8 @@ public final class KineticNumericFields {
 
         @Override
         protected boolean hasBorderError() {
-            return super.hasBorderError() || !isValueValid();
+            // The base check already includes this field's number validation.
+            return super.hasBorderError();
         }
     }
 

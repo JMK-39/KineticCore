@@ -178,6 +178,14 @@ public abstract class KineticCustomControl implements KineticControl {
         return Component.empty();
     }
 
+    /**
+     * 提示不得遮挡的悬停部分 / The hovered part its tooltip must not cover, as {x, y, width, height}: the one cell or
+     * row under the mouse, not the whole control. {@code null} keeps the tooltip clear of the cursor only.
+     */
+    protected int[] tooltipBounds(double mouseX, double mouseY) {
+        return null;
+    }
+
     private static final class Access implements CustomControlSupport.Accessor {
         @Override
         public void attach(KineticCustomControl control, Object widget) {
@@ -247,6 +255,11 @@ public abstract class KineticCustomControl implements KineticControl {
         @Override
         public Component narration(KineticCustomControl control) {
             return control.narration();
+        }
+
+        @Override
+        public int[] tooltipBounds(KineticCustomControl control, double mouseX, double mouseY) {
+            return control.tooltipBounds(mouseX, mouseY);
         }
     }
 }

@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ItemCreatorNetwork {
-    private static final NetworkChannel CHANNEL = KineticNetwork.channel(KineticResourceIds.of("kineticcore", "item_creator"), "2", NetworkVersionPolicy.EXACT);
+    private static final NetworkChannel CHANNEL = KineticNetwork.channel(KineticResourceIds.of("kineticcore", "item_creator"), "3", NetworkVersionPolicy.EXACT);
     private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
     private static final AtomicInteger NEXT = new AtomicInteger();
     private static final ConcurrentHashMap<Integer, Consumer<KineticItemCreator.Result>> PENDING = new ConcurrentHashMap<>();
@@ -40,6 +40,7 @@ public final class ItemCreatorNetwork {
     private static int next() { return NEXT.updateAndGet(i -> i == Integer.MAX_VALUE ? 1 : i + 1); }
     private static int send(ItemCreatorProtocol.Request request, Consumer<KineticItemCreator.Result> result) {
         if (requests == null) throw new IllegalStateException("Editor network is unavailable");
+        ItemCreatorProtocol.validateRequestSize(request);
         PENDING.put(request.requestId(), result);
         try { requests.send(request); } catch (RuntimeException e) { PENDING.remove(request.requestId()); throw e; }
         return request.requestId();

@@ -46,6 +46,14 @@ public final class KineticSuperFlightClientRuntime {
     private static float displayedFovBoost;
     private static long lastFovUpdateNanos;
     private static double selectedSpeedMultiplier = 20.0D;
+    // Set by an add-on that drives the flight (0 = none): its speed, eased in and out, and the pose while moving.
+    private static double overrideMultiplier;
+    /** Share of the gap to the driven target speed closed each tick when speeding up and when slowing down. */
+    private static final double DRIVEN_ACCELERATION = 0.16D;
+    private static final double DRIVEN_DECELERATION = 0.26D;
+    /** Below this speed (blocks a tick) a driven glide without input comes to rest and the flyer hovers upright. */
+    private static final double DRIVEN_REST_SPEED = 0.08D;
+    private static Vec3 drivenDirection = Vec3.ZERO;
     private static double accelerationStartSpeed = CREATIVE_SPRINT_SPEED;
     private static double accelerationTargetSpeed = CREATIVE_SPRINT_SPEED;
     private static double accelerationTicks;
@@ -113,6 +121,18 @@ public final class KineticSuperFlightClientRuntime {
 
     public static double selectedSpeedMultiplier() {
         return selectedSpeedMultiplier;
+    }
+
+    public static void setOverride(double multiplier) {
+        overrideMultiplier = multiplier > 0.0D && Double.isFinite(multiplier)
+                ? Mth.clamp(multiplier, MIN_SELECTED_SPEED_MULTIPLIER, MAX_SELECTED_SPEED_MULTIPLIER)
+                : 0.0D;
+        if (overrideMultiplier <= 0.0D) currentSpeed = Math.min(currentSpeed, targetSpeed());
+        resetAccelerationPhase();
+    }
+
+    public static double override() {
+        return overrideMultiplier;
     }
 
     public static void setRollInput(boolean leftDown, boolean rightDown) {
@@ -235,15 +255,20 @@ public final class KineticSuperFlightClientRuntime {
         syncRoll(false);
         updateManeuverSpeed();
 
-        currentSpeed = Math.max(CREATIVE_SPRINT_SPEED, Math.min(currentSpeed, targetSpeed()));
+        if (overrideMultiplier <= 0.0D) currentSpeed = Math.max(CREATIVE_SPRINT_SPEED, Math.min(currentSpeed, targetSpeed()));
     }
 
     public static void applyTravel(Player player) {
         if (!active || player == null || Minecraft.getInstance().player != player) return;
 
+        settleLegs(player);
         boolean instantBoost = instantBoostRequested();
+        boolean driven = overrideMultiplier > 0.0D;
         if (!maneuvering) {
-            if (instantBoost && !spaceStopLatch) {
+            if (driven && hasMovementInput() && !spaceStopLatch) {
+                startManeuver(player);
+                currentSpeed = Math.max(currentSpeed, CREATIVE_SPRINT_SPEED);
+            } else if (instantBoost && !spaceStopLatch) {
                 startManeuver(player);
                 currentSpeed = targetSpeed();
             } else if (KineticClientRuntime.shiftKeyDown() && !spaceStopLatch) {
@@ -267,6 +292,10 @@ public final class KineticSuperFlightClientRuntime {
         player.startFallFlying();
         player.fallDistance = 0.0F;
         moving = hasMovementInput();
+        if (driven) {
+            applyDrivenTravel(player);
+            return;
+        }
         if (instantBoost) {
             currentSpeed = targetSpeed();
             accelerating = false;
@@ -281,6 +310,51 @@ public final class KineticSuperFlightClientRuntime {
         }
 
         applyDirectionalTravel(player, Math.max(CREATIVE_SPRINT_SPEED, Math.min(currentSpeed, targetSpeed())));
+    }
+
+    /**
+     * A driven flight eases toward its speed instead of jumping to it, and when the keys are let go it glides on in the
+     * same direction, slowing, and only then rises back to an upright hover; tapping the keys never flips the pose.
+     */
+    private static void applyDrivenTravel(Player player) {
+        double target = moving ? targetSpeed() : 0.0D;
+        currentSpeed += (target - currentSpeed) * (target > currentSpeed ? DRIVEN_ACCELERATION : DRIVEN_DECELERATION);
+        if (moving) {
+            Vec3 direction = movementDirection(freeLookDown());
+            if (direction.lengthSqr() > 1.0E-7D) drivenDirection = direction;
+        }
+        if (!moving && currentSpeed < DRIVEN_REST_SPEED) {
+            currentSpeed = CREATIVE_SPRINT_SPEED;
+            drivenDirection = Vec3.ZERO;
+            stopManeuver(player, false);
+            return;
+        }
+        if (drivenDirection.lengthSqr() < 1.0E-7D) {
+            player.setDeltaMovement(Vec3.ZERO);
+            actualSpeed = 0.0D;
+            return;
+        }
+        Vec3 motion = drivenDirection.scale(currentSpeed);
+        Vec3 beforeMove = player.position();
+        player.setDeltaMovement(motion);
+        player.move(MoverType.SELF, motion);
+        actualSpeed = player.position().subtract(beforeMove).length();
+        player.setDeltaMovement(motion);
+        player.fallDistance = 0.0F;
+        visualYaw = yawFromDirection(drivenDirection);
+        applyVisualYaw(player, visualYaw);
+    }
+
+    /**
+     * Super flight moves the player itself, so vanilla never updates the walking animation: the legs would freeze in
+     * the middle of a stride. Easing it to rest lets them hang naturally while hovering and flying.
+     */
+    private static void settleLegs(Player player) {
+        //? if >=26.1 {
+        /*player.walkAnimation.update(0.0F, 0.35F, 1.0F);
+        *///?} else {
+        player.walkAnimation.update(0.0F, 0.35F);
+        //?}
     }
 
 
@@ -489,6 +563,8 @@ public final class KineticSuperFlightClientRuntime {
     }
 
     private static void updateManeuverSpeed() {
+        // A driven flight eases its own speed in travel.
+        if (overrideMultiplier > 0.0D) return;
         if (instantBoostRequested()) {
             currentSpeed = targetSpeed();
             accelerating = false;
@@ -580,7 +656,7 @@ public final class KineticSuperFlightClientRuntime {
 
     private static double targetSpeed() {
         return CREATIVE_SPRINT_SPEED * Mth.clamp(
-                selectedSpeedMultiplier,
+                overrideMultiplier > 0.0D ? overrideMultiplier : selectedSpeedMultiplier,
                 MIN_SELECTED_SPEED_MULTIPLIER,
                 MAX_SELECTED_SPEED_MULTIPLIER
         );

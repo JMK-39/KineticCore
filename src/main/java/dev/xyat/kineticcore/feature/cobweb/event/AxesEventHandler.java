@@ -7,9 +7,13 @@ import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 
+/** Axes, pickaxes, shovels and hoes break cobwebs like a sword: same speed, and the web drops string. */
 public class AxesEventHandler {
     private static final KineticRegistrationBatch REGISTRATION = new KineticRegistrationBatch();
+    // A sword's mining speed on cobwebs.
+    private static final float SWORD_SPEED = 15.0f;
 
     public static void register() {
         REGISTRATION.run(
@@ -20,24 +24,23 @@ public class AxesEventHandler {
 
 
     public static void onHarvestCheck(KineticPlayerEvents.HarvestCheckContext context) {
-        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "fast_web", true)) return;
-
-        if (context.state().getBlock() == Blocks.COBWEB) {
-            ItemStack stack = context.player().getMainHandItem();
-            if (!stack.isEmpty() && stack.is(ItemTags.AXES)) {
-                context.canHarvest(true);
-            }
+        if (!context.canHarvest() && appliesTo(context.state(), context.player().getMainHandItem())) {
+            context.canHarvest(true);
         }
     }
 
     public static void onBreakSpeed(KineticPlayerEvents.BreakSpeedContext context) {
-        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "fast_web", true)) return;
-
-        if (context.state().getBlock() == Blocks.COBWEB) {
-            ItemStack stack = context.player().getMainHandItem();
-            if (!stack.isEmpty() && stack.is(ItemTags.AXES)) {
-                context.speed(15.0f);
-            }
+        ItemStack stack = context.player().getMainHandItem();
+        // Only tools that are not already fast on cobwebs; the incoming speed then carries the tool's base speed of 1
+        // times haste, mining fatigue, underwater and airborne factors, which keep applying as they do for a sword.
+        if (appliesTo(context.state(), stack) && stack.getDestroySpeed(context.state()) <= 1.0f) {
+            context.speed(context.speed() * SWORD_SPEED);
         }
+    }
+
+    private static boolean appliesTo(BlockState state, ItemStack stack) {
+        if (state.getBlock() != Blocks.COBWEB || stack.isEmpty()) return false;
+        if (!KTServerConfigApi.getBoolean("kineticcore:general_mechanics", "fast_web", true)) return false;
+        return stack.is(ItemTags.AXES) || stack.is(ItemTags.PICKAXES) || stack.is(ItemTags.SHOVELS) || stack.is(ItemTags.HOES);
     }
 }

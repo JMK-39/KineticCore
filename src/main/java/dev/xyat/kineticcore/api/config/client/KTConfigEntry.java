@@ -66,6 +66,17 @@ public final class KTConfigEntry<T> {
     private final UnaryOperator<T> copier;
     private final Predicate<T> validator;
     private final Runnable action;
+    /** How the list editor shows a string list's rows. */
+    public enum ListStyle {
+        /** Free text rows. */
+        TEXT,
+        /** Fixed names (packs): reorder and remove only. */
+        FIXED,
+        /** "itemId|number" rows: an item slot, its name and a number field; Add picks an item. */
+        ITEM_VALUE
+    }
+
+    private ListStyle listStyle = ListStyle.TEXT;
 
     private KTConfigEntry(
             String id,
@@ -146,6 +157,15 @@ public final class KTConfigEntry<T> {
     }
 
     /** Returns the stable entry identifier used for snapshots, pending values, and server synchronization. */
+    /** The row style of a string list in the list editor. */
+    public ListStyle listStyle() {
+        return listStyle;
+    }
+
+    void listStyle(ListStyle style) {
+        this.listStyle = style;
+    }
+
     public String id() {
         return id;
     }

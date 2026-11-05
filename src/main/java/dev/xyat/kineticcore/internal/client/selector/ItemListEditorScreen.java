@@ -1,376 +1,140 @@
 package dev.xyat.kineticcore.internal.client.selector;
 
-import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
-
 import dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays;
+import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors.ItemSelectorOptions;
+import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors.ItemSelectorPreset;
+import dev.xyat.kineticcore.api.client.gui.selector.KineticSelectors.ItemListRuleAdapter;
+import dev.xyat.kineticcore.api.registry.KineticRegistries;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.kineticcore.api.client.search.KineticItemSearch;
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
-import dev.xyat.kineticcore.api.registry.KineticRegistries;
-import dev.xyat.kineticcore.api.resource.KineticResourceIds;
-import dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen;
-import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
-import dev.xyat.kineticcore.internal.client.gui.widget.scroll.KineticScroll.GridScrollController;
-
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Consumer;
 
-public final class ItemListEditorScreen extends KineticScreen {
-    public enum SelectionMode {
-        ITEMS_ONLY,
-        ITEMS_TAGS_MODS
+/** The native item selector with a persistent multiselection draft, including tag and mod rules. */
+public final class ItemListEditorScreen extends ItemSelectorScreen {
+    public enum SelectionMode { ITEMS_ONLY, ITEMS_TAGS_MODS }
+    private final LinkedHashSet<String> rules = new LinkedHashSet<>();
+    private final Consumer<List<String>> onSave;
+    private final SelectionMode selectionMode;
+    private final ItemListRuleAdapter adapter;
+    private String previousRuleQuery;
+    private List<String> queryRules = List.of();
+
+    public ItemListEditorScreen(Component title, List<String> initialRules, SelectionMode selectionMode,
+                                Consumer<List<String>> onSave) {
+        this(title, initialRules, selectionMode, null, onSave);
     }
 
-    private static final int PANEL_X = 42;
-    private static final int PANEL_Y = 18;
-    private static final int PANEL_WIDTH = 556;
-    private static final int PANEL_HEIGHT = 330;
-    private static final int GRID_X = 69;
-    private static final int GRID_Y = 60;
-    private static final int SLOT_SIZE = 18;
-    private static final int SLOT_GAP = 1;
-    private static final int CELL_SIZE = SLOT_SIZE + SLOT_GAP;
-    private static final int COLUMNS = 27;
-    private static final int ROWS_VISIBLE = 13;
-    private static final int GRID_WIDTH = COLUMNS * CELL_SIZE - SLOT_GAP;
-    private static final int GRID_HEIGHT = ROWS_VISIBLE * CELL_SIZE - SLOT_GAP;
-    private static final int SCROLL_X = GRID_X + GRID_WIDTH + 6;
-
-    private final SelectionMode selectionMode;
-    private final Consumer<List<String>> onSave;
-    private final List<String> rules = new ArrayList<>();
-    private final Map<String, ItemStack> previewCache = new HashMap<>();
-    private final GridScrollController scroll = new GridScrollController();
-
-    private int hoveredIndex = -1;
-
-    public ItemListEditorScreen(
-            Component title,
-            List<String> initialRules,
-            SelectionMode selectionMode,
-            Consumer<List<String>> onSave
-    ) {
-        super(Objects.requireNonNull(title, "title"));
-        this.selectionMode = Objects.requireNonNull(selectionMode, "selectionMode");
-        this.onSave = Objects.requireNonNull(onSave, "onSave");
-        if (initialRules != null) {
-            Set<String> unique = new LinkedHashSet<>();
-            for (String rule : initialRules) {
-                String normalized = normalizeRule(rule);
-                if (!normalized.isEmpty()) unique.add(normalized);
-            }
-            rules.addAll(unique);
+    public ItemListEditorScreen(Component title, List<String> initialRules, SelectionMode selectionMode,
+                                ItemListRuleAdapter adapter, Consumer<List<String>> onSave) {
+        super(Objects.requireNonNull(title), KineticClientRuntime.currentScreen(), null, selectionMode == SelectionMode.ITEMS_ONLY
+                ? ItemSelectorOptions.itemsOnly(ItemSelectorPreset.defaults(), List.of(), stack -> adapter == null || adapter.acceptsItem(stack))
+                : ItemSelectorOptions.filtered(ItemSelectorPreset.defaults(), List.of(), stack -> adapter == null || adapter.acceptsItem(stack)));
+        this.selectionMode = Objects.requireNonNull(selectionMode);
+        this.adapter = adapter;
+        this.onSave = Objects.requireNonNull(onSave);
+        if (initialRules != null) for (String value : initialRules) {
+            if (value != null && !value.isBlank()) rules.add(value.trim());
         }
     }
 
-    @Override
-    protected void buildUi() {
-        updateScrollRange();
+    @Override protected int extraToolbarWidth() { return 88; }
 
-        addButton(158, 316, 96, KineticText.translatable("gui.kineticcore.items.list_editor.add"), null, this::openSelector);
-        addButton(PANEL_X + 7, PANEL_Y + 6, 96, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
-        addButton(386, 316, 96, KineticText.translatable("gui.kineticcore.hud_editor.save"), null, this::save);
+    @Override protected void buildExtraToolbar(int right, int top) {
+        addButton(right - 84, top, 40, KineticText.translatable("gui.kineticcore.items.list_editor.rules"),
+                title, this::showRules);
+        addButton(right - 40, top, 40, KineticText.translatable("gui.kineticcore.hud_editor.save"),
+                title, () -> {
+                    onSave.accept(List.copyOf(rules));
+                    if (KineticClientRuntime.currentScreen() == this) navigateBack();
+                });
     }
 
-    private void openSelector() {
-        KineticItemSearch.prepare(() ->
-                KineticClientRuntime.openScreen(new ItemSelectorScreen(this, this::acceptSelection))
-        );
-    }
-
-    private void acceptSelection(ItemSelectorScreen.Selection selection) {
-        if (selection == null) return;
-
+    @Override protected void choose(Selection selection, int button) {
         String rule;
         if (selection.isItem()) {
-            ResourceLocation id = KineticRegistries.items().id(selection.stack().getItem());
+            var id = KineticRegistries.items().id(selection.stack().getItem());
             if (id == null) return;
-            rule = id.toString();
-        } else if (selection.isTag()) {
-            if (selectionMode == SelectionMode.ITEMS_ONLY) {
-                showItemOnlyToast();
+            ItemStack stack = selection.stack();
+            if (adapter != null) {
+                String existing = rules.stream().filter(stored -> matches(stored, stack)).findFirst().orElse(null);
+                if (adapter.editItem(stack, existing, button, KineticClientRuntime.shiftModifierDown(), replacement -> {
+                    rules.removeIf(stored -> matches(stored, stack));
+                    if (replacement != null && !replacement.isBlank() && acceptsRule(replacement)) rules.add(replacement);
+                })) return;
+            }
+            rule = adapter == null ? id.toString() : adapter.itemRule(selection.stack());
+            if (selected(selection.stack())) {
+                rules.removeIf(existing -> matches(existing, selection.stack()));
                 return;
             }
-            rule = "#" + selection.value();
-        } else if (selection.isMod()) {
-            if (selectionMode == SelectionMode.ITEMS_ONLY) {
-                showItemOnlyToast();
-                return;
-            }
-            rule = "@" + selection.value();
-        } else {
-            return;
+        } else if (selectionMode == SelectionMode.ITEMS_TAGS_MODS && selection.isTag()) {
+            rule = adapter == null ? "#" + selection.value() : adapter.groupRule("#" + selection.value());
+        } else if (selectionMode == SelectionMode.ITEMS_TAGS_MODS && selection.isMod()) {
+            rule = adapter == null ? "@" + selection.value() : adapter.groupRule("@" + selection.value());
+        } else return;
+        if (rule == null || rule.isBlank() || !acceptsRule(rule)) return;
+        if (!rules.remove(rule) && button == 0) rules.add(rule);
+    }
+
+    @Override protected boolean acceptsRule(String rule) {
+        return adapter == null || adapter.acceptsRule(rule);
+    }
+
+    @Override protected List<String> additionalRuleCandidates() {
+        return adapter == null ? List.of() : List.copyOf(adapter.ruleCandidates());
+    }
+
+    @Override protected boolean matchesRuleFilter(KineticItemSearch.CachedItem item, String rule) {
+        return adapter == null ? super.matchesRuleFilter(item, rule) : adapter.matches(rule, item.stack());
+    }
+
+    @Override protected boolean matchesRuleQuery(KineticItemSearch.CachedItem item, String query) {
+        if (adapter == null) return super.matchesRuleQuery(item, query);
+        if (!query.equals(previousRuleQuery)) {
+            previousRuleQuery = query;
+            var candidates = new LinkedHashSet<String>();
+            if (adapter.acceptsRule(query)) candidates.add(query);
+            adapter.ruleCandidates().stream().filter(rule -> rule.startsWith(query.substring(0, 1))
+                    && rule.contains(query.substring(1))).forEach(candidates::add);
+            queryRules = List.copyOf(candidates);
         }
-
-        String normalized = normalizeRule(rule);
-        if (!normalized.isEmpty() && !rules.contains(normalized)) {
-            rules.add(normalized);
-            updateScrollRange();
-        }
+        var stack = item.stack();
+        return queryRules.stream().anyMatch(rule -> adapter.matches(rule, stack));
     }
 
-    private void showItemOnlyToast() {
-        KineticOverlays.toast("kineticcore_item_list_item_only", KineticText.translatable("gui.kineticcore.items.list_editor.item_only"), KineticOverlays.Position.BOTTOM_CENTER, 5000, 0, -30);
+    @Override protected boolean selected(ItemStack stack) {
+        return rules.stream().anyMatch(rule -> matches(rule, stack));
     }
 
-    private void save() {
-        onSave.accept(List.copyOf(rules));
-    }
-
-    private void updateScrollRange() {
-        scroll.update(totalRows(), ROWS_VISIBLE);
-    }
-
-    private int totalRows() {
-        return (rules.size() + COLUMNS - 1) / COLUMNS;
-    }
-
-    @Override
-    protected void renderCanvasBackground(
-            @NotNull GuiGraphics graphics,
-            int mouseX,
-            int mouseY,
-            float partialTick
-    ) {
-        GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
-        dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
-                .scrollingTextCentered(title, canvasWidth() / 2, 30, 342, 0xFFFFAA00, true);
-        graphics.fill(
-                GRID_X,
-                GRID_Y,
-                GRID_X + GRID_WIDTH,
-                GRID_Y + GRID_HEIGHT,
-                GuiTheme.current().panelAlt()
-        );
-        GuiTheme.stateOutline(graphics, GRID_X, GRID_Y, GRID_WIDTH, GRID_HEIGHT, false, false, false);
-        renderRules(graphics, mouseX, mouseY);
-        scroll.render(graphics,
-                mouseX,
-                mouseY,
-                SCROLL_X,
-                GRID_Y,
-                4,
-                GRID_HEIGHT,
-                18
-        );
-    }
-
-    @Override
-    protected void renderCanvasForeground(
-            @NotNull GuiGraphics graphics,
-            int mouseX,
-            int mouseY,
-            float partialTick
-    ) {
-        if (rules.isEmpty()) {
-            VanillaGuiDraw.centeredText(graphics, 
-                    font,
-                    KineticText.translatable("gui.kineticcore.items.list_editor.empty"),
-                    GRID_X + GRID_WIDTH / 2,
-                    GRID_Y + GRID_HEIGHT / 2 - font.lineHeight / 2,
-                    0xFFAAAAAA
-            );
-        }
-    }
-
-    private void renderRules(GuiGraphics graphics, int mouseX, int mouseY) {
-        hoveredIndex = indexAt(mouseX, mouseY);
-        int smoothRow = scroll.smoothIndexOffset();
-        int scrollShift = scroll.visualShift(CELL_SIZE);
-        int first = smoothRow * COLUMNS;
-        int last = Math.min(
-                rules.size(),
-                first + (ROWS_VISIBLE + 1) * COLUMNS
-        );
-
-        enableUiScissor(
-                graphics,
-                GRID_X,
-                GRID_Y,
-                GRID_X + GRID_WIDTH,
-                GRID_Y + GRID_HEIGHT
-        );
-        for (int index = first; index < last; index++) {
-            int visible = index - first;
-            int column = visible % COLUMNS;
-            int row = visible / COLUMNS;
-            int x = GRID_X + column * CELL_SIZE;
-            int y = GRID_Y + row * CELL_SIZE - scrollShift;
-            boolean hovered = index == hoveredIndex;
-            String rule = rules.get(index);
-            ItemStack stack = previewStack(rule);
-            boolean invalid = stack.isEmpty();
-
-            if (invalid) {
-                graphics.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, GuiTheme.current().panel());
-                GuiTheme.stateOutline(graphics, x, y, SLOT_SIZE, SLOT_SIZE, false, hovered, true);
-            } else {
-                GuiTheme.itemSlot(graphics, x, y, SLOT_SIZE, SLOT_SIZE, 2, false, hovered, false);
-            }
-            if (!stack.isEmpty()) {
-                GuiTheme.item(
-                        graphics,
-                        font,
-                        stack,
-                        x,
-                        y,
-                        SLOT_SIZE,
-                        1.0F,
-                        true
-                );
-            }
-
-            if (rule.startsWith("#") || rule.startsWith("@")) {
-                VanillaGuiDraw.text(graphics, font, rule.substring(0, 1), x + 2, y + 2, 0xFFFFFFFF, true);
-            }
-        }
-        disableUiScissor(graphics);
-    }
-
-    private ItemStack previewStack(String rule) {
-        if (rule == null || rule.isBlank()) return ItemStack.EMPTY;
-        return previewCache.computeIfAbsent(rule, this::buildPreviewStack);
-    }
-
-    private ItemStack buildPreviewStack(String rule) {
-        if (rule.startsWith("@")) {
-            String namespace = rule.substring(1);
-            return KineticRegistries.items().entries().entrySet().stream()
-                    .filter(entry -> entry.getKey().getNamespace().equals(namespace))
-                    .map(entry -> new ItemStack(entry.getValue()))
-                    .filter(stack -> !stack.isEmpty())
-                    .findFirst()
-                    .orElse(ItemStack.EMPTY);
-        }
+    private boolean matches(String rule, ItemStack stack) {
+        if (adapter != null) return adapter.matches(rule, stack);
+        var id = KineticRegistries.items().id(stack.getItem());
+        if (id == null) return false;
+        if (rule.startsWith("@")) return id.getNamespace().equals(rule.substring(1));
         if (rule.startsWith("#")) {
-            ResourceLocation id = KineticResourceIds.tryParse(rule.substring(1));
-            if (id == null) return ItemStack.EMPTY;
-            TagKey<Item> tag = TagKey.create(Registries.ITEM, id);
-            return KineticRegistries.items().values().stream()
-                    .map(ItemStack::new)
-                    .filter(stack -> stack.is(tag))
-                    .findFirst()
-                    .orElse(ItemStack.EMPTY);
+            var tag = KineticResourceIds.tryParse(rule.substring(1));
+            return tag != null && stack.is(TagKey.create(Registries.ITEM, tag));
         }
-
-        ResourceLocation id = KineticResourceIds.tryParse(rule);
-        if (id == null) return ItemStack.EMPTY;
-        Item item = KineticRegistries.items().get(id);
-        return item == null ? ItemStack.EMPTY : new ItemStack(item);
+        return id.toString().equals(rule);
     }
 
-    private int indexAt(double mouseX, double mouseY) {
-        if (!GuiTheme.hovering(mouseX, mouseY, GRID_X, GRID_Y, GRID_WIDTH, GRID_HEIGHT)) {
-            return -1;
-        }
-        int localX = (int) (mouseX - GRID_X);
-        int localY = (int) Math.floor(
-                mouseY - GRID_Y + scroll.visualShift(CELL_SIZE)
-        );
-        int column = localX / CELL_SIZE;
-        int row = localY / CELL_SIZE;
-        if (column >= COLUMNS || row >= ROWS_VISIBLE) return -1;
-        if (localX % CELL_SIZE >= SLOT_SIZE || localY % CELL_SIZE >= SLOT_SIZE) return -1;
-        int index = (scroll.smoothIndexOffset() + row) * COLUMNS + column;
-        return index >= 0 && index < rules.size() ? index : -1;
-    }
-
-    @Override
-    protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
-        boolean widget = super.canvasMouseClicked(mouseX, mouseY, button);
-
-        if (button == 0 && scroll.beginDrag(
-                mouseX,
-                mouseY,
-                SCROLL_X,
-                GRID_Y,
-                6,
-                GRID_HEIGHT,
-                18,
-                2
-        )) {
-            return true;
-        }
-
-        if (button == 1) {
-            int index = indexAt(mouseX, mouseY);
-            if (index >= 0) {
-                rules.remove(index);
-                updateScrollRange();
-                return true;
-            }
-        }
-        return widget;
-    }
-
-    @Override
-    protected boolean canvasMouseDragged(
-            double mouseX,
-            double mouseY,
-            int button,
-            double dragX,
-            double dragY
-    ) {
-        return scroll.drag(mouseY, GRID_Y, GRID_HEIGHT, 18)
-                || super.canvasMouseDragged(mouseX, mouseY, button, dragX, dragY);
-    }
-
-    @Override
-    protected boolean canvasMouseReleased(double mouseX, double mouseY, int button) {
-        return scroll.release(button)
-                || super.canvasMouseReleased(mouseX, mouseY, button);
-    }
-
-    @Override
-    protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
-        if (GuiTheme.hovering(mouseX, mouseY, GRID_X, GRID_Y, GRID_WIDTH + 12, GRID_HEIGHT)
-                && scroll.scroll(delta, 1.0D)) {
-            return true;
-        }
-        return super.canvasMouseScrolled(mouseX, mouseY, delta);
-    }
-
-    @Override
-    protected void renderTooltips(
-            GuiGraphics graphics,
-            int scaledMouseX,
-            int scaledMouseY,
-            int mouseX,
-            int mouseY
-    ) {
-        if (hoveredIndex < 0 || hoveredIndex >= rules.size()) return;
-        String rule = rules.get(hoveredIndex);
-        List<Component> lines = new ArrayList<>();
-        ItemStack stack = previewStack(rule);
-        if (!stack.isEmpty()) {
-            lines.add(stack.getHoverName());
-        }
-        lines.add(Component.literal(rule));
-        lines.add(KineticText.translatable("gui.kineticcore.items.list_editor.remove_hint"));
-        showTooltip(lines, 300);
-    }
-
-    private static String normalizeRule(String rule) {
-        return rule == null ? "" : rule.trim();
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
+    private void showRules() {
+        List<KineticOverlays.MenuItem> entries = new ArrayList<>();
+        for (String rule : List.copyOf(rules)) entries.add(KineticOverlays.MenuItem.action(
+                adapter == null ? Component.literal(rule) : adapter.ruleLabel(rule), () -> { rules.remove(rule); showRules(); }));
+        if (entries.isEmpty()) entries.add(KineticOverlays.MenuItem.action(
+                KineticText.translatable("gui.kineticcore.items.list_editor.empty"), () -> { }));
+        openContextMenu(460, 24, entries, 172);
     }
 }

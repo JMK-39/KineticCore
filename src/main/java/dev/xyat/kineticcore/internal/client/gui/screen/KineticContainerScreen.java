@@ -210,10 +210,22 @@ public abstract class KineticContainerScreen<T extends AbstractContainerMenu> ex
 
     private void renderContainerFrame(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         runtime.renderInCanvas(graphics, mouseX, mouseY, partialTick, (uiGraphics, virtualMouseX, virtualMouseY, tick) -> {
-            //? if >=26.1
-            /*renderBg(uiGraphics, tick, virtualMouseX, virtualMouseY);*/
-            vanillaRender(uiGraphics, virtualMouseX, virtualMouseY, tick);
-            renderUiForeground(uiGraphics, virtualMouseX, virtualMouseY, tick);
+            dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.beginFrame(uiGraphics);
+            try {
+                //? if >=26.1
+                /*renderBg(uiGraphics, tick, virtualMouseX, virtualMouseY);*/
+                vanillaRender(uiGraphics, virtualMouseX, virtualMouseY, tick);
+                renderUiForeground(uiGraphics, virtualMouseX, virtualMouseY, tick);
+                if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) {
+                    java.util.List<net.minecraft.client.gui.components.AbstractWidget> shown = new java.util.ArrayList<>();
+                    for (var child : children()) {
+                        if (child instanceof net.minecraft.client.gui.components.AbstractWidget widget) shown.add(widget);
+                    }
+                    dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.controls(uiGraphics, shown);
+                }
+            } finally {
+                dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.endFrame();
+            }
             runtime.controls().renderAutoCompleteSuggestions(uiGraphics, virtualMouseX, virtualMouseY);
             if (runtime.businessTooltipsAllowed(isInsideUi(mouseX, mouseY))) {
                 requestContainerTooltips(uiGraphics, virtualMouseX, virtualMouseY, mouseX, mouseY);

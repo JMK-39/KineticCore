@@ -110,21 +110,39 @@ public final class KineticText {
     }
 
     /**
-     * Text wider than its space never gets cut off: up to twice the space it scrolls back and forth; text longer
-     * than that shows its start with an ellipsis and scrolls through in full while the mouse is over it.
+     * Text wider than its space shows its start with an ellipsis; while the mouse is over it, it scrolls back and
+     * forth through the whole text, starting from the beginning each time the mouse arrives.
      */
     private static int drawOverflowing(GuiGraphics graphics, Font font, Component text, int left, int y, int maxWidth,
                                        int textWidth, int color, boolean shadow) {
-        if (textWidth > maxWidth * 2
-                && !VanillaGuiDraw.mouseOver(graphics, left, y - 1, maxWidth, font.lineHeight + 2)) {
+        if (!VanillaGuiDraw.mouseOver(graphics, left, y - 1, maxWidth, font.lineHeight + 2)) {
             return VanillaGuiDraw.text(graphics, font, ellipsized(font, text, maxWidth), left, y, color, shadow);
         }
+        long hoveredFor = hoveredMillis(left, y, maxWidth, text);
         KineticRenderRuntime.enableScissor(graphics, left, y - 1, left + maxWidth, y + font.lineHeight + 1);
         try {
-            return drawShifted(graphics, font, text, left, y, color, shadow, scrollingOffsetExact(textWidth - maxWidth));
+            return drawShifted(graphics, font, text, left, y, color, shadow, scrollingOffsetExact(textWidth - maxWidth, hoveredFor));
         } finally {
             KineticRenderRuntime.disableScissor(graphics);
         }
+    }
+
+    // When each hovered text was first hovered, so its scroll starts at the beginning. An entry not drawn hovered for
+    // a moment is dropped, which restarts the scroll the next time the mouse arrives.
+    private static final java.util.Map<Long, long[]> HOVER_STARTS = new java.util.HashMap<>();
+    private static final long HOVER_FORGET_MILLIS = 150L;
+
+    private static long hoveredMillis(int left, int y, int maxWidth, Component text) {
+        long now = Util.getMillis();
+        long key = (((long) left * 31L + y) * 31L + maxWidth) * 31L + text.getString().hashCode();
+        if (HOVER_STARTS.size() > 32) HOVER_STARTS.values().removeIf(entry -> now - entry[1] > HOVER_FORGET_MILLIS);
+        long[] entry = HOVER_STARTS.get(key);
+        if (entry == null || now - entry[1] > HOVER_FORGET_MILLIS) {
+            entry = new long[]{now, now};
+            HOVER_STARTS.put(key, entry);
+        }
+        entry[1] = now;
+        return now - entry[0];
     }
 
     /** The start of the text that fits together with a trailing ellipsis, keeping the text's own styles. */
@@ -153,7 +171,7 @@ public final class KineticText {
     }
 
     private static int scrollingOffset(int overflow) {
-        return Math.round(scrollingOffsetExact(overflow));
+        return Math.round(scrollingOffsetExact(overflow, Util.getMillis()));
     }
 
     // Back and forth at a constant 18 GUI pixels per second (about three characters a second, at least 0.75
@@ -163,11 +181,11 @@ public final class KineticText {
     private static final double MIN_SWEEP_SECONDS = 0.75D;
     private static final double END_PAUSE_SECONDS = 0.5D;
 
-    private static float scrollingOffsetExact(int overflow) {
+    private static float scrollingOffsetExact(int overflow, long millis) {
         if (overflow <= 0) return 0F;
         double sweep = Math.max(overflow / SCROLL_PIXELS_PER_SECOND, MIN_SWEEP_SECONDS);
         double leg = END_PAUSE_SECONDS + sweep;
-        double time = (Util.getMillis() / 1000.0D) % (leg * 2.0D);
+        double time = (millis / 1000.0D) % (leg * 2.0D);
         double progress;
         if (time < END_PAUSE_SECONDS) {
             progress = 0.0D;                                        // paused at the start

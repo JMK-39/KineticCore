@@ -10,6 +10,7 @@ import dev.xyat.kineticcore.api.resource.KineticResourceIds;
 import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 import dev.xyat.kineticcore.api.spawnegg.KineticSpawnEggs;
 import dev.xyat.kineticcore.api.world.event.KineticWorldEvents;
+import dev.xyat.kineticcore.feature.mechanics.config.GeneralMechanicsConfig;
 import dev.xyat.kineticcore.feature.networklimit.config.NetworkConfig;
 import dev.xyat.kineticcore.feature.spawnegg.config.SpawnEggConfig;
 import dev.xyat.kineticcore.feature.spawnegg.entity.ThrowSpawnEgg;
@@ -21,6 +22,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -53,12 +55,13 @@ public final class ItemCreatorPackRuntime {
     private static int phase,ticks,cases,potionIndex;
     private static String healthId,armorId,attackId;
     private static SpawnEggTemplate template;
-    private static boolean originalThrow,reload,guiOnly;
+    private static boolean originalThrow,reload,guiOnly,mechanicsOnly;
     private static double originalInaccuracy;
     private static com.mojang.authlib.GameProfile testOwner;
     public static void install(){
         reload="reload".equals(System.getProperty("kineticcore.itemCreatorValidation.case"));
         guiOnly="gui".equals(System.getProperty("kineticcore.itemCreatorValidation.case"));
+        mechanicsOnly="mechanics".equals(System.getProperty("kineticcore.itemCreatorValidation.case"));
         KineticClientEvents.onTick(KineticClientEvents.TickPhase.END,ItemCreatorPackRuntime::tick);
         LOG.info("ITEM_CREATOR_VALIDATION_INSTALL case={} game={}",reload?"reload":"all",KineticPlatform.gameDirectory());
         try{Files.writeString(evidencePath(),"ITEM_CREATOR_VALIDATION_INSTALL case="+testCase()+" time="+java.time.Instant.now()+"\n");}catch(java.io.IOException error){throw new java.io.UncheckedIOException(error);}
@@ -76,6 +79,7 @@ public final class ItemCreatorPackRuntime {
             else if(phase==1&&serverDone){
                 if(reload){phase=90;ticks=0;runServer(ItemCreatorPackRuntime::checkReload);return;}
                 if(guiOnly){KineticGui.closeScreen();phase=20;ticks=0;ItemCreatorGuiValidation.start(()->{phase=21;ticks=0;});return;}
+                if(mechanicsOnly){KineticGui.closeScreen();phase=66;ticks=0;runServer(ItemCreatorPackRuntime::gameplayMechanics);return;}
                 KineticGui.closeScreen();phase=2;ticks=0;KineticItemCreator.requestEgg(template,r->result=r);
             }else if(phase==2&&result!=null){
                 require(result.success(),"egg generation denied: "+result.translationKey());pass("network-give-egg");result=null;phase=3;ticks=0;
@@ -98,7 +102,9 @@ public final class ItemCreatorPackRuntime {
                     level.setBlockAndUpdate(DISPENSER.below(),Blocks.STONE.defaultBlockState());spawned.getPersistentData().putBoolean("itemcreator_saved",true);
                     Files.writeString(KineticPlatform.gameDirectory().resolve("itemcreator-saved-entity.txt"),spawned.getUUID().toString());pass("redstone-dispenser-template");ordinaryDispenser();
                 });
-            }else if(phase==6&&serverDone){phase=7;ticks=0;runServer(ItemCreatorPackRuntime::permissionsAndConfig);}
+            }else if(phase==6&&serverDone){phase=65;ticks=0;runServer(ItemCreatorPackRuntime::placeByHand);}
+            else if(phase==65&&serverDone){phase=66;ticks=0;runServer(ItemCreatorPackRuntime::gameplayMechanics);}
+            else if(phase==66&&serverDone){if(mechanicsOnly){phase=21;ticks=0;return;}phase=7;ticks=0;runServer(ItemCreatorPackRuntime::permissionsAndConfig);}
             else if(phase==7&&serverDone){phase=8;ticks=0;runServer(ItemCreatorPackRuntime::runtimeAttributeRoundTrip);}
             else if(phase==8&&serverDone){phase=81;ticks=0;KineticItemCreator.requestEgg(new SpawnEggTemplate("missing:entity",List.of(),List.of()),r->result=r);}
             else if(phase==81&&result!=null){require(!result.success(),"unknown entity request succeeded");result=null;pass("network-unknown-id-rejected");phase=82;ticks=0;runServer(()->{
@@ -162,15 +168,52 @@ public final class ItemCreatorPackRuntime {
         for(var entity:level.getEntitiesOfClass(LivingEntity.class,AREA))if(entity!=player)entity.discard();
         originalThrow=SpawnEggConfig.enableSpawnEggThrow;originalInaccuracy=SpawnEggConfig.spawnEggThrowInaccuracy;SpawnEggConfig.enableSpawnEggThrow=true;SpawnEggConfig.spawnEggThrowInaccuracy=0;
         player.getPersistentData().putBoolean("DisableEggThrow",false);
-        template=new SpawnEggTemplate("minecraft:zombie",List.of(new AttributeSpec(healthId,80,AttributeSpec.Operation.SET),new AttributeSpec(armorId,6,AttributeSpec.Operation.ADDITION),new AttributeSpec(attackId,1.5,AttributeSpec.Operation.MULTIPLY_TOTAL)),List.of(new EffectSpec("minecraft:speed",2,6000,false,true),new EffectSpec("minecraft:fire_resistance",0,-1,false,true)),"Validation Zombie");
+        template=new SpawnEggTemplate("minecraft:zombie",List.of(new AttributeSpec(healthId,80,AttributeSpec.Operation.SET),new AttributeSpec(armorId,6,AttributeSpec.Operation.ADDITION),new AttributeSpec(attackId,1.5,AttributeSpec.Operation.MULTIPLY_TOTAL)),List.of(new EffectSpec("minecraft:speed",2,6000,false,true),new EffectSpec("minecraft:fire_resistance",0,-1,false,true)),"Validation Zombie",equipment());
         KineticWorldEvents.onEntityJoin(KineticEventPriority.LOWEST,c->{if(c.entity()instanceof LivingEntity living&&AREA.contains(living.position())&&living.getType()==net.minecraft.world.entity.EntityType.ZOMBIE){JOINED.add(living.getUUID());attribute(living,healthId).setBaseValue(30);attribute(living,armorId).setBaseValue(7);attribute(living,attackId).setBaseValue(4);addExisting(attribute(living,armorId),4);addExisting(attribute(living,attackId),2);living.addEffect(new MobEffectInstance(speed(),6000,4));living.addEffect(new MobEffectInstance(effect("minecraft:invisibility"),6000,0));if(living instanceof Mob mob)mob.setNoAi(true);}});
         KineticSpawnEggs.onSpawned(KineticEventPriority.HIGHEST,c->{if(!ItemCreatorStackData.hasTemplate(c.stack())||c.entity().getType()!=net.minecraft.world.entity.EntityType.ZOMBIE)return;require(JOINED.contains(c.entity().getUUID()),"completion before entity join");c.entity().getPersistentData().putLong("itemcreator_join_tick",c.entity().level().getGameTime());var copy=c.stack();copy.setCount(99);require(c.stack().getCount()==1,"source stack aliases callbacks");LOG.info("ITEM_CREATOR_SPAWN_BEFORE base={}",attribute((LivingEntity)c.entity(),healthId).getBaseValue());});
         KineticSpawnEggs.onSpawned(KineticEventPriority.LOWEST,c->{
-            if(!ItemCreatorStackData.hasTemplate(c.stack())||c.entity().getType()!=net.minecraft.world.entity.EntityType.ZOMBIE)return;var living=(LivingEntity)c.entity();require(attribute(living,healthId).getBaseValue()==80,"late SET overwritten");require(living.getName().getString().equals("Validation Zombie"),"custom entity name lost");
+            if(!ItemCreatorStackData.hasTemplate(c.stack())||c.entity().getType()!=net.minecraft.world.entity.EntityType.ZOMBIE)return;var living=(LivingEntity)c.entity();verifyEquipment(living);require(attribute(living,healthId).getBaseValue()==80,"late SET overwritten");require(living.getName().getString().equals("Validation Zombie"),"custom entity name lost");
             require(attribute(living,armorId).getValue()==17&&attribute(living,attackId).getValue()==15,"addition/multiplier lost existing modifier");require(living.hasEffect(effect("minecraft:invisibility")),"unselected effect removed");
             var effect=living.getEffect(speed());require(effect!=null&&effect.getAmplifier()==2&&effect.getDuration()==6000&&!effect.isVisible()&&effect.showIcon(),"effect parameters incorrect");
             require(living.getPersistentData().getLong("itemcreator_join_tick")==living.level().getGameTime(),"template crossed a tick");require(living.getHealth()==living.getMaxHealth(),"new health not initialized");spawned=living;ownerless=c.player()==null;callbackCount++;
         });
+    }
+    private static List<EquipmentSpec> equipment(){
+        //? if >=1.20.5 {
+        /*String stick="minecraft:stick[minecraft:custom_data={EquipmentFixture:1b}]";
+        *///?} else {
+        String stick="minecraft:stick{EquipmentFixture:1b}";
+        //?}
+        return List.of(new EquipmentSpec(EquipmentSpec.Slot.MAINHAND,stick),new EquipmentSpec(EquipmentSpec.Slot.OFFHAND,"minecraft:torch"),new EquipmentSpec(EquipmentSpec.Slot.HEAD,"minecraft:carved_pumpkin"));
+    }
+    private static void verifyEquipment(LivingEntity living){
+        for(var spec:equipment()){
+            var expected=dev.xyat.kineticcore.api.inventory.KineticItemText.parse(spec.item());var actual=living.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.valueOf(spec.slot().name()));
+            //? if >=1.20.5 {
+            /*require(ItemStack.isSameItemSameComponents(expected,actual),"Equipment/NBT missing: "+spec.slot());
+            *///?} else {
+            require(ItemStack.isSameItemSameTags(expected,actual),"Equipment/NBT missing: "+spec.slot());
+            //?}
+        }
+    }
+    /** Other pack mods may add enchantments after spawning; the original item and custom data must survive. */
+    private static void verifySavedEquipment(LivingEntity living){
+        for(var spec:equipment()){
+            var expected=dev.xyat.kineticcore.api.inventory.KineticItemText.parse(spec.item());var actual=living.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.valueOf(spec.slot().name()));
+            require(actual.getItem()==expected.getItem()&&actual.getCount()==1,"Saved equipment item missing: "+spec.slot());
+            if(spec.slot()==EquipmentSpec.Slot.MAINHAND){
+                //? if >=1.20.5 {
+                /*var custom=actual.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);require(custom!=null,"Saved equipment custom data missing");var data=custom.copyTag();
+                *///?} else {
+                require(actual.hasTag(),"Saved equipment NBT missing");var data=actual.getTag();
+                //?}
+                //? if >=26.1 {
+                /*require(data.getByteOr("EquipmentFixture",(byte)0)==1,"Saved equipment custom marker lost");
+                *///?} else {
+                require(data.getByte("EquipmentFixture")==1,"Saved equipment custom marker lost");
+                //?}
+            }
+        }
     }
     private static void ordinaryDispenser(){
         var level=level();var block=(DispenserBlockEntity)level.getBlockEntity(DISPENSER);block.setItem(0,new ItemStack(Items.ZOMBIE_SPAWN_EGG,2));var before=level.getEntitiesOfClass(ThrowSpawnEgg.class,AREA).size();
@@ -182,6 +225,55 @@ public final class ItemCreatorPackRuntime {
             state.tick(level,DISPENSER,level.getRandom());require(block.getItem(0).getCount()==1,"cancelled launch consumed egg");require(!dev.xyat.kineticcore.feature.spawnegg.SpawnEggDispenseBehavior.INSTANCE.isSuccess(),"failed launch reported success");
         }pass("cancelled-dispenser-launch-no-consumption");
     }
+    /** A special egg placed on the ground by hand (vanilla useOn, no throw) applies its template, and an unnamed egg does not name the mob. */
+    private static void placeByHand(){
+        var level=level();var player=player();var floor=new BlockPos(1004,119,1004);
+        var egg=KineticItemCreator.buildEgg(level,new SpawnEggTemplate("minecraft:pig",List.of(new AttributeSpec(healthId,10,AttributeSpec.Operation.ADDITION)),
+                List.of(new EffectSpec("minecraft:speed",1,1200,false,true)),"",List.of()));
+        java.util.function.Predicate<LivingEntity> isPig=entity->entity.getType()==net.minecraft.world.entity.EntityType.PIG;
+        var before=Set.copyOf(level.getEntitiesOfClass(LivingEntity.class,AREA,isPig));
+        player.setItemInHand(InteractionHand.MAIN_HAND,egg);
+        var hit=new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(floor).add(0,0.5,0),Direction.UP,floor,false);
+        require(egg.useOn(new net.minecraft.world.item.context.UseOnContext(player,InteractionHand.MAIN_HAND,hit)).consumesAction(),"hand placement rejected");
+        var placed=level.getEntitiesOfClass(LivingEntity.class,AREA,isPig).stream().filter(pig->!before.contains(pig)).toList();
+        require(placed.size()==1,"hand placement spawned "+placed.size()+" pigs");var pig=placed.get(0);
+        require(pig.getMaxHealth()==20&&pig.getHealth()==20,"hand-placed egg ignored its template: max="+pig.getMaxHealth()+" health="+pig.getHealth());
+        var effect=pig.getEffect(speed());require(effect!=null&&effect.getAmplifier()==1,"hand-placed egg lost its effect");
+        require(pig.getCustomName()==null,"unnamed egg named its mob: "+pig.getCustomName());
+        pig.discard();player.getInventory().clearContent();player.containerMenu.broadcastChanges();pass("hand-placed-egg-template max=20");
+    }
+    // Fast cobweb breaking and farmland protection through the game's own mining and landing code.
+    private static void gameplayMechanics(){
+        var level=level();var player=player();player.setGameMode(GameType.SURVIVAL);player.removeAllEffects();player.getInventory().clearContent();selectZero(player);
+        var web=new BlockPos(1002,120,1006);level.setBlockAndUpdate(web,Blocks.COBWEB.defaultBlockState());var state=level.getBlockState(web);
+        java.util.function.Function<net.minecraft.world.item.Item,Float> progress=tool->{player.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(tool));return state.getDestroyProgress(player,level,web);};
+        float sword=progress.apply(Items.IRON_SWORD);
+        for(var tool:List.of(Items.IRON_AXE,Items.IRON_PICKAXE,Items.IRON_SHOVEL,Items.IRON_HOE)){float speed=progress.apply(tool);require(Math.abs(speed-sword)<=sword*1e-4f,"cobweb with "+tool+" progress="+speed+" sword="+sword);}
+        boolean fastWeb=GeneralMechanicsConfig.fastCobWebBreaking;GeneralMechanicsConfig.fastCobWebBreaking=false;
+        try{float off=progress.apply(Items.IRON_AXE);require(off<sword/10,"cobweb option off still fast: "+off);}finally{GeneralMechanicsConfig.fastCobWebBreaking=fastWeb;}
+        player.setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(Items.IRON_PICKAXE));
+        require(player.gameMode.destroyBlock(web)&&level.getBlockState(web).isAir(),"pickaxe could not break the cobweb");
+        var drops=level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,new AABB(web).inflate(1.5));
+        require(drops.stream().anyMatch(e->e.getItem().is(Items.STRING)),"pickaxe-broken cobweb dropped no string");drops.forEach(e->e.discard());
+        pass("fast-cobweb axe/pickaxe/shovel/hoe progress="+sword);
+        // A 2-block fall always tramples (chance is fall distance - 0.5) and deals no damage.
+        var farm=new BlockPos(1006,119,1006);
+        java.util.function.Function<ItemStack,Boolean> trampled=boots->{level.setBlockAndUpdate(farm,Blocks.FARMLAND.defaultBlockState());player.setItemSlot(EquipmentSlot.FEET,boots);var farmland=level.getBlockState(farm);farmland.getBlock().fallOn(level,farmland,farm,player,2);return !level.getBlockState(farm).is(Blocks.FARMLAND);};
+        require(trampled.apply(ItemStack.EMPTY),"bare feet did not trample farmland");
+        require(!trampled.apply(enchantedBoots(FEATHER_FALLING)),"Feather Falling boots trampled farmland");
+        require(trampled.apply(enchantedBoots(PROTECTION)),"Protection boots kept farmland");
+        boolean farmland=GeneralMechanicsConfig.enableFarmlandProtection;GeneralMechanicsConfig.enableFarmlandProtection=false;
+        try{require(trampled.apply(enchantedBoots(FEATHER_FALLING)),"farmland option off still protected");}finally{GeneralMechanicsConfig.enableFarmlandProtection=farmland;}
+        level.setBlockAndUpdate(farm,Blocks.STONE.defaultBlockState());player.setItemSlot(EquipmentSlot.FEET,ItemStack.EMPTY);player.getInventory().clearContent();player.containerMenu.broadcastChanges();
+        pass("farmland-feather-falling");
+    }
+    //? if >=1.21 {
+    /*private static final net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> FEATHER_FALLING=net.minecraft.world.item.enchantment.Enchantments.FEATHER_FALLING,PROTECTION=net.minecraft.world.item.enchantment.Enchantments.PROTECTION;
+    private static ItemStack enchantedBoots(net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> enchantment){var registry=level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);var boots=new ItemStack(Items.IRON_BOOTS);boots.enchant(registry.getOrThrow(enchantment),1);return boots;}
+    *///?} else {
+    private static final net.minecraft.world.item.enchantment.Enchantment FEATHER_FALLING=net.minecraft.world.item.enchantment.Enchantments.FALL_PROTECTION,PROTECTION=net.minecraft.world.item.enchantment.Enchantments.ALL_DAMAGE_PROTECTION;
+    private static ItemStack enchantedBoots(net.minecraft.world.item.enchantment.Enchantment enchantment){var boots=new ItemStack(Items.IRON_BOOTS);boots.enchant(enchantment,1);return boots;}
+    //?}
     private static void permissionsAndConfig(){
         var client=Minecraft.getInstance();var server=client.getSingleplayerServer();var player=player();var profile=new com.mojang.authlib.GameProfile(UUID.randomUUID(),"itemcreator_guest");
         //? if >=1.21 {
@@ -218,7 +310,7 @@ public final class ItemCreatorPackRuntime {
     }
     private static void checkReload()throws Exception{
         UUID id=UUID.fromString(Files.readString(KineticPlatform.gameDirectory().resolve("itemcreator-saved-entity.txt")).trim());var level=level();level.getChunkAt(new BlockPos(1007,120,1000));var entity=level.getEntity(id);require(entity instanceof LivingEntity,"saved entity missing after reopen");var living=(LivingEntity)entity;
-        require(living.getPersistentData().getBoolean("itemcreator_saved"),"save marker missing");require(attribute(living,healthId).getBaseValue()==80,"SET base changed on reopen");var effect=living.getEffect(speed());require(effect!=null&&effect.getAmplifier()==2&&effect.getDuration()<6000,"buff refreshed on reopen");pass("real-world-save-reopen");
+        verifySavedEquipment(living);require(living.getPersistentData().getBoolean("itemcreator_saved"),"save marker missing");require(attribute(living,healthId).getBaseValue()==80,"SET base changed on reopen");var effect=living.getEffect(speed());require(effect!=null&&effect.getAmplifier()==2&&effect.getDuration()<6000,"buff refreshed on reopen");pass("real-world-save-reopen");
         require(attribute(living,armorId).getValue()==17&&attribute(living,attackId).getValue()==15,"permanent modifiers duplicated/lost on reopen");
         UUID cowId=UUID.fromString(Files.readString(KineticPlatform.gameDirectory().resolve("itemcreator-saved-cow.txt")).trim());var cow=(LivingEntity)level.getEntity(cowId);require(cow!=null&&attribute(cow,attackId).getBaseValue()==13&&attribute(cow,attackId).getValue()==37.5,"runtime added cow attribute lost/duplicated on reopen");pass("runtime-added-attribute-world-reopen");
     }
@@ -245,7 +337,7 @@ public final class ItemCreatorPackRuntime {
     private static net.minecraft.server.level.ServerLevel level(){return (net.minecraft.server.level.ServerLevel)player().level();}
     private static ServerPlayer player(){var client=Minecraft.getInstance();return client.getSingleplayerServer().getPlayerList().getPlayer(client.player.getUUID());}
     private static void runServer(Checked action){serverDone=false;Minecraft.getInstance().getSingleplayerServer().execute(()->{try{action.run();serverDone=true;}catch(Throwable e){failure=e;}});}
-    private static String testCase(){return reload?"reload":guiOnly?"gui":"all";}
+    private static String testCase(){return reload?"reload":guiOnly?"gui":mechanicsOnly?"mechanics":"all";}
     private static java.nio.file.Path evidencePath(){return KineticPlatform.gameDirectory().resolve("itemcreator-validation-"+testCase()+".log");}
     private static synchronized void evidence(String line){try{Files.writeString(evidencePath(),line+"\n",java.nio.file.StandardOpenOption.CREATE,java.nio.file.StandardOpenOption.APPEND);}catch(java.io.IOException error){throw new java.io.UncheckedIOException(error);}}
     private static void pass(String name){cases++;evidence("ITEM_CREATOR_CASE_PASS case="+name);LOG.info("ITEM_CREATOR_CASE_PASS case={}",name);}

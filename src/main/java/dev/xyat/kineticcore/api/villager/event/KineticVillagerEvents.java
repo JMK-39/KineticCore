@@ -20,7 +20,8 @@ public final class KineticVillagerEvents {
         VillagerProfession profession();
 
         /**
-         * Returns the live trade list of one level; add or remove listings to change the pool.
+         * Returns the live trade list of one level; add or remove listings to change the pool. The list can always
+         * be changed, even when another mod left an unmodifiable list for that level.
          *
          * @param level villager level from 1 (novice) to 5 (master)
          */

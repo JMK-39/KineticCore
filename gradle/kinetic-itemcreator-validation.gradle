@@ -1,4 +1,15 @@
 // Opt-in actual-client fixture. Test code and metadata never enter release jars.
+def backgroundMixinConfig = 'kineticcore.validation.background.mixins.json'
+def backgroundRefmap
+if (project.property('loader') == 'forge') {
+    dependencies {
+        testAnnotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    }
+    backgroundRefmap = mixin.add(sourceSets.test, 'kineticcore.validation.background.refmap.json')
+    // ModDev shares source-set Mixin mappings with every Forge remap operation. Its generated mapping provider
+    // carries no task dependency, so order test AP output before reobf reads it, including release-JAR-only builds.
+    // compileTestJava consumes main classes directly; it does not depend on reobfJar.
+}
 def validationMetadata = layout.buildDirectory.dir('itemcreator-validation-metadata')
 def writeValidationMetadata = tasks.register('writeItemCreatorValidationMetadata') {
     outputs.dir validationMetadata
@@ -6,22 +17,43 @@ def writeValidationMetadata = tasks.register('writeItemCreatorValidationMetadata
         def name = project.property('loader') == 'forge' ? 'mods.toml' : 'neoforge.mods.toml'
         def target = new File(validationMetadata.get().asFile, "META-INF/${name}")
         target.parentFile.mkdirs()
-        target.setText('modLoader="javafml"\nloaderVersion="[1,)"\nlicense="LGPLv3"\n[[mods]]\nmodId="kineticcore_itemcreator_validation"\nversion="1.0.0"\ndisplayName="Item Creator Game Validation"\n', 'UTF-8')
+        // NeoForge reads Mixin configs only from [[mixins]]; Forge takes the MixinConfigs manifest attribute below.
+        def mixins = project.property('loader') == 'forge' ? '' : "[[mixins]]\nconfig=\"${backgroundMixinConfig}\"\n"
+        target.setText('modLoader="javafml"\nloaderVersion="[1,)"\nlicense="LGPLv3"\n[[mods]]\nmodId="kineticcore_itemcreator_validation"\nversion="1.0.0"\ndisplayName="Item Creator Game Validation"\n' + mixins, 'UTF-8')
         def formats = project.findProperty('pack_min_format')
                 ? "\"min_format\":${project.property('pack_min_format')},\"max_format\":${project.property('pack_max_format')}"
                 : "\"pack_format\":${project.findProperty('pack_format') ?: 15}"
         new File(validationMetadata.get().asFile, 'pack.mcmeta').setText("{\"pack\":{\"description\":\"Item Creator Game Validation\",${formats}}}", 'UTF-8')
+        // Background mode on every version: 26.1 reworked Window (BackgroundWindowModernMixin); only Forge needs a refmap.
+        def modernWindow = project.property('minecraft_version').tokenize('.')[0].toInteger() >= 26
+        def config = [
+                required: true,
+                minVersion: '0.8',
+                package: 'dev.xyat.kineticcoreitemcreatorvalidation.background.mixin',
+                compatibilityLevel: 'JAVA_17',
+                plugin: 'dev.xyat.kineticcoreitemcreatorvalidation.background.BackgroundValidationPlugin',
+                client: [modernWindow ? 'BackgroundWindowModernMixin' : 'BackgroundWindowMixin', 'BackgroundMouseInputMixin', 'BackgroundMinecraftMixin', 'BackgroundLanguageMixin'],
+                injectors: [defaultRequire: 1]
+        ]
+        if (project.property('loader') == 'forge') config.refmap = 'kineticcore.validation.background.refmap.json'
+        new File(validationMetadata.get().asFile, backgroundMixinConfig).setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(config)), 'UTF-8')
     }
 }
 def fixtureJar = tasks.register('itemCreatorValidationJar', Jar) {
     dependsOn 'testClasses', writeValidationMetadata
     from(sourceSets.test.output) { include 'dev/xyat/kineticcoreitemcreatorvalidation/**' }
     from validationMetadata
+    if (project.property('loader') == 'forge') {
+        from backgroundRefmap
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        manifest.attributes('MixinConfigs': backgroundMixinConfig)
+    }
     archiveFileName = 'kineticcore-itemcreator-validation.jar'
 }
 if (project.property('loader') == 'forge') {
     afterEvaluate {
         def shipped = tasks.named('reobfJar').get()
+        shipped.dependsOn(tasks.named('compileTestJava'))
         tasks.register('reobfItemCreatorValidationJar', shipped.getClass().superclass) {
             dependsOn fixtureJar
             input.set(fixtureJar.flatMap { it.archiveFile })
@@ -34,6 +66,7 @@ if (project.property('loader') == 'forge') {
     }
 }
 if (project.findProperty('kinetic_itemcreator_validation')?.toString()?.toBoolean()) {
+    if (project.property('loader') == 'forge') mixin.config(backgroundMixinConfig)
     def isolatedFixture = sourceSets.create('itemCreatorValidation')
     isolatedFixture.java.setSrcDirs([])
     isolatedFixture.resources.srcDir validationMetadata

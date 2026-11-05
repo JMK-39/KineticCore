@@ -113,7 +113,9 @@ public class ItemSelectorScreen extends KineticScreen {
     private static final ItemGridDensity GRID_DENSITY = ItemGridDensity.COMPACT;
     private static final int SLOT_SIZE = GRID_DENSITY.slotSize();
     private static final int CELL_SIZE = GRID_DENSITY.cellPitch();
-    private static final int GRID_VIEWPORT_WIDTH = 491;
+    // Exactly twenty columns plus the two-pixel viewport inset, so the last column keeps the same gap to the scrollbar
+    // as the first column keeps to the category list.
+    private static final int GRID_VIEWPORT_WIDTH = 482;
     // Exactly thirteen complete rows, including the two-pixel viewport inset. No partial stationary row.
     private static final int GRID_VIEWPORT_HEIGHT = 314;
     // Category origins remain where they were, independently of the item grid density.
@@ -123,10 +125,10 @@ public class ItemSelectorScreen extends KineticScreen {
     private static final int CATEGORY_VIEWPORT_HEIGHT = CATEGORY_ROWS_VISIBLE * CATEGORY_CELL_SIZE;
     private static final int CATEGORY_WIDTH = 116;
     private static final int CATEGORY_BUTTON_SHIFT_X = -4;
-    private static final int CATEGORY_BUTTON_WIDTH = 124;
+    private static final int CATEGORY_BUTTON_WIDTH = 129;
     private static final int CATEGORY_SCROLL_GAP = 2;
     private static final int CATEGORY_GAP = 5;
-    private static final int GRID_SHIFT_LEFT = -5;
+    private static final int GRID_SHIFT_LEFT = -10;
     private static final int CATEGORY_SCROLLBAR_SHIFT_X = 1;
     private static final int CATEGORY_SCROLLBAR_WIDTH = 4;
     private static final int MAIN_SCROLL_GAP = 2;
@@ -175,7 +177,11 @@ public class ItemSelectorScreen extends KineticScreen {
 
     /** Applies one request's selector options without sharing mutable initial state with other pending opens. */
     public ItemSelectorScreen(Screen parent, Consumer<Selection> onSelect, ItemSelectorOptions options) {
-        super(KineticText.translatable("gui.kineticcore.items.item_selector.title"));
+        this(KineticText.translatable("gui.kineticcore.items.item_selector.title"), parent, onSelect, options);
+    }
+
+    protected ItemSelectorScreen(Component title, Screen parent, Consumer<Selection> onSelect, ItemSelectorOptions options) {
+        super(title);
         setParentScreen(parent);
         this.onSelect = onSelect;
         this.options = options == null ? ItemSelectorOptions.defaults() : options;
@@ -288,31 +294,36 @@ public class ItemSelectorScreen extends KineticScreen {
             return;
         }
 
-        gridY = 34;
+        // Standard header: divider at y 24, content from y 28.
+        gridY = 28;
         categoryY = gridY;
 
         int contentW = gridContentWidth();
-        int totalWidth = CATEGORY_WIDTH
+        // Centre the visible span: from the category buttons' left edge to the item scrollbar's right edge.
+        int leadIn = -CATEGORY_BUTTON_SHIFT_X;
+        int totalWidth = leadIn
+                + CATEGORY_WIDTH
                 + CATEGORY_SCROLLBAR_WIDTH
                 + CATEGORY_GAP
+                - GRID_SHIFT_LEFT
                 + contentW
-                + SCROLLBAR_WIDTH
-                + 4;
+                + MAIN_SCROLL_GAP
+                + SCROLLBAR_WIDTH;
 
-        categoryX = Math.max(8, (canvasWidth() - totalWidth) / 2);
+        categoryX = Math.max(4, (canvasWidth() - totalWidth) / 2) + leadIn;
         gridX = categoryX + CATEGORY_WIDTH + CATEGORY_SCROLLBAR_WIDTH + CATEGORY_GAP - GRID_SHIFT_LEFT;
         itemGrid = new ItemGridLayout(gridX, gridY, GRID_VIEWPORT_WIDTH, GRID_VIEWPORT_HEIGHT, GRID_DENSITY);
         gridCols = itemGrid.columns();
         gridRowsVisible = itemGrid.visibleRows();
 
         int gap = 4;
-        int topY = 5;
+        int topY = 4;
         int backBtnW = 40;
-        int applyBtnW = 45;
+        int applyBtnW = 40;
         int rightEdge = gridX + contentW + SCROLLBAR_WIDTH + 4;
 
-        int backBtnX = categoryButtonX();
-        int applyBtnX = rightEdge - applyBtnW - 2;
+        int backBtnX = 4;
+        int applyBtnX = rightEdge - applyBtnW - 2 - extraToolbarWidth();
         btnAreaStartX = applyBtnX;
         topInfoY = topY + 6;
 
@@ -332,9 +343,9 @@ public class ItemSelectorScreen extends KineticScreen {
         applyFilterBtn.setVisible(false);
         applyFilterBtn.setEnabled(false);
 
-        int searchX = gridX;
+        int searchX = backBtnX + backBtnW + gap;
         int maxSearchWidth = Math.max(100, applyBtnX - gap - searchX);
-        int searchWidth = Math.min(220, maxSearchWidth);
+        int searchWidth = Math.min(260, maxSearchWidth);
 
         searchBox = addAutoCompleteField(
                 searchX, topY, searchWidth, Component.empty(),
@@ -349,6 +360,7 @@ public class ItemSelectorScreen extends KineticScreen {
         searchBox.setSelectionResponder(this::applySelectedSuggestion);
         searchBox.setValue(searchText);
 
+        buildExtraToolbar(rightEdge - 2, topY);
         categoryScroll.update(categoryEntries.size(), CATEGORY_ROWS_VISIBLE);
         createCategoryButtons();
         refreshDisplay();
@@ -366,13 +378,15 @@ public class ItemSelectorScreen extends KineticScreen {
         String current = searchBox == null ? searchText : searchBox.getValue();
         String trimmed = current == null ? "" : current.trim();
         if (trimmed.startsWith("@")) {
-            return allMods.stream()
-                    .map(mod -> new KineticSuggestion("@" + mod, Component.empty()))
+            return java.util.stream.Stream.concat(allMods.stream().map(mod -> "@" + mod), additionalRuleCandidates().stream().filter(rule -> rule.startsWith("@")))
+                    .distinct().filter(this::acceptsRule)
+                    .map(rule -> new KineticSuggestion(rule, Component.empty()))
                     .toList();
         }
         if (trimmed.startsWith("#")) {
-            return allTags.stream()
-                    .map(tag -> new KineticSuggestion("#" + tag, Component.empty()))
+            return java.util.stream.Stream.concat(allTags.stream().map(tag -> "#" + tag), additionalRuleCandidates().stream().filter(rule -> rule.startsWith("#")))
+                    .distinct().filter(this::acceptsRule)
+                    .map(rule -> new KineticSuggestion(rule, Component.empty()))
                     .toList();
         }
         return List.of();
@@ -441,10 +455,7 @@ public class ItemSelectorScreen extends KineticScreen {
             displayCache.put(cacheKey, displayList);
         }
 
-        mainScroll.update(
-                totalDisplayRows(),
-                gridRowsVisible
-        );
+        updateMainScroll();
         markDisplayChanged();
         updateApplyButton();
     }
@@ -644,12 +655,23 @@ public class ItemSelectorScreen extends KineticScreen {
 
     private boolean failsActiveFilter(KineticItemSearch.CachedItem item) {
         if (activeFilterType == 1 && activeFilterValue != null) {
-            return !item.namespace().equals(activeFilterValue);
+            return !matchesRuleFilter(item, "@" + activeFilterValue);
         }
         if (activeFilterType == 2 && activeFilterValue != null) {
-            return !item.tagIds().contains(activeFilterValue);
+            return !matchesRuleFilter(item, "#" + activeFilterValue);
         }
         return false;
+    }
+
+    protected List<String> additionalRuleCandidates() { return List.of(); }
+
+    protected boolean matchesRuleFilter(KineticItemSearch.CachedItem item, String rule) {
+        return rule.startsWith("@") ? item.namespace().equals(rule.substring(1)) : item.tagIds().contains(rule.substring(1));
+    }
+
+    protected boolean matchesRuleQuery(KineticItemSearch.CachedItem item, String query) {
+        return query.startsWith("@") ? item.namespace().contains(query.substring(1))
+                : item.tagIds().stream().anyMatch(tag -> tag.contains(query.substring(1)));
     }
 
     private boolean failsSearch(KineticItemSearch.CachedItem item, String query, String extraQuery) {
@@ -657,11 +679,10 @@ public class ItemSelectorScreen extends KineticScreen {
             return !extraQuery.isEmpty() && !item.matches(extraQuery);
         }
         if (query.startsWith("@") && query.length() > 1) {
-            return !item.namespace().contains(query.substring(1));
+            return !matchesRuleQuery(item, query);
         }
         if (query.startsWith("#") && query.length() > 1) {
-            String tagQuery = query.substring(1);
-            return item.tagIds().stream().noneMatch(tag -> tag.contains(tagQuery));
+            return !matchesRuleQuery(item, query);
         }
         return !query.isEmpty() && !item.matches(query);
     }
@@ -696,10 +717,13 @@ public class ItemSelectorScreen extends KineticScreen {
     private void updateApplyButton() {
         if (applyFilterBtn == null) return;
         boolean canApply = !options.itemResultsOnly()
-                && activeFilterType != 0 && activeFilterValue != null && !activeFilterValue.isBlank();
+                && activeFilterType != 0 && activeFilterValue != null && !activeFilterValue.isBlank()
+                && acceptsRule((activeFilterType == 1 ? "@" : "#") + activeFilterValue);
         applyFilterBtn.setVisible(canApply);
         applyFilterBtn.setEnabled(canApply);
     }
+
+    protected boolean acceptsRule(String rule) { return true; }
 
 
 
@@ -714,15 +738,21 @@ public class ItemSelectorScreen extends KineticScreen {
         refreshDisplay();
     }
 
+    protected int extraToolbarWidth() { return 0; }
+
+    protected void buildExtraToolbar(int right, int top) { }
+
+    protected boolean selected(ItemStack stack) { return false; }
+
+    protected void choose(Selection selection, int mouseButton) {
+        if (mouseButton != 0) return;
+        if (onSelect != null) onSelect.accept(selection);
+        navigateBack();
+    }
+
     private void applyFilterAsResult() {
-        if (onSelect != null) {
-            if (activeFilterType == 2 && activeFilterValue != null) {
-                onSelect.accept(Selection.tag(activeFilterValue));
-            } else if (activeFilterType == 1 && activeFilterValue != null) {
-                onSelect.accept(Selection.mod(activeFilterValue));
-            }
-        }
-        this.navigateBack();
+        if (activeFilterType == 2 && activeFilterValue != null) choose(Selection.tag(activeFilterValue), 0);
+        else if (activeFilterType == 1 && activeFilterValue != null) choose(Selection.mod(activeFilterValue), 0);
     }
 
     @Override
@@ -730,8 +760,9 @@ public class ItemSelectorScreen extends KineticScreen {
         if (KineticItemSearch.ready()) {
             syncCategoryButtons();
         }
-        graphics.fillGradient(0, 0, this.canvasWidth(), this.canvasHeight(), 0xFF222222, 0xFF111111);
-        graphics.fill(0, this.gridY - 4, this.canvasWidth(), this.gridY - 3, 0x40FFFFFF);
+        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.backdrop(graphics, 0, 0, this.canvasWidth(), this.canvasHeight());
+        dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme.panel(graphics, 0, 0, this.canvasWidth(), this.canvasHeight());
+        dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme.separator(graphics, 4, this.gridY - 4, this.canvasWidth() - 8);
 
     }
 
@@ -944,6 +975,7 @@ public class ItemSelectorScreen extends KineticScreen {
             for (VisibleSlot slot : visibleSlotCache) {
                 boolean hovered = mouseInGrid && slot.contains(mouseX, mouseY);
                 GuiTheme.itemSlot(graphics, slot.x(), slot.y(), SLOT_SIZE, SLOT_SIZE, 2, false, hovered, false);
+                if (selected(slot.stack())) GuiTheme.indicatorOutline(graphics, slot.x(), slot.y(), SLOT_SIZE, SLOT_SIZE, dev.xyat.kineticcore.api.client.gui.theme.KineticTheme.Indicator.SUCCESS);
                 GuiTheme.item(graphics, this.font, slot.stack(), slot.x(), slot.y(), SLOT_SIZE, 1.0F, false);
             }
         } finally {
@@ -986,6 +1018,12 @@ public class ItemSelectorScreen extends KineticScreen {
         return GRID_VIEWPORT_HEIGHT;
     }
 
+    private void updateMainScroll() {
+        int rows = totalDisplayRows();
+        mainScroll.updateContent(rows == 0 ? 0 : GRID_DENSITY.padding() * 2 + (rows - 1) * CELL_SIZE + SLOT_SIZE,
+                GRID_VIEWPORT_HEIGHT, CELL_SIZE);
+    }
+
     private int totalDisplayRows() {
         return (int) Math.ceil((double) displayList.size() / Math.max(1, gridCols));
     }
@@ -1011,10 +1049,7 @@ public class ItemSelectorScreen extends KineticScreen {
             int mouseX,
             int mouseY
     ) {
-        mainScroll.update(
-                totalDisplayRows(),
-                gridRowsVisible
-        );
+        updateMainScroll();
 
         mainScroll.render(
                 graphics,
@@ -1051,7 +1086,7 @@ public class ItemSelectorScreen extends KineticScreen {
             return true;
         }
         if (super.canvasMouseClicked(mouseX, mouseY, button)) return true;
-        if (button == 0 && KineticItemSearch.ready()) return handleListClick(mouseX, mouseY);
+        if ((button == 0 || button == 1) && KineticItemSearch.ready()) return handleListClick(mouseX, mouseY, button);
         return false;
     }
 
@@ -1089,13 +1124,10 @@ public class ItemSelectorScreen extends KineticScreen {
 
 
 
-    private boolean handleListClick(double mouseX, double mouseY) {
+    private boolean handleListClick(double mouseX, double mouseY, int button) {
         int contentWidth = gridContentWidth();
         int contentHeight = gridContentHeight();
-        mainScroll.update(
-                totalDisplayRows(),
-                gridRowsVisible
-        );
+        updateMainScroll();
 
         if (mainScroll.beginDrag(
                 mouseX,
@@ -1122,10 +1154,7 @@ public class ItemSelectorScreen extends KineticScreen {
         if (!options.accepts(selected)) {
             return true;
         }
-        if (onSelect != null) {
-            onSelect.accept(Selection.item(selected));
-        }
-        this.navigateBack();
+        choose(Selection.item(selected), button);
         return true;
     }
 
@@ -1174,7 +1203,7 @@ public class ItemSelectorScreen extends KineticScreen {
                 return true;
             }
         }
-        mainScroll.update(totalDisplayRows(), gridRowsVisible);
+        updateMainScroll();
         if (mainScroll.scroll(delta, 1.0D)) {
             invalidateVisibleSlotCache();
             return true;

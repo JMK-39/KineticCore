@@ -153,7 +153,7 @@ public final class MultiToggleListWidget extends VerticalScrollListWidget implem
         if (!visible || mouseY < getY() || mouseY >= getY() + getHeight()) return -1;
         int start = scroll.smoothIndexOffset();
         int shift = scroll.visualShift(ROW_PITCH);
-        int end = Math.min(items.size(), start + visibleRows() + 1);
+        int end = rowEnd(start, items.size());
         for (int index = start; index < end; index++) {
             StateButton button = rowButtons.get(index);
             if (!button.visible) continue;
@@ -169,7 +169,7 @@ public final class MultiToggleListWidget extends VerticalScrollListWidget implem
         if (!visible || mouseY < getY() || mouseY >= getY() + getHeight()) return null;
         int start = scroll.smoothIndexOffset();
         int shift = scroll.visualShift(ROW_PITCH);
-        int end = Math.min(items.size(), start + visibleRows() + 1);
+        int end = rowEnd(start, items.size());
         for (int rowIndex = start; rowIndex < end; rowIndex++) {
             int rowY = getY() + (rowIndex - start) * ROW_PITCH - shift + ROW_TOP_PADDING;
             List<ToggleButton> buttons = toggleButtons.get(rowIndex);
@@ -207,7 +207,7 @@ public final class MultiToggleListWidget extends VerticalScrollListWidget implem
             KineticRenderRuntime.enableScissor(graphics, getX(), getY(), getX() + contentWidth(), getY() + getHeight());
             try {
                 int start = scroll.smoothIndexOffset();
-                int end = Math.min(rowButtons.size(), start + visibleRows() + 1);
+                int end = rowEnd(start, rowButtons.size());
                 for (int index = start; index < end; index++) {
                     StateButton rowButton = rowButtons.get(index);
                     if (!rowButton.visible) continue;
@@ -242,6 +242,10 @@ public final class MultiToggleListWidget extends VerticalScrollListWidget implem
         if (!active || !visible) return false;
         if (handleScrollbarPress(mouseX, mouseY, button, selectedIndex)) return true;
         if (button != 0) return false;
+        // Rows are placed at render time; while the list scrolls smoothly they lag behind the hit test, so a click
+        // right after scrolling would miss the row it lands on (or find it inactive). Place them for this frame first.
+        refreshRange();
+        refreshLayout();
         ToggleHit hit = toggleAt(mouseX, mouseY);
         if (hit != null) {
             ToggleButton toggleButton = toggleButtons.get(hit.rowIndex()).get(hit.toggleIndex());
@@ -311,7 +315,8 @@ public final class MultiToggleListWidget extends VerticalScrollListWidget implem
     protected void refreshLayout() {
         int start = scroll.smoothIndexOffset();
         int shift = scroll.visualShift(ROW_PITCH);
-        int end = Math.min(rowButtons.size(), start + visibleRows() + 1);
+        shiftRows(-scroll.subPixelShift(ROW_PITCH), rowButtons, toggleButtons);
+        int end = rowEnd(start, rowButtons.size());
         for (int rowIndex = 0; rowIndex < rowButtons.size(); rowIndex++) {
             MultiToggleItem item = items.get(rowIndex);
             boolean rowVisible = visible && rowIndex >= start && rowIndex < end;

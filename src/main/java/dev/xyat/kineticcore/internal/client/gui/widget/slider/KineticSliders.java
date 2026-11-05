@@ -168,13 +168,13 @@ public final class KineticSliders {
             KineticTheme.Palette theme = GuiTheme.current();
             int trackY = y + Math.max(0, (height - TRACK_HEIGHT) / 2);
             int trackBottom = Math.min(y + height, trackY + TRACK_HEIGHT);
-            graphics.fill(x, trackY, x + width, trackBottom, theme.scrollTrack());
+            GuiTheme.pillRect(graphics, x, trackY, x + width, trackBottom, theme.scrollTrack());
 
             int travel = Math.max(0, width - KNOB_WIDTH);
             int knobX = x + (int) Math.round(this.value * travel);
             int fillRight = Math.max(x + 1, Math.min(x + width - 1, knobX + KNOB_WIDTH / 2));
             if (trackBottom - trackY > 2 && fillRight > x + 1) {
-                graphics.fill(x + 1, trackY + 1, fillRight, trackBottom - 1, theme.accentHover());
+                GuiTheme.pillRect(graphics, x + 1, trackY + 1, fillRight, trackBottom - 1, theme.accentHover());
             }
 
             int knobTop = y + 1;
@@ -182,7 +182,7 @@ public final class KineticSliders {
             int knobColor = error
                     ? theme.danger()
                     : isHoveredOrFocused() ? theme.scrollThumbHover() : theme.scrollThumb();
-            graphics.fill(knobX, knobTop, knobX + KNOB_WIDTH, knobBottom, knobColor);
+            GuiTheme.pillRect(graphics, knobX, knobTop, knobX + KNOB_WIDTH, knobBottom, knobColor);
             GuiTheme.stateOutline(graphics, x, y, width, height, false, isHoveredOrFocused(), error);
         }
 

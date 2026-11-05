@@ -1,6 +1,8 @@
 package dev.xyat.kineticcore.internal.client.gui.widget.button;
 
 import dev.xyat.kineticcore.internal.client.gui.text.KineticText;
+import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
+import dev.xyat.kineticcore.internal.client.gui.theme.RoundedShapes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -21,19 +23,63 @@ public abstract class VanillaButton extends Button {
         super(x, y, width, height, message, onPress, createNarration);
     }
 
+    // Fraction of a GUI pixel the button is drawn lower (or higher) than its whole-pixel position: scrolling lists
+    // set it so their rows glide in screen pixels. Hit testing keeps the whole-pixel bounds.
+    private float renderShiftY;
+
+    /** Draws the button this many (fractional) GUI pixels lower; 0 draws it at its position. */
+    public void setRenderShiftY(float shift) {
+        renderShiftY = Float.isFinite(shift) ? shift : 0F;
+    }
+
+    private void renderShifted(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        if (renderShiftY == 0F) {
+            renderButton(graphics, mouseX, mouseY, partialTick);
+            return;
+        }
+        dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw.push(graphics);
+        try {
+            dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw.translate(graphics, 0, renderShiftY, 0);
+            renderButton(graphics, mouseX, mouseY, partialTick);
+        } finally {
+            dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw.pop(graphics);
+        }
+    }
+
     /** Draws the button; the default is the vanilla look. */
     protected void renderButton(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderVanillaButton(graphics, mouseX, mouseY, partialTick);
     }
 
-    /** The vanilla button look: sprite and centred label. */
+    /** The standard button look: the vanilla sprite, or a rounded glass button in the modern style; centred label. */
     protected final void renderVanillaButton(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        if (GuiTheme.modern()) {
+            renderModernButton(graphics);
+            return;
+        }
         //? if >=26.1 {
         /*extractDefaultSprite(graphics);
         drawLabel(graphics, (active ? 0xFFFFFF : 0xA0A0A0) | net.minecraft.util.Mth.ceil(alpha * 255.0F) << 24);
         *///?} else {
         super.renderWidget(graphics, mouseX, mouseY, partialTick);
         //?}
+    }
+
+    /** A light glass key: brighter when hovered or focused, faint when disabled, with a soft rim and a top sheen. */
+    private void renderModernButton(GuiGraphics graphics) {
+        int x = getX();
+        int y = getY();
+        int width = getWidth();
+        int height = getHeight();
+        float radius = Math.min(4F, Math.min(width, height) / 3F);
+        boolean lit = active && (isHovered() || isFocused());
+        RoundedShapes.fill(graphics, x, y, width, height, radius, 0x60000000);
+        RoundedShapes.fill(graphics, x, y, width, height, radius, !active ? 0x22FFFFFF : lit ? 0x58FFFFFF : 0x34FFFFFF);
+        // The upper half catches a little more light.
+        RoundedShapes.fill(graphics, x + 1, y + 1, width - 2, Math.max(1, height / 2 - 1), Math.max(0F, radius - 1F),
+                active ? 0x14FFFFFF : 0x08FFFFFF);
+        RoundedShapes.outline(graphics, x, y, width, height, radius, 1F, lit ? 0x90FFFFFF : 0x50FFFFFF);
+        drawLabel(graphics, (active ? 0xFFFFFF : 0xA0A0A0) | net.minecraft.util.Mth.ceil(alpha * 255.0F) << 24);
     }
 
     //? if <26.1 {
@@ -76,12 +122,12 @@ public abstract class VanillaButton extends Button {
     //? if >=26.1 {
     /*@Override
     protected final void extractContents(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderButton(graphics, mouseX, mouseY, partialTick);
+        renderShifted(graphics, mouseX, mouseY, partialTick);
     }
     *///?} else {
     @Override
     protected final void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderButton(graphics, mouseX, mouseY, partialTick);
+        renderShifted(graphics, mouseX, mouseY, partialTick);
     }
     //?}
 }

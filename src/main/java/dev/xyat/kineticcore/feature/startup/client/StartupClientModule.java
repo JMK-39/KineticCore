@@ -17,13 +17,27 @@ public final class StartupClientModule {
     private static long totalStartupTime = -1L;
     private static long firstTitleScreenRenderTime = -1L;
     private static boolean calculated;
+    private static boolean registered;
 
     private StartupClientModule() {
     }
 
     public static void register() {
+        if (registered) return;
+        registered = true;
+        dev.xyat.kineticcore.api.client.gui.overlay.KineticOverlays.setTitleScreenInformationAreaProvider(StartupClientModule::informationArea);
         KineticClientEvents.onScreenInitBefore(StartupClientModule::onScreenInit);
         KineticClientEvents.onScreenRenderAfter(StartupClientModule::onScreenRender);
+    }
+
+    /** Reserves enabled information rows even after the startup timer fades, so add-ons do not jump upwards. */
+    public static dev.xyat.kineticcore.api.client.gui.layout.KineticLayout.Rect informationArea() {
+        var font=KineticClientRuntime.font();
+        int rows=registered?((StartupConfig.showLoginInfo()?1:0)+(StartupConfig.showStartupTime()?1:0)):0;
+        int width=0;
+        if(rows>0&&StartupConfig.showLoginInfo())width=font.width(KineticI18n.translatable("msg.kineticcore.startup.account_id",Component.literal(KineticClientRuntime.username())));
+        if(rows>0&&StartupConfig.showStartupTime())width=Math.max(width,font.width(KineticI18n.translatable("msg.kineticcore.startup.startup_time",Component.literal("000.00"))));
+        return new dev.xyat.kineticcore.api.client.gui.layout.KineticLayout.Rect(StartupConfig.anchorX(),StartupConfig.anchorY(),width,Math.max(0,rows*(font.lineHeight+2)-2));
     }
 
     private static void onScreenInit(Screen screen) {

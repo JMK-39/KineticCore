@@ -17,7 +17,8 @@ import java.util.List;
 public final class LayoutFrameRecorder {
     public static final boolean ENABLED = Boolean.getBoolean("kineticcore.layoutCheck");
 
-    public enum Kind { FRAME, TEXT, BUTTON, CONTROL }
+    /** FRAME: an outlined panel or surface. BACKDROP: an opaque fill or texture with no line to keep clear of. */
+    public enum Kind { FRAME, BACKDROP, TEXT, BUTTON, CONTROL }
 
     public record Box(Kind kind, int x, int y, int width, int height, String label) {
         int right() { return x + width; }
@@ -83,6 +84,11 @@ public final class LayoutFrameRecorder {
 
     public static void frame(GuiGraphics graphics, int x, int y, int width, int height) {
         record(graphics, Kind.FRAME, x, y, width, height, "");
+    }
+
+    /** An opaque fill or texture large enough to be a page background; smaller ones are icons or bars. */
+    public static void backdrop(GuiGraphics graphics, int x, int y, int width, int height) {
+        if (width >= 32 && height >= 32) record(graphics, Kind.BACKDROP, x, y, width, height, "");
     }
 
     public static void text(GuiGraphics graphics, int x, int y, int width, String label) {

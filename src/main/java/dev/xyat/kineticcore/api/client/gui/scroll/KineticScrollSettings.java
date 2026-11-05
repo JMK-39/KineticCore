@@ -50,6 +50,7 @@ public final class KineticScrollSettings {
     private static final class ConfigHolder {
         private static final KTClientConfigSpec SPEC;
         private static final KTClientConfigSpec.DoubleValue WHEEL_ITEMS_PER_NOTCH;
+        private static final KTClientConfigSpec.BooleanValue MODERN_STYLE;
 
         static {
             KTClientConfigSpec.Builder builder = KTClientConfigSpec.builder();
@@ -67,6 +68,10 @@ public final class KineticScrollSettings {
                             DEFAULT_WHEEL_ITEMS_PER_NOTCH,
                             KineticScrollSettings::isValidWheelAmount
                     );
+            MODERN_STYLE = builder.comment(
+                    "现代界面风格：圆角与柔和描边。关闭后使用经典的直角风格。",
+                    "Modern interface style: rounded corners and soft edges. Off uses the classic square style."
+            ).translation("cfg.kineticcore.ui.modern_style").defineBoolean("modernStyle", true);
 
             builder.pop();
             SPEC = builder.build();
@@ -77,6 +82,10 @@ public final class KineticScrollSettings {
 
         private static void bind() {
             wheelItemsProvider = WHEEL_ITEMS_PER_NOTCH::get;
+            dev.xyat.kineticcore.internal.client.gui.theme.GuiStyle.bind(MODERN_STYLE::get, value -> {
+                MODERN_STYLE.set(value);
+                SPEC.save();
+            });
         }
     }
 }

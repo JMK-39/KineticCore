@@ -60,6 +60,8 @@ public final class ItemCreatorService {
         //?}
         for (var spec : template.attributes()) if (!KineticRegistries.attributes().contains(KineticResourceIds.tryParse(spec.id()))) throw new IllegalArgumentException("Unknown attribute");
         validateRegisteredEffects(template.effects());
+        for (var equipment : template.equipment()) if (dev.xyat.kineticcore.api.inventory.KineticItemText.parse(equipment.item()).isEmpty())
+            throw new IllegalArgumentException("Empty equipment item");
         ItemCreatorStackData.writeTemplate(stack, template);
         name(stack, template.name().isEmpty() ? Component.translatable("gui.kineticcore.item_creator.special_egg", type.getDescription()) : Component.literal(template.name()));
         return stack;
@@ -89,6 +91,8 @@ public final class ItemCreatorService {
         /*stack.set(DataComponents.POTION_CONTENTS, new PotionContents(Optional.empty(), Optional.empty(), instances));
         *///?} else {
         PotionUtils.setCustomEffects(stack, instances);
+        // 1.20.1 draws a potion without a base potion in the "uncraftable" magenta; use the effects' own colour.
+        stack.getOrCreateTag().putInt("CustomPotionColor", PotionUtils.getColor(instances));
         //?}
         name(stack, customName.isEmpty() ? Component.translatable("gui.kineticcore.item_creator.custom_potion") : Component.literal(customName));
         return stack;

@@ -23,6 +23,8 @@ public abstract class ControlBuilder<B extends ControlBuilder<B, C>, C> {
     protected boolean enabled = true;
     /** 初始可见 / Initially visible. */
     protected boolean visible = true;
+    /** 布局编辑器中的固定名字（可为 null）/ Fixed name in the layout editor (nullable). */
+    protected String layoutId;
 
     /** 由 KineticUi 创建 / Created by KineticUi. */
     protected ControlBuilder(int x, int y, int width) {
@@ -57,6 +59,16 @@ public abstract class ControlBuilder<B extends ControlBuilder<B, C>, C> {
     /** 初始可见状态 / Initial visibility. */
     public final B visible(boolean visible) {
         this.visible = visible;
+        return self();
+    }
+
+    /**
+     * 布局编辑器中的固定名字：玩家保存的位置跟着这个名字，按钮文字或创建顺序变化都不会让布局错位。未设置时按控件类型与文字识别。
+     * Fixed name in the layout editor: the player's saved position follows this name, so changing the label or the
+     * build order cannot misplace it. Without one the control is identified by its type and label.
+     */
+    public final B layoutId(String id) {
+        this.layoutId = id == null || id.isBlank() ? null : id.trim();
         return self();
     }
 

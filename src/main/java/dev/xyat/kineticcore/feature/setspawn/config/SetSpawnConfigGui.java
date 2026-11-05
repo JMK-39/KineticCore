@@ -75,6 +75,14 @@ public final class SetSpawnConfigGui {
                         Integer.MAX_VALUE,
                         KineticI18n.translatable("cfg.kineticcore.setspawn.biome_step.tooltip")
                 )
+                .booleanValue(
+                        "protect_platform",
+                        KineticI18n.translatable("cfg.kineticcore.setspawn.protect_platform"),
+                        () -> SetSpawnConfig.protectPlatform,
+                        value -> SetSpawnConfig.protectPlatform = value,
+                        true,
+                        KineticI18n.translatable("cfg.kineticcore.setspawn.protect_platform.tooltip")
+                )
                 .build();
     }
 

@@ -4,6 +4,7 @@ import dev.xyat.kineticcore.api.client.gui.input.ScrollInput;
 import dev.xyat.kineticcore.api.client.gui.page.KineticPage;
 import dev.xyat.kineticcore.api.client.gui.render.KineticGraphics;
 import dev.xyat.kineticcore.api.client.gui.text.KineticText;
+import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
 import dev.xyat.kineticcore.api.client.gui.ui.KineticUi;
 import dev.xyat.kineticcore.api.client.gui.widget.KineticButton;
 import dev.xyat.kineticcore.api.client.gui.widget.list.SelectionItem;
@@ -55,7 +56,7 @@ public final class DatapackRecoveryPage extends KineticPage {
                 .enabled(problem() != null && problem().location() != null).tooltip(text("locate_hint"))
                 .onClick(() -> { var problem = problem(); if (problem != null && problem.location() != null)
                     DatapackRecoveryClient.locate(Path.of(problem.location().openPath())); }).build();
-        ui.button(MARGIN + (buttonWidth + GAP) * 2, y, buttonWidth).text(text("back"))
+        ui.button(MARGIN + (buttonWidth + GAP) * 2, y, 40).text(text("back"))
                 .onClick(this::leave).build();
         ui.button(MARGIN, y + CONTROL_HEIGHT + GAP, buttonWidth).text(text("core_folder"))
                 .tooltip(Component.literal(PackModule.DATA_PACK_DIR.toAbsolutePath().toString()))
@@ -79,12 +80,17 @@ public final class DatapackRecoveryPage extends KineticPage {
     }
 
     @Override
+    protected void renderBackground(KineticGraphics g, int mouseX, int mouseY, float partialTick) {
+        KineticTheme.panel(g, 0, 0, width(), height());
+    }
+
+    @Override
     protected void renderForeground(KineticGraphics g, int mouseX, int mouseY, float partialTick) {
         g.scrollingTextCentered(title(), width() / 2, 8, width() - 2 * MARGIN, 0xFFFFAA00, false);
         g.scrollingText(text("summary", problems.size()), MARGIN, 24, width() - 2 * MARGIN, 0xFFFFAA00, false);
         int top = 42, bottom = height() - 72, right = width() - MARGIN;
         g.fill(DETAILS_X, top, right, bottom, 0xCC202020);
-        g.outline(DETAILS_X, top, right - DETAILS_X, bottom - top, 0xFF777777);
+        KineticTheme.verticalSeparator(g, DETAILS_X - 2, top, bottom - top);
         int textWidth = right - DETAILS_X - 8;
         contentHeight = KineticText.wrappedHeight(details(), textWidth);
         scroll = Math.max(0, Math.min(scroll, Math.max(0, contentHeight - (bottom - top - 8))));

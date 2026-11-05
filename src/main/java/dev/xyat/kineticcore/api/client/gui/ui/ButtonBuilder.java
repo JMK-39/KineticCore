@@ -15,6 +15,8 @@ public abstract class ButtonBuilder extends LayeredControlBuilder<ButtonBuilder,
     protected boolean compact = false;
     /** 内容卡片表面（高度 26，文字隐藏，由页面自绘内容）/ Content-card surface (height 26, label hidden, page draws the content). */
     protected boolean card = false;
+    /** 展开按钮：打开菜单或列表 / Opens a menu or list. */
+    protected boolean expands = false;
 
     /** 由 KineticUi 创建 / Created by KineticUi. */
     protected ButtonBuilder(int x, int y, int width) {
@@ -48,6 +50,16 @@ public abstract class ButtonBuilder extends LayeredControlBuilder<ButtonBuilder,
     /** 紧凑样式（窄内边距）/ Compact style. */
     public final ButtonBuilder compact() {
         this.compact = true;
+        return this;
+    }
+
+    /**
+     * 展开按钮（点击打开菜单、下拉列表或选择器）：标签后统一显示向下三角，不要在文字里自己加“▾”。
+     * The button opens a menu, list or picker: every add-on gets the same down triangle after the label; do not add a
+     * "▾" to the text yourself.
+     */
+    public final ButtonBuilder expands() {
+        this.expands = true;
         return this;
     }
 

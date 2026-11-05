@@ -147,24 +147,29 @@ public final class KineticTheme {
         GuiTheme.colorSwatch(GuiGraphicsAdapter.unwrap(graphics), x, y, width, height, rgb, outlined);
     }
 
-    /** Draws a one-pixel horizontal separator using the active theme border color. */
+    /** Draws a one-pixel gray-white divider between content regions. */
     public static void separator(KineticGraphics graphics, int x, int y, int width) {
         GuiTheme.separator(GuiGraphicsAdapter.unwrap(graphics), x, y, width);
     }
 
-    /** Draws a one-pixel vertical separator using the active theme border color. */
+    /** Draws a one-pixel gray-white divider between content regions. */
     public static void verticalSeparator(KineticGraphics graphics, int x, int y, int height) {
         GuiTheme.verticalSeparator(GuiGraphicsAdapter.unwrap(graphics), x, y, height);
     }
 
-    /** Draws the standard outer frame used by item and rule grids without adding per-cell backgrounds. */
+    /** Draws a borderless grid region; cards retain their individual interactive outlines. */
     public static void gridFrame(KineticGraphics graphics, int x, int y, int width, int height) {
         GuiTheme.gridFrame(GuiGraphicsAdapter.unwrap(graphics), x, y, width, height);
     }
 
-    /** Draws the standard selected, hovered, or error outline for a control. */
+    /** Draws the standard outline; selected and hovered borders breathe while keeping distinct state colors. */
     public static void stateOutline(KineticGraphics graphics, int x, int y, int width, int height, boolean selected, boolean hovered, boolean error) {
         GuiTheme.stateOutline(GuiGraphicsAdapter.unwrap(graphics), x, y, width, height, selected, hovered, error);
+    }
+
+    /** Returns an opaque breathing version of a border color, preserving its hue and selection visibility. */
+    public static int breathingColor(int argb) {
+        return dev.xyat.kineticcore.internal.client.gui.theme.SelectionPulse.color(argb, System.nanoTime() / 1_000_000L);
     }
 
     /** Draws a standard state outline with a theme-owned color and caller-selected thickness. */

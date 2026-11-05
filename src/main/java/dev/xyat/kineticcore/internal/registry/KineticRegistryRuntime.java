@@ -96,8 +96,10 @@ public final class KineticRegistryRuntime {
         //? if forge {
         // Forge registries made with RegistryBuilder are not always mirrored into the vanilla root registry.
         IForgeRegistry<?> registry = RegistryManager.ACTIVE.getRegistry(registryId);
-        if (registry == null) return Optional.empty();
-        return Optional.of(new ForgeView<>((IForgeRegistry<T>) registry));
+        if (registry != null) return Optional.of(new ForgeView<>((IForgeRegistry<T>) registry));
+        // Vanilla registries Forge does not manage, such as the world generation types.
+        Registry<?> vanilla = BuiltInRegistries.REGISTRY.get(registryId);
+        return vanilla == null ? Optional.empty() : Optional.of(view((Registry<T>) vanilla));
         //?} else {
         /*Registry<?> registry = BuiltInRegistries.REGISTRY.get(registryId);
         if (registry == null) return Optional.empty();

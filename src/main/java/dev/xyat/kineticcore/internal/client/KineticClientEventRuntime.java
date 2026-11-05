@@ -56,6 +56,7 @@ public final class KineticClientEventRuntime {
     private static final CopyOnWriteArrayList<KineticClientEvents.HudRenderHandler> HUD_END = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<KineticClientEvents.MouseButtonHandler> MOUSE_BUTTON_BEFORE = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<KineticClientEvents.InteractionKeyHandler> INTERACTION_KEY = new CopyOnWriteArrayList<>();
+    private static final EnumMap<dev.xyat.kineticcore.api.event.KineticEventPriority, CopyOnWriteArrayList<KineticClientEvents.MouseScrollHandler>> MOUSE_SCROLL = mouseScrollHandlers();
     private static final CopyOnWriteArrayList<KineticClientEvents.PlayerRenderBeforeHandler> PLAYER_RENDER_BEFORE = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<KineticClientEvents.PlayerRenderAfterHandler> PLAYER_RENDER_AFTER = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<KineticClientEvents.BlockScreenEffectHandler> BLOCK_SCREEN_EFFECT = new CopyOnWriteArrayList<>();
@@ -64,6 +65,7 @@ public final class KineticClientEventRuntime {
     private static final EnumMap<KineticClientEvents.LevelRenderStage, CopyOnWriteArrayList<KineticClientEvents.LevelRenderHandler>> LEVEL_RENDER = levelRenderHandlers();
 
     private static final KineticForgeListenerRegistrations LISTENER_REGISTRATIONS = new KineticForgeListenerRegistrations();
+    private static final Runnable LAYOUT_EDITOR_TICK = dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor::tick;
     private static boolean initialized;
     private static boolean reloadListenerRegistrationClosed;
 
@@ -81,10 +83,15 @@ public final class KineticClientEventRuntime {
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> fire(TICK_END)));
         *///?}
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogin));
+        // The GUI layout editor's /ktlayout client command; its toggle runs on the next tick end. The tick hook is added
+        // to the list directly: going through KineticClientEvents.onTick here would re-enter initialize().
+        attempt.install(dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor::install);
+        TICK_END.addIfAbsent(LAYOUT_EDITOR_TICK);
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onLogout));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onItemTooltip));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenInitBefore));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenInitAfter));
+        attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onKineticScreenSidebarInit));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenRenderBefore));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenRenderAfter));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onScreenMousePressedBefore));
@@ -122,6 +129,13 @@ public final class KineticClientEventRuntime {
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(KineticClientEventRuntime::onBlockScreenEffect));
         attempt.install(() -> MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, KineticClientEventRuntime::onInventoryEffectLayout));
         attempt.install(() -> KineticModContextRuntime.modEventBus().addListener(KineticClientEventRuntime::onRegisterClientReloadListeners));
+        //? if >=26.1 {
+        /*// Structure previews draw through their own picture-in-picture renderer on 26.1.
+        attempt.install(() -> KineticModContextRuntime.modEventBus().addListener(
+                (net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent event) -> event.register(
+                        dev.xyat.kineticcore.internal.client.render.structure.StructurePreviewPip.State.class,
+                        dev.xyat.kineticcore.internal.client.render.structure.StructurePreviewPip::new)));
+        *///?}
         attempt.finish();
         initialized = true;
     }
@@ -187,6 +201,46 @@ public final class KineticClientEventRuntime {
     public static KineticEventSubscription registerMouseButtonBefore(KineticClientEvents.MouseButtonHandler listener) {
         initialize();
         return add(MOUSE_BUTTON_BEFORE, listener);
+    }
+
+    public static KineticEventSubscription registerMouseScroll(dev.xyat.kineticcore.api.event.KineticEventPriority priority,
+                                                               KineticClientEvents.MouseScrollHandler listener) {
+        return add(MOUSE_SCROLL.get(priority), listener);
+    }
+
+    /**
+     * Offers one in-game wheel turn to the handlers, highest priority first; called by the mouse handler before it
+     * does anything with the turn. Returns whether a handler cancelled it.
+     */
+    public static boolean mouseScrolled(double horizontal, double vertical) {
+        boolean[] cancelled = {false};
+        KineticClientEvents.MouseScrollContext context = new KineticClientEvents.MouseScrollContext() {
+            @Override
+            public double vertical() {
+                return vertical;
+            }
+
+            @Override
+            public double horizontal() {
+                return horizontal;
+            }
+
+            @Override
+            public boolean cancelled() {
+                return cancelled[0];
+            }
+
+            @Override
+            public void cancel() {
+                cancelled[0] = true;
+            }
+        };
+        for (CopyOnWriteArrayList<KineticClientEvents.MouseScrollHandler> listeners : MOUSE_SCROLL.values()) {
+            if (listeners.isEmpty()) continue;
+            KineticCallbackBatch.runUntilCancelled(listeners, listener -> listener.handle(context), context::cancelled);
+            if (cancelled[0]) return true;
+        }
+        return false;
     }
 
     public static KineticEventSubscription registerInteractionKey(KineticClientEvents.InteractionKeyHandler listener) {
@@ -274,6 +328,18 @@ public final class KineticClientEventRuntime {
             CLIENT_RELOAD_LISTENERS.clear();
         }
         if (failure != null) throw failure;
+    }
+
+    private static void onKineticScreenSidebarInit(ScreenEvent.Init.Post event) {
+        if (!(event.getScreen() instanceof dev.xyat.kineticcore.internal.client.gui.screen.KineticScreenHost)) return;
+        for (var listener : List.copyOf(event.getListenersList())) {
+            for (Class<?> type = listener.getClass(); type != null; type = type.getSuperclass()) {
+                if (type.getName().equals("dev.ftb.mods.ftblibrary.sidebar.SidebarGroupGuiButton")) {
+                    event.removeListener(listener);
+                    break;
+                }
+            }
+        }
     }
 
     private static void onScreenInitBefore(ScreenEvent.Init.Pre event) {
@@ -846,6 +912,15 @@ public final class KineticClientEventRuntime {
 
     private static void fire(CopyOnWriteArrayList<Runnable> listeners) {
         KineticCallbackBatch.runAll(listeners, Runnable::run);
+    }
+
+    private static EnumMap<dev.xyat.kineticcore.api.event.KineticEventPriority, CopyOnWriteArrayList<KineticClientEvents.MouseScrollHandler>> mouseScrollHandlers() {
+        EnumMap<dev.xyat.kineticcore.api.event.KineticEventPriority, CopyOnWriteArrayList<KineticClientEvents.MouseScrollHandler>> handlers =
+                new EnumMap<>(dev.xyat.kineticcore.api.event.KineticEventPriority.class);
+        for (dev.xyat.kineticcore.api.event.KineticEventPriority priority : dev.xyat.kineticcore.api.event.KineticEventPriority.values()) {
+            handlers.put(priority, new CopyOnWriteArrayList<>());
+        }
+        return handlers;
     }
 
     private static <T> KineticEventSubscription add(CopyOnWriteArrayList<T> listeners, T listener) {

@@ -25,6 +25,15 @@ public final class KTConfigPageBuilderAtomicRegression {
         reject(() -> duplicate.action("run", Component.empty(), () -> {}, null));
         check(duplicate.build().entries().size() == 1,
                 "valid duplicate ids must still be rejected");
+
+        KTConfigPage.Builder integerEditor = KTConfigPage.builder("test:integer_editor", Component.empty());
+        integerEditor.intList("radii", Component.empty(), () -> java.util.List.of(0, 1, 2, 3),
+                ignored -> {}, java.util.List.of(0, 1, 2, 3), null);
+        KTConfigPage.ListEditor editor = (title, values, apply) -> apply.accept(java.util.List.of("-1", "0", "8", "16"));
+        integerEditor.listEditor("radii", editor);
+        check(integerEditor.build().listEditor("radii") == editor,
+                "integer-list rows must accept a dedicated visual editor without changing the stored row type");
+        reject(() -> duplicate.listEditor("run", editor));
         System.out.println("PASS: " + cases + " config-page atomic registration cases");
     }
 

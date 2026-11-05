@@ -137,6 +137,20 @@ public final class KineticFlightClient {
         KineticSuperFlightClientRuntime.setRollInput(leftDown, rightDown);
     }
 
+    /**
+     * Lets an add-on drive the local player's super flight: while set, flight moves at {@code speedMultiplier} times
+     * creative flight speed (1 to 100), reaches it at once, and takes the flight pose whenever the player moves forward
+     * or back. Zero or less hands speed and pose back to the player's own super-flight settings.
+     */
+    public static void overrideSuperFlight(double speedMultiplier) {
+        KineticSuperFlightClientRuntime.setOverride(speedMultiplier);
+    }
+
+    /** The speed multiplier set by {@link #overrideSuperFlight(double)}, or 0 while the player's own settings apply. */
+    public static double superFlightOverride() {
+        return KineticSuperFlightClientRuntime.override();
+    }
+
     /** Returns the remembered target super-flight speed multiplier. */
     public static double superFlightSelectedSpeedMultiplier() {
         return KineticSuperFlightClientRuntime.selectedSpeedMultiplier();

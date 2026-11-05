@@ -53,6 +53,8 @@ public final class CustomControlSupport {
         void onTick(KineticCustomControl control);
 
         Component narration(KineticCustomControl control);
+
+        int[] tooltipBounds(KineticCustomControl control, double mouseX, double mouseY);
     }
 
     private static volatile Accessor accessor;
@@ -109,7 +111,8 @@ public final class CustomControlSupport {
     }
 
     /** Vanilla widget adapter hosting one custom control. */
-    public static final class Widget extends VanillaWidget implements InternalControl {
+    public static final class Widget extends VanillaWidget implements InternalControl,
+            dev.xyat.kineticcore.internal.client.gui.widget.TooltipAnchorSource {
         private int pressedButton = -1;
         private final KineticCustomControl control;
 
@@ -156,6 +159,12 @@ public final class CustomControlSupport {
         }
 
         @Override
+        public void setHeight(int height) {
+            control.resizeControlHeight(height);
+            this.height = height;
+        }
+
+        @Override
         public void setVisible(boolean visible) {
             control.setControlVisible(visible);
             this.visible = visible;
@@ -190,6 +199,11 @@ public final class CustomControlSupport {
             //? if >=1.20.3
             /*sync();*/
             access().render(control, GuiGraphicsAdapter.wrap(graphics), mouseX, mouseY, partialTick);
+        }
+
+        @Override
+        public int[] tooltipAnchor(double mouseX, double mouseY) {
+            return access().tooltipBounds(control, mouseX, mouseY);
         }
 
         @Override

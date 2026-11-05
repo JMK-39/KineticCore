@@ -25,6 +25,12 @@ public final class ItemCreatorValidation {
         validateId(template.entityId());
         validateAttributes(template.attributes());
         validateEffects(template.effects());
+        validateEquipment(template.equipment());
+    }
+    public static void validateEquipment(List<EquipmentSpec> entries) {
+        if (entries.size() > EquipmentSpec.Slot.values().length) throw new IllegalArgumentException("Too many equipment slots");
+        Set<EquipmentSpec.Slot> slots = new HashSet<>();
+        for (var entry : entries) if (!slots.add(entry.slot())) throw new IllegalArgumentException("Duplicate equipment slot");
     }
     public static void validateAttributes(List<AttributeSpec> entries) {
         unique(entries.stream().map(AttributeSpec::id).toList());

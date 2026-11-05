@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
  * run on the client thread while a config screen is open.
  */
 public final class KTConfigPage {
-    /** Opens a visual string-list editor. Apply returns a draft; the config page still owns saving and permissions. */
+    /** Opens a visual string/integer-list editor. Apply returns textual draft values; the config page owns typed validation, saving and permissions. */
     @FunctionalInterface
     public interface ListEditor {
         /** Receives an immutable draft and a callback to replace it; cancelling must not call apply. */
@@ -107,6 +107,7 @@ public final class KTConfigPage {
     private final Component title;
     private final Component description;
     private final KTConfigScope scope;
+    private final int displayOrder;
     private final boolean serverManaged;
     private final boolean mirrorOnJoin;
     private final ApplyTiming applyTiming;
@@ -120,6 +121,7 @@ public final class KTConfigPage {
         this.title = builder.title;
         this.description = builder.description;
         this.scope = builder.scope;
+        this.displayOrder = builder.displayOrder;
         this.serverManaged = builder.serverManaged;
         this.mirrorOnJoin = builder.mirrorOnJoin;
         this.applyTiming = builder.applyTiming;
@@ -166,6 +168,9 @@ public final class KTConfigPage {
     public KTConfigScope scope() {
         return scope;
     }
+
+    /** Display priority within the same module and scope; smaller values appear first. */
+    public int displayOrder() { return displayOrder; }
 
     /**
      * Returns whether a {@link KTConfigScope#SERVER_AUTHORITATIVE} page is edited through Kinetic's server config
@@ -253,6 +258,7 @@ public final class KTConfigPage {
         private final Map<String, ListEditor> listEditors = new HashMap<>();
         private Component description;
         private KTConfigScope scope = KTConfigScope.LOCAL_INSTALLATION;
+        private int displayOrder;
         private boolean serverManaged;
         private boolean mirrorOnJoin;
         private ApplyTiming applyTiming = ApplyTiming.MIXED;
@@ -266,16 +272,16 @@ public final class KTConfigPage {
         }
 
         /**
-         * Replaces a string-list row's text editor with an add-on's visual editor, without changing its
+         * Replaces a string/integer-list row's text editor with an add-on's visual editor, without changing its
          * storage format, validation, draft handling or server authorization. Register after the row.
-         * @param entryId an existing string-list row id
+         * @param entryId an existing string-list or integer-list row id
          * @param editor visual editor callback
          * @return this builder
          */
         public Builder listEditor(String entryId, ListEditor editor) {
             if (entries.stream().noneMatch(entry -> entry.id().equals(entryId)
-                    && entry.type() == KTConfigEntry.Type.STRING_LIST)) {
-                throw new IllegalArgumentException("Visual editor requires a string-list row: " + entryId);
+                    && (entry.type() == KTConfigEntry.Type.STRING_LIST || entry.type() == KTConfigEntry.Type.INTEGER_LIST))) {
+                throw new IllegalArgumentException("Visual editor requires a string-list or integer-list row: " + entryId);
             }
             listEditors.put(entryId, Objects.requireNonNull(editor, "editor"));
             return this;
@@ -302,6 +308,12 @@ public final class KTConfigPage {
          */
         public Builder scope(KTConfigScope scope) {
             this.scope = Objects.requireNonNull(scope, "scope");
+            return this;
+        }
+
+        /** Sets display priority without changing the page's stable persistence identifier. */
+        public Builder displayOrder(int order) {
+            this.displayOrder = order;
             return this;
         }
 
@@ -1069,6 +1081,49 @@ public final class KTConfigPage {
                 List<String> defaultValue, Component tooltip
         ) {
             return stringListValidated(id, label, reader, writer, defaultValue, value -> true, tooltip);
+        }
+
+        /**
+         * Adds a string list whose items are fixed names (for example pack ids): the editor reorders and
+         * removes them but never edits a name or adds a new one.
+         *
+         * @param id entry id, unique within this page
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue list restored by reset; copied, must not be {@code null}
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         */
+        public Builder orderList(
+                String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
+                List<String> defaultValue, Component tooltip
+        ) {
+            stringList(id, label, reader, writer, defaultValue, tooltip);
+            entries.get(entries.size() - 1).listStyle(KTConfigEntry.ListStyle.FIXED);
+            return this;
+        }
+
+        /**
+         * Adds a list of {@code itemId|number} pairs edited as item slots with a number beside each: clicking a
+         * slot changes the item, Add picks a new item.
+         *
+         * @param id entry id, unique within this page
+         * @param label row label shown to the player
+         * @param reader supplies the live value each time the editor loads or refreshes the row
+         * @param writer receives an accepted value when the page is saved
+         * @param defaultValue list restored by reset; copied, must not be {@code null}
+         * @param validator rule on the whole list; a rejected value blocks saving
+         * @param tooltip optional hover text, or {@code null} for none
+         * @return this builder
+         */
+        public Builder itemValueList(
+                String id, Component label, Supplier<List<String>> reader, Consumer<List<String>> writer,
+                List<String> defaultValue, Predicate<List<String>> validator, Component tooltip
+        ) {
+            stringListValidated(id, label, reader, writer, defaultValue, validator, tooltip);
+            entries.get(entries.size() - 1).listStyle(KTConfigEntry.ListStyle.ITEM_VALUE);
+            return this;
         }
 
         /**

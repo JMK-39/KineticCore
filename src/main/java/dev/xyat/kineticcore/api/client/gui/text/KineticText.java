@@ -56,9 +56,12 @@ public final class KineticText {
         return trim(safe, available) + ELLIPSIS;
     }
 
-    /** 按宽度换行 / Wraps a component into lines of at most maxWidth. */
+    /**
+     * 按宽度换行，逗号、句号、右括号等不放在行首，左括号不放在行尾 / Wraps a component into lines of at most maxWidth;
+     * closing punctuation never starts a line and opening punctuation never ends one.
+     */
     public static List<FormattedCharSequence> wrap(Component text, int maxWidth) {
-        return font().split(text == null ? FormattedText.EMPTY : text, Math.max(1, maxWidth));
+        return dev.xyat.kineticcore.internal.client.gui.text.LineBreaks.split(font(), text == null ? FormattedText.EMPTY : text, maxWidth);
     }
 
     /** 换行后的总高度 / Total height after wrapping. */

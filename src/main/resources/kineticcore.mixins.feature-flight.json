@@ -18,6 +18,7 @@
     "client.FlightClientMixins$MouseTweaks",
     "client.FlightClientMixins$GameModeTweaks",
     "client.FlightClientMixins$CameraTweaks",
+    "client.FlightClientMixins$ElytraSoundTweaks",
     "client.FlightClientMixins$PlayerRendererTweaks",
     "client.FlightClientMixins$GameRendererTweaks",
     "client.FlightClientMixins$LevelRendererTweaks"

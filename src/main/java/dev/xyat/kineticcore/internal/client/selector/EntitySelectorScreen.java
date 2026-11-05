@@ -46,16 +46,24 @@ import java.util.function.Consumer;
  * responsibility.
  */
 public final class EntitySelectorScreen extends KineticScreen {
-    private static final int COLS = 8;
-    private static final int CELL_W = 68;
-    private static final int CELL_H = 68;
-    private static final int GRID_X = 42;
-    private static final int GRID_Y = 67;
-    private static final int VISIBLE_ROWS = 3;
+    // Entity cards use the same model size as the other entity grids, so more entities fit on one screen.
+    private static final int COLS = 12;
+    private static final int CELL_W = 52;
+    private static final int CELL_H = 52;
+    private static final int GRID_X = 4;
+    private static final int GRID_Y = 28;
+    private static final int VISIBLE_ROWS = 6;
     private static final int GRID_W = COLS * CELL_W;
-    private static final int GRID_H = VISIBLE_ROWS * CELL_H;
-    private static final int SCROLL_X = GRID_X + GRID_W + 6;
+    private static final int GRID_H = 328;
+    private static final int SCROLL_X = GRID_X + GRID_W + 2;
     private static final int SCROLL_W = 4;
+    private static final int FILTER_W = 60;
+    private static final int FILTER_X = SCROLL_X + SCROLL_W - FILTER_W;
+    /** Search field width; the selected count follows it on the same row, before the filter button. */
+    private static final int SEARCH_W = 300;
+    private static final int COUNT_X = GRID_X + SEARCH_W + 8;
+    private static final int TOP_BUTTON_W = 92;
+    private static final int BACK_BUTTON_W = 40;
     private static final int MODS_PER_PAGE = 8;
     private static final int FILTER_MENU_WIDTH = 140;
 
@@ -127,7 +135,7 @@ public final class EntitySelectorScreen extends KineticScreen {
     @Override
     protected void buildUi() {
         KineticEditBox searchBox = addTextField(
-                GRID_X, 38, Math.min(GRID_W, 430),
+                48, 4, SEARCH_W,
                 KineticText.translatable("gui.kineticcore.entity_selector.search_hint"),
                 KineticText.translatable("gui.kineticcore.entity_selector.search_hint"),
                 null, null
@@ -139,14 +147,16 @@ public final class EntitySelectorScreen extends KineticScreen {
             updateSearch(searchQuery);
         });
 
-        addCompactButton(GRID_X + 438, 38, 96,
+        addCompactButton(FILTER_X - 88, 4, FILTER_W,
                 KineticText.translatable("gui.kineticcore.entity_selector.filter"),
                 KineticText.translatable("gui.kineticcore.entity_selector.filter.tooltip"),
                 this::showFilterMenu);
 
-        addButton(166, 325, 92, KineticText.translatable("gui.kineticcore.entity_selector.clear"), null, selectedIds::clear);
-        addButton(GRID_X, 16, 92, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
-        addButton(382, 325, 92, KineticText.translatable("gui.kineticcore.entity_selector.apply"), null, this::applyAndReturn);
+        // Back on the left of the top row, Clear and Apply on the right, so the grid gets the room below.
+        int right = SCROLL_X + SCROLL_W;
+        addButton(4, 4, BACK_BUTTON_W, KineticText.translatable("gui.kineticcore.config.back"), null, this::onClose);
+        addButton(right - 84, 4, 40, KineticText.translatable("gui.kineticcore.entity_selector.clear"), null, selectedIds::clear);
+        addButton(right - 40, 4, 40, KineticText.translatable("gui.kineticcore.entity_selector.apply"), null, this::applyAndReturn);
 
         updateSearch(searchQuery);
     }
@@ -194,7 +204,7 @@ public final class EntitySelectorScreen extends KineticScreen {
         entries.add(KineticOverlays.MenuItem.action(
                 KineticText.translatable("gui.kineticcore.entity_selector.filter.mods", selectedMods.size()),
                 () -> showModMenu(0)));
-        openContextMenu(GRID_X + 438, 60, entries, FILTER_MENU_WIDTH);
+        openContextMenu(FILTER_X - 88, 24, entries, FILTER_MENU_WIDTH);
     }
 
     /** Page the namespace menu so large modpacks do not overflow the screen. */
@@ -233,7 +243,7 @@ public final class EntitySelectorScreen extends KineticScreen {
                     KineticText.translatable("gui.kineticcore.entity_selector.filter.next"),
                     () -> showModMenu(page + 1)));
         }
-        openContextMenu(GRID_X + 438, 60, entries, FILTER_MENU_WIDTH);
+        openContextMenu(FILTER_X - 88, 24, entries, FILTER_MENU_WIDTH);
     }
 
     private CategoryFilter categoryOf(String id) {
@@ -302,27 +312,19 @@ public final class EntitySelectorScreen extends KineticScreen {
 
     private void updateScrollRange() {
         int totalRows = (filteredEntityIds.size() + COLS - 1) / COLS;
-        scroll.updateRange(Math.max(0, totalRows - VISIBLE_ROWS), totalRows, VISIBLE_ROWS);
+        scroll.updateContent(totalRows == 0 ? 0 : totalRows * CELL_H - 2, GRID_H, CELL_H);
     }
 
     @Override
     protected void renderCanvasBackground(
             @NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         deferredTooltip = null;
-        GuiTheme.panel(graphics, 20, 12, 600, 342);
-        dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
-                .scrollingTextCentered(title, canvasWidth() / 2, 22, 364, 0xFFFFAA00, true);
-        GuiTheme.panelAlt(graphics, GRID_X - 3, GRID_Y - 3, GRID_W + 6, GRID_H + 6);
+        GuiTheme.panel(graphics, 0, 0, 640, 360);
+        int right = SCROLL_X + SCROLL_W;
+        var adapter = dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics);
         renderGrid(graphics, mouseX, mouseY);
         scroll.render(graphics, mouseX, mouseY,
                 SCROLL_X, GRID_Y, SCROLL_W, GRID_H, 18
-        );
-        VanillaGuiDraw.centeredText(graphics, 
-                font,
-                KineticText.translatable("gui.kineticcore.entity_selector.selected", Component.literal(String.valueOf(selectedIds.size()))),
-                canvasWidth() / 2,
-                306,
-                0xFFAAAAAA
         );
         if (filteredEntityIds.isEmpty()) {
             VanillaGuiDraw.centeredText(graphics, 
@@ -340,7 +342,7 @@ public final class EntitySelectorScreen extends KineticScreen {
         int scrollShift = scroll.visualShift(CELL_H);
         int first = smoothRow * COLS;
         int last = Math.min(
-                first + (VISIBLE_ROWS + 1) * COLS,
+                first + (VISIBLE_ROWS + 2) * COLS,
                 filteredEntityIds.size()
         );
         enableUiScissor(
@@ -360,21 +362,17 @@ public final class EntitySelectorScreen extends KineticScreen {
                     && mouseX >= x && mouseX < x + CELL_W
                     && mouseY >= y && mouseY < y + CELL_H;
 
-            EntityPreviewRenderer.drawCheckerboard(graphics, x + 2, y + 2, CELL_W - 4, CELL_H - 4);
-            if (selected) {
-                // 已选中（已修改）的生物使用绿色双线描边 / Selected (modified) entities use a green double outline.
-                GuiTheme.indicatorOutline(graphics, x, y, CELL_W, CELL_H, KineticTheme.Indicator.SUCCESS);
-                GuiTheme.indicatorOutline(graphics, x + 1, y + 1, CELL_W - 2, CELL_H - 2, KineticTheme.Indicator.SUCCESS);
-            } else {
-                GuiTheme.stateOutline(graphics, x, y, CELL_W, CELL_H, false, hovered, false);
-            }
+            // Each card is an item slot 1 px inside its cell, so neighbours keep a 2 px gap; selected cards get a
+            // single green outline on the card.
+            GuiTheme.itemSlot(graphics, x, y, CELL_W - 2, hovered);
+            if (selected) GuiTheme.indicatorOutline(graphics, x, y, CELL_W - 2, CELL_H - 2, KineticTheme.Indicator.SUCCESS);
 
             boolean rendered = previewRenderer.renderCanvas(
                     graphics, id, "selector:" + id,
                     x + 3, y + 3, CELL_W - 6, CELL_H - 6, hovered
             );
             if (!rendered) {
-                VanillaGuiDraw.centeredText(graphics, font, "?", x + CELL_W / 2, y + 23, 0xFF777777);
+                VanillaGuiDraw.centeredText(graphics, font, "?", x + CELL_W / 2, y + CELL_H / 2 - 4, 0xFF777777);
             }
             int previewTop = Math.max(y, GRID_Y);
             int previewBottom = Math.min(y + CELL_H, GRID_Y + GRID_H);
@@ -409,6 +407,8 @@ public final class EntitySelectorScreen extends KineticScreen {
 
     private int entityIndex(double mouseX, double mouseY) {
         int column = (int) ((mouseX - GRID_X) / CELL_W);
+        double localY = mouseY - GRID_Y + scroll.visualShift(CELL_H);
+        if (column >= COLS || (mouseX - GRID_X) % CELL_W >= CELL_W - 2 || localY % CELL_H >= CELL_H - 2) return -1;
         int row = (int) Math.floor(
                 (mouseY - GRID_Y + scroll.visualShift(CELL_H)) / CELL_H
         );

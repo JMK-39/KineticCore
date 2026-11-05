@@ -129,8 +129,8 @@ public final class KineticScroll {
             int visualWidth = visualScrollbarWidth(width);
             int visualX = visualScrollbarX(x, width);
             KineticTheme.Palette theme = GuiTheme.current();
-            graphics.fill(visualX, y, visualX + visualWidth, y + height, theme.scrollTrack());
-            graphics.fill(
+            GuiTheme.pillRect(graphics, visualX, y, visualX + visualWidth, y + height, theme.scrollTrack());
+            GuiTheme.pillRect(graphics,
                     visualX,
                     thumbY,
                     visualX + visualWidth,
@@ -162,8 +162,8 @@ public final class KineticScroll {
                     && mouseY >= y
                     && mouseY <= y + height;
             KineticTheme.Palette theme = GuiTheme.current();
-            graphics.fill(x, y, x + width, y + height, theme.scrollTrack());
-            graphics.fill(
+            GuiTheme.pillRect(graphics, x, y, x + width, y + height, theme.scrollTrack());
+            GuiTheme.pillRect(graphics,
                     thumbX,
                     y,
                     thumbX + safeThumbWidth,
@@ -423,8 +423,33 @@ public final class KineticScroll {
         );
     }
 
+    /**
+     * Smooth scrolling motion: a critically damped spring pulls the shown offset to the target. It starts and stops
+     * gently (no jump at the first frame, no hard stop) and keeps its speed when wheel notches follow each other, so
+     * fast scrolling glides instead of moving in steps. Critically damped, so it never overshoots the target.
+     */
+    static final class Spring {
+        /** Stiffness: about a third of a second to settle on a new target. */
+        private static final double OMEGA = 15D;
+
+        private Spring() {
+        }
+
+        /** Advances {@code [position, velocity]} by {@code seconds} towards {@code target}. */
+        static double[] step(double position, double velocity, double target, double seconds) {
+            double offset = position - target;
+            double decay = Math.exp(-OMEGA * seconds);
+            double carry = (velocity + OMEGA * offset) * seconds;
+            double nextOffset = (offset + carry) * decay;
+            double nextVelocity = (velocity - OMEGA * carry) * decay;
+            if (Math.abs(nextOffset) < 1.0E-3D && Math.abs(nextVelocity) < 1.0E-2D) return new double[]{target, 0D};
+            return new double[]{target + nextOffset, nextVelocity};
+        }
+    }
+
     /** Animated scroll state shared by Kinetic scrolling controls. */
     public static class State {
+        private double velocity;
         private double current;
         private double target;
         private double max;
@@ -440,6 +465,7 @@ public final class KineticScroll {
             long now = System.nanoTime();
             if (!initialized || immediate) {
                 current = this.target;
+                velocity = 0D;
                 initialized = true;
                 lastAnimationNanos = now;
                 return current;
@@ -465,6 +491,7 @@ public final class KineticScroll {
 
             if (immediate) {
                 current = target;
+                velocity = 0D;
                 lastAnimationNanos = System.nanoTime();
                 return current;
             }
@@ -509,6 +536,7 @@ public final class KineticScroll {
             this.max = validMaximum(max);
             this.target = clamp(value);
             this.current = this.target;
+            this.velocity = 0D;
             this.initialized = true;
             this.lastAnimationNanos = System.nanoTime();
         }
@@ -539,18 +567,14 @@ public final class KineticScroll {
             target = clamp(target);
             current = clamp(current);
 
-            double difference = target - current;
-            if (Math.abs(difference) <= 1.0E-3D) {
+            if (Math.abs(target - current) <= 1.0E-3D && Math.abs(velocity) < 1.0E-2D) {
                 current = target;
+                velocity = 0D;
                 return;
             }
-
-            double factor =
-                    1D - Math.exp(-18D * deltaSeconds);
-
-            current = clamp(
-                    current + difference * factor
-            );
+            double[] next = Spring.step(current, velocity, target, deltaSeconds);
+            current = clamp(next[0]);
+            velocity = current == next[0] ? next[1] : 0D;
         }
 
         private double validMaximum(double requested) {
@@ -946,8 +970,10 @@ public final class KineticScroll {
         private int offset;
         private double currentOffset;
         private double targetOffset;
+        private double velocity;
         private long lastAnimationNanos = System.nanoTime();
         private int maxOffset;
+        private double endOffset;
         private int totalItems;
         private int visibleItems;
         private boolean dragging;
@@ -1006,6 +1032,7 @@ public final class KineticScroll {
                     0,
                     this.totalItems - this.visibleItems
             );
+            this.endOffset = this.maxOffset;
             if (this.maxOffset == 0) {
                 dragging = false;
                 dragGrabOffset = 0;
@@ -1025,6 +1052,7 @@ public final class KineticScroll {
             this.totalItems = Math.max(0, totalItems);
             this.visibleItems = Math.max(1, visibleItems);
             this.maxOffset = Math.max(0, maxOffset);
+            this.endOffset = this.maxOffset;
             if (this.maxOffset == 0) {
                 dragging = false;
                 dragGrabOffset = 0;
@@ -1033,6 +1061,20 @@ public final class KineticScroll {
             currentOffset = clamp(currentOffset);
             targetOffset = clamp(targetOffset);
             offset = clamp((int) Math.round(targetOffset));
+        }
+
+        /** Uses the actual clipped viewport, including partial rows, with no trailing blank row. */
+        public void updateContent(int contentPixels, int viewportPixels, int unitPixels) {
+            int unit = Math.max(1, unitPixels);
+            this.totalItems = Math.max(0, contentPixels);
+            this.visibleItems = Math.max(1, viewportPixels);
+            this.endOffset = Math.max(0D, (this.totalItems - (double) this.visibleItems) / unit);
+            this.maxOffset = (int) Math.ceil(endOffset);
+            if (!canScroll()) {
+                dragging = false;
+                dragGrabOffset = 0;
+            }
+            advanceAnimation();
         }
 
         /** Returns the nearest logical item offset after advancing smooth animation. */
@@ -1062,6 +1104,14 @@ public final class KineticScroll {
         /** Converts the fractional offset into a pixel shift for one item/row size. */
         public int visualShift(int unitPixels) {
             return (int) Math.round(fractionalOffset() * Math.max(0, unitPixels));
+        }
+
+        /**
+         * What {@link #visualShift} rounds away, between -0.5 and 0.5 pixels. Lists translate their rows by minus this
+         * while drawing, so scrolling moves in screen pixels instead of whole (scaled) GUI pixels.
+         */
+        public float subPixelShift(int unitPixels) {
+            return (float) (fractionalOffset() * Math.max(0, unitPixels) - visualShift(unitPixels));
         }
 
         /** Returns the maximum logical offset currently allowed by this controller. */
@@ -1155,10 +1205,11 @@ public final class KineticScroll {
 
         /** Immediately sets current and target offsets to the supplied clamped logical position. */
         public void setOffset(int offset) {
-            int clamped = clamp(offset);
-            this.offset = clamped;
+            double clamped = clamp((double) offset);
+            this.offset = (int) Math.round(clamped);
             this.currentOffset = clamped;
             this.targetOffset = clamped;
+            this.velocity = 0D;
             this.lastAnimationNanos = System.nanoTime();
         }
 
@@ -1174,6 +1225,7 @@ public final class KineticScroll {
             offset = 0;
             currentOffset = 0D;
             targetOffset = 0D;
+            velocity = 0D;
             lastAnimationNanos = System.nanoTime();
             dragging = false;
             dragGrabOffset = 0;
@@ -1355,7 +1407,7 @@ public final class KineticScroll {
                     height,
                     thumbHeight(height, minThumbHeight),
                     maxOffset,
-                    smoothOffset(),
+                    endOffset <= 0D ? 0D : smoothOffset() * maxOffset / endOffset,
                     dragging
             );
         }
@@ -1385,8 +1437,8 @@ public final class KineticScroll {
             updateThumbHover(hovered);
             registerFrameHook();
             KineticTheme.Palette theme = GuiTheme.current();
-            graphics.fill(x, y, x + width, y + height, theme.scrollTrack());
-            graphics.fill(
+            GuiTheme.pillRect(graphics, x, y, x + width, y + height, theme.scrollTrack());
+            GuiTheme.pillRect(graphics,
                     currentThumbLeft,
                     y,
                     currentThumbLeft + currentThumbWidth,
@@ -1447,7 +1499,7 @@ public final class KineticScroll {
 
             advanceAnimation();
             return y + (int) Math.round(
-                    travel * (currentOffset / maxOffset)
+                    travel * (currentOffset / endOffset)
             );
         }
 
@@ -1472,7 +1524,7 @@ public final class KineticScroll {
 
             advanceAnimation();
             return x + (int) Math.round(
-                    travel * (currentOffset / maxOffset)
+                    travel * (currentOffset / endOffset)
             );
         }
 
@@ -1531,7 +1583,7 @@ public final class KineticScroll {
                     Math.min(1D, ratio)
             );
 
-            double next = clamp(ratio * maxOffset);
+            double next = clamp(ratio * endOffset);
             currentOffset = next;
             targetOffset = next;
             offset = clamp((int) Math.round(next));
@@ -1565,7 +1617,7 @@ public final class KineticScroll {
                     Math.min(1D, ratio)
             );
 
-            double next = clamp(ratio * maxOffset);
+            double next = clamp(ratio * endOffset);
             currentOffset = next;
             targetOffset = next;
             offset = clamp((int) Math.round(next));
@@ -1579,22 +1631,25 @@ public final class KineticScroll {
 
             targetOffset = clamp(targetOffset);
             if (dragging) {
+                // The thumb follows the pointer exactly; no motion is carried over.
                 currentOffset = targetOffset;
+                velocity = 0D;
+            } else if (Math.abs(targetOffset - currentOffset) <= 1.0E-3D && Math.abs(velocity) < 1.0E-2D) {
+                currentOffset = targetOffset;
+                velocity = 0D;
             } else {
-                double difference = targetOffset - currentOffset;
-                if (Math.abs(difference) <= 1.0E-3D) {
-                    currentOffset = targetOffset;
-                } else {
-                    double factor = 1D - Math.exp(-18D * deltaSeconds);
-                    currentOffset += difference * factor;
-                }
+                double[] next = Spring.step(currentOffset, velocity, targetOffset, deltaSeconds);
+                currentOffset = next[0];
+                velocity = next[1];
             }
-            currentOffset = clamp(currentOffset);
+            double clamped = clamp(currentOffset);
+            if (clamped != currentOffset) velocity = 0D;
+            currentOffset = clamped;
             offset = clamp((int) Math.round(targetOffset));
         }
 
         private double clamp(double value) {
-            return Math.max(0D, Math.min(value, maxOffset));
+            return Math.max(0D, Math.min(value, endOffset));
         }
 
         private int clamp(int value) {

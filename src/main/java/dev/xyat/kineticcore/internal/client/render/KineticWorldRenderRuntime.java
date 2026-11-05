@@ -32,12 +32,85 @@ public final class KineticWorldRenderRuntime {
             *///?} else {
             ThickWorldLineType.createType();
             //?}
+    /** Lines that ignore depth, for the parts of a box hidden behind blocks. */
+    //? if >=26.1 {
+    /*private static final com.mojang.blaze3d.pipeline.RenderPipeline SEE_THROUGH_LINES_PIPELINE = com.mojang.blaze3d.pipeline.RenderPipeline
+            .builder(net.minecraft.client.renderer.RenderPipelines.LINES_SNIPPET)
+            .withLocation(net.minecraft.resources.Identifier.fromNamespaceAndPath("kineticcore", "pipeline/lines_see_through"))
+            .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(new com.mojang.blaze3d.pipeline.DepthStencilState(com.mojang.blaze3d.platform.CompareOp.ALWAYS_PASS, false))
+            .build();
+    private static final RenderType SEE_THROUGH_LINES = RenderType.create("kinetic_lines_see_through",
+            net.minecraft.client.renderer.rendertype.RenderSetup.builder(SEE_THROUGH_LINES_PIPELINE)
+                    .setLayeringTransform(net.minecraft.client.renderer.rendertype.LayeringTransform.VIEW_OFFSET_Z_LAYERING)
+                    .setOutputTarget(net.minecraft.client.renderer.rendertype.OutputTarget.ITEM_ENTITY_TARGET)
+                    .createRenderSetup());
+    *///?} else {
+    private static final RenderType SEE_THROUGH_LINES = ThickWorldLineType.createSeeThroughLinesType();
+    //?}
+    /**
+     * Additive glow quads: lightning blending, no culling, depth-tested without writing depth. 26.1's lightning type
+     * writes depth (overlapping glows would cut each other off), so there it is the dragon-ray type: the same blending
+     * without depth writes, taking triangles and culling back faces.
+     */
+    private static final RenderType GLOW =
+            //? if >=26.1 {
+            /*net.minecraft.client.renderer.rendertype.RenderTypes.dragonRays();
+            *///?} else {
+            ThickWorldLineType.createGlowType();
+            //?}
+    /** Tinted quads: ordinary alpha blending, no culling, depth-tested without writing depth. */
+    private static final RenderType TINT =
+            //? if >=26.1 {
+            /*net.minecraft.client.renderer.rendertype.RenderTypes.debugQuads();
+            *///?} else {
+            ThickWorldLineType.createTintType();
+            //?}
     //? if >=1.21 {
     /*// Reused by every screen overlay; it grows to the largest overlay drawn so far.
     private static final ByteBufferBuilder OVERLAY_BUFFER = new ByteBufferBuilder(256);
     *///?}
+    /**
+     * Kinetic's own immediate source for glow and tint batches: closing a batch draws it at once, so a tint batch closed
+     * before a glow batch is always under it. Some mods wrap the level renderer's source, defer its draws and replay them
+     * by type, which put the glow under the tint.
+     */
+    private static final MultiBufferSource.BufferSource EFFECTS =
+            //? if >=1.21 {
+            /*MultiBufferSource.immediate(new ByteBufferBuilder(4096));
+            *///?} else {
+            MultiBufferSource.immediate(new com.mojang.blaze3d.vertex.BufferBuilder(4096));
+            //?}
+
+    //? if <26.1 {
+    /**
+     * The camera's view rotation for this frame (model view times stage pose), recorded after entities, where every
+     * version sets it up the same way vanilla draws entities. Later stages disagree: on 1.20.1 weather leaves the
+     * rotation both in the pose and in the model view, on 1.21.1 only in the model view.
+     */
+    private static final Matrix4f VIEW = new Matrix4f();
+    private static final Matrix4f IDENTITY = new Matrix4f();
+    private static boolean viewRecorded;
+    //?}
 
     private KineticWorldRenderRuntime() {
+    }
+
+    private static boolean viewCaptureInstalled;
+
+    /** Records the frame's view rotation after entities and forgets it when the level is done (installed once). */
+    public static void installViewCapture() {
+        if (viewCaptureInstalled) return;
+        viewCaptureInstalled = true;
+        //? if <26.1 {
+        dev.xyat.kineticcore.api.client.event.KineticClientEvents.onLevelRender(
+                dev.xyat.kineticcore.api.client.event.KineticClientEvents.LevelRenderStage.AFTER_ENTITIES, context -> {
+                    VIEW.set(RenderSystem.getModelViewMatrix()).mul(context.poseStack().last().pose());
+                    viewRecorded = true;
+                });
+        dev.xyat.kineticcore.api.client.event.KineticClientEvents.onLevelRender(
+                dev.xyat.kineticcore.api.client.event.KineticClientEvents.LevelRenderStage.AFTER_LEVEL, context -> viewRecorded = false);
+        //?}
     }
 
     /**
@@ -89,6 +162,117 @@ public final class KineticWorldRenderRuntime {
         //?}
     }
 
+    public static Vec3 cameraPosition(Camera camera) {
+        return camera.getPosition();
+    }
+
+    public static float cameraYaw(Camera camera) {
+        //? if >=26.1 {
+        /*return camera.yRot();
+        *///?} else {
+        return camera.getYRot();
+        //?}
+    }
+
+    public static float cameraPitch(Camera camera) {
+        //? if >=26.1 {
+        /*return camera.xRot();
+        *///?} else {
+        return camera.getXRot();
+        //?}
+    }
+
+    /** Adds one glow (additive) or tint (alpha-blended) quad with a colour per corner; points are world positions. */
+    public static void glowQuad(PoseStack poseStack, Vec3 cameraPosition, boolean additive,
+                                Vec3 a, Vec3 b, Vec3 c, Vec3 d, int argbA, int argbB, int argbC, int argbD) {
+        if (poseStack == null) {
+            return;
+        }
+        VertexConsumer consumer = EFFECTS.getBuffer(additive ? GLOW : TINT);
+        //? if >=26.1 {
+        /*Matrix4f pose = poseStack.last().pose();
+        *///?} else {
+        // Camera-relative positions only: the view rotation is applied once, as the model view, when the batch draws.
+        Matrix4f pose = viewRecorded ? IDENTITY : poseStack.last().pose();
+        //?}
+        //? if >=26.1 {
+        /*if (additive) {
+            // Triangles with back faces culled: both halves of the quad in both windings.
+            glowVertex(consumer, pose, cameraPosition, a, argbA);
+            glowVertex(consumer, pose, cameraPosition, b, argbB);
+            glowVertex(consumer, pose, cameraPosition, c, argbC);
+            glowVertex(consumer, pose, cameraPosition, a, argbA);
+            glowVertex(consumer, pose, cameraPosition, c, argbC);
+            glowVertex(consumer, pose, cameraPosition, d, argbD);
+            glowVertex(consumer, pose, cameraPosition, c, argbC);
+            glowVertex(consumer, pose, cameraPosition, b, argbB);
+            glowVertex(consumer, pose, cameraPosition, a, argbA);
+            glowVertex(consumer, pose, cameraPosition, d, argbD);
+            glowVertex(consumer, pose, cameraPosition, c, argbC);
+            glowVertex(consumer, pose, cameraPosition, a, argbA);
+            return;
+        }
+        *///?}
+        glowVertex(consumer, pose, cameraPosition, a, argbA);
+        glowVertex(consumer, pose, cameraPosition, b, argbB);
+        glowVertex(consumer, pose, cameraPosition, c, argbC);
+        glowVertex(consumer, pose, cameraPosition, d, argbD);
+    }
+
+    private static void glowVertex(VertexConsumer consumer, Matrix4f pose, Vec3 camera, Vec3 point, int argb) {
+        float x = (float) (point.x - camera.x);
+        float y = (float) (point.y - camera.y);
+        float z = (float) (point.z - camera.z);
+        float alpha = ((argb >>> 24) & 0xFF) / 255.0F;
+        float red = ((argb >>> 16) & 0xFF) / 255.0F;
+        float green = ((argb >>> 8) & 0xFF) / 255.0F;
+        float blue = (argb & 0xFF) / 255.0F;
+        //? if >=1.21 {
+        /*consumer.addVertex(pose, x, y, z).setColor(red, green, blue, alpha);
+        *///?} else {
+        consumer.vertex(pose, x, y, z).color(red, green, blue, alpha).endVertex();
+        //?}
+    }
+
+    /**
+     * Draws the quads of one public glow or tint batch now, with the frame's recorded view rotation as the model view
+     * (the quads are camera-relative), so the effects sit on what they belong to at every stage. Before entities, or if
+     * no rotation was recorded, the quads carry the stage's pose and draw under the game's model view as it is. The
+     * stage's own projection is set as well.
+     */
+    public static void endGlowBatch(boolean additive, Matrix4f projection) {
+        //? if >=26.1 {
+        /*EFFECTS.endBatch(additive ? GLOW : TINT);
+        *///?} else {
+        //? if >=1.20.5 {
+        /*Matrix4fStack modelView = RenderSystem.getModelViewStack();
+        modelView.pushMatrix();
+        if (viewRecorded) modelView.set(VIEW);
+        *///?} else {
+        PoseStack modelView = RenderSystem.getModelViewStack();
+        modelView.pushPose();
+        if (viewRecorded) {
+            modelView.setIdentity();
+            modelView.last().pose().set(VIEW);
+        }
+        //?}
+        RenderSystem.applyModelViewMatrix();
+        RenderSystem.backupProjectionMatrix();
+        if (projection != null) RenderSystem.setProjectionMatrix(projection, RenderSystem.getVertexSorting());
+        try {
+            EFFECTS.endBatch(additive ? GLOW : TINT);
+        } finally {
+            RenderSystem.restoreProjectionMatrix();
+            //? if >=1.20.5 {
+            /*modelView.popMatrix();
+            *///?} else {
+            modelView.popPose();
+            //?}
+            RenderSystem.applyModelViewMatrix();
+        }
+        //?}
+    }
+
     /** Draws one camera-relative line box into the shared line buffer. */
     public static void lineBox(
             PoseStack poseStack,
@@ -115,6 +299,30 @@ public final class KineticWorldRenderRuntime {
         float green = ((argb >>> 8) & 0xFF) / 255.0F;
         float blue = (argb & 0xFF) / 255.0F;
         LevelRenderer.renderLineBox(poseStack, consumer, relativeBox, red, green, blue, alpha);
+        //?}
+    }
+
+    /** Draws one camera-relative line box that is not hidden by blocks, into its own line buffer. */
+    public static void lineBoxSeeThrough(
+            PoseStack poseStack,
+            Camera camera,
+            MultiBufferSource.BufferSource bufferSource,
+            AABB worldBox,
+            int argb
+    ) {
+        if (poseStack == null || camera == null || bufferSource == null || worldBox == null) {
+            return;
+        }
+        //? if >=26.1 {
+        /*Vec3 cameraPosition = camera.position();
+        net.minecraft.client.renderer.ShapeRenderer.renderShape(poseStack, bufferSource.getBuffer(SEE_THROUGH_LINES),
+                net.minecraft.world.phys.shapes.Shapes.create(worldBox),
+                -cameraPosition.x, -cameraPosition.y, -cameraPosition.z, argb, 1.0F);
+        *///?} else {
+        Vec3 cameraPosition = camera.getPosition();
+        AABB relativeBox = worldBox.move(-cameraPosition.x, -cameraPosition.y, -cameraPosition.z);
+        LevelRenderer.renderLineBox(poseStack, bufferSource.getBuffer(SEE_THROUGH_LINES), relativeBox,
+                ((argb >>> 16) & 0xFF) / 255.0F, ((argb >>> 8) & 0xFF) / 255.0F, (argb & 0xFF) / 255.0F, ((argb >>> 24) & 0xFF) / 255.0F);
         //?}
     }
 
@@ -185,6 +393,8 @@ public final class KineticWorldRenderRuntime {
     /** Flushes all shared world-line render types after one public batch finishes. */
     public static void endLineBatch(MultiBufferSource.BufferSource bufferSource) {
         if (bufferSource != null) {
+            // The faint see-through lines go first so the depth-tested ones draw over them where they are visible.
+            bufferSource.endBatch(SEE_THROUGH_LINES);
             //? if >=26.1 {
             /*bufferSource.endBatch(net.minecraft.client.renderer.rendertype.RenderTypes.lines());
             *///?} else {
@@ -272,6 +482,63 @@ public final class KineticWorldRenderRuntime {
                 Runnable clearState
         ) {
             super(name, format, mode, bufferSize, affectsCrumbling, sortOnUpload, setupState, clearState);
+        }
+
+        private static RenderType createGlowType() {
+            return RenderType.create(
+                    "kinetic_glow",
+                    DefaultVertexFormat.POSITION_COLOR,
+                    VertexFormat.Mode.QUADS,
+                    2048,
+                    false,
+                    false,
+                    RenderType.CompositeState.builder()
+                            .setShaderState(POSITION_COLOR_SHADER)
+                            .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                            .setCullState(NO_CULL)
+                            .setDepthTestState(LEQUAL_DEPTH_TEST)
+                            .setWriteMaskState(COLOR_WRITE)
+                            .createCompositeState(false)
+            );
+        }
+
+        private static RenderType createTintType() {
+            return RenderType.create(
+                    "kinetic_tint",
+                    DefaultVertexFormat.POSITION_COLOR,
+                    VertexFormat.Mode.QUADS,
+                    2048,
+                    false,
+                    false,
+                    RenderType.CompositeState.builder()
+                            .setShaderState(POSITION_COLOR_SHADER)
+                            .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                            .setCullState(NO_CULL)
+                            .setDepthTestState(LEQUAL_DEPTH_TEST)
+                            .setWriteMaskState(COLOR_WRITE)
+                            .createCompositeState(false)
+            );
+        }
+
+        private static RenderType createSeeThroughLinesType() {
+            return RenderType.create(
+                    "kinetic_lines_see_through",
+                    DefaultVertexFormat.POSITION_COLOR_NORMAL,
+                    VertexFormat.Mode.LINES,
+                    256,
+                    false,
+                    false,
+                    RenderType.CompositeState.builder()
+                            .setShaderState(RENDERTYPE_LINES_SHADER)
+                            .setLineState(new LineStateShard(java.util.OptionalDouble.empty()))
+                            .setLayeringState(VIEW_OFFSET_Z_LAYERING)
+                            .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                            .setOutputState(ITEM_ENTITY_TARGET)
+                            .setWriteMaskState(COLOR_WRITE)
+                            .setCullState(NO_CULL)
+                            .setDepthTestState(NO_DEPTH_TEST)
+                            .createCompositeState(false)
+            );
         }
 
         private static RenderType createType() {

@@ -37,6 +37,21 @@ public final class KineticScrollStateRegression {
         check(!grid.drag(40, 0, 120, 12), "range becoming non-scrollable must cancel previous drag");
         check(!grid.release(0), "cancelled drag must not consume subsequent release");
         check(grid.offset() == 0, "range shrink clamps offset to zero");
+        grid.updateContent(7 * 44, 298, 44);
+        grid.setOffset(Integer.MAX_VALUE);
+        check(Math.abs(grid.smoothOffset() * 44 - 10) < 0.001,
+                "partial final row is fully revealed without blank space");
+        grid.scroll(-100, 1);
+        check(Math.abs(grid.smoothOffset() * 44 - 10) < 0.001, "wheel cannot overscroll the exact bottom");
+        check(grid.beginDrag(2, 20, 0, 0, 6, 120, 12, 0), "begin exact-range drag");
+        grid.drag(1000, 0, 120, 12);
+        check(Math.abs(grid.smoothOffset() * 44 - 10) < 0.001, "thumb reaches same exact bottom");
+        grid.release(0);
+        grid.updateContent(900, 298, 44);
+        grid.setOffset(Integer.MAX_VALUE);
+        check(Math.abs(grid.smoothOffset() * 44 - 602) < 0.001, "non-integral row range stays pixel exact");
+        grid.updateContent(200, 298, 44);
+        check(!grid.canScroll() && grid.smoothOffset() == 0, "short content never scrolls into blank space");
         check(KineticScroll.stateThumbHeight(100, 8, 4, 10) == 100,
                 "thumb cannot exceed track when visible count exceeds total");
         check(KineticScroll.stateThumbHeight(0, 3, 5, 10) == 0,

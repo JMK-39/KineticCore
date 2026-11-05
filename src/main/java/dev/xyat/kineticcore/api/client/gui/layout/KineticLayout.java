@@ -11,6 +11,13 @@ public final class KineticLayout {
     public static final int MAX_CANVAS_WIDTH = 640;
     /** Hard maximum virtual canvas height, independent of display resolution. */
     public static final int MAX_CANVAS_HEIGHT = 360;
+    /** Default spacing for newly laid out controls; existing explicit layouts retain their own spacing. */
+    public static final int CONTROL_GAP = 4;
+    /** Default inset from a page's canvas. */
+    public static final int CANVAS_INSET = 4;
+    /** Standard entity card geometry shared by entity editors and selectors. */
+    public static final int ENTITY_CARD_SIZE = 50;
+    public static final int ENTITY_CARD_GAP = 2;
     /** Density bucket derived from how much the target area must scale a design canvas. */
     public enum Level {
         LARGE,

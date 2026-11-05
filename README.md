@@ -23,7 +23,8 @@ One JAR per Minecraft version: `kineticcore-<loader>-<minecraft>-<version>.jar`,
 ### Features
 
 - **Config center (F6)**: every setting in one place, client and server settings separated, each feature can be switched off.
-- **Flight**: flight permission, Superman-style high-speed flight, creative noclip, and crawling.
+- **Custom potions and spawn eggs**: save reusable presets with multiple effects and mob attributes. Spawn eggs also support six equipment slots, item NBT/components and an equipped mob preview. Click an equipment icon to search for an item; right-click to edit its data or clear the slot.
+- **Flight**: flight permission, Superman-style high-speed flight with speed-driven effects and sounds (vapour cone, sonic boom, takeoff blast, plasma), creative noclip, and crawling.
 - **Custom world spawn**: pick the spawn of new worlds by dimension, biome or structure (villages by default).
 - **First-join rewards**: items, equipment and commands for new players; **world init commands** for a new save.
 - **Data pack loading recovery**: diagnose singleplayer loading errors, locate faulty files or ZIP packs, and temporarily retry without the identified local packs. Reopening the world restores the original pack selection. Dedicated servers report the diagnosis in their logs. See [Data pack recovery](https://github.com/JMK-39/KineticCore/wiki/Data-Pack-Recovery).
@@ -54,9 +55,10 @@ KineticCore 是 Kinetic 系列的核心模组：自带一组玩法与客户端�
 ### 功能
 
 - **配置中心（F6）**：所有设置集中在一处，客户端与服务端设置分开，每项功能都可以关闭。
+- **自定义药水与刷怪蛋**：保存含多个药水效果、属性的预设；刷怪蛋还支持六个装备槽位、物品 NBT／组件和装备预览。点击装备格搜索并更换物品，右键编辑数据或清空槽位。
 - **数据包加载防护**：显示单人存档的加载错误，定位错误文件或 ZIP 包，并允许暂时跳过已定位的本地错误包重试；重新进入存档仍加载原来的包，专用服务器仅在日志中报告诊断。详见 [数据包加载防护](https://github.com/JMK-39/KineticCore/wiki/数据包加载防护)。
-- **飞行**：飞行权限、超人式高速飞行、创造模式穿墙，以及主动爬行。
-- **自定义出生点**：按维度、群系或结构选择新世界的出生点（默认村庄）。
+- **飞行**：飞行权限、超人式高速飞行（随速度变化的特效与音效：音锥、音爆、起飞爆鸣、等离子光焰）、创造模式穿墙，以及主动爬行。
+- **自定义出生点**：按维度、群系或结构选择新世界的出生点（默认村庄）；任何高度的地面（包括底层基岩）都可落脚，找不到地面时可选铺黑曜石保护平台。
 - **首次进入奖励**：为新玩家发放物品、装备并执行指令；**世界初始化指令**在新存档首次加载时执行。
 - **客户端**：紧凑状态效果显示（JEI 自动避开）、FPS 与 TPS/MSPT HUD、复制物品 ID 与详情、日志清理与过滤、新安装时的默认选项。
 - **游戏机制**：PVP 保护、捡起物品的生物仍可自然消失、按比例的虚空伤害、创造模式虚空免疫、投掷刷怪蛋、耕地保护、快速破坏蜘蛛网、属性范围限制、更大的网络容量、移除配方书、蜜蜂修复。

@@ -69,8 +69,50 @@ public final class FlightClient {
                 () -> KineticClientEvents.onCameraAngles(FlightClient::onCameraAngles),
                 () -> KineticClientEvents.onHudRender(KineticClientEvents.HudStage.END, FlightClient::renderSuperFlightHorizon),
                 () -> KineticClientEvents.onBlockScreenEffect(FlightClient::onBlockOverlay),
+                () -> KineticClientEvents.onMouseScroll(dev.xyat.kineticcore.api.event.KineticEventPriority.NORMAL, FlightClient::onScroll),
                 () -> CommonHooks.onPlayerPoseUpdate(FlightClient::applySuperFlightPose)
         );
+    }
+
+    /** Shift + wheel sets the super flight speed while it is active, and the creative flying speed otherwise. */
+    private static void onScroll(KineticClientEvents.MouseScrollContext context) {
+        Player player = KineticClientRuntime.localPlayer();
+        if (player == null) return;
+        double vertical = context.vertical();
+        if (KineticFlightClient.superFlightActive() && KineticClientRuntime.shiftKeyDown()) {
+            double currentMult = KineticFlightClient.superFlightSelectedSpeedMultiplier();
+            double step = vertical > 0.0D ? 1.0D : -1.0D;
+            double newMult = Mth.clamp(currentMult + step,
+                    SuperFlightClientConfig.MIN_SELECTED_SPEED,
+                    SuperFlightClientConfig.MAX_SELECTED_SPEED);
+            if (Double.compare(newMult, currentMult) != 0) {
+                KineticFlightClient.setSuperFlightSelectedSpeedMultiplier(newMult);
+                SuperFlightClientConfig.setSelectedSpeed(newMult);
+                KineticClientRuntime.displayClientMessage(KineticI18n.translatable(
+                        "msg.kineticcore.superflight.speed",
+                        Component.literal(String.valueOf((int) newMult))
+                ), true);
+            }
+            context.cancel();
+            return;
+        }
+
+        if (player.isCreative() && KineticFlightClient.isSpeedModifierDown()) {
+            float currentMult = KineticFlightClient.flightSpeedMultiplier();
+            float step = KineticClientRuntime.altModifierDown() ? ((vertical > 0) ? 1.0F : -1.0F) : ((vertical > 0) ? 0.1F : -0.1F);
+            float newMult = Mth.clamp(currentMult + step, 0.1F, 100.0F);
+            newMult = Math.round(newMult * 10.0F) / 10.0F;
+
+            if (newMult != currentMult) {
+                KineticFlightClient.setFlightSpeedMultiplier(newMult);
+                player.getAbilities().setFlyingSpeed(newMult * 0.05F);
+                player.onUpdateAbilities();
+
+                String displayVal = (newMult == (int) newMult) ? String.valueOf((int) newMult) : String.format("%.1f", newMult);
+                KineticClientRuntime.displayClientMessage(KineticI18n.translatable("gui.kineticcore.flying.speed", Component.literal(displayVal)), true);
+            }
+            context.cancel();
+        }
     }
 
     public static void setNoclip(boolean state) {

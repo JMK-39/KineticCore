@@ -14,9 +14,10 @@ import java.util.Objects;
  * 所有纵向滚动列表/网格共用的滚动条、拖拽、滚轮、中键跳转与悬停提示逻辑。
  * Shared scrollbar, drag, wheel, middle-click jump and hover-hint handling for vertical lists and grids.
  */
-public abstract class VerticalScrollListWidget extends VanillaWidget implements InternalControl {
+public abstract class VerticalScrollListWidget extends VanillaWidget implements InternalControl,
+        dev.xyat.kineticcore.internal.client.gui.widget.TooltipAnchorSource {
     /** 内容与滚动条间距 / Gap between content and scrollbar. */
-    protected static final int SCROLLBAR_GAP = 4;
+    protected static final int SCROLLBAR_GAP = 2;
     /** 滚动条宽度 / Scrollbar width. */
     protected static final int SCROLLBAR_WIDTH = 4;
     /** 滑块最小高度 / Minimum thumb height. */
@@ -42,6 +43,11 @@ public abstract class VerticalScrollListWidget extends VanillaWidget implements 
     /** 单行像素间距 / Pixel pitch of one row. */
     protected abstract int rowPitch();
 
+    /** Last drawn pixel of the final row, measured from the viewport top. */
+    protected int contentHeight() {
+        return scrollRangeRows() * rowPitch();
+    }
+
     /** 当前悬停行的提示，无则 null / Tooltip of the hovered row, or null. */
     protected abstract Component hoveredRowTooltip();
 
@@ -57,6 +63,27 @@ public abstract class VerticalScrollListWidget extends VanillaWidget implements 
     /** 可见行数 / Number of visible rows. */
     protected int visibleRows() {
         return Math.max(1, getHeight() / Math.max(1, rowPitch()));
+    }
+
+    /**
+     * 从 start 起需要绘制与命中的行的结束下标 / End index of the rows drawn and hit-tested from {@code start}.
+     * While the list glides, rows are shifted up by up to one row, so a part-visible row at the bottom needs one
+     * row more than {@link #visibleRows()} + 1; rows past the bottom are cut off by the list's clip.
+     */
+    protected int rowEnd(int start, int size) {
+        return Math.min(size, start + visibleRows() + 2);
+    }
+
+    /** The row band under the mouse, so a row's tooltip opens beside that row rather than over it. */
+    @Override
+    public int[] tooltipAnchor(double mouseX, double mouseY) {
+        int pitch = Math.max(1, rowPitch());
+        if (mouseY < getY() || mouseY >= getY() + getHeight()) return null;
+        int shift = scroll.visualShift(pitch);
+        int band = (int) Math.floor((mouseY - getY() + shift) / pitch);
+        int top = Math.max(getY(), getY() + band * pitch - shift);
+        int bottom = Math.min(getY() + getHeight(), getY() + (band + 1) * pitch - shift);
+        return new int[]{getX(), top, contentWidth(), Math.max(1, bottom - top)};
     }
 
     /** 行提示优先，否则为滑块中键提示 / Row tooltip first, then the scrollbar middle-click hint. */
@@ -93,7 +120,7 @@ public abstract class VerticalScrollListWidget extends VanillaWidget implements 
 
     /** 按当前内容重算滚动范围 / Recomputes the scroll range from content. */
     protected void refreshRange() {
-        scroll.update(scrollRangeRows(), visibleRows());
+        scroll.updateContent(contentHeight(), getHeight(), rowPitch());
         if (pendingInitialScrollOffset > 0) {
             scroll.setOffset(pendingInitialScrollOffset);
             pendingInitialScrollOffset = 0;
@@ -108,6 +135,19 @@ public abstract class VerticalScrollListWidget extends VanillaWidget implements 
     /** 滚动条左边 X / Scrollbar left X. */
     protected int scrollbarX() {
         return getX() + getWidth() - SCROLLBAR_WIDTH;
+    }
+
+    /**
+     * Gives every row button (also inside nested lists) the part of the scroll offset that whole-pixel row positions
+     * leave out, so the rows glide in screen pixels.
+     */
+    protected static void shiftRows(float shiftY, Iterable<?>... groups) {
+        for (Iterable<?> group : groups) {
+            for (Object entry : group) {
+                if (entry instanceof dev.xyat.kineticcore.internal.client.gui.widget.button.VanillaButton button) button.setRenderShiftY(shiftY);
+                else if (entry instanceof Iterable<?> nested) shiftRows(shiftY, nested);
+            }
+        }
     }
 
     /** 绘制标准滚动条 / Renders the standard scrollbar. */

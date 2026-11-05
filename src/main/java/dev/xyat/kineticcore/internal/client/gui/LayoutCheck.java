@@ -32,6 +32,8 @@ public final class LayoutCheck {
         List<AbstractWidget> widgets = new ArrayList<>();
         for (GuiEventListener child : screen.children()) {
             if (child instanceof AbstractWidget widget && widget.visible && widget.getWidth() > 0 && widget.getHeight() > 0) {
+                if (screen instanceof dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen canvas
+                        && !canvas.canvasControlFullyVisible(widget)) continue;
                 widgets.add(widget);
             }
         }
@@ -58,7 +60,7 @@ public final class LayoutCheck {
         java.util.Set<String> seen = new java.util.HashSet<>();
         for (int i = 0; i < boxes.size(); i++) {
             LayoutFrameRecorder.Box item = boxes.get(i);
-            if (item.kind() == LayoutFrameRecorder.Kind.FRAME) continue;
+            if (isSurface(item)) continue;
             for (int f = 0; f < boxes.size(); f++) {
                 LayoutFrameRecorder.Box frame = boxes.get(f);
                 if (frame.kind() != LayoutFrameRecorder.Kind.FRAME) continue;
@@ -86,10 +88,10 @@ public final class LayoutCheck {
         }
         for (int i = 0; i < boxes.size(); i++) {
             LayoutFrameRecorder.Box a = boxes.get(i);
-            if (a.kind() == LayoutFrameRecorder.Kind.FRAME) continue;
+            if (isSurface(a)) continue;
             for (int j = i + 1; j < boxes.size(); j++) {
                 LayoutFrameRecorder.Box b = boxes.get(j);
-                if (b.kind() == LayoutFrameRecorder.Kind.FRAME) continue;
+                if (isSurface(b)) continue;
                 if (a.kind() == LayoutFrameRecorder.Kind.CONTROL && b.kind() == LayoutFrameRecorder.Kind.CONTROL) continue;
                 boolean overlaps = a.x() < b.right() && a.right() > b.x() && a.y() < b.bottom() && a.bottom() > b.y();
                 if (!overlaps) continue;
@@ -103,7 +105,26 @@ public final class LayoutCheck {
                 if (seen.add(problem)) problems.add(problem);
             }
         }
+        // Every text, page-drawn button and control sits on a background: a panel, surface or opaque backdrop.
+        // Nothing may float over the world or the page behind.
+        for (LayoutFrameRecorder.Box item : boxes) {
+            if (isSurface(item)) continue;
+            boolean backed = false;
+            for (LayoutFrameRecorder.Box surface : boxes) {
+                if (isSurface(surface) && item.inside(surface.x(), surface.y(), surface.right(), surface.bottom())) {
+                    backed = true;
+                    break;
+                }
+            }
+            if (backed) continue;
+            String problem = "no background: " + describe(item);
+            if (seen.add(problem)) problems.add(problem);
+        }
         return problems;
+    }
+
+    private static boolean isSurface(LayoutFrameRecorder.Box box) {
+        return box.kind() == LayoutFrameRecorder.Kind.FRAME || box.kind() == LayoutFrameRecorder.Kind.BACKDROP;
     }
 
     // True when the item lies in a popup drawn after the frame: a later frame that holds the item and crosses the

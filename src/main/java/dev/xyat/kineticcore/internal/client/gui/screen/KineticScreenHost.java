@@ -596,6 +596,11 @@ public interface KineticScreenHost {
         kineticRuntime().controls().showItemTooltip(stack);
     }
 
+    default void showItemTooltip(ItemStack stack, List<Component> additionalLines) {
+        kineticRuntime().controls().showItemTooltip(stack, additionalLines);
+    }
+
+
     // ---- overlays -----------------------------------------------------------------------------------------------
 
     /** Returns whether a menu or modal dialog currently blocks this screen's underlying input and hover content. */

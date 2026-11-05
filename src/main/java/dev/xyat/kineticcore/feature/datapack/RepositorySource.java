@@ -303,7 +303,9 @@ public class RepositorySource extends FolderRepositorySource {
                 @NotNull PackType type,
                 @NotNull ResourceLocation location
         ) {
-            return delegate.getResource(type, location);
+            IoSupplier<InputStream> file = delegate.getResource(type, location);
+            if (type == PackType.SERVER_DATA && WorldgenTypeFilter.hidden(packId(), location, file)) return null;
+            return LootTableItemFilter.wrap(packId(), location, file);
         }
 
         @Override
@@ -313,7 +315,9 @@ public class RepositorySource extends FolderRepositorySource {
                 @NotNull String path,
                 @NotNull PackResources.ResourceOutput output
         ) {
-            delegate.listResources(type, namespace, path, output);
+            delegate.listResources(type, namespace, path, (id, supplier) -> {
+                if (type != PackType.SERVER_DATA || !WorldgenTypeFilter.hidden(packId(), id, supplier)) output.accept(id, LootTableItemFilter.wrap(packId(), id, supplier));
+            });
         }
 
         @Override
@@ -365,6 +369,13 @@ public class RepositorySource extends FolderRepositorySource {
             return null;
         }
 
+        /** A file of the pack as served: data files through the Kinetic filters; {@code null} for one left out. */
+        @Nullable
+        private IoSupplier<InputStream> dataFile(ResourceLocation id, IoSupplier<InputStream> file) {
+            if (packType != PackType.SERVER_DATA) return file;
+            return WorldgenTypeFilter.hidden(packId(), id, file) ? null : LootTableItemFilter.wrap(packId(), id, file);
+        }
+
         @Nullable
         @Override
         public IoSupplier<InputStream> getResource(
@@ -386,7 +397,7 @@ public class RepositorySource extends FolderRepositorySource {
             }
 
             if (Files.exists(resourcePath) && Files.isRegularFile(resourcePath)) {
-                return IoSupplier.create(resourcePath);
+                return dataFile(location, IoSupplier.create(resourcePath));
             }
 
             return null;
@@ -416,7 +427,9 @@ public class RepositorySource extends FolderRepositorySource {
             try (Stream<Path> stream = Files.walk(directory)) {
                 stream.filter(Files::isRegularFile).forEach(file -> {
                     String relative = namespaceDirectory.relativize(file).toString().replace('\\', '/');
-                    output.accept(KineticResourceIds.of(namespace, relative), IoSupplier.create(file));
+                    ResourceLocation id = KineticResourceIds.of(namespace, relative);
+                    IoSupplier<InputStream> served = dataFile(id, IoSupplier.create(file));
+                    if (served != null) output.accept(id, served);
                 });
             } catch (Exception ignored) {
             }

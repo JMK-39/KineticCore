@@ -59,6 +59,33 @@ public final class KineticSelectors {
         ITEMS_TAGS_MODS
     }
 
+    /** Adapts item cards to caller-owned rule registries without changing selector layout. */
+    public interface ItemListRuleAdapter {
+        /** Returns whether a concrete item card belongs in this selector. */
+        boolean acceptsItem(ItemStack stack);
+        /** Returns the caller-owned exact rule stored when this item card is selected. */
+        String itemRule(ItemStack stack);
+        /** Returns whether a stored rule includes this item card, for selection and search. */
+        boolean matches(String rule, ItemStack stack);
+        /** Returns whether a new rule may be applied; existing unknown rules remain removable. */
+        default boolean acceptsRule(String rule) { return true; }
+        /** Complete #tag and @namespace rules offered by the caller-owned registry. */
+        default Collection<String> ruleCandidates() { return List.of(); }
+        /**
+         * Handles a click on an item card before the default select/deselect toggle, for example to open a settings
+         * dialog or the NBT editor. {@code existingRule} is the first stored rule matching the card, or null;
+         * {@code replace} swaps every rule matching the card for the given rule, or removes them when given null.
+         * Returns true when the click was handled.
+         */
+        default boolean editItem(ItemStack stack, String existingRule, int mouseButton, boolean shift, Consumer<String> replace) {
+            return false;
+        }
+        /** Turns a selected {@code #tag} or {@code @namespace} into the rule form this caller stores. */
+        default String groupRule(String rule) { return rule; }
+        /** The text shown for a stored rule in the editor's rules menu. */
+        default Component ruleLabel(String rule) { return Component.literal(rule); }
+    }
+
     /**
      * Immutable initial source, filter, category, and search state for an item selector.
      * Nullable enum values fall back to {@link ItemSource#ALL} and {@link ItemFilter#NONE}; nullable text becomes empty.
@@ -203,6 +230,12 @@ public final class KineticSelectors {
             return new ItemSelectorOptions(preset, additionalItems, itemPredicate, true);
         }
 
+        /** Filters concrete candidates while retaining tag and mod rule selection. */
+        public static ItemSelectorOptions filtered(ItemSelectorPreset preset,
+                Collection<ItemStack> additionalItems, Predicate<ItemStack> itemPredicate) {
+            return new ItemSelectorOptions(preset, additionalItems, itemPredicate, false);
+        }
+
         /** Returns the normalized initial selector preset. */
         public ItemSelectorPreset preset() {
             return preset;
@@ -309,6 +342,16 @@ public final class KineticSelectors {
                 ? ItemListEditorScreen.SelectionMode.ITEMS_ONLY
                 : ItemListEditorScreen.SelectionMode.ITEMS_TAGS_MODS;
         KineticClientRuntime.openScreen(new ItemListEditorScreen(title, initialRules, internalMode, onSave));
+    }
+
+    /** Opens the same multiselector using caller-owned rule IDs, matching and admission rules. */
+    public static void openItemListEditor(Component title, List<String> initialRules, ItemListMode mode,
+            ItemListRuleAdapter adapter, Consumer<List<String>> onSave) {
+        var internalMode = mode == ItemListMode.ITEMS_ONLY
+                ? ItemListEditorScreen.SelectionMode.ITEMS_ONLY
+                : ItemListEditorScreen.SelectionMode.ITEMS_TAGS_MODS;
+        KineticClientRuntime.openScreen(new ItemListEditorScreen(title, initialRules, internalMode,
+                Objects.requireNonNull(adapter), onSave));
     }
 
     /** Opens the standard NBT text editor with the supplied initial serialized value. */

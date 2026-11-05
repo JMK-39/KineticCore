@@ -29,6 +29,7 @@
     "datapack.client.MinecraftResourceReloadMixin",
     "datapack.client.GuiReloadNoticeMixin",
     "client.OptionsLoadMixin$FileHandler",
+    "client.MouseScrollMixin",
     "client.KeyAccess",
     "gpufix.client.RenderTargetMixin",
     "recipebook.client.ButtonAccess",

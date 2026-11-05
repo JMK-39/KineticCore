@@ -25,6 +25,7 @@ public abstract class KineticHudEditorPage extends KineticPage {
     /** 默认最小缩放 / Default minimum scale. */
     public static final double DEFAULT_MINIMUM_SCALE = 0.5D;
     private static final int BUTTON_WIDTH = 90;
+    private static final int SHORT_BUTTON_WIDTH = 40;
     private static final int BUTTON_GAP = 6;
 
     /** 元素左上角（原生坐标）与缩放 / Element top-left in native coordinates and its scale. */
@@ -132,18 +133,18 @@ public abstract class KineticHudEditorPage extends KineticPage {
         HudLayout defaults = defaultLayout(width(), height());
         editor.initialize(width(), height(), elementWidth(), elementHeight(), initial.x(), initial.y(),
                 defaults.x(), defaults.y(), initial.scale(), defaults.scale(), minimumScale());
-        int totalWidth = BUTTON_WIDTH * 3 + BUTTON_GAP * 2;
+        int totalWidth = SHORT_BUTTON_WIDTH * 2 + BUTTON_WIDTH + BUTTON_GAP * 2;
         int startX = (width() - totalWidth) / 2;
         int buttonY = height() - 30;
-        ui.button(startX, buttonY, BUTTON_WIDTH)
+        ui.button(startX, buttonY, SHORT_BUTTON_WIDTH)
                 .text(KineticI18n.translatable("gui.kineticcore.hud_editor.save"))
                 .onClick(() -> save(currentLayout()))
                 .build();
-        ui.button(startX + BUTTON_WIDTH + BUTTON_GAP, buttonY, BUTTON_WIDTH)
+        ui.button(startX + SHORT_BUTTON_WIDTH + BUTTON_GAP, buttonY, BUTTON_WIDTH)
                 .text(KineticI18n.translatable("gui.kineticcore.hud_editor.reset"))
                 .onClick(this::resetLayout)
                 .build();
-        ui.button(startX + (BUTTON_WIDTH + BUTTON_GAP) * 2, buttonY, BUTTON_WIDTH)
+        ui.button(startX + SHORT_BUTTON_WIDTH + BUTTON_WIDTH + BUTTON_GAP * 2, buttonY, SHORT_BUTTON_WIDTH)
                 .text(KineticI18n.translatable("gui.kineticcore.hud_editor.cancel"))
                 .onClick(this::close)
                 .build();

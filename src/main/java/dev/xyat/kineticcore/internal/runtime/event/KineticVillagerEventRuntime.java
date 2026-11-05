@@ -8,6 +8,7 @@ import dev.xyat.kineticcore.internal.runtime.KineticForgeListenerRegistrations;
 import dev.xyat.kineticcore.api.event.KineticEventPriority;
 import dev.xyat.kineticcore.api.event.KineticEventSubscription;
 import dev.xyat.kineticcore.api.villager.event.KineticVillagerEvents;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.npc.VillagerTrades;
 import net.minecraftforge.common.MinecraftForge;
@@ -15,6 +16,7 @@ import net.minecraftforge.event.village.VillagerTradesEvent;
 import net.minecraftforge.event.village.WandererTradesEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -72,8 +74,23 @@ public final class KineticVillagerEventRuntime {
 
         @Override
         public List<VillagerTrades.ItemListing> trades(int level) {
-            return event.getTrades().get(level);
+            return modifiableTrades(event.getTrades(), level);
         }
+    }
+
+    /**
+     * Returns the list of one level that callers may change. Other mods sometimes put an unmodifiable list there
+     * (Actually Subtractions uses List.of for its engineer), so anything that is not an ArrayList is replaced by a
+     * copy in the map first; Forge reads the map after the event.
+     */
+    static List<VillagerTrades.ItemListing> modifiableTrades(Int2ObjectMap<List<VillagerTrades.ItemListing>> trades, int level) {
+        List<VillagerTrades.ItemListing> listings = trades.get(level);
+        if (listings == null || listings instanceof ArrayList) {
+            return listings;
+        }
+        List<VillagerTrades.ItemListing> copy = new ArrayList<>(listings);
+        trades.put(level, copy);
+        return copy;
     }
 
     private record WandererContext(WandererTradesEvent event) implements KineticVillagerEvents.WandererTradesContext {

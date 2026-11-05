@@ -25,7 +25,7 @@ public final class PackConfigGui {
                 .serverManaged()
                 .applyTiming(KTConfigPage.ApplyTiming.RELOAD_REQUIRED)
                 .applyNotice(KineticI18n.translatable("cfg.kineticcore.datapack.pack_order.apply_notice"))
-                .stringList(
+                .orderList(
                         "datapacks",
                         KineticI18n.translatable("cfg.kineticcore.datapack.pack_order.datapacks"),
                         PackModule::datapackOrderSnapshot,
@@ -42,7 +42,7 @@ public final class PackConfigGui {
                 .scope(KTConfigScope.CLIENT_LOCAL)
                 .applyTiming(KTConfigPage.ApplyTiming.RELOAD_REQUIRED)
                 .applyNotice(KineticI18n.translatable("cfg.kineticcore.datapack.pack_order.apply_notice"))
-                .stringList(
+                .orderList(
                         "resourcepacks",
                         KineticI18n.translatable("cfg.kineticcore.datapack.pack_order.resourcepacks"),
                         PackModule::resourcePackOrderSnapshot,

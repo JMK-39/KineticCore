@@ -58,8 +58,10 @@ public class NbtEditorScreen extends KineticScreen {
 
     @Override
     protected void buildUi() {
+        // Back at the top left like every page, then search; Clear and Save at the top right.
+        addButton(4, 4, 40, KineticText.translatable("gui.kineticcore.config.back"), null, this::navigateBack);
         searchBox = addTextField(
-                20, 10, 120,
+                48, 4, 160,
                 KineticText.translatable("gui.kineticcore.search"),
                 KineticText.translatable("gui.kineticcore.search_hint"),
                 null, null
@@ -68,16 +70,15 @@ public class NbtEditorScreen extends KineticScreen {
             if (nbtEditor != null) nbtEditor.setSearchQuery(query);
         });
 
-        addButton(145, 10, 20, KineticText.translatable("gui.kineticcore.symbol.up"), null, () -> nbtEditor.navigateSearch(-1));
-        addButton(170, 10, 20, KineticText.translatable("gui.kineticcore.symbol.down"), null, () -> nbtEditor.navigateSearch(1));
+        addButton(212, 4, 20, KineticText.translatable("gui.kineticcore.symbol.up"), null, () -> nbtEditor.navigateSearch(-1));
+        addButton(236, 4, 20, KineticText.translatable("gui.kineticcore.symbol.down"), null, () -> nbtEditor.navigateSearch(1));
 
-        int btnW = 80;
-        int gap = 10;
-        int closeX = this.canvasWidth() - 20 - btnW;
-        int saveX = closeX - gap - btnW;
+        int btnW = 56;
+        int gap = 4;
+        int saveX = this.canvasWidth() - 4 - 40;
         int clearX = saveX - gap - btnW;
 
-        addButton(saveX, 10, btnW, KineticText.translatable("gui.kineticcore.nbt.save"), null, () -> {
+        addButton(saveX, 4, 40, KineticText.translatable("gui.kineticcore.nbt.save"), null, () -> {
             String val = nbtEditor.getValue().trim();
             if (val.isEmpty() || problem == NBT_PROBLEM && val.equals("{}")) {
                 onSave.accept("");
@@ -88,13 +89,12 @@ public class NbtEditorScreen extends KineticScreen {
             }
         });
 
-        addButton(clearX, 10, btnW, KineticText.translatable("gui.kineticcore.nbt.clear"), null, () -> nbtEditor.setValue(""));
-        addButton(closeX, 10, btnW, KineticText.translatable("gui.kineticcore.nbt.close"), null, this::navigateBack);
+        addButton(clearX, 4, btnW, KineticText.translatable("gui.kineticcore.nbt.clear"), null, () -> nbtEditor.setValue(""));
 
-        int editorX = 20;
-        int editorY = 40;
-        int editorW = this.canvasWidth() - 40;
-        int editorH = this.canvasHeight() - 60;
+        int editorX = 4;
+        int editorY = 30;
+        int editorW = this.canvasWidth() - 8;
+        int editorH = this.canvasHeight() - 34;
 
         nbtEditor = new NbtEditorWidget(this.font, editorX, editorY, editorW, editorH);
         nbtEditor.setResponder(val -> {
@@ -107,13 +107,15 @@ public class NbtEditorScreen extends KineticScreen {
 
     @Override
     public void renderCanvasBackground(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        g.fill(0, 0, this.canvasWidth(), this.canvasHeight(), 0xCC000000);
+        // The standard panel, so the toolbar and status line sit on the same background as every other page.
+        dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme.panel(g, 0, 0, this.canvasWidth(), this.canvasHeight());
+        GuiTheme.separator(g, 4, 26, canvasWidth() - 8);
         nbtEditor.render(g, mx, my);
 
         if (nbtEditor != null) {
             String countText = nbtEditor.getSearchMatchCount();
             if (!countText.isEmpty()) {
-                VanillaGuiDraw.text(g, this.font, countText, 195, 16, 0xFFFFFFFF, false);
+                VanillaGuiDraw.text(g, this.font, countText, 260, 8, 0xFFFFFFFF, false);
             }
         }
     }
@@ -142,7 +144,8 @@ public class NbtEditorScreen extends KineticScreen {
 
     @Override
     public boolean canvasMouseScrolled(double mx, double my, double d) {
-        if (nbtEditor.mouseScrolled(d)) return true;
+        if (GuiTheme.hovering(mx, my, 4, 30, canvasWidth() - 8, canvasHeight() - 34)
+                && nbtEditor.mouseScrolled(d)) return true;
         return super.canvasMouseScrolled(mx, my, d);
     }
 
@@ -299,7 +302,9 @@ public class NbtEditorScreen extends KineticScreen {
             boolean inString = false;
             char stringChar = 0;
 
-            int[] charWidths = new int[value.length()];
+            // Fractional glyph advances: rounding every character up (font.width) makes lines of TTF fonts wrap early.
+            float[] charWidths = new float[value.length()];
+            var splitter = font.getSplitter();
             String[] charColors = new String[value.length()];
 
             for (int i = 0; i < value.length(); i++) {
@@ -323,11 +328,11 @@ public class NbtEditorScreen extends KineticScreen {
                     }
                 }
                 charColors[i] = targetColor;
-                charWidths[i] = font.width(String.valueOf(c));
+                charWidths[i] = splitter.stringWidth(String.valueOf(c));
             }
 
             int currentLineStart = 0;
-            int currentLineWidth = 0;
+            float currentLineWidth = 0;
 
             for (int i = 0; i < value.length(); i++) {
                 if (currentLineWidth + charWidths[i] > maxW && currentLineWidth > 0) {
@@ -342,7 +347,7 @@ public class NbtEditorScreen extends KineticScreen {
             }
         }
 
-        private LineInfo buildLine(String raw, String[] colors, int[] widths, int start, int end) {
+        private LineInfo buildLine(String raw, String[] colors, float[] widths, int start, int end) {
             LineInfo info = new LineInfo();
             info.rawStartIndex = start;
             info.rawEndIndex = end;
@@ -350,10 +355,10 @@ public class NbtEditorScreen extends KineticScreen {
 
             StringBuilder colored = new StringBuilder();
             String lastColor = "";
-            int currentX = 0;
+            float currentX = 0;
 
             for (int i = start; i < end; i++) {
-                info.pixelOffsets[i - start] = currentX;
+                info.pixelOffsets[i - start] = Math.round(currentX);
                 if (!colors[i].equals(lastColor)) {
                     colored.append(colors[i]);
                     lastColor = colors[i];
@@ -361,7 +366,7 @@ public class NbtEditorScreen extends KineticScreen {
                 colored.append(raw.charAt(i));
                 currentX += widths[i];
             }
-            info.pixelOffsets[end - start] = currentX;
+            info.pixelOffsets[end - start] = Math.round(currentX);
             info.coloredString = colored.toString();
             return info;
         }

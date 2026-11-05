@@ -305,8 +305,15 @@ public final class KineticAutoComplete {
                 VanillaGuiDraw.translate(gui, 0, 0, 600);
                 KineticTheme.Palette theme = GuiTheme.current();
                 boolean showTranslations = shouldShowTranslations();
-                gui.fill(x, y, x + w, y + totalH, theme.background());
-                VanillaGuiDraw.outline(gui, x, y, w, totalH, theme.border());
+                boolean modern = GuiTheme.modern();
+                if (modern) {
+                    // A frosted card; rows are plain, only the hovered and the chosen row light up.
+                    dev.xyat.kineticcore.internal.client.gui.theme.RoundedShapes.fill(gui, x, y, w, totalH, 4F, 0xF0141820);
+                    dev.xyat.kineticcore.internal.client.gui.theme.RoundedShapes.outline(gui, x, y, w, totalH, 4F, 1F, 0x60FFFFFF);
+                } else {
+                    gui.fill(x, y, x + w, y + totalH, theme.background());
+                    VanillaGuiDraw.outline(gui, x, y, w, totalH, theme.border());
+                }
                 KineticRenderRuntime.enableScissor(gui, x, y, x + w, y + totalH);
                 try {
                     for (int i = 0; i < rowsToRender; i++) {
@@ -316,15 +323,16 @@ public final class KineticAutoComplete {
                         int rowBackground = (index & 1) == 0
                                 ? theme.panelAlt()
                                 : theme.panel();
-                        gui.fill(x + 1, top, x + w - 1, top + itemH, rowBackground);
+                        if (!modern) gui.fill(x + 1, top, x + w - 1, top + itemH, rowBackground);
 
                         boolean hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY < y + totalH
                                 && mouseY >= top && mouseY < top + itemH;
                         boolean selected = index == selectedIndex;
                         // Plain text rows: only the hovered row and the keyboard choice (yellow) are outlined.
                         if (hovered || selected) {
-                            gui.fill(x + 1, top, x + w - 1, top + itemH, theme.panel());
-                            GuiTheme.stateOutline(gui, x + 1, top, w - 2, itemH, selected, hovered, false);
+                            if (modern) GuiTheme.fillShape(gui, x + 2, top, w - 4, itemH, 0x30FFFFFF);
+                            else gui.fill(x + 1, top, x + w - 1, top + itemH, theme.panel());
+                            GuiTheme.stateOutline(gui, modern ? x + 2 : x + 1, top, modern ? w - 4 : w - 2, itemH, selected, hovered, false);
                         }
 
                         KineticSuggestion suggestion = suggestions.get(index);

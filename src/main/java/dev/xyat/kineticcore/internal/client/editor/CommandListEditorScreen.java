@@ -30,20 +30,16 @@ import java.util.function.Supplier;
 //? if <26.1
 @OnlyIn(Dist.CLIENT)
 public final class CommandListEditorScreen extends KineticScreen {
-    private static final int PANEL_X = 24;
-    private static final int PANEL_Y = 18;
-    private static final int PANEL_W = 592;
-    private static final int PANEL_H = 324;
-    private static final int LIST_X = 44;
-    private static final int LIST_Y = 58;
-    private static final int LIST_W = 538;
-    private static final int ROW_H = 24;
-    private static final int VISIBLE_ROWS = 10;
+    private static final int LIST_X = 4;
+    private static final int LIST_Y = 28;
+    private static final int LIST_W = 622;
+    private static final int ROW_H = 22;
+    private static final int VISIBLE_ROWS = 14;
     private static final int LIST_H = ROW_H * VISIBLE_ROWS;
     private static final int SCROLL_X = LIST_X + LIST_W + 6;
     private static final int SCROLL_W = 4;
     private static final int MOVE_W = 34;
-    private static final int DELETE_W = 54;
+    private static final int DELETE_W = 40;
     private static final int BUTTON_GAP = 3;
 
     private final Supplier<List<String>> commandGetter;
@@ -112,14 +108,15 @@ public final class CommandListEditorScreen extends KineticScreen {
             ));
         }
 
+        // Add sits at the top right of the header; the rows use the whole page below it.
         addButton(
-                44, 314, 110,
+                636 - 56, 4, 56,
                 KineticText.translatable("gui.kineticcore.command_list.add"),
                 null,
                 () -> openEditor(-1)
         );
         addButton(
-                LIST_X, 24, 110,
+                4, 4, 40,
                 KineticText.translatable("gui.kineticcore.command_list.back"),
                 null,
                 this::closeToParent
@@ -204,11 +201,14 @@ public final class CommandListEditorScreen extends KineticScreen {
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         deferredTooltip = null;
         updateRowButtons();
+        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.backdrop(graphics, 0, 0, canvasWidth(), canvasHeight());
         graphics.fillGradient(0, 0, canvasWidth(), canvasHeight(), 0xFF171717, 0xFF0E0E0E);
-        GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_W, PANEL_H);
-        GuiTheme.panelAlt(graphics, LIST_X - 4, LIST_Y - 4, LIST_W + 8, LIST_H + 8);
+        GuiTheme.panel(graphics, 0, 0, canvasWidth(), canvasHeight());
+        GuiTheme.surface(graphics, LIST_X, LIST_Y, LIST_W, LIST_H,
+                dev.xyat.kineticcore.api.client.gui.theme.KineticTheme.Surface.PANEL_ALT);
+        GuiTheme.separator(graphics, 4, 24, 632);
         dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
-                .scrollingTextCentered(title, canvasWidth() / 2, 30, 324, 0xFFFFFF, true);
+                .scrollingTextCentered(title, canvasWidth() / 2, 8, canvasWidth() - 2 * (4 + 56 + 4), 0xFFFFFF, true);
 
         renderRows(graphics, mouseX, mouseY);
         scroll.render(graphics, mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18);
@@ -235,7 +235,7 @@ public final class CommandListEditorScreen extends KineticScreen {
         enableUiScissor(graphics, LIST_X, LIST_Y, LIST_X + LIST_W, LIST_Y + LIST_H);
         try {
             for (int index = first; index < end; index++) {
-                int y = LIST_Y + (int) Math.round((index - smoothOffset) * ROW_H);
+                int y = LIST_Y + index * ROW_H - (int) Math.round(smoothOffset * ROW_H);
                 boolean hovered = mouseX >= LIST_X
                         && mouseX < LIST_X + LIST_W - actionWidth
                         && mouseY >= LIST_Y
@@ -283,8 +283,9 @@ public final class CommandListEditorScreen extends KineticScreen {
 
     private int rowIndex(double mouseY) {
         if (mouseY < LIST_Y || mouseY >= LIST_Y + LIST_H) return -1;
-        double contentY = mouseY - LIST_Y + scroll.smoothOffset() * ROW_H;
+        double contentY = mouseY - LIST_Y + Math.round(scroll.smoothOffset() * ROW_H);
         int index = (int) Math.floor(contentY / ROW_H);
+        if (contentY - index * ROW_H >= ROW_H - 2) return -1;
         return index >= 0 && index < currentCommands().size() ? index : -1;
     }
 
@@ -319,7 +320,8 @@ public final class CommandListEditorScreen extends KineticScreen {
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
         if (super.canvasMouseClicked(mouseX, mouseY, button)) return true;
         if (button == 0 && scroll.beginDrag(mouseX, mouseY, SCROLL_X, LIST_Y, SCROLL_W, LIST_H, 18, 2)) return true;
-        if (button == 0 && inList(mouseX, mouseY)) {
+        int actionWidth = MOVE_W * 2 + DELETE_W + BUTTON_GAP * 2 + 12;
+        if (button == 0 && inList(mouseX, mouseY) && mouseX < LIST_X + LIST_W - actionWidth) {
             int index = rowIndex(mouseY);
             if (index >= 0) {
                 openEditor(index);

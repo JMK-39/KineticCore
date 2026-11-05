@@ -1,0 +1,9 @@
+Super flight sounds: mixed for KineticCore from these CC0 (public domain) recordings on OpenGameArt.org.
+No attribution is required; the authors are listed with thanks.
+
+- Air Whoosh - pyranostudios - https://opengameart.org/content/air-whoosh
+- Battle at Sea (cannon fire) - thimras - https://opengameart.org/content/battle-at-sea
+- 100 CC0 SFX #2 (thunder) - rubberduck - https://opengameart.org/content/100-cc0-sfx-2
+- Dragon Flap - VishwaJai - https://opengameart.org/node/129587
+
+Resource packs can replace any of them: put an .ogg with the same name in assets/kineticcore/sounds/flight/.

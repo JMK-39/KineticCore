@@ -1,6 +1,7 @@
 package dev.xyat.kineticcore.internal.client.gui.screen;
 
 import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
+import dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme;
 
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl;
@@ -99,6 +100,7 @@ public final class KineticScreenRuntime {
     private final KineticScrollFrameRuntime.Frame scrollFrame = new KineticScrollFrameRuntime.Frame();
     private final KineticScreenControls controls;
     private final KineticScreenFocus focus;
+    private final dev.xyat.kineticcore.internal.client.screen.KineticDeleteAction deletion = new dev.xyat.kineticcore.internal.client.screen.KineticDeleteAction();
     private final List<PreviewWheelTarget> previewWheelTargets = new ArrayList<>();
 
     /**
@@ -160,26 +162,71 @@ public final class KineticScreenRuntime {
      */
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, FrameRenderer content) {
         KineticScrollFrameRuntime.enter(scrollFrame);
+        KineticScreenRuntime previous = rendering;
+        rendering = this;
         try {
             focus.synchronizeControlState();
-            //? if >=1.20.2 {
-            /*hostScreen.renderVanillaBackground(graphics, mouseX, mouseY, partialTick);
-            *///?} else {
-            screen.renderBackground(graphics);
-            //?}
+            if (net.minecraft.client.Minecraft.getInstance().level != null) {
+                // In a world the game stays visible and live around the canvas, only dimmed (no blur, the same on
+                // every version); the canvas panels themselves are opaque.
+                graphics.fillGradient(0, 0, screen.width, screen.height, 0xC0101010, 0xD0101010);
+            } else {
+                //? if >=1.20.2 {
+                /*hostScreen.renderVanillaBackground(graphics, mouseX, mouseY, partialTick);
+                *///?} else {
+                screen.renderBackground(graphics);
+                //?}
+            }
+            // A page that drew the theme shadow last frame gets it across the whole screen, so the dimmed area is
+            // not a canvas-sized box with the brighter margins around it.
+            pageShadowOnScreen = pageShadowRequested;
+            pageShadowRequested = false;
+            if (pageShadowOnScreen) GuiTheme.shadowFill(graphics, screen.width, screen.height);
             overlays.beginFrame();
             previewWheelTargets.clear();
             content.render(graphics, mouseX, mouseY, partialTick);
             overlays.render(graphics, font.get(), screen.width, screen.height, mouseX, mouseY);
         } finally {
+            rendering = previous;
             KineticScrollFrameRuntime.exit(scrollFrame);
         }
+    }
+
+    // The runtime whose frame is being drawn, and the page shadow state that frame uses.
+    private static KineticScreenRuntime rendering;
+    private int pageRenderDepth;
+    private boolean pageShadowRequested;
+    private boolean pageShadowOnScreen;
+
+    /**
+     * Called by the theme shadow. Inside a canvas page it records the request and returns whether the full-screen
+     * shadow already covers the page this frame, in which case the canvas-sized fill is skipped.
+     */
+    public static boolean pageShadowCoveredByScreen() {
+        KineticScreenRuntime runtime = rendering;
+        if (runtime == null || runtime.pageRenderDepth <= 0) return false;
+        runtime.pageShadowRequested = true;
+        return runtime.pageShadowOnScreen;
     }
 
     /**
      * Draws {@code content} inside the scaled canvas, clipped to it. The renderer receives canvas graphics and the
      * mouse position in page coordinates.
      */
+    // When this screen opened: a page eases in from 96 % of its size during the first 180 ms.
+    private final long openedAt = System.nanoTime();
+
+    private void applyOpeningScale(GuiGraphics graphics) {
+        double t = Math.min(1D, (System.nanoTime() - openedAt) / 180_000_000D);
+        if (t >= 1D) return;
+        double inverse = 1D - t;
+        float scale = (float) (0.96D + 0.04D * (1D - inverse * inverse * inverse));
+        float centreX = canvas.width() / 2F, centreY = canvas.height() / 2F;
+        VanillaGuiDraw.translate(graphics, centreX, centreY, 0);
+        VanillaGuiDraw.scale(graphics, scale, scale, 1F);
+        VanillaGuiDraw.translate(graphics, -centreX, -centreY, 0);
+    }
+
     public void renderInCanvas(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, FrameRenderer content) {
         int virtualMouseX = (int) Math.floor(canvas.toVirtualX(mouseX));
         int virtualMouseY = (int) Math.floor(canvas.toVirtualY(mouseY));
@@ -188,12 +235,15 @@ public final class KineticScreenRuntime {
         VanillaGuiDraw.push(graphics);
         VanillaGuiDraw.translate(graphics, canvas.x(), canvas.y(), 0);
         VanillaGuiDraw.scale(graphics, canvas.scale(), canvas.scale(), 1f);
+        applyOpeningScale(graphics);
         graphics.enableScissor(0, 0, canvas.width(), canvas.height());
         canvasDepth++;
+        pageRenderDepth++;
         try {
             content.render(graphics, virtualMouseX, virtualMouseY, partialTick);
         } finally {
             canvasDepth--;
+            pageRenderDepth--;
             try {
                 graphics.disableScissor();
             } finally {
@@ -213,10 +263,13 @@ public final class KineticScreenRuntime {
         VanillaGuiDraw.push(canvasGraphics);
         VanillaGuiDraw.translate(canvasGraphics, canvas.x(), canvas.y(), 0);
         VanillaGuiDraw.scale(canvasGraphics, canvas.scale(), canvas.scale(), 1f);
+        applyOpeningScale(canvasGraphics);
         canvasGraphics.enableScissor(0, 0, canvas.width(), canvas.height());
+        pageRenderDepth++;
         try {
             content.render(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
         } finally {
+            pageRenderDepth--;
             try {
                 canvasGraphics.disableScissor();
             } finally {
@@ -244,7 +297,27 @@ public final class KineticScreenRuntime {
 
     /** Requests the tooltip of the hovered registered control, if any passes {@code hitFilter}. */
     public boolean requestWidgetTooltip(double mouseX, double mouseY, Predicate<AbstractWidget> hitFilter) {
-        return controls.requestWidgetTooltip(mouseX, mouseY, hitFilter);
+        boolean handled = controls.requestWidgetTooltip(mouseX, mouseY, hitFilter);
+        AbstractWidget widget = controls.lastHitWidget();
+        if (widget == null || !overlays.hasTooltip()) return handled;
+        if (widget instanceof dev.xyat.kineticcore.internal.client.gui.widget.TooltipAnchorSource source) {
+            // A list or grid: beside the hovered row or cell (the page may have shown the row's tooltip itself).
+            int[] row = source.tooltipAnchor(mouseX, mouseY);
+            if (row != null) anchorTooltip(row[0], row[1], row[2], row[3], false);
+        } else if (widget.getHeight() <= 24) {
+            // A button or field: below or above it.
+            anchorTooltip(widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(), true);
+        }
+        return handled;
+    }
+
+    /**
+     * Places this frame's tooltip beside an area given in page coordinates: below or above it for a control, beside
+     * it for a row or cell. Call it after the tooltip is requested.
+     */
+    public void anchorTooltip(int x, int y, int width, int height, boolean control) {
+        overlays.tooltipAnchor(canvas.toScreenX(x), canvas.toScreenY(y), canvas.toScreenRight(x + width),
+                canvas.toScreenBottom(y + height), control);
     }
 
     private boolean requestScrollbarHint() {
@@ -378,10 +451,22 @@ public final class KineticScreenRuntime {
      * Key press: overlays, autocomplete, then the host's business hook; Escape then closes through the host's close
      * hook before the vanilla fallback runs.
      */
+    public void bindDeleteAction(java.util.function.BooleanSupplier available, Runnable action) {
+        deletion.bind(available, action);
+    }
+
     public boolean keyPressed(int keyCode, int scanCode, int modifiers, KeyHandler business, KeyHandler fallback) {
         focus.synchronizeControlState();
         if (overlays.keyPressed(keyCode, scanCode, modifiers)) return true;
         if (controls.handleAutoCompleteKey(keyCode, scanCode, modifiers)) return true;
+        var focused = screen.getFocused();
+        boolean editingText = focused instanceof net.minecraft.client.gui.components.EditBox
+                || focused instanceof dev.xyat.kineticcore.api.client.gui.widget.KineticTextField
+                || focused instanceof net.minecraft.client.gui.components.MultiLineEditBox;
+        if (deletion.handle(keyCode, editingText)) return true;
+        // Enter belongs to modal confirmation and text editing/completion, never a focused row or action button.
+        if (!editingText && (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.ENTER, keyCode)
+                || KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.KP_ENTER, keyCode))) return true;
         if (business.handle(keyCode, scanCode, modifiers)) return true;
         if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.ESCAPE, keyCode)) {
             screen.onClose();

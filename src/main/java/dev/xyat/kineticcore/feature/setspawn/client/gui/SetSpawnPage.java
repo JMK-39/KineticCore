@@ -41,12 +41,14 @@ public class SetSpawnPage extends KineticPage {
     private final List<String> serverDictStructs;
 
     private int currentTab = 0;
+    private static final int TABS_W = 192, SWITCH_W = 76, SEARCH_Y = 28, LIST_Y = 52;
 
     private KineticAutoCompleteField activeInput;
     private KineticActionList activeListWidget;
 
     public SetSpawnPage(SetSpawnNetwork.OpenSetSpawnGuiPacket packet) {
         super(KineticI18n.translatable("gui.kineticcore.setspawn.title"));
+        useCanvas(640, 360, 4);
 
         this.globalEnable = packet.globalEnable();
         this.dimEnable = packet.dimEnable();
@@ -68,11 +70,9 @@ public class SetSpawnPage extends KineticPage {
 
     @Override
     protected void build(KineticUi ui) {
-        int panelW = width() - 40;
-        int startX = 20;
-        int topY = 16;
-
-        ui.tabBar(startX + 64, topY, 250, List.of(
+        // Header: Back, the three tabs, the title centred, Save at the top right. Second row: search and switches.
+        int topY = 4;
+        ui.tabBar(48, topY, TABS_W, List.of(
                         KineticI18n.translatable("gui.kineticcore.setspawn.dim"),
                         KineticI18n.translatable("gui.kineticcore.setspawn.biome"),
                         KineticI18n.translatable("gui.kineticcore.setspawn.struct")))
@@ -84,20 +84,22 @@ public class SetSpawnPage extends KineticPage {
                 .onSelect(this::switchTab)
                 .build();
 
-        ui.button(startX + panelW - 145, topY, 80)
+        ui.button(width() - 44, topY, 40)
                 .text(KineticI18n.translatable("gui.kineticcore.hud_editor.save"))
                 .onClick(() -> SetSpawnNetwork.saveToServer(new SetSpawnNetwork.SaveSetSpawnPacket(
                         globalEnable, dimEnable, dims, biomeEnable, biomes, structEnable, structs
                 )))
                 .build();
-        ui.button(startX, topY, 60)
+        ui.button(4, topY, 40)
                 .text(KineticI18n.translatable("gui.kineticcore.config.back"))
                 .onClick(this::close)
                 .build();
 
-        int searchY = 46;
-        int switchesW = 270;
-        int inputW = panelW - switchesW - 5;
+        int searchY = SEARCH_Y;
+        int addX = width() - 4 - SWITCH_W;
+        int tabSwitchX = addX - 4 - SWITCH_W;
+        int globalX = tabSwitchX - 4 - SWITCH_W;
+        int inputW = globalX - 4 - 4;
 
         Component inputPlaceholder = KineticI18n.translatable(
                 currentTab == 0
@@ -106,7 +108,7 @@ public class SetSpawnPage extends KineticPage {
                                 ? "gui.kineticcore.setspawn.hint_biome"
                                 : "gui.kineticcore.setspawn.hint_struct")
         );
-        activeInput = ui.autoComplete(startX, searchY, inputW, this::getActiveDict)
+        activeInput = ui.autoComplete(4, searchY, inputW, this::getActiveDict)
                 .placeholder(inputPlaceholder)
                 .onSelect(value -> {
                     addToList(value);
@@ -116,7 +118,7 @@ public class SetSpawnPage extends KineticPage {
 
         Component enabled = KineticI18n.translatable("gui.kineticcore.setspawn.enable");
         Component disabled = KineticI18n.translatable("gui.kineticcore.setspawn.disable");
-        ui.toggle(startX + inputW + 5, searchY, 85)
+        ui.toggle(globalX, searchY, SWITCH_W)
                 .value(globalEnable)
                 .labels(
                         KineticI18n.translatable("gui.kineticcore.setspawn.global_btn", enabled),
@@ -134,7 +136,7 @@ public class SetSpawnPage extends KineticPage {
                         ? "gui.kineticcore.setspawn.tooltip.dim"
                         : (currentTab == 1 ? "gui.kineticcore.setspawn.tooltip.biome" : "gui.kineticcore.setspawn.tooltip.struct")
         );
-        ui.toggle(startX + inputW + 95, searchY, 85)
+        ui.toggle(tabSwitchX, searchY, SWITCH_W)
                 .value(currentEnable)
                 .labels(
                         KineticI18n.translatable(tabPrefix, enabled),
@@ -149,7 +151,7 @@ public class SetSpawnPage extends KineticPage {
 
         String currentEnv = currentTab == 0 ? playerDim : (currentTab == 1 ? playerBiome : playerStruct);
         boolean isOverworldDim = currentTab == 0 && "minecraft:overworld".equals(currentEnv);
-        ui.button(startX + panelW - 85, searchY, 85)
+        ui.button(addX, searchY, SWITCH_W)
                 .text(KineticI18n.translatable("gui.kineticcore.setspawn.add_current_single"))
                 .tooltip(Component.literal(toDisplayEntry(currentEnv, getCurrentPrefix())))
                 .enabled(!(currentEnv.equals("none") || currentEnv.isEmpty() || isOverworldDim))
@@ -159,11 +161,9 @@ public class SetSpawnPage extends KineticPage {
                 })
                 .build();
 
-        int listY = 76;
-        int listH = height() - listY - 16;
         List<String> activeData = currentTab == 0 ? dims : (currentTab == 1 ? biomes : structs);
 
-        activeListWidget = ui.actionList(startX, listY, panelW, listH, activeListItems(activeData))
+        activeListWidget = ui.actionList(4, LIST_Y, width() - 8, height() - LIST_Y - 4, activeListItems(activeData))
                 .selected(-1)
                 .actionWidth(38)
                 .onSelect(index -> {
@@ -313,18 +313,10 @@ public class SetSpawnPage extends KineticPage {
     @Override
     protected void renderBackground(KineticGraphics g, int mx, int my, float pt) {
         KineticTheme.shadow(g, width(), height());
-
-        int panelW = width() - 40;
-        int startX = 20;
-        int listY = 76;
-        int listH = height() - listY - 16;
-
-        KineticTheme.panel(g, 10, 8, width() - 20, height() - 16);
-
-        KineticTheme.separator(g, 16, 40, width() - 32);
-        KineticTheme.separator(g, 16, 71, width() - 32);
-
-        KineticTheme.panelAlt(g, startX - 2, listY - 2, panelW + 4, listH + 4);
+        KineticTheme.panel(g, 0, 0, width(), height());
+        KineticTheme.separator(g, 4, 24, width() - 8);
+        int half = Math.min(width() / 2 - (48 + TABS_W + 4), width() / 2 - 48);
+        g.scrollingTextCentered(title(), width() / 2, 8, Math.max(0, half * 2), 0xFFFFAA00, false);
 
     }
 

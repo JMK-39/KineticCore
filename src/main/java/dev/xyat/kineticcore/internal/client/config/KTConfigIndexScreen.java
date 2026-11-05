@@ -24,19 +24,19 @@ import java.util.List;
 import java.util.Map;
 
 final class KTConfigIndexScreen extends KineticScreen {
-    private static final int LIST_X = 62;
-    private static final int LIST_Y = 86;
-    private static final int LIST_WIDTH = 510;
-    private static final int LIST_HEIGHT = 252;
+    private static final int LIST_X = 4;
+    private static final int LIST_Y = 28;
+    private static final int LIST_WIDTH = 626;
+    private static final int LIST_HEIGHT = 328;
     private static final int ROW_HEIGHT = 26;
     private static final int ROW_STRIDE = 28;
     private static final int VISIBLE_ROWS = LIST_HEIGHT / ROW_STRIDE;
-    private static final int SCROLL_X = 578;
+    private static final int SCROLL_X = 632;
     private static final int SCROLL_WIDTH = 4;
     private static final int MODULE_NAME_X = LIST_X + 9;
     private static final int MODULE_FUNCTION_X = LIST_X + 185;
-    private static final int MODULE_NAME_COLOR = 0xFFFFAA00;
-    private static final int MODULE_FUNCTION_COLOR = 0xFF55FFFF;
+    private static final int MODULE_NAME_COLOR = 0xFFFFFFFF;
+    private static final int MODULE_FUNCTION_COLOR = 0xFFFFFFFF;
 
     private record ModuleGroup(
             String namespace,
@@ -74,9 +74,9 @@ final class KTConfigIndexScreen extends KineticScreen {
         updateScrollRange();
 
         KineticEditBox searchBox = addTextField(
-                LIST_X,
                 48,
-                430,
+                4,
+                280,
                 KineticText.translatable("gui.kineticcore.config.search_plugins"),
                 KineticText.translatable("gui.kineticcore.config.search_plugins"),
                 null, null
@@ -86,13 +86,32 @@ final class KTConfigIndexScreen extends KineticScreen {
         searchBox.setResponder(this::updateSearch);
 
         addButton(
-                514,
-                24,
-                72,
-                KineticText.translatable("gui.done"),
+                LIST_X,
+                4,
+                40,
+                KineticText.translatable("gui.kineticcore.close"),
                 null,
                 this::onClose
         );
+        // The look of every Kinetic screen, switched here at the top of F6: modern (rounded) or classic.
+        addButtonWithHandler(
+                636 - STYLE_BUTTON_WIDTH,
+                4,
+                STYLE_BUTTON_WIDTH,
+                styleLabel(),
+                KineticText.translatable("gui.kineticcore.config.style.tooltip"),
+                button -> {
+                    dev.xyat.kineticcore.internal.client.gui.theme.GuiStyle.setModern(!dev.xyat.kineticcore.internal.client.gui.theme.GuiStyle.modern());
+                    button.setMessage(styleLabel());
+                }
+        );
+    }
+
+    private static final int STYLE_BUTTON_WIDTH = 96;
+
+    private static Component styleLabel() {
+        return KineticText.translatable(dev.xyat.kineticcore.internal.client.gui.theme.GuiStyle.modern()
+                ? "gui.kineticcore.config.style.modern" : "gui.kineticcore.config.style.classic");
     }
 
     private void updateSearch(String query) {
@@ -103,7 +122,8 @@ final class KTConfigIndexScreen extends KineticScreen {
     }
 
     private void updateScrollRange() {
-        listScroll.update(moduleModel.items().size(), VISIBLE_ROWS);
+        int count = moduleModel.items().size();
+        listScroll.updateContent(count == 0 ? 0 : (count - 1) * ROW_STRIDE + ROW_HEIGHT, LIST_HEIGHT, ROW_STRIDE);
     }
 
     @Override
@@ -113,27 +133,12 @@ final class KTConfigIndexScreen extends KineticScreen {
             int mouseY,
             float partialTick
     ) {
-        GuiTheme.panel(graphics, 42, 18, 556, 330);
-        VanillaGuiDraw.centeredText(graphics, font, title, canvasWidth() / 2, 28, 0xFFFFAA00);
-        VanillaGuiDraw.centeredText(graphics, 
-                font,
-                KineticText.translatable(
+        GuiTheme.panel(graphics, 0, 0, 640, 360);
+        KineticText.drawScrollingLeft(graphics, font, KineticText.translatable(
                         "gui.kineticcore.config.module_count",
-                        Component.literal(String.valueOf(moduleModel.items().size())),
                         Component.literal(String.valueOf(registeredModules.size()))
-                ),
-                canvasWidth() / 2,
-                72,
-                0xFFAAAAAA
-        );
+                ), 332, 8, 636 - STYLE_BUTTON_WIDTH - 4 - 332, 0xFFFFFFFF, false);
 
-        GuiTheme.panelAlt(
-                graphics,
-                LIST_X - 3,
-                LIST_Y - 3,
-                LIST_WIDTH + 25,
-                LIST_HEIGHT + 6
-        );
         renderModuleRows(graphics, mouseX, mouseY);
 
         listScroll.render(
@@ -192,7 +197,7 @@ final class KTConfigIndexScreen extends KineticScreen {
                 KineticText.drawScrollingLeft(
                         graphics,
                         font,
-                        module.title(),
+                        Component.literal(module.title().getString()),
                         MODULE_NAME_X,
                         y + 4,
                         MODULE_FUNCTION_X - MODULE_NAME_X - 12,
@@ -204,7 +209,7 @@ final class KTConfigIndexScreen extends KineticScreen {
                     KineticText.drawScrollingLeft(
                             graphics,
                             font,
-                            module.function(),
+                            Component.literal(module.function().getString()),
                             MODULE_FUNCTION_X,
                             y + 4,
                             LIST_X + LIST_WIDTH - 9 - MODULE_FUNCTION_X,
@@ -218,8 +223,8 @@ final class KTConfigIndexScreen extends KineticScreen {
                         Component.literal(String.valueOf(module.entryCount()))
                 );
                 int countX = LIST_X + LIST_WIDTH - 9 - font.width(count);
-                VanillaGuiDraw.text(graphics, font, module.namespace(), LIST_X + 9, y + 16, 0xFF999999, false);
-                VanillaGuiDraw.text(graphics, font, count, countX, y + 16, 0xFF999999, false);
+                VanillaGuiDraw.text(graphics, font, module.namespace(), LIST_X + 9, y + 16, 0xFFFFFFFF, false);
+                VanillaGuiDraw.text(graphics, font, count, countX, y + 16, 0xFFFFFFFF, false);
             }
         } finally {
             disableUiScissor(graphics);
@@ -321,6 +326,13 @@ final class KTConfigIndexScreen extends KineticScreen {
                 Component.literal(String.valueOf(hoveredModule.entryCount()))
         ));
         showTooltip(lines, 340);
+        // Beside the hovered row rather than over it.
+        int index = moduleModel.items().indexOf(hoveredModule);
+        if (index >= 0) {
+            int y = LIST_Y + (int) Math.round((index - listScroll.smoothOffset()) * ROW_STRIDE);
+            int top = Math.max(LIST_Y, y), bottom = Math.min(LIST_Y + LIST_HEIGHT, y + ROW_HEIGHT);
+            if (bottom > top) kineticRuntime().anchorTooltip(LIST_X, top, LIST_WIDTH, bottom - top, false);
+        }
     }
 
     private static List<ModuleGroup> groupPages(List<KTConfigPage> pages) {

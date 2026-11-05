@@ -19,6 +19,7 @@ public class SetSpawnConfig {
     public static int structureRadius = 256;
     public static int structureSearchTimeoutSeconds = 12;
     public static int biomeStep = 48;
+    public static boolean protectPlatform = true;
 
     public static boolean enableDimensions = false;
     public static List<String> setspawnDimensions = new ArrayList<>();
@@ -84,6 +85,7 @@ public class SetSpawnConfig {
                 .intValue("structure_radius", () -> structureRadius, value -> structureRadius = value, 0, Integer.MAX_VALUE)
                 .intValue("structure_timeout_seconds", () -> structureSearchTimeoutSeconds, value -> structureSearchTimeoutSeconds = value, 1, Integer.MAX_VALUE)
                 .intValue("biome_step", () -> biomeStep, value -> biomeStep = value, 1, Integer.MAX_VALUE)
+                .booleanValue("protect_platform", () -> protectPlatform, value -> protectPlatform = value)
                 .onSave(SetSpawnConfig::save)
                 .build());
         }
@@ -125,6 +127,12 @@ public class SetSpawnConfig {
                  Sampling step size for biome search. (Suggested value: 32-64)
                  Smaller values are more accurate (can find tiny or narrow biomes) but take longer; larger values are faster but might skip the target biome.""");
 
+        define("setspawn.protect_platform", true, """
+                 找不到可站立的地面时，是否在出生点铺一块 3x3 黑曜石保护平台。地面在任何高度都算（包括世界最底层的基岩）。
+                 关闭后不放任何方块，直接使用算出的位置。
+                 Whether to lay a 3x3 obsidian platform at the spawn when no standable ground is found. Ground counts at any height,
+                 including bedrock at the bottom of the world. When off, no blocks are placed and the computed position is used as is.""");
+
         define("setspawn.rule_dimension.enable", false, """
                  优先级 1: 是否启用维度限制。若启用，玩家只会出生在列表允许的维度中。
                  Priority 1: Enable dimension limit. If enabled, players will only spawn in the allowed dimensions.""");
@@ -162,6 +170,7 @@ public class SetSpawnConfig {
         structureSearchTimeoutSeconds = configData.getOrElse("setspawn.structure_timeout_seconds", 12);
         if (structureSearchTimeoutSeconds < 1) structureSearchTimeoutSeconds = 1;
         biomeStep = Math.max(1, configData.getOrElse("setspawn.biome_step", 48));
+        protectPlatform = configData.getOrElse("setspawn.protect_platform", true);
 
         enableDimensions = configData.getOrElse("setspawn.rule_dimension.enable", false);
         setspawnDimensions = readStringList("setspawn.rule_dimension.list", List.of());
@@ -187,14 +196,14 @@ public class SetSpawnConfig {
 
     /** Keep the last usable configuration active if a reload stops halfway. */
     private record SettingsSnapshot(
-            boolean custom, int searchRadius, int structureRadius, int timeoutSeconds, int step,
+            boolean custom, int searchRadius, int structureRadius, int timeoutSeconds, int step, boolean platform,
             boolean dimensionsEnabled, List<String> dimensions,
             boolean biomesEnabled, List<String> biomes,
             boolean structuresEnabled, List<String> structures
     ) {
         private static SettingsSnapshot capture() {
             return new SettingsSnapshot(enableCustomSpawn, spawnSearchRadius, SetSpawnConfig.structureRadius,
-                    structureSearchTimeoutSeconds, biomeStep, enableDimensions,
+                    structureSearchTimeoutSeconds, biomeStep, protectPlatform, enableDimensions,
                     new ArrayList<>(setspawnDimensions), enableBiomes,
                     new ArrayList<>(setspawnBiomes), enableStructures,
                     new ArrayList<>(setspawnStructures));
@@ -206,6 +215,7 @@ public class SetSpawnConfig {
             SetSpawnConfig.structureRadius = structureRadius;
             structureSearchTimeoutSeconds = timeoutSeconds;
             biomeStep = step;
+            protectPlatform = platform;
             enableDimensions = dimensionsEnabled;
             setspawnDimensions = new ArrayList<>(dimensions);
             enableBiomes = biomesEnabled;
@@ -224,6 +234,7 @@ public class SetSpawnConfig {
         configData.set("setspawn.structure_radius", structureRadius);
         configData.set("setspawn.structure_timeout_seconds", structureSearchTimeoutSeconds);
         configData.set("setspawn.biome_step", biomeStep);
+        configData.set("setspawn.protect_platform", protectPlatform);
 
         configData.set("setspawn.rule_dimension.enable", enableDimensions);
         configData.set("setspawn.rule_dimension.list", setspawnDimensions);

@@ -29,6 +29,14 @@ public final class KineticGui {
     private KineticGui() {
     }
 
+    /** Binds Delete on the current Kinetic screen to an existing deletion operation, including its confirmation. */
+    public static void bindDeleteAction(java.util.function.BooleanSupplier available, Runnable action) {
+        var screen = KineticClientRuntimeImpl.currentScreen();
+        if (!(screen instanceof dev.xyat.kineticcore.internal.client.gui.screen.KineticScreenHost host))
+            throw new IllegalStateException("No Kinetic screen is open");
+        host.kineticRuntime().bindDeleteAction(available, action);
+    }
+
     /**
      * 以新导航根打开页面（返回时回到游戏）。
      * Opens a page as a new navigation root (going back returns to the game).

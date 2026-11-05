@@ -155,7 +155,7 @@ public final class SelectionListWidget extends VerticalScrollListWidget implemen
             KineticRenderRuntime.enableScissor(graphics, getX(), getY(), getX() + contentWidth(), getY() + getHeight());
             try {
                 int start = scroll.smoothIndexOffset();
-                int end = Math.min(rowButtons.size(), start + visibleRows() + 1);
+                int end = rowEnd(start, rowButtons.size());
                 for (int index = start; index < end; index++) {
                     StateButton button = rowButtons.get(index);
                     if (!button.visible) continue;
@@ -181,6 +181,10 @@ public final class SelectionListWidget extends VerticalScrollListWidget implemen
         if (!active || !visible) return false;
         if (handleScrollbarPress(mouseX, mouseY, button, selectedIndex)) return true;
         if (button != 0) return false;
+        // Rows are placed at render time; while the list scrolls smoothly they lag behind the hit test, so a click
+        // right after scrolling would miss the row it lands on (or find it inactive). Place them for this frame first.
+        refreshRange();
+        refreshLayout();
         int index = itemAt(mouseX, mouseY);
         return index >= 0 && rowButtons.get(index).active && rowButtons.get(index).mouseClicked(mouseX, mouseY, button);
     }
@@ -220,7 +224,8 @@ public final class SelectionListWidget extends VerticalScrollListWidget implemen
     protected void refreshLayout() {
         int start = scroll.smoothIndexOffset();
         int shift = scroll.visualShift(rowStep);
-        int end = Math.min(rowButtons.size(), start + visibleRows() + 1);
+        shiftRows(-scroll.subPixelShift(rowStep), rowButtons);
+        int end = rowEnd(start, rowButtons.size());
         for (int index = 0; index < rowButtons.size(); index++) {
             StateButton button = rowButtons.get(index);
             boolean rowVisible = visible && index >= start && index < end;
@@ -270,5 +275,10 @@ public final class SelectionListWidget extends VerticalScrollListWidget implemen
     @Override
     protected int rowPitch() {
         return rowStep;
+    }
+
+    @Override
+    protected int contentHeight() {
+        return items.isEmpty() ? 0 : rowTopPadding + (items.size() - 1) * rowStep + rowHeight;
     }
 }

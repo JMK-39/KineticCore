@@ -65,6 +65,31 @@ public final class KineticWorldRender {
         }
 
         /**
+         * Draws one world-space box that stays visible behind blocks, as selection boxes in building tools do: the
+         * edges in the open in full colour, the edges behind blocks faintly.
+         */
+        public void boxThroughBlocks(AABB worldBox, Indicator indicator) {
+            if (closed || worldBox == null || indicator == null) {
+                return;
+            }
+            int argb = indicatorColor(indicator);
+            KineticWorldRenderRuntime.lineBoxSeeThrough(
+                    context.poseStack(),
+                    context.camera(),
+                    context.bufferSource(),
+                    worldBox,
+                    (argb & 0x00FFFFFF) | 0x60000000
+            );
+            KineticWorldRenderRuntime.lineBox(
+                    context.poseStack(),
+                    context.camera(),
+                    context.bufferSource(),
+                    worldBox,
+                    argb
+            );
+        }
+
+        /**
          * Draws a chunk-aligned three-dimensional cage with internal chunk grid lines.
          * Radius is measured in chunks around {@code center}; height bounds are world-space Y coordinates.
          */
@@ -92,6 +117,114 @@ public final class KineticWorldRender {
             }
             closed = true;
             KineticWorldRenderRuntime.endLineBatch(context.bufferSource());
+        }
+    }
+
+    /**
+     * Begins a batch of glowing quads for the supplied Kinetic level-render callback: additive, lightning-style
+     * blending, both faces drawn and depth-tested without writing depth, so overlapping glows add up softly. Use it
+     * for light trails, auras, shock rings and other energy shapes; points are world positions. Draw from
+     * {@link KineticClientEvents.LevelRenderStage#AFTER_PARTICLES} or later (from
+     * {@link KineticClientEvents.LevelRenderStage#AFTER_WEATHER} clouds and rain no longer cover it), and close the batch
+     * after drawing.
+     */
+    public static GlowBatch beginGlowBatch(KineticClientEvents.LevelRenderContext context) {
+        return new GlowBatch(Objects.requireNonNull(context, "context"), true);
+    }
+
+    /**
+     * Begins a batch of tinted quads: like {@link #beginGlowBatch(KineticClientEvents.LevelRenderContext)} but with
+     * ordinary alpha blending, so a colour keeps its hue over bright backgrounds (additive red turns pink against a
+     * daytime sky). Draw the coloured body of an effect here, close the batch, then add its bright core in a glow batch.
+     */
+    public static GlowBatch beginTintBatch(KineticClientEvents.LevelRenderContext context) {
+        return new GlowBatch(Objects.requireNonNull(context, "context"), false);
+    }
+
+    /**
+     * Quads in world space, glowing or tinted; see {@link #beginGlowBatch(KineticClientEvents.LevelRenderContext)}
+     * and {@link #beginTintBatch(KineticClientEvents.LevelRenderContext)}.
+     */
+    public static final class GlowBatch implements AutoCloseable {
+        private final KineticClientEvents.LevelRenderContext context;
+        private final boolean additive;
+        private final Vec3 cameraPosition;
+        private final Vec3 forward;
+        private final Vec3 right;
+        private final Vec3 up;
+        private boolean closed;
+
+        private GlowBatch(KineticClientEvents.LevelRenderContext context, boolean additive) {
+            KineticWorldRenderRuntime.installViewCapture();
+            this.context = context;
+            this.additive = additive;
+            this.cameraPosition = KineticWorldRenderRuntime.cameraPosition(context.camera());
+            double yaw = Math.toRadians(KineticWorldRenderRuntime.cameraYaw(context.camera()));
+            double pitch = Math.toRadians(KineticWorldRenderRuntime.cameraPitch(context.camera()));
+            this.forward = new Vec3(-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+            Vec3 side = forward.cross(new Vec3(0.0D, 1.0D, 0.0D));
+            this.right = side.lengthSqr() < 1.0E-6D ? new Vec3(1.0D, 0.0D, 0.0D) : side.normalize();
+            this.up = right.cross(forward).normalize();
+        }
+
+        /** The camera position in world space. */
+        public Vec3 cameraPosition() {
+            return cameraPosition;
+        }
+
+        /** Unit vector the camera looks along. */
+        public Vec3 cameraForward() {
+            return forward;
+        }
+
+        /** Unit vector to the right of the view, for camera-facing shapes. */
+        public Vec3 cameraRight() {
+            return right;
+        }
+
+        /** Unit vector up in the view, for camera-facing shapes. */
+        public Vec3 cameraUp() {
+            return up;
+        }
+
+        /** One quad in a single ARGB colour; alpha scales the glow. */
+        public void quad(Vec3 a, Vec3 b, Vec3 c, Vec3 d, int argb) {
+            quad(a, b, c, d, argb, argb, argb, argb);
+        }
+
+        /** One quad with a colour per corner, for gradients and fading ends (alpha 0 is invisible). */
+        public void quad(Vec3 a, Vec3 b, Vec3 c, Vec3 d, int argbA, int argbB, int argbC, int argbD) {
+            if (closed || a == null || b == null || c == null || d == null) {
+                return;
+            }
+            KineticWorldRenderRuntime.glowQuad(context.poseStack(), cameraPosition, additive,
+                    a, b, c, d, argbA, argbB, argbC, argbD);
+        }
+
+        /** A soft camera-facing glow: the core colour at the centre fading to nothing at {@code radius}. */
+        public void glow(Vec3 center, double radius, int coreArgb) {
+            if (closed || center == null || radius <= 0.0D) {
+                return;
+            }
+            int edge = coreArgb & 0x00FFFFFF;
+            Vec3 previous = null;
+            for (int step = 0; step <= 8; step++) {
+                double angle = step * Math.PI / 4.0D;
+                Vec3 point = center.add(right.scale(Math.cos(angle) * radius)).add(up.scale(Math.sin(angle) * radius));
+                if (previous != null) {
+                    quad(center, center, previous, point, coreArgb, coreArgb, edge, edge);
+                }
+                previous = point;
+            }
+        }
+
+        @Override
+        public void close() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            KineticWorldRenderRuntime.endGlowBatch(additive, context.projectionMatrix());
         }
     }
 

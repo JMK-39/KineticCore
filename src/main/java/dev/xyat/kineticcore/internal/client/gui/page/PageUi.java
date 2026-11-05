@@ -44,9 +44,34 @@ public final class PageUi implements KineticUi {
         this.customs = customs;
     }
 
+    // Duplicate layout keys within one build (two "Edit" buttons) get #1, #2, … in build order.
+    private final java.util.Map<String, Integer> layoutKeyCounts = new java.util.HashMap<>();
+
     /** Forgets custom controls before a rebuild. */
     public void reset() {
         customs.clear();
+        layoutKeyCounts.clear();
+    }
+
+    /** Applies the player's stored layout to a control built directly on the page and lets the layout editor edit it. */
+    private void registerLayout(Object control, String layoutId) {
+        if (control instanceof dev.xyat.kineticcore.api.client.gui.widget.KineticAutoCompleteField field
+                && control instanceof net.minecraft.client.gui.components.AbstractWidget box
+                && host.screen() instanceof dev.xyat.kineticcore.internal.client.gui.screen.KineticScreen canvas) {
+            // Keep suggestion popups inside the canvas: they start 4 px left of the field and add a 10 px scrollbar.
+            field.setSuggestionPopupMaxWidth(canvas.canvasWidth() - 4 - (box.getX() - 4) - 10);
+        }
+        if (viewport != null || !(control instanceof net.minecraft.client.gui.components.AbstractWidget widget)) return;
+        if (layoutId != null) {
+            dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.register(host.screen(), widget, layoutId);
+            return;
+        }
+        String key = control instanceof CustomControlSupport.Widget custom
+                ? custom.control().getClass().getSimpleName()
+                : dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.key(widget);
+        int count = layoutKeyCounts.merge(key, 1, Integer::sum);
+        if (count > 1) key += "#" + count;
+        dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.register(host.screen(), widget, key);
     }
 
     /**
@@ -100,7 +125,7 @@ public final class PageUi implements KineticUi {
     }
 
     private <C extends InternalControl> C finish(C control, Component tooltip, Supplier<Component> dynamicTooltip,
-                                                 boolean enabled, boolean visible) {
+                                                 boolean enabled, boolean visible, String layoutId) {
         if (dynamicTooltip != null) {
             host.registerDynamicWidgetTooltip(control, dynamicTooltip);
         } else if (tooltip != null) {
@@ -109,6 +134,7 @@ public final class PageUi implements KineticUi {
         if (!enabled) control.setEnabled(false);
         if (!visible) control.setVisible(false);
         bindViewport(control);
+        registerLayout(control, layoutId);
         return control;
     }
 
@@ -136,7 +162,8 @@ public final class PageUi implements KineticUi {
                             : host.addButton(x, y, width, text, null, action);
                 }
                 self[0] = button;
-                return finish(button, tooltip, dynamicTooltip, enabled, visible);
+                if (expands) button.setExpands(true);
+                return finish(button, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -148,7 +175,7 @@ public final class PageUi implements KineticUi {
             public KineticItemButton build() {
                 Runnable action = onClick == null ? () -> { } : onClick;
                 return finish(host.addItemButton(x, y, width, icon, text, null, action),
-                        tooltip, dynamicTooltip, enabled, visible);
+                        tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -162,12 +189,12 @@ public final class PageUi implements KineticUi {
                 if (layer > 0) {
                     if (compact) throw new IllegalStateException("compact toggles cannot be layered");
                     return finish(host.addHighZToggleButton(x, y, width, value, onText, offText, null, validator, change, z(layer)),
-                            tooltip, dynamicTooltip, enabled, visible);
+                            tooltip, dynamicTooltip, enabled, visible, layoutId);
                 }
                 return finish(compact
                                 ? host.addCompactToggleButton(x, y, width, value, onText, offText, null, validator, change)
                                 : host.addToggleButton(x, y, width, value, onText, offText, null, validator, change),
-                        tooltip, dynamicTooltip, enabled, visible);
+                        tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -178,7 +205,7 @@ public final class PageUi implements KineticUi {
             @Override
             public KineticCycleButton build() {
                 return finish(host.addCycleButton(x, y, width, index, options, null, validator, orNoop(onChange)),
-                        tooltip, dynamicTooltip, enabled, visible);
+                        tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -190,7 +217,7 @@ public final class PageUi implements KineticUi {
             public KineticColorButton build() {
                 Runnable action = onClick == null ? () -> { } : onClick;
                 return finish(host.addColorPreviewButton(x, y, width, rgb, text, null, action),
-                        tooltip, dynamicTooltip, enabled, visible);
+                        tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -201,7 +228,7 @@ public final class PageUi implements KineticUi {
             @Override
             public KineticColorSwatch build() {
                 Runnable action = onClick == null ? () -> { } : onClick;
-                return finish(host.addColorSwatchButton(x, y, rgb, null, action), tooltip, dynamicTooltip, enabled, visible);
+                return finish(host.addColorSwatchButton(x, y, rgb, null, action), tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -213,7 +240,7 @@ public final class PageUi implements KineticUi {
             public KineticSlider build() {
                 return finish(host.addSlider(x, y, width, label, min, max, step, value, validator,
                                 onChange == null ? ignored -> { } : onChange, null),
-                        tooltip, dynamicTooltip, enabled, visible);
+                        tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -230,7 +257,7 @@ public final class PageUi implements KineticUi {
                 if (firstShownTextAsDefault) field.useFirstShownTextAsDefault();
                 else field.setDefaultText(defaultText);
                 field.setValueColor(valueColor);
-                return finish(field, tooltip, dynamicTooltip, enabled, visible);
+                return finish(field, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -244,7 +271,7 @@ public final class PageUi implements KineticUi {
                 if (maxLength > 0) area.setCharacterLimit(maxLength);
                 if (value != null) area.setValue(value);
                 if (onChange != null) area.setValueListener(onChange);
-                return finish(area, tooltip, dynamicTooltip, enabled, visible);
+                return finish(area, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -265,7 +292,7 @@ public final class PageUi implements KineticUi {
                 else field.setDefaultText(defaultText);
                 field.setValueColor(valueColor);
                 field.setOptional(optional);
-                return finish(field, tooltip, dynamicTooltip, enabled, visible);
+                return finish(field, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -283,7 +310,7 @@ public final class PageUi implements KineticUi {
                 else field.setDefaultText(defaultText);
                 field.setValueColor(valueColor);
                 if (onSelect != null) field.setSelectionResponder(onSelect);
-                return finish(field, tooltip, dynamicTooltip, enabled, visible);
+                return finish(field, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -308,7 +335,7 @@ public final class PageUi implements KineticUi {
                 else field.setDefaultText(defaultText);
                 field.setValueColor(valueColor);
                 if (onSelect != null) field.setSelectionResponder(onSelect);
-                return finish(field, tooltip, dynamicTooltip, enabled, visible);
+                return finish(field, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -319,7 +346,7 @@ public final class PageUi implements KineticUi {
             @Override
             public KineticDropdown build() {
                 return finish(host.addDropdown(x, y, width, options, selected, null, validator, orNoop(onChange)),
-                        tooltip, dynamicTooltip, enabled, visible);
+                        tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -355,14 +382,14 @@ public final class PageUi implements KineticUi {
             public KineticTabStrip build() {
                 KineticTabStrip strip = host.addScrollableTabStrip(x, y, width, tabs, pinnedLeading, selected, scrollOffset,
                         previousText, nextText, orNoop(onSelect));
-                return finishPublic(strip, tooltip, dynamicTooltip, enabled, visible);
+                return finishPublic(strip, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
 
     private <C extends KineticControl> C finishPublic(C control, Component tooltip, Supplier<Component> dynamicTooltip,
-                                                      boolean enabled, boolean visible) {
-        finish(CustomControlSupport.widget(control), tooltip, dynamicTooltip, enabled, visible);
+                                                      boolean enabled, boolean visible, String layoutId) {
+        finish(CustomControlSupport.widget(control), tooltip, dynamicTooltip, enabled, visible, layoutId);
         return control;
     }
 
@@ -375,7 +402,7 @@ public final class PageUi implements KineticUi {
                         ? host.addHighZScrollableSelectionList(x, y, width, height, items, selected, scrollOffset, orNoop(onSelect), z(layer))
                         : host.addScrollableSelectionList(x, y, width, height, items, selected, scrollOffset, orNoop(onSelect));
                 if (textRows) list.setTextRows(true);
-                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible);
+                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -388,7 +415,7 @@ public final class PageUi implements KineticUi {
                 KineticItemSelectionList list = layer > 0
                         ? host.addHighZScrollableItemSelectionList(x, y, width, height, items, selected, scrollOffset, orNoop(onSelect), z(layer))
                         : host.addScrollableItemSelectionList(x, y, width, height, items, selected, scrollOffset, orNoop(onSelect));
-                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible);
+                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -405,7 +432,7 @@ public final class PageUi implements KineticUi {
                         dev.xyat.kineticcore.internal.client.gui.widget.list.ItemGridWidget widget) {
                     widget.setDecorations(decorations);
                 }
-                return finishPublic(grid, tooltip, dynamicTooltip, enabled, visible);
+                return finishPublic(grid, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -420,7 +447,7 @@ public final class PageUi implements KineticUi {
                         orNoop(onSelect), orNoop(onAction), z(layer))
                         : host.addScrollableActionList(x, y, width, height, items, selected, scrollOffset, actionWidth,
                         orNoop(onSelect), orNoop(onAction));
-                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible);
+                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -435,7 +462,7 @@ public final class PageUi implements KineticUi {
                         orNoop(onSelect), orNoop(onAction), z(layer))
                         : host.addScrollableItemActionList(x, y, width, height, items, selected, scrollOffset, actionWidth,
                         orNoop(onSelect), orNoop(onAction));
-                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible);
+                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -450,7 +477,7 @@ public final class PageUi implements KineticUi {
                         orNoop(onSelect), orNoop(onAction), z(layer))
                         : host.addScrollableMultiActionList(x, y, width, height, items, selected, scrollOffset,
                         orNoop(onSelect), orNoop(onAction));
-                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible);
+                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -466,7 +493,7 @@ public final class PageUi implements KineticUi {
                         : host.addScrollableToggleActionList(x, y, width, height, items, selected, scrollOffset,
                         toggleWidth, actionWidth, orNoop(onSelect), orNoop(onToggle), orNoop(onAction));
                 list.setTextRows(textRows);
-                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible);
+                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -481,7 +508,7 @@ public final class PageUi implements KineticUi {
                         orNoop(onSelect), orNoop(onToggle), z(layer))
                         : host.addScrollableMultiToggleList(x, y, width, height, items, selected, scrollOffset,
                         orNoop(onSelect), orNoop(onToggle));
-                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible);
+                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -495,7 +522,7 @@ public final class PageUi implements KineticUi {
                         ? host.addHighZScrollableToggleList(x, y, width, height, items, scrollOffset, orNoop(onToggle), z(layer))
                         : host.addScrollableToggleList(x, y, width, height, items, scrollOffset, orNoop(onToggle));
                 if (textRows) list.setTextRows(true);
-                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible);
+                return finishPublic(list, tooltip, dynamicTooltip, enabled, visible, layoutId);
             }
         };
     }
@@ -507,6 +534,7 @@ public final class PageUi implements KineticUi {
         host.registerDynamicWidgetTooltip(widget, widget::tooltip);
         customs.add(widget);
         bindViewport(widget);
+        registerLayout(widget, null);
         return control;
     }
 

@@ -25,7 +25,7 @@ public final class InlineButtonRenderer {
         BUTTON.visible = true;
         int mouse = hovered ? 0 : -100000;
         VanillaGuiDraw.render(BUTTON, graphics, hovered ? x + 1 : mouse, hovered ? y + 1 : mouse, 0F);
-        if (error) GuiTheme.stateOutline(graphics, x, y, width, height, false, hovered, true);
+        if (error || hovered) GuiTheme.stateOutline(graphics, x, y, width, height, false, hovered, error);
     }
 
     private static final class PaintButton extends VanillaButton {

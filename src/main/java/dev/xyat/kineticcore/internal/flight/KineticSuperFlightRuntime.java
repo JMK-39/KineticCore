@@ -11,7 +11,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Pose;
 //? if >=1.21 {
 /*import net.minecraft.resources.ResourceLocation;
+import java.util.Locale;
 *///?} else {
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 //?}
 
@@ -30,6 +32,8 @@ public final class KineticSuperFlightRuntime {
     private static final String COMMAND_SPEED_NAME = "Kinetic command super flight";
     //?}
     private static final double COMMAND_SPEED_VALUE = 20.0D;
+    /** Any flight speed above zero makes super flight available; a grant adds this much. */
+    private static final double GRANT_VALUE = 1.0D;
     private static volatile BiConsumer<ServerPlayer, Boolean> stateSyncSender = (player, active) -> { };
     private static volatile BiConsumer<ServerPlayer, Float> rollSyncSender = (player, roll) -> { };
     private static volatile Consumer<ServerPlayer> transientResetSender = player -> { };
@@ -143,6 +147,30 @@ public final class KineticSuperFlightRuntime {
             player.fallDistance = 0.0F;
         }
         return actual;
+    }
+
+    public static void grant(LivingEntity entity, String sourceId, boolean granted) {
+        if (entity == null || sourceId == null || sourceId.isBlank()) return;
+        AttributeInstance instance = entity.getAttribute(KineticAttributeHolders.of(KineticFlightAttributeRuntime.flightSpeed()));
+        if (instance == null) return;
+        //? if >=1.21 {
+        /*ResourceLocation id = ResourceLocation.fromNamespaceAndPath("kineticcore",
+                "super_flight/" + sourceId.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9/._-]", "_"));
+        *///?} else {
+        UUID id = UUID.nameUUIDFromBytes(("kineticcore:super_flight/" + sourceId).getBytes(StandardCharsets.UTF_8));
+        //?}
+        boolean present = instance.getModifier(id) != null;
+        if (granted && !present) {
+            //? if >=1.21 {
+            /*instance.addTransientModifier(new AttributeModifier(id, GRANT_VALUE, AttributeModifier.Operation.ADD_VALUE));
+            *///?} else {
+            instance.addTransientModifier(new AttributeModifier(id, "Kinetic super flight: " + sourceId, GRANT_VALUE,
+                    AttributeModifier.Operation.ADDITION));
+            //?}
+        } else if (!granted && present) {
+            instance.removeModifier(id);
+            if (entity instanceof ServerPlayer player && active(player) && !available(player)) setActive(player, false);
+        }
     }
 
     public static boolean commandEnabled(ServerPlayer player) {

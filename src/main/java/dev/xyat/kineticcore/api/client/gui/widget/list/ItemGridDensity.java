@@ -9,6 +9,8 @@ package dev.xyat.kineticcore.api.client.gui.widget.list;
 public enum ItemGridDensity {
     /** Native 16px icons in 22px slots, with 2px gaps and 2px viewport padding. */
     COMPACT(22, 2, 2, 1.0F, false),
+    /** The standard compact slots without the inner padding, for grids that must fit one more row or column. */
+    COMPACT_FLUSH(22, 2, 0, 1.0F, false),
     /** Default 24px slots with comfortable spacing. */
     STANDARD(24, 5, 4, 1.0F, false),
     /** 26px slots with extra spacing, for touch-friendly or sparse grids. */

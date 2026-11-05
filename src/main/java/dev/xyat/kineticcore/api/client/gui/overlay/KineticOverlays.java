@@ -17,6 +17,21 @@ import java.util.Objects;
  */
 public final class KineticOverlays {
     /**
+     * Reserved title-screen login/startup information area, in GUI-scaled screen coordinates.
+     * Includes enabled timer rows after fading, allowing add-ons to place stable notices below it.
+     */
+    public static dev.xyat.kineticcore.api.client.gui.layout.KineticLayout.Rect titleScreenInformationArea() {
+        return GuiOverlayRuntime.titleScreenInformationArea();
+    }
+    /**
+     * Registers the startup-information renderer's reserved area provider; the rectangle is evaluated on the
+     * client thread each frame so config changes and language-dependent line widths are reflected immediately.
+     * @param provider supplies bounds in GUI-scaled screen coordinates
+     */
+    public static void setTitleScreenInformationAreaProvider(java.util.function.Supplier<dev.xyat.kineticcore.api.client.gui.layout.KineticLayout.Rect> provider) {
+        GuiOverlayRuntime.titleScreenInformationAreaProvider(provider);
+    }
+    /**
      * Screen anchor of a toast. Offsets passed to {@link #toast(String, Component, Position, int, int, int)} are
      * relative to it.
      */
@@ -40,7 +55,8 @@ public final class KineticOverlays {
 
     /**
      * One immutable context-menu row. Create rows with the static factories and pass them to the screen's
-     * context-menu API.
+     * context-menu API. Button-opened action and toggle menus use real buttons. Only selectable candidates
+     * accompanied by a search field use plain text rows; addons do not need to draw their own menu controls.
      */
     public static final class MenuItem {
         private final Component label;
@@ -51,6 +67,7 @@ public final class KineticOverlays {
         private final Runnable action;
         private final boolean enabled;
         private final MenuItemStyle style;
+        private final boolean button;
 
         private MenuItem(
                 Component label,
@@ -74,6 +91,20 @@ public final class KineticOverlays {
                 boolean enabled,
                 MenuItemStyle style
         ) {
+            this(label, detail, tooltip, checked, choice, action, enabled, style, false);
+        }
+
+        private MenuItem(
+                Component label,
+                Component detail,
+                Component tooltip,
+                Boolean checked,
+                boolean choice,
+                Runnable action,
+                boolean enabled,
+                MenuItemStyle style,
+                boolean button
+        ) {
             this.choice = choice;
             this.label = Objects.requireNonNullElse(label, Component.empty());
             this.detail = Objects.requireNonNullElse(detail, Component.empty());
@@ -82,6 +113,7 @@ public final class KineticOverlays {
             this.action = action == null ? () -> { } : action;
             this.style = style == null ? MenuItemStyle.NORMAL : style;
             this.enabled = this.style != MenuItemStyle.SEPARATOR && enabled;
+            this.button = button;
         }
 
         /**
@@ -168,6 +200,20 @@ public final class KineticOverlays {
         /** Creates a non-interactive context-menu separator. */
         public static MenuItem separator() {
             return new MenuItem(Component.empty(), Component.empty(), Component.empty(), null, () -> { }, false, MenuItemStyle.SEPARATOR);
+        }
+
+        /**
+         * Returns a copy rendered as a menu button even in a multi-selection or searchable menu. All text,
+         * selection state, style, enabled state and the click action are preserved; separators remain dividers.
+         * For example, {@code MenuItem.toggle(label, tooltip, enabled, action).asButton()} keeps its green state.
+         */
+        public MenuItem asButton() {
+            return new MenuItem(label, detail, tooltip, checked, choice, action, enabled, style, true);
+        }
+
+        /** Whether this row explicitly requests menu-button presentation instead of automatic text rows. */
+        public boolean isButton() {
+            return button;
         }
 
         /** Returns the row text; never {@code null}. */
@@ -258,6 +304,11 @@ public final class KineticOverlays {
      */
     public static void requestItemTooltip(ItemStack stack, int mouseX, int mouseY) {
         GuiOverlayRuntime.requestItemTooltip(stack, mouseX, mouseY);
+    }
+
+    /** Requests a complete native tooltip with additional page instructions, retaining tooltip images and styles. */
+    public static void requestItemTooltip(ItemStack stack, List<Component> additionalLines, int mouseX, int mouseY) {
+        GuiOverlayRuntime.requestItemTooltip(stack, additionalLines, mouseX, mouseY);
     }
 
     /**

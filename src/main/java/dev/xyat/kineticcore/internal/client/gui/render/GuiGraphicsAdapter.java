@@ -54,11 +54,15 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
 
     @Override
     public void fill(int x1, int y1, int x2, int y2, int argb) {
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED && (argb >>> 24) >= 0xC0)
+            dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.backdrop(graphics, x1, y1, x2 - x1, y2 - y1);
         graphics.fill(x1, y1, x2, y2, argb);
     }
 
     @Override
     public void fillGradient(int x1, int y1, int x2, int y2, int topArgb, int bottomArgb) {
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED && (topArgb >>> 24) >= 0xC0 && (bottomArgb >>> 24) >= 0xC0)
+            dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.backdrop(graphics, x1, y1, x2 - x1, y2 - y1);
         graphics.fillGradient(x1, y1, x2, y2, topArgb, bottomArgb);
     }
 
@@ -147,18 +151,21 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
 
     @Override
     public void texture(KineticTexture texture, int x, int y, int u, int v, int width, int height) {
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.backdrop(graphics, x, y, width, height);
         VanillaGuiDraw.texture(graphics, location(texture), x, y, u, v, width, height, texture.textureWidth(), texture.textureHeight());
     }
 
     @Override
     public void texture(KineticTexture texture, int x, int y, int width, int height, float u, float v,
                         int regionWidth, int regionHeight) {
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.backdrop(graphics, x, y, width, height);
         VanillaGuiDraw.texture(graphics, location(texture), x, y, width, height, u, v, regionWidth, regionHeight,
                 texture.textureWidth(), texture.textureHeight());
     }
 
     @Override
     public void texture(KineticTexture texture, int x, int y, int u, int v, int width, int height, int argb) {
+        if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.backdrop(graphics, x, y, width, height);
         VanillaGuiDraw.tintedTexture(graphics, location(texture), x, y, u, v, width, height,
                 texture.textureWidth(), texture.textureHeight(), argb);
     }
@@ -167,6 +174,11 @@ public final class GuiGraphicsAdapter implements KineticGraphics {
     public void effectIcon(MobEffect effect, int x, int y, int size) {
         if (effect == null || size <= 0) return;
         VanillaGuiDraw.effectIcon(graphics, effect, x, y, size);
+    }
+
+    @Override
+    public void batchItems(Runnable drawing) {
+        ItemBatch.run(graphics, dev.xyat.kineticcore.internal.client.KineticClientRuntimeImpl.font(), drawing);
     }
 
     @Override

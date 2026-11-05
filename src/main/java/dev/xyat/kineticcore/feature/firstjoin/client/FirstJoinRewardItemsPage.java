@@ -95,13 +95,14 @@ public final class FirstJoinRewardItemsPage extends KineticPage {
                 .allowNegative(false).range(1, 999).onChange(this::updateCount).build();
         countField.limitTextLength(3);
         countField.setActive(false);
-        ui.button(230, 317, 136).text(KineticI18n.translatable("gui.kineticcore.firstjoin.import_inventory"))
+        // Header row of the panel: Back at its top-left, Import and Save at its top-right.
+        ui.button(436, 20, 56).text(KineticI18n.translatable("gui.kineticcore.firstjoin.import_inventory"))
                 .tooltip(KineticI18n.translatable("gui.kineticcore.firstjoin.import_inventory.tooltip"))
                 .onClick(this::importInventory).build();
-        ui.button(118, 317, 100).text(KineticI18n.translatable("gui.kineticcore.config.back"))
+        ui.button(104, 20, 40).text(KineticI18n.translatable("gui.kineticcore.config.back"))
                 .tooltip(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.back.tooltip"))
                 .onClick(this::requestClose).build();
-        ui.button(384, 317, 136).text(KineticI18n.translatable("gui.kineticcore.config.save"))
+        ui.button(496, 20, 40).text(KineticI18n.translatable("gui.kineticcore.config.save"))
                 .tooltip(KineticI18n.translatable("gui.kineticcore.firstjoin.reward_items.save.tooltip"))
                 .onClick(this::save).build();
     }
@@ -172,8 +173,8 @@ public final class FirstJoinRewardItemsPage extends KineticPage {
 
     @Override
     protected void renderBackground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        KineticTheme.panel(graphics, 100, 16, 440, 330);
-        graphics.centeredText(title(), width() / 2, 31, KineticTheme.current().text(), true);
+        KineticTheme.panel(graphics, 100, 16, 440, 284);
+        graphics.scrollingTextCentered(title(), width() / 2, 26, 440 - 2 * (4 + 60 + 4 + 40 + 4), KineticTheme.current().text(), true);
         graphics.texture(INVENTORY_TEXTURE, BASE_X, BASE_Y, 0, 0, 176, 166);
         graphics.fill(BASE_X + 87, BASE_Y + 15, BASE_X + 169, BASE_Y + 59, 0xFFC6C6C6);
         graphics.centeredText(KineticI18n.translatable("gui.kineticcore.firstjoin.inventory"),

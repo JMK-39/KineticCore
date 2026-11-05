@@ -22,11 +22,9 @@ import java.util.function.Consumer;
 
 public final class ColorPickerScreen extends KineticScreen {
     private static final int PANEL_X = 120;
-    private static final int PANEL_Y = 45;
     private static final int PANEL_W = 400;
     private static final int PANEL_H = 270;
     private static final int PICKER_X = 145;
-    private static final int PICKER_Y = 90;
     private static final int PICKER_SIZE = 128;
     private static final int HUE_X = 280;
     private static final int HUE_W = 10;
@@ -38,6 +36,8 @@ public final class ColorPickerScreen extends KineticScreen {
     private static final int SWATCH_GAP = 3;
     private static final int SWATCH_COLS = 12;
     private final boolean paletteMode;
+    private final int panelY;
+    private final int pickerY;
     private final int maxColors;
     private final Consumer<Integer> colorConsumer;
     private final Consumer<List<Integer>> paletteConsumer;
@@ -85,6 +85,8 @@ public final class ColorPickerScreen extends KineticScreen {
     ) {
         super(title);
         this.paletteMode = paletteMode;
+        this.panelY = (STANDARD_CANVAS_HEIGHT - (paletteMode ? PANEL_H : 215)) / 2;
+        this.pickerY = panelY + 45;
         this.maxColors = Math.max(1, maxColors);
         this.colorConsumer = colorConsumer;
         this.paletteConsumer = paletteConsumer;
@@ -99,20 +101,20 @@ public final class ColorPickerScreen extends KineticScreen {
     @Override
     protected void buildUi() {
         addButton(
-                PANEL_X + PANEL_W - 128, PANEL_Y + 10, 56,
+                PANEL_X + PANEL_W - 96, panelY + 10, 40,
                 KineticText.translatable("gui.kineticcore.palette.cancel"),
                 KineticText.translatable("gui.kineticcore.palette.cancel.tooltip"),
                 this::onClose
         );
         addButton(
-                PANEL_X + PANEL_W - 66, PANEL_Y + 10, 56,
+                PANEL_X + PANEL_W - 50, panelY + 10, 40,
                 KineticText.translatable("gui.kineticcore.palette.apply"),
                 KineticText.translatable("gui.kineticcore.palette.apply.tooltip"),
                 this::applyAndClose
         );
 
         hexBox = addTextField(
-                SIDE_X + 45, PICKER_Y + 33, SIDE_W - 45,
+                SIDE_X + 45, pickerY + 33, SIDE_W - 45,
                 KineticText.translatable("gui.kineticcore.palette.hex"),
                 null, raw -> raw.matches("[0-9a-fA-F]{0,6}"),
                 KineticText.translatable("gui.kineticcore.palette.hex.tooltip")
@@ -120,12 +122,12 @@ public final class ColorPickerScreen extends KineticScreen {
         hexBox.setMaxLength(6);
         hexBox.setResponder(this::onHexChanged);
 
-        redBox = createRgbBox(PICKER_Y + 59, "gui.kineticcore.palette.red");
-        greenBox = createRgbBox(PICKER_Y + 83, "gui.kineticcore.palette.green");
-        blueBox = createRgbBox(PICKER_Y + 107, "gui.kineticcore.palette.blue");
+        redBox = createRgbBox(pickerY + 59, "gui.kineticcore.palette.red");
+        greenBox = createRgbBox(pickerY + 83, "gui.kineticcore.palette.green");
+        blueBox = createRgbBox(pickerY + 107, "gui.kineticcore.palette.blue");
 
         addButton(
-                SIDE_X, PICKER_Y + 137, 89,
+                SIDE_X, pickerY + 137, 89,
                 KineticText.translatable("gui.kineticcore.palette.copy_hex"),
                 KineticText.translatable("gui.kineticcore.palette.copy_hex.tooltip"),
                 () -> KineticClientRuntime.setClipboard(String.format(Locale.ROOT, "#%06X", rgb))
@@ -133,7 +135,7 @@ public final class ColorPickerScreen extends KineticScreen {
 
         if (paletteMode) {
             Button add = addButton(
-                    SIDE_X + 96, PICKER_Y + 137, 91,
+                    SIDE_X + 96, pickerY + 137, 91,
                     KineticText.translatable("gui.kineticcore.palette.add"),
                     KineticText.translatable("gui.kineticcore.palette.add.tooltip"),
                     this::addCurrentColor
@@ -158,19 +160,19 @@ public final class ColorPickerScreen extends KineticScreen {
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         GuiTheme.shadow(graphics, canvasWidth(), canvasHeight());
-        GuiTheme.panel(graphics, PANEL_X, PANEL_Y, PANEL_W, paletteMode ? PANEL_H : 215);
-        VanillaGuiDraw.centeredText(graphics, font, title, PANEL_X + PANEL_W / 2, PANEL_Y + 15, 0xFFFFFF);
+        GuiTheme.panel(graphics, PANEL_X, panelY, PANEL_W, paletteMode ? PANEL_H : 215);
+        KineticText.drawScrollingLeft(graphics, font, title, PANEL_X + 4, panelY + 15, PANEL_W - 104, 0xFFFFFF, false);
 
-        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.picker"), PICKER_X, PICKER_Y - 15, 0xFFFFFF, false);
-        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.current"), SIDE_X, PICKER_Y - 15, 0xFFFFFF, false);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.picker"), PICKER_X, pickerY - 15, 0xFFFFFF, false);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.current"), SIDE_X, pickerY - 15, 0xFFFFFF, false);
         renderPicker(graphics);
 
-        graphics.fill(SIDE_X, PICKER_Y, SIDE_X + SIDE_W, PICKER_Y + 24, 0xFF000000 | rgb);
-        VanillaGuiDraw.outline(graphics, SIDE_X, PICKER_Y, SIDE_W, 24, 0xFFFFFFFF);
-        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.hex"), SIDE_X, PICKER_Y + 38, 0xFFFFFF, false);
-        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.red"), SIDE_X, PICKER_Y + 64, 0xFFFFFF, false);
-        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.green"), SIDE_X, PICKER_Y + 88, 0xFFFFFF, false);
-        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.blue"), SIDE_X, PICKER_Y + 112, 0xFFFFFF, false);
+        graphics.fill(SIDE_X, pickerY, SIDE_X + SIDE_W, pickerY + 24, 0xFF000000 | rgb);
+        VanillaGuiDraw.outline(graphics, SIDE_X, pickerY, SIDE_W, 24, 0xFFFFFFFF);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.hex"), SIDE_X, pickerY + 38, 0xFFFFFF, false);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.red"), SIDE_X, pickerY + 64, 0xFFFFFF, false);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.green"), SIDE_X, pickerY + 88, 0xFFFFFF, false);
+        VanillaGuiDraw.text(graphics, font, KineticText.translatable("gui.kineticcore.palette.blue"), SIDE_X, pickerY + 112, 0xFFFFFF, false);
 
         if (paletteMode) {
             VanillaGuiDraw.text(graphics, 
@@ -190,9 +192,9 @@ public final class ColorPickerScreen extends KineticScreen {
         for (int x = 0; x < PICKER_SIZE; x++) {
             float sat = x / (float) (PICKER_SIZE - 1);
             int top = 0xFF000000 | (Mth.hsvToRgb(hue, sat, 1.0f) & 0xFFFFFF);
-            graphics.fillGradient(PICKER_X + x, PICKER_Y, PICKER_X + x + 1, PICKER_Y + PICKER_SIZE, top, 0xFF000000);
+            graphics.fillGradient(PICKER_X + x, pickerY, PICKER_X + x + 1, pickerY + PICKER_SIZE, top, 0xFF000000);
         }
-        VanillaGuiDraw.outline(graphics, PICKER_X - 1, PICKER_Y - 1, PICKER_SIZE + 2, PICKER_SIZE + 2, 0xFFFFFFFF);
+        VanillaGuiDraw.outline(graphics, PICKER_X - 1, pickerY - 1, PICKER_SIZE + 2, PICKER_SIZE + 2, 0xFFFFFFFF);
 
         int[] hues = {
                 0xFFFF0000,
@@ -204,18 +206,18 @@ public final class ColorPickerScreen extends KineticScreen {
                 0xFFFF0000
         };
         for (int i = 0; i < 6; i++) {
-            int y1 = PICKER_Y + i * PICKER_SIZE / 6;
-            int y2 = PICKER_Y + (i + 1) * PICKER_SIZE / 6;
+            int y1 = pickerY + i * PICKER_SIZE / 6;
+            int y2 = pickerY + (i + 1) * PICKER_SIZE / 6;
             graphics.fillGradient(HUE_X, y1, HUE_X + HUE_W, y2, hues[i], hues[i + 1]);
         }
-        VanillaGuiDraw.outline(graphics, HUE_X - 1, PICKER_Y - 1, HUE_W + 2, PICKER_SIZE + 2, 0xFFFFFFFF);
+        VanillaGuiDraw.outline(graphics, HUE_X - 1, pickerY - 1, HUE_W + 2, PICKER_SIZE + 2, 0xFFFFFFFF);
 
         int selectorX = PICKER_X + Math.round(saturation * (PICKER_SIZE - 1));
-        int selectorY = PICKER_Y + Math.round((1.0f - value) * (PICKER_SIZE - 1));
+        int selectorY = pickerY + Math.round((1.0f - value) * (PICKER_SIZE - 1));
         VanillaGuiDraw.outline(graphics, selectorX - 2, selectorY - 2, 5, 5, 0xFF000000);
         VanillaGuiDraw.outline(graphics, selectorX - 1, selectorY - 1, 3, 3, 0xFFFFFFFF);
 
-        int hueY = PICKER_Y + Math.round(hue * (PICKER_SIZE - 1));
+        int hueY = pickerY + Math.round(hue * (PICKER_SIZE - 1));
         graphics.fill(HUE_X - 2, hueY - 1, HUE_X + HUE_W + 2, hueY + 2, 0xFFFFFFFF);
         graphics.fill(HUE_X - 1, hueY, HUE_X + HUE_W + 1, hueY + 1, 0xFF000000);
     }
@@ -234,7 +236,7 @@ public final class ColorPickerScreen extends KineticScreen {
             graphics.fill(x, y, x + SWATCH_CELL, y + SWATCH_CELL, 0xFF000000 | color);
             VanillaGuiDraw.outline(graphics, x, y, SWATCH_CELL, SWATCH_CELL, 0xFFFFFFFF);
             if (GuiTheme.hovering(mouseX, mouseY, x, y, SWATCH_CELL, SWATCH_CELL)) {
-                VanillaGuiDraw.outline(graphics, x - 1, y - 1, SWATCH_CELL + 2, SWATCH_CELL + 2, 0xFFFFB300);
+                GuiTheme.stateOutline(graphics, x - 1, y - 1, SWATCH_CELL + 2, SWATCH_CELL + 2, false, true, false);
             }
         }
     }
@@ -242,15 +244,15 @@ public final class ColorPickerScreen extends KineticScreen {
     @Override
     protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int mouseX, int mouseY) {
         if (overlayBlocksInput()) return;
-        if (GuiTheme.hovering(scaledMouseX, scaledMouseY, PICKER_X, PICKER_Y, PICKER_SIZE, PICKER_SIZE)) {
+        if (GuiTheme.hovering(scaledMouseX, scaledMouseY, PICKER_X, pickerY, PICKER_SIZE, PICKER_SIZE)) {
             showTooltipLine(KineticText.translatable("gui.kineticcore.palette.picker.tooltip"));
             return;
         }
-        if (GuiTheme.hovering(scaledMouseX, scaledMouseY, HUE_X - 2, PICKER_Y, HUE_W + 4, PICKER_SIZE)) {
+        if (GuiTheme.hovering(scaledMouseX, scaledMouseY, HUE_X - 2, pickerY, HUE_W + 4, PICKER_SIZE)) {
             showTooltipLine(KineticText.translatable("gui.kineticcore.palette.hue.tooltip"));
             return;
         }
-        if (GuiTheme.hovering(scaledMouseX, scaledMouseY, SIDE_X, PICKER_Y, SIDE_W, 24)) {
+        if (GuiTheme.hovering(scaledMouseX, scaledMouseY, SIDE_X, pickerY, SIDE_W, 24)) {
             showTooltipLine(KineticText.translatable(
                     "gui.kineticcore.palette.current.tooltip",
                     String.format(Locale.ROOT, "%06X", rgb)
@@ -271,12 +273,12 @@ public final class ColorPickerScreen extends KineticScreen {
     @Override
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
-            if (GuiTheme.hovering(mouseX, mouseY, PICKER_X, PICKER_Y, PICKER_SIZE, PICKER_SIZE)) {
+            if (GuiTheme.hovering(mouseX, mouseY, PICKER_X, pickerY, PICKER_SIZE, PICKER_SIZE)) {
                 squareDragging = true;
                 updateFromSquare(mouseX, mouseY);
                 return true;
             }
-            if (GuiTheme.hovering(mouseX, mouseY, HUE_X - 2, PICKER_Y, HUE_W + 4, PICKER_SIZE)) {
+            if (GuiTheme.hovering(mouseX, mouseY, HUE_X - 2, pickerY, HUE_W + 4, PICKER_SIZE)) {
                 hueDragging = true;
                 updateFromHue(mouseY);
                 return true;
@@ -325,13 +327,13 @@ public final class ColorPickerScreen extends KineticScreen {
 
     private void updateFromSquare(double mouseX, double mouseY) {
         saturation = (float) Mth.clamp((mouseX - PICKER_X) / (PICKER_SIZE - 1.0), 0.0, 1.0);
-        value = 1.0f - (float) Mth.clamp((mouseY - PICKER_Y) / (PICKER_SIZE - 1.0), 0.0, 1.0);
+        value = 1.0f - (float) Mth.clamp((mouseY - pickerY) / (PICKER_SIZE - 1.0), 0.0, 1.0);
         rgb = Mth.hsvToRgb(hue, saturation, value) & 0xFFFFFF;
         syncFields();
     }
 
     private void updateFromHue(double mouseY) {
-        hue = (float) Mth.clamp((mouseY - PICKER_Y) / (PICKER_SIZE - 1.0), 0.0, 1.0);
+        hue = (float) Mth.clamp((mouseY - pickerY) / (PICKER_SIZE - 1.0), 0.0, 1.0);
         if (hue >= 1.0f) {
             hue = 0.0f;
         }

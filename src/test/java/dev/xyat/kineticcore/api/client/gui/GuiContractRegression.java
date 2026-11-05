@@ -63,7 +63,7 @@ public final class GuiContractRegression {
                             && density.renderScale() > 0F,
                     density + " must have usable dimensions");
             check(density.cellPitch() == density.slotSize() + density.gap(), density + " pitch is slot plus gap");
-            check(density.slotSize() > previousSlot, "densities are ordered from smallest to largest slot");
+            check(density.slotSize() >= previousSlot, "densities are ordered from smallest to largest slot (flush variants share a size)");
             previousSlot = density.slotSize();
         }
         check(ItemGridDensity.PREVIEW.decorations() && !ItemGridDensity.STANDARD.decorations(),

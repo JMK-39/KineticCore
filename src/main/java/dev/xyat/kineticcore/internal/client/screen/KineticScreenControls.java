@@ -1077,6 +1077,10 @@ public final class KineticScreenControls {
         overlays.itemTooltip(stack);
     }
 
+    public void showItemTooltip(ItemStack stack, List<Component> additionalLines) {
+        overlays.itemTooltip(stack, additionalLines);
+    }
+
     /** Closes context menu. */
     public void closeContextMenu() {
         overlays.closeMenu();
@@ -1117,8 +1121,13 @@ public final class KineticScreenControls {
                     for (int index = 0; index < values.size(); index++) {
                         int optionIndex = index;
                         Option option = values.get(index);
-                        Component label = Component.literal(option.value());
-                        Component detail = showTranslations ? option.translation() : Component.empty();
+                        // A registry ID (biome, attribute, ...) shows the ID and, outside English, its translation.
+                        // Any other value (add, replace, ...) shows only the add-on's label: the raw value would
+                        // repeat it in another language.
+                        boolean idValue = option.value().indexOf(':') > 0;
+                        boolean labelled = !option.translation().getString().isBlank();
+                        Component label = idValue || !labelled ? Component.literal(option.value()) : option.translation();
+                        Component detail = idValue && showTranslations ? option.translation() : Component.empty();
                         Component optionTooltip = option.tooltip().getString().isBlank() ? label : option.tooltip();
                         // A dropdown picks exactly one value: buttons when short, framed text rows once it is searchable.
                         entries.add(KineticOverlays.MenuItem.choice(
@@ -1178,16 +1187,35 @@ public final class KineticScreenControls {
         return autoCompleteGroup.handleKeyPressed(keyCode, scanCode, modifiers);
     }
 
+    /** The registered control whose tooltip the last {@link #requestWidgetTooltip} showed, or {@code null}. */
+    public AbstractWidget lastTooltipWidget() {
+        return lastTooltipWidget;
+    }
+
+    private AbstractWidget lastTooltipWidget;
+    private AbstractWidget lastHitWidget;
+
+    /** The registered control under the mouse in the last {@link #requestWidgetTooltip}, or {@code null}. */
+    public AbstractWidget lastHitWidget() {
+        return lastHitWidget;
+    }
+
     public boolean requestWidgetTooltip(double mouseX, double mouseY, Predicate<AbstractWidget> hitFilter) {
+        lastTooltipWidget = null;
+        lastHitWidget = null;
         for (int index = tooltipHitOrder.size() - 1; index >= 0; index--) {
             AbstractWidget widget = tooltipHitOrder.get(index);
             if (!widget.visible || !hitFilter.test(widget)) continue;
             if (mouseX >= widget.getX() && mouseX < widget.getX() + widget.getWidth()
                     && mouseY >= widget.getY() && mouseY < widget.getY() + widget.getHeight()) {
+                lastHitWidget = widget;
                 Supplier<Component> supplier = widgetTooltips.get(widget);
                 try {
                     Component tooltip = supplier == null ? null : supplier.get();
-                    if (tooltip != null && !tooltip.getString().isBlank()) overlays.tooltip(tooltip, 320);
+                    if (tooltip != null && !tooltip.getString().isBlank()) {
+                        overlays.tooltip(tooltip, 320);
+                        lastTooltipWidget = widget;
+                    }
                 } catch (RuntimeException | Error failure) {
                     // A business-supplied dynamic tooltip must not crash the screen or
                     // expose tooltips belonging to widgets behind this foreground one.

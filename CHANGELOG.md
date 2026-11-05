@@ -1,3 +1,218 @@
+2026年11月5日 — 26.11.5 — Line breaks in Chinese text / 中文换行
+- Wrapped text in Kinetic GUIs (dialogs, descriptions, tooltips, toasts and field placeholders) no longer starts a line with a comma, full stop or closing bracket, or ends one with an opening bracket or quotation mark. Vanilla breaks Chinese text after any character; the break now moves back a character or two. Breaks between English words are unchanged.
+- Kinetic 界面中自动换行的文字（对话框、说明、悬浮提示、通知与输入框占位文字）不再把逗号、句号、右括号等放在行首，也不再把左括号、左引号放在行尾：原版会在任意汉字后换行，现在换行位置会往前挪一两个字。英文单词之间的换行不变。
+
+2026年11月4日 — 26.11.4 — Search boxes keep what you type, spawn egg editor fixes / 搜索框保留已输入文字与刷怪蛋编辑器修复
+- Typing in the search box of a Kinetic menu (the F6 module pages, the config list, the potion and spawn egg editors) no longer selects what was typed so far, so the next letter adds to it instead of replacing it. A field that a screen focuses for you now puts the caret after its text with nothing selected.
+- 在 Kinetic 菜单的搜索框（F6 模块页、配置列表、药水与刷怪蛋编辑器）中输入时，已输入的文字不再被反复选中，后输入的字会接在后面而不是覆盖前面的内容。界面自动聚焦的输入框现在把光标放在文字末尾，不选中任何内容。
+- Spawn egg editor: switching an attribute from Addition to Final Multiplier crashed the game when its value was 0 or less, which is the case for every newly ticked attribute. The value now becomes the multiplier 1 (no change) and a message says that a multiplier cannot be 0; typing 0 (or less) as a multiplier is refused with "Cannot multiply by 0".
+- 刷怪蛋编辑器：属性数值为 0 或负数时（新勾选的属性都是 0），把“加法”切换为“最终倍率”会导致游戏崩溃。现在会自动改为倍数 1（不改变数值），并提示最终倍率不能为 0；在最终倍率下手动输入 0（或负数）会提示“不能乘 0”，该值不会生效。
+- Special spawn eggs now apply their attributes, effects, equipment and name however the mob is spawned: placed on a block or in water by right-clicking, from a dispenser, or thrown. Before, only thrown eggs and spawners did, so a hand-placed egg spawned a plain mob (for example a pig whose max health stayed at 10). A mob from an egg that has no name in the editor no longer carries the egg's label ("Special Spawn Egg: Pig") as its name; a name given in an anvil stays.
+- 特殊刷怪蛋无论以何种方式生成生物都会应用其属性、效果、装备与名称：右键放在方块上或水中、发射器、投掷均可。此前只有投掷和刷怪笼会应用，手动放置的刷怪蛋生成的是普通生物（例如最大生命值仍为 10 的猪）。编辑器中未命名的刷怪蛋生成的生物不再把刷怪蛋的标签（“特殊刷怪蛋：猪”）当作名字；用铁砧改的名字保留。
+- Fast cobweb breaking now covers pickaxes, shovels and hoes as well as axes, as its description says. They break a cobweb as fast as a sword and it drops string; Mining Fatigue, Haste, being underwater and being in the air change the speed as they do for a sword (before, axes always got the same speed).
+- 快速破网现在和描述一致，除斧外镐、锹和锄也适用：破坏蜘蛛网和剑一样快，并掉落线；挖掘疲劳、急迫、水下与空中对速度的影响与用剑时相同（此前斧头的速度固定不变）。
+- Farmland protection works with Feather Falling boots, but its descriptions (the F6 tooltip, the general.toml comment and the wiki) said Protection, which never kept farmland. They now say Feather Falling, and the line under Feather Falling on items says that jumping onto farmland won't trample it.
+- 耕地保护对“摔落保护”靴子生效，但其说明（F6 提示、general.toml 注释与 wiki）写的是“保护”，而“保护”从未生效。说明已改为“摔落保护”，物品上“摔落保护”下方的提示也改为“穿在脚上时，跳到耕地上不会踩坏它”。
+- Structures and structure sets in Kinetic data packs whose type no installed mod registers (for example after the mod that adds it was removed) are left out of the pack, with a warning in the log, so the world still loads; vanilla would refuse to load the world's data packs at all.
+- Kinetic 数据包中类型未被任何已安装模组注册的结构和结构集合（例如提供该类型的模组被移除后）会被跳过并在日志中警告，世界照常加载；原版会因此拒绝加载整个世界的数据包。
+- Add-ons can register structure types, structure placement types and structure piece types (KineticWorldgenTypes).
+- 附属可以注册结构类型、结构放置类型与结构部件类型（KineticWorldgenTypes）。
+
+2026年11月3日 — 26.11.3 — 3D structure previews for add-ons / 附属可用的结构 3D 预览
+- Add-ons can show a block structure in 3D in any screen (KineticStructureView): drag to turn, right-drag or middle-drag to move, scroll to zoom, double-click to reset, and a cross-section height that hides everything above it. Large structures are built a slice per frame with a percentage shown, so the game never stalls; chests, beds and banners are drawn with their own models and blocks unknown to the game show as red glass. It looks the same on 1.20.1, 1.21.1 and 26.1.2.
+- 附属可以在任意界面中用 3D 显示方块结构（KineticStructureView）：左键拖拽旋转，右键或中键拖拽平移，滚轮缩放，双击复位，并可设置剖面高度隐藏其上方的方块。大型结构逐帧分段构建并显示百分比，不会卡顿；箱子、床、旗帜用自身模型绘制，游戏中不存在的方块显示为红色玻璃。1.20.1、1.21.1 与 26.1.2 上显示效果一致。
+- Block snapshots (KineticBlockSnapshot) hold a structure's blocks, block entity data and entities, are encoded compactly and keep the names of blocks the reading side does not know. Large data is sent in parts with progress (KineticBlobTransfer).
+- 方块快照（KineticBlockSnapshot）保存结构的方块、方块实体数据与实体，编码紧凑，读取端不认识的方块保留其名称。大数据可分段发送并报告进度（KineticBlobTransfer）。
+- Small pictures of snapshots can be drawn without a game window, also on a server, and saved as PNG (KineticSnapshotThumbnail); PNG data can be shown in screens as a texture (KineticRuntimeTextures).
+- 快照的小图可以在没有游戏窗口的情况下绘制（服务端也可以），并保存为 PNG（KineticSnapshotThumbnail）；PNG 数据可作为贴图显示在界面中（KineticRuntimeTextures）。
+- Add-ons can use the mouse wheel in game (KineticClientEvents.onMouseScroll) with a priority: a handler that takes a turn keeps it from the hotbar and from Kinetic's own wheel uses. The creative flight speed (Shift + wheel) now listens the same way at normal priority, so a held tool's wheel controls come first.
+- 附属可以在游戏中使用鼠标滚轮（KineticClientEvents.onMouseScroll），并指定优先级：处理了滚动的监听器会阻止快捷栏切换和 Kinetic 自身的滚轮功能。创造飞行调速（Shift + 滚轮）也改用同一事件、普通优先级，手持工具的滚轮操作优先。
+- World line boxes can stay visible behind blocks (LineBatch.boxThroughBlocks): the edges in the open are drawn in full colour, the hidden ones faintly, as selection boxes in building tools are.
+- 世界线框可以透过方块显示（LineBatch.boxThroughBlocks）：露在外面的边用正常颜色，被挡住的边淡色显示，与建筑工具的选区框一样。
+- Loot tables in Kinetic data packs (config/kineticcore/datapack) load without the entries whose item is missing, for example after a mod was removed, and the rest of the table keeps working; vanilla would drop the whole table. The log names the entries left out, once per table.
+- Kinetic 数据包（config/kineticcore/datapack）中的战利品表在加载时去掉物品缺失的条目（例如移除了某个模组），表的其余部分照常生效；原版会让整张表失效。日志按表列出被去掉的条目，每张表一行。
+
+2026年11月2日 — 26.11.2 — Spawn platform switch, tooltips beside the hovered slot, Actually Subtractions crash / 出生平台开关、提示框紧贴悬停格与实用拓展崩溃
+- Custom spawn: ground at any height counts as a place to stand, down to the bottom layer of the world (a flat world's bedrock floor), so no obsidian platform is laid in the sky above it. A new F6 switch, Obsidian Safety Platform (on by default), decides whether a 3x3 platform is laid when no ground is found at all; when off, no blocks are placed.
+- 自定义出生点：任何高度的地面都可作为落脚点，最低到世界底层（如超平坦世界的基岩层），不再在其上方的空中铺黑曜石平台。F6 新增“黑曜石保护平台”开关（默认开启），决定完全找不到地面时是否铺 3x3 平台；关闭后不放置任何方块。
+- Item grids and entity card grids open a tooltip beside the hovered slot or card instead of beside the whole row, so it stays next to the cursor and only keeps that one item uncovered.
+- 物品网格与实体卡片网格的提示框改为紧贴悬停的格子或卡片显示，不再推到整行的外侧；提示框只避开被悬停的那一项。
+- Fixed a crash when entering a world with Actually Subtractions (the 1.20.1 port of Actually Additions) and ContentStudio installed. That mod locks its engineer villager's trade lists; the trade lists Kinetic hands to add-ons can now always be changed.
+- 修复同时安装 Actually Subtractions（实用拓展的 1.20.1 移植版）与 ContentStudio 时进入世界崩溃的问题。该模组把工程师村民的交易列表设为不可修改；Kinetic 交给附属的交易列表现在始终可以修改。
+
+2026年11月1日 — 26.11.1 — Driven flight brakes sooner / 附属驱动的飞行刹得更快
+- A flight driven by an add-on brakes harder when the keys are let go: from top speed it comes to an upright hover in about half a second.
+- 附属驱动的超人飞行松开按键后刹得更快：从全速到直立悬停约半秒。
+
+2026年10月31日 — 26.10.31 — Add-ons drive super flight, Kinetic's own flight sounds / 附属驱动超人飞行与自制飞行音效
+- Add-ons can grant super flight from an item or effect (KineticSuperFlight.grant) and drive it for the local player (KineticFlightClient.overrideSuperFlight): their own speed, eased in and out, and the flight pose while moving; letting go glides on, slows and then hovers upright, so tapping the keys never flips the pose. In super flight the legs hang still instead of freezing mid-stride.
+- 附属可以由物品或效果授予超人飞行（KineticSuperFlight.grant），并为本人接管飞行（KineticFlightClient.overrideSuperFlight）：使用附属给定的速度并平滑加减速，移动时进入飞行姿势；松开按键会继续滑行、减速后直立悬停，点按方向键不会来回切换姿势。超人飞行中双腿自然下垂，不再定格在迈步的姿势。
+- Super flight's wind, sonic boom and takeoff blast are mixed from public-domain (CC0) recordings instead of vanilla sounds (see sounds/flight/CREDITS.txt), and the vanilla elytra rush is silenced while super flight is on. KineticClientSounds plays sounds that exist only in a resource pack's sounds.json.
+- 超人飞行的风声、音爆与起飞爆鸣改为由公有领域（CC0）录音混制的音效，不再使用原版音效（见 sounds/flight/CREDITS.txt）；超人飞行期间不再播放原版鞘翅风声。KineticClientSounds 可以播放只在资源包 sounds.json 中定义的音效。
+- Glow and tint batches draw at once and in order, after clouds and rain, so a mod that defers the level's drawing no longer puts the glow under the tint; on 26.1 overlapping glows no longer cut each other off. On 1.20.1 and 1.21.1 they draw with the view recorded after entities, so effects drawn after weather stay on what they belong to while the camera turns (they used to drift or turn twice).
+- 发光与着色批次改为立即按顺序绘制，并放在云和雨雪之后：推迟世界绘制的模组不会再让发光层被着色层盖住；26.1 上重叠的发光面不再互相遮挡。1.20.1 与 1.21.1 上改用实体渲染后记录的视角绘制，雨雪之后绘制的特效在转动镜头时不再偏离（以前会漂移或被转两次）。
+- In the potion and spawn egg editors, the fields and buttons of each row sit as far from the row's right edge as from its top and bottom.
+- 药水与刷怪蛋编辑器中，每行的输入框与按钮离行右边框的距离与上下一致。
+
+2026年10月27日 — 26.10.27 — Super flight effects, page views for screenshots / 超人飞行特效与页面视图截图
+- Custom spawn eggs can specify main-hand, off-hand and four armor-slot items, including their NBT or components. The compact item grid shows vanilla equipment-slot silhouettes; click to search and replace, right-click to edit data or clear. Equipment is saved with presets, shown in the mob preview and applied to ordinary, thrown and spawner-generated mobs. Missing attribute/effect translations no longer repeat raw language keys, and row controls are vertically centered in both editors.
+- 自定义刷怪蛋新增主手、副手和四个盔甲槽位，保留装备的 NBT／组件；紧凑物品格使用原版装备空槽图案，点击搜索更换，右键编辑数据或清空。支持记录保存、生物预览、普通使用、投掷和刷怪笼。属性与药水效果缺失翻译时仅显示注册 ID，两种编辑器的行内输入框和按钮改为垂直居中。
+- Superman flight has effects and sounds that follow its speed: rushing wind that grows louder and higher, cloud streaks and speed lines, a vapour cone as the flyer nears the sound barrier (320 m/s by default), a sonic boom with a shock ring and a flash when crossing it, a blast on fast takeoffs, and a white-hot shield with plasma flames streaming back at twice the barrier speed. Nearby players who fly that fast show the same effects. Everything, including the barrier and takeoff speeds, volumes and colours, is set on the new Super-Flight Effects page in F6.
+- 超人飞行加入随速度变化的特效与音效：风声随速度变响变尖，云气拖尾与速度线；接近音障（默认 320 m/s）时出现音锥，突破时有音爆、冲击环与闪光；极速起飞时有爆鸣；达到两倍音障速度时身前出现白热护盾，等离子火舌向后翻卷。附近高速飞行的玩家也会显示同样的效果。所有内容（包括音障与起飞速度、音量和颜色）都在 F6 新增的“超人飞行特效”页设置。
+- Add-ons can draw quads in the world in one batch, either glowing with additive blending (KineticWorldRender.beginGlowBatch) or tinted with ordinary blending so colours keep their hue against a bright sky (beginTintBatch), and play positioned or looping client sounds by id (KineticClientSounds).
+- 附属可以批量绘制世界中的面片：叠加混合的发光面（KineticWorldRender.beginGlowBatch），或普通混合、在明亮天空下也保持本色的着色面（beginTintBatch）；并可按 ID 播放定点或循环的客户端音效（KineticClientSounds）。
+- Pages can list their tabs and categories (KineticPage.reviewViews) so screenshot tools capture every one of them; the spawn egg editor lists its attribute and effect lists.
+- 页面可以列出自己的标签页和分类（KineticPage.reviewViews），截图工具会逐个截图；刷怪蛋编辑器列出了属性与药水效果两个列表。
+
+2026年10月26日 — 26.10.26 — Opaque canvas, complete item bans / 不透明画布与彻底封禁
+- Right-click menus show eight rows at most and scroll the rest with a scrollbar, so long menus no longer run off the screen.
+- 右键菜单最多显示 8 行，其余用滚动条滚动，长菜单不再超出屏幕。
+- The datapack and resource pack priority lists show pack names as fixed text: they can be reordered and removed, never renamed, and have no Add button.
+- 数据包与资源包优先级列表的名称改为固定文字，只能排序和移除，不能修改名称，也不再有“添加条目”。
+- Config lists can now show item rows: an item slot (click to change it), the item's name in colour and a number beside it; Add opens the item picker (KTConfigPage.itemValueList).
+- 配置列表新增物品行样式：物品格（点击更换）、彩色物品名和右侧数值，“添加”直接打开物品选择器（KTConfigPage.itemValueList）。
+- The spawn location editor follows the canvas layout (Back, tabs, centred title and Save in the header; search and switches on one row; the list fills the rest), and Back returns to the settings page instead of closing everything.
+- 出生地编辑器按画布重新排版（顶栏为返回、分类、居中标题和保存；搜索与开关在同一行；列表铺满下方），返回改为回到设置页，不再直接关闭界面。
+- The potion and spawn egg editors are rebuilt around saved records. The left column lists every saved potion or egg of this client (newest first, the one being edited outlined in yellow; right-click to duplicate or delete). On the right, tick as many effects (or attributes) as needed straight in the list; a ticked row shows its level, seconds and Forever switch (or operation and value) in place, and right-click sets particles and icon. New, Save and Generate sit at the top right: Save stores the record in the client config and moves the ticked entries to the top of the list, vanilla entries come before modded ones, and switching records or leaving with unsaved changes asks first. The egg editor shows the mob above its records.
+- 药水与刷怪蛋编辑器按“记录”重做：左侧列出本机保存的所有药水或刷怪蛋记录（最新的在最上面，正在编辑的为黄色边框；右键可复制或删除）。右侧列表直接勾选多个药水效果（或属性），勾选的行内就能设置等级、秒数和永久（或运算与数值），右键设置粒子和图标。右上角为新建、保存与生成：保存会把记录写入客户端配置，并把勾选过的条目置顶；原版条目排在模组条目之前；有未保存的修改时切换记录或离开会先询问。刷怪蛋编辑器在记录上方显示生物模型。
+- The NBT and data component editor has Back at the top left like every page; Clear and Save are at the top right and the separate Close button is gone.
+- NBT 与数据组件编辑器左上角改为“返回”，与其他页面一致；清空与保存在右上角，去掉单独的“关闭”按钮。
+- The canvas of every Kinetic screen is opaque in the modern style, and around it the game stays visible and live, only dimmed. The background blur is gone on every version, which also removes its frame-rate cost on 1.20.1.
+- 现代风格下所有 Kinetic 界面的画布改为不透明；画布外仍能看到实时变化的游戏画面，只加一层暗色。所有版本都不再模糊背景，1.20.1 也因此不再有模糊带来的掉帧。
+- The first-join reward editor has Back, Import Inventory and Save in its header instead of at the bottom.
+- 首次加入奖励编辑页的返回、导入背包与保存移到顶栏，不再放在底部。
+
+2026年10月24日 — 26.10.24 — Buttons at the top, standard slots / 按钮置顶与统一物品格
+- Screens with many icons stay smooth on 1.20.1 and 1.21.1: rounded shapes, slot outlines and item icons are sent to the GPU in batches instead of one draw call per fill or icon (a full item grid went from thousands of draw calls a frame to a few). Kinetic screens never limited the frame rate; the drop was drawing cost. Add-ons can batch their own icon grids with KineticGraphics.batchItems.
+- 物品较多的界面在 1.20.1 与 1.21.1 上保持流畅：圆角形状、格子边框与物品图标改为批量提交，不再每次填充或每个图标单独提交一次（满屏物品网格每帧从数千次绘制降到几次）。Kinetic 界面本身从未限制帧率，掉帧来自绘制开销。附属可用 KineticGraphics.batchItems 批量绘制自己的图标网格。
+- One item slot size and one 3D mob card size everywhere: KineticSizes (22 px slots 24 px apart, 50 px mob cards) and the new ItemGridDensity.COMPACT_FLUSH (standard slots without inner padding) for add-on grids.
+- 统一物品格与生物卡片尺寸：新增 KineticSizes（物品格 22 像素、间距 24，生物卡片 50 像素）与 ItemGridDensity.COMPACT_FLUSH（无内边距的标准格子），供各附属网格使用。
+- Colour swatches are flat right-angled squares of their colour (white outline on hover) instead of small buttons.
+- 颜色选择块改为直角纯色方块（悬停白色描边），不再是小按钮样式。
+- Command editor: Save at the top right and the command box at the bottom, so its suggestions open over the whole page. Command and value lists: Add (and Done) in the header, the description on one line and the rows right under it.
+- 指令编辑：保存移到右上角，指令框放在最底部，补全列表向上展开占用整页；指令列表与数值列表：新增（与完成）放在顶栏，说明压成一行，条目紧接其下。
+- The NBT/text editor wraps at the real line width: TTF fonts with fractional glyph widths no longer wrap long before the right edge.
+- NBT/文本编辑器按真实宽度换行：使用小数字宽的 TTF 字体时不再离右边很远就换行。
+
+2026年10月23日 — 26.10.23 — Modern style, movable content areas and a real command line / 现代风格、可拖动的内容区域与真正的命令行
+
+- Pages can declare named content regions (region(...)); the layout editor shows them as orange areas that can be moved and resized like controls. The page is rebuilt in the new rectangle, so grids show as many whole cells as fit and leave the rest blank. Dragging the edge between two neighbouring areas resizes both (hold Ctrl to resize one side only).
+- Controls can carry a fixed layout name (layoutId(...)), so a saved position no longer depends on the label text or build order. Saved layouts remember the defaults they were made against; when a mod update changes a page's defaults, the old positions are dropped with a notice instead of misplacing controls. Per-row buttons the page positions itself are no longer offered for editing, and Ctrl+Z skips steps that would change nothing.
+- The in-page command line is a vanilla text field with the vanilla chat command suggestions: Tab completes, arrow keys choose, copy, paste and selection work, and Enter runs the command (it was swallowed before). Besides /ktlayout, any client or server command can be run from it. While it is open it receives every key first, so Backspace edits the text instead of deleting a hovered entry.
+- Back buttons show a left triangle before their label, and buttons that open a menu or list (dropdowns and buttons marked with expands()) show a down triangle after it, the same in every add-on. Cancel and Close at the top-left now read Back.
+- A modern style for every Kinetic screen, on by default: rounded corners drawn smoothly at any GUI scale, translucent frosted-glass panels over the blurred game (Minecraft's own menu blur on 1.21.1 and 26.1.2, the same blur added on 1.20.1), glass buttons, dark rounded input fields, pill scrollbars and sliders, rounded menu rows and notices. Item slots keep the vanilla look. modernStyle in config/kineticcore/ui_client.toml (UI & Interaction settings) switches back to the classic square style.
+- The layout editor selects several items: Shift+click adds or removes one, dragging a box on empty space selects everything inside it, Ctrl+A selects every control. Dragging or the arrow keys move the whole selection, and right-click restores all of it. Double-clicking an item opens the command line with its numbers (/ktlayout set x y width height) to type exact values.
+- New /ktlayout sub-commands, listed by the vanilla suggestions: reset (the whole page back to its defaults), set x y [width height], align left|right|top|bottom|centerx|centery (several items to their common edge, one item to the canvas margin or centre), same width|height|size (as the item clicked last) and distribute horizontal|vertical (equal gaps). Each is one undo step.
+- Hover and selection are easier to see: the outline breathes towards white and back (instead of a faint dimming), the current choice has a full-pixel outline, and in the modern style a soft halo breathes around the item, with a faint tint inside cards, rows and fields. Autocomplete lists use the frosted rounded look.
+- An empty input field is no longer marked red before anyone has clicked into it; it shows the error once it was visited and is still empty or invalid. Confirmation dialogs say Back instead of Cancel.
+- While editing, problems are marked red: moved controls that overlap another control, items outside the 4 px canvas margin and buttons too narrow for their label; the hover label names the problem, and the save question says how many remain.
+- Text too long for its space shows its start with an ellipsis and scrolls through in full only while the mouse is over it, starting from the beginning each time.
+- Tooltips are placed beside what they describe and always stay on screen: a button's or field's tooltip opens below it (above when there is no room), an item's to its right or left, a menu entry's beside the menu. Tooltips of buttons at the top of a screen no longer reach past its edge. A list row's or grid cell's tooltip opens beside or below that row, never on top of it; pages that draw their own rows or cards place theirs with tooltipAnchor(x, y, width, height).
+- Buttons in dropdown menus have 2 px between them.
+- 1.20.1: a page opened from the chat screen (TextStudio's chat history) no longer stays invisible in the modern style; the frosted background left depth behind that hid the page.
+- 页面可声明命名内容区域（region(...)）；布局编辑器中显示为橙色区域，可像控件一样移动和调整大小。页面按新矩形重建，网格按能放下的整格数显示，剩余部分留白。拖动两个相邻区域之间的边会同时调整两边（按住 Ctrl 只改一边）。
+- 控件可设置固定布局名（layoutId(...)），保存的位置不再受按钮文字或创建顺序影响。保存的布局会记录当时的默认位置；模组更新改变页面默认布局后，旧位置会被停用并提示，不会错位。页面自行定位的每行按钮不再出现在编辑中，Ctrl+Z 会跳过不产生变化的步骤。
+- 页面内命令行改为原版输入框并带原版聊天命令补全：Tab 补全、方向键选择，支持复制、粘贴和选择，回车可执行（此前回车被吞掉）。除 /ktlayout 外也可执行任意客户端或服务器命令。命令行打开时优先接收所有按键，退格只编辑文字，不会删除鼠标下的条目。
+- 返回按钮在文字前显示向左三角，打开菜单或列表的按钮（下拉框及标记 expands() 的按钮）在文字后显示向下三角，所有附属外观一致。左上角的“取消”“关闭”统一改为“返回”。
+- 所有 Kinetic 界面新增现代风格（默认开启）：任意界面缩放下都平滑的圆角、模糊游戏画面上的半透明毛玻璃面板（1.21.1 与 26.1.2 使用原版菜单模糊，1.20.1 补上同样的模糊）、玻璃质感按钮、深色圆角输入框、胶囊形滚动条与滑块、圆角菜单行与提示。物品格保持原版样式。config/kineticcore/ui_client.toml 中的 modernStyle（“界面与交互”设置）可切回经典直角风格。
+- 布局编辑器支持多选：Shift+点击加选或取消，在空白处拖框选中框内全部项，Ctrl+A 全选控件。拖动或方向键会移动全部选中项，右键会把它们全部恢复默认。双击某项会打开命令行并填好它的数值（/ktlayout set x y 宽 高），可直接输入精确数值。
+- 新增 /ktlayout 子命令（原版补全会列出）：reset（本页全部恢复默认）、set x y [宽 高]、align left|right|top|bottom|centerx|centery（多项对齐到共同边缘，单项对齐到画布边距或中线）、same width|height|size（与最后点击的项同宽/同高/同大小）、distribute horizontal|vertical（等距排列）。每条命令都可一次撤销。
+- 悬浮与选中提示更明显：描边的呼吸改为向白色提亮再回落（原来只是轻微变暗），当前选中项描边加粗到 1 个界面像素；现代风格下控件外圈还有随呼吸变化的柔和光晕，卡片、列表行和输入框内部带淡淡的同色底。自动补全列表也改为毛玻璃圆角样式。
+- 空输入框在没被点过之前不再显示红框；点过之后仍为空或无效才显示错误。确认弹窗里的“取消”改为“返回”。
+- 编辑时用红色标出问题：移动后与其他控件重叠、超出画布 4 像素边距、按钮宽度放不下文字；悬停标签会写明问题，保存询问中会提示还剩几处。
+- 超出空间的文字平时显示开头加省略号，只在鼠标悬停时从头开始来回滚动显示全文。
+- 悬浮提示放在所描述内容的旁边，并始终完整显示在屏幕内：按钮和输入框的提示显示在其下方（放不下时在上方），物品的提示在其左右两侧，菜单项的提示在菜单旁边。屏幕顶部按钮的提示不再超出屏幕边缘。列表行和物品格的提示显示在该行旁边或下方，不再盖住它；自绘行或卡片的页面用 tooltipAnchor(x, y, 宽, 高) 指定位置。
+- 下拉菜单中的按钮之间留 2 像素间距。
+- 1.20.1：从聊天界面打开的页面（TextStudio 的抓取历史）在现代风格下不再看不见；原因是毛玻璃背景残留的深度把页面挡住了。
+
+---
+
+2026年10月22日 — 26.10.22 — In-page layout editor / 页面内布局编辑器
+
+- One Core command edits the layout of any Kinetic page: type /ktlayout in chat, or press / on an open page and enter ktlayout. Drag a control to move it, drag its edge or corner to resize, turn the mouse wheel to scale it; the arrow keys nudge it by 1 px (Shift: 4 px), or resize it after an edge drag. Controls snap to the canvas margins and centre and to the edges, centres and 4 px gaps of neighbouring controls, with guide lines like an image editor; hold Alt to place freely. Right-click restores a control's default, Ctrl+Z undoes. A label shows the position, size and scale of the selected control.
+- Entering the command again asks whether to save. Saved layouts go to config/kineticcore/gui-layouts/<modid>.json, one file per mod, and only hold the controls that differ from their defaults; deleting an entry or the file restores the original layout. Every position stays inside the 640×360 canvas.
+- The item search and item list editor start their content 6 px higher (header divider at 24, content at 28). The item list editor's Rules button shows 规则 again in Chinese (it showed ??), and add-ons can handle clicks on item cards themselves (for example to open a settings dialog or the NBT editor) and give #tag / @mod picks their own rule form.
+- The entity selector's confirm button reads Apply again (it was labelled Back, the same as the real Back button); Clear Selection is shortened to Clear so it fits its button.
+- Autocomplete suggestion lists on canvas pages stay inside the canvas: a field near the right edge no longer pushes its list past the frame; longer suggestions are clipped inside their row.
+- 核心提供统一的页面布局编辑命令：在聊天栏输入 /ktlayout，或在打开的页面中按 / 后输入 ktlayout 即可进入编辑模式。按住拖动控件移动位置，拖动边缘或角调整大小，滚轮按比例缩放；方向键每次微调 1 像素（Shift 为 4 像素），拖动过边缘后方向键改为微调大小。控件会自动吸附画布边距、中线以及相邻控件的边缘、中心和 4 像素间距，并显示参考线（类似 PS），按住 Alt 可自由放置。右键恢复控件默认位置，Ctrl+Z 撤销；选中控件时显示位置、尺寸与缩放比例。
+- 再次输入命令时询问是否保存。布局保存在 config/kineticcore/gui-layouts/<模组ID>.json，每个模组一个文件，只记录与默认不同的控件；删除对应条目或文件即可恢复原布局。所有位置都限制在 640×360 画布内。
+- 物品搜索与物品列表编辑器的内容上移 6 像素（顶栏分隔线在 24，内容从 28 开始）；列表编辑器的“规则”按钮恢复中文（原显示为 ??）；附属可自行处理物品卡片点击（例如打开设置弹窗或 NBT 编辑器），并为 #标签 / @模组 选择指定自己的规则格式。
+- 生物选择器的确认按钮恢复为“应用”（此前误写为“返回”，与左上角返回按钮同名）；“清空选择”缩短为“清空”，完整显示在按钮内。
+- 画布页面中的自动补全候选列表保持在画布内：靠近右边缘的输入框不再让候选列表超出外框，过长的候选在行内截断。
+
+---
+
+2026年10月20日 — 26.10.20 — Consistent canvas and dedicated list editors / 统一画布与专用列表编辑
+
+- Core configuration screens and add-on pages share the four-point outer margin, so the same 640×360 canvas has matching visible bounds.
+- Editors keep one white outer canvas frame; content areas and grid backgrounds use open surfaces and gray-white divider lines, while controls, cards and selection states retain their outlines.
+- Hovered controls and current selections use distinct breathing outlines. Entity cards keep green membership and red errors visible independently from the current editing item.
+- Integer-list settings support dedicated visual editors while preserving integer validation, unsaved drafts and server-controlled saving.
+- Scrolling controls share one clipping region for drawing, hovering, clicking and tooltips. FTB inventory sidebars are hidden only on Core-owned screens, including container editors.
+- 核心配置界面与附属页面统一使用四点外边距，相同的 640×360 画布显示为一致的边框大小。
+- 编辑界面仅保留白色画布外框，内容区与网格背景改用开放区域和灰白色分割线；控件、物品格及选中状态保留对应描边。
+- 悬浮与当前选择使用不同颜色的呼吸描边；生物卡片可分别显示绿色已配置状态、红色错误与当前编辑项，悬浮时也不会遮掉错误颜色。
+- 整数列表配置支持附属提供专用可视化编辑器，保留整数校验、草稿及服务端保存权限。
+- 滚动控件的绘制、悬停、点击及提示统一遵循视口裁剪；仅在核心托管界面中隐藏 FTB 背包侧栏，容器编辑页也保持一致。
+
+- Native item tooltips can append page instructions without losing structured item components; unsaved draft attributes are captured while the preview is active.
+- Generic lists use compact rows; single-color dialogs are centered, and NBT editing uses the four-point margin with wheel input limited to its body.
+
+- Enter and keypad Enter confirm dialogs without activating focused list rows or action buttons; text input and completion keep their normal behavior.
+- Layout validation also records container editors, so recipe workstations receive the same frame and control checks as ordinary pages.
+- Notifications stack with a two-point gap, including wrapped messages and entrance animations, without overlapping their borders.
+- Add-ons can query the reserved title-screen account and startup-information area through the overlay API, keeping their own notices below it without jumping when the timer fades.
+
+---
+
+2026年10月16日 — 26.10.16 — Native spawner templates and shared editor controls / 原生刷怪笼模板与通用编辑控件
+
+- Custom spawn eggs configure vanilla spawners with the selected name, attributes and effects through native SpawnData, both when used directly and when thrown at a spawner. Later waves keep the template, and the spawner retains its timing, range and other settings.
+- 自定义刷怪蛋直接使用或投掷命中原生刷怪笼时，会通过原生 SpawnData 写入指定名称、属性与效果；后续波次保持模板，并保留刷怪笼原有的延迟、范围等设置。
+
+- Lists calculate their scroll limit from the actual clipped viewport: the final entry is fully visible at the end without trailing blank rows, including draggable scrollbars and partial rows.
+- Entity cards use a shared 50×50 size with 2 px gaps; full-width selectors fit twelve columns. Selected borders breathe while retaining their state color.
+- Add-ons can bind Delete to their existing deletion action. Text fields keep normal text deletion; Enter and keypad Enter confirm modal dialogs, and Escape cancels them.
+- Item rule editors open the shared item multiselector directly, supporting tags, mod namespaces and caller-owned rule registries. Saving and cancelling return to the originating screen.
+- Large configuration pages use the 640×360 canvas, compact top controls and less left indentation. The index shows the installed add-on count and a Close button; client entries are white and server entries cyan. Reset All applies immediately after confirmation.
+- 列表按实际裁剪区域计算滚动末端，最后一项完整显示后准确停止，不再多出空白行，支持拖动滑块与非整行视口。
+- 生物格统一为50×50、间距2点，完整宽度的选择器可显示12列；选中描边保留状态颜色并加入呼吸明暗效果。
+- 附属可将Delete绑定到已有删除操作；文本输入保留正常字符删除，确认框支持回车与小键盘回车确认、Esc取消。
+- 物品规则直接进入核心多选搜索器，支持标签、模组与调用方注册表规则；保存及取消返回原界面。
+- 大配置页统一640×360画布，压紧顶部按钮与左侧缩进；首页显示实际附属数量及关闭按钮，客户端配置白色、服务端配置青色；全部重置经二次确认后立即应用。
+
+---
+
+2026年10月15日 — 26.10.15 — Dropdown labels and entity cards / 下拉选项与生物卡片
+
+- Dropdown menus show an add-on's label for each option instead of the stored value next to it, so options such as "add" no longer appear twice in two languages. Lists of registry IDs (biomes, attributes and so on) keep the ID with its translated name.
+- The entity selector puts Back, Clear and Apply in the top row and the selected count beside a shorter search field, so the grid shows six rows. Each entity card is an item slot with a 2 px gap to its neighbours; selected entities have a single green outline instead of a double one that ran into the next card.
+- Entity cards in every screen use the item slot background instead of a near-white checkerboard.
+
+- 下拉菜单的每个选项只显示附属提供的名称，不再在旁边重复显示存储值，例如“add”不会再以两种语言出现两次；生物群系、属性等注册 ID 列表仍显示 ID 与译名。
+- 生物选择器把返回、清空与应用放在顶部一行，已选数量放在缩短的搜索框右侧，网格可显示六行。每个生物卡片都是带 2 像素间距的物品格；已选生物使用单层绿色描边，不再用会与相邻卡片连在一起的双层描边。
+- 所有界面的生物卡片改用物品格背景，不再使用接近纯白的棋盘格。
+
+---
+
+2026年10月14日 — 26.10.14 — Uniform entity model cards / 统一的生物模型卡片
+
+- The entity selector uses the same small model cards as the other entity grids, so it shows twelve columns and five rows of entities at once instead of eight by three. Its search field and Filter button line up with the grid.
+- Entity previews leave room for models that turn and for legs, wings and other parts that reach past the hit box, so wide mobs such as spiders and camels keep a gap to the left and right frame as well as above and below.
+- The item selector's category buttons are slightly wider and the item grid moves right accordingly; the grid is exactly as wide as its twenty columns, so the gap before the scrollbar matches the gap after the category list.
+- The spawn egg and potion editors use one panel: name, mob preview or potion form and Generate on the left; on the right, Attributes and Potion Effects tabs with a search field, a list of IDs (with translated names in other languages than English), and an editor under the list for the clicked entry with Apply and Remove. Entries on the item have a green outline and their values at the end of the row; the entry being edited has a yellow outline. Saved drafts and New draft sit in the header.
+- Clicking a list row right after scrolling the list now always hits that row. Before, a click while the list was still gliding to its new position could do nothing, for example when unticking an accessory slot just scrolled into view.
+- While a list scrolls, the part-visible row at its bottom stays drawn and clickable. Before, it disappeared during the last part of each scroll in lists whose height is not a whole number of rows.
+
+- 生物选择器使用与其他生物网格相同的小号模型卡片，一屏可显示 12 列 5 行生物，不再是 8 列 3 行；搜索框与筛选按钮与网格对齐。
+- 生物预览为旋转的模型以及超出碰撞箱的腿、翅膀等部位预留空间，蜘蛛、骆驼等较宽的生物左右与边框也保持间距，不再贴边。
+- 物品选择器左侧分类按钮略微加长，物品网格相应右移；网格宽度正好容纳 20 列，滚动条前的间距与分类列表后的间距一致，右侧不再多出空隙。
+- 刷怪蛋与药水编辑器合并为一个面板：左侧为名称、生物预览或药水形态以及生成按钮；右侧为属性与药水效果标签页和搜索框、显示 ID 的列表（非英文时附带译名），以及列表下方针对所点条目的编辑区（应用、移除）。已加入物品的条目显示绿色边框并在行末显示数值，正在编辑的条目显示黄色边框；已存方案与新建方案位于顶部。
+- 滚动列表后立即点击某一行，现在总能命中该行；此前列表仍在平滑滚动时点击可能无效，例如取消勾选刚滚入视野的饰品槽位。
+- 列表滚动时，底部只露出一部分的那一行会保持显示并可点击；此前在高度不是整行数的列表中，每次滚动的最后阶段该行会消失。
+
+---
+
 2026年10月13日 — 26.10.13 — Spawn egg and potion editors / 生物刷怪蛋与药水编辑器
 
 - Add core editors for special spawn eggs and normal, splash and lingering potions. Edit attributes and multiple effects directly in outlined text lists with small Edit buttons and Reset settings, including modded effects and their icons; saved selected entries move to the top, with vanilla entries first in each group. Spawn eggs use a square checkerboard model preview and a single-entity picker; potions switch forms through three expanded buttons.
@@ -12,6 +227,16 @@
 
 ---
 
+2026年10月13日 — 26.10.13 — Full-screen shade and aligned titles / 全屏遮罩与标题对齐
+
+- The background shade of a canvas page covers the whole screen instead of leaving a darker canvas-sized box.
+- Titles of the configuration, list, selector and command editor screens line up with their Back buttons, and the Back button keeps a two-pixel gap to the frame.
+
+- 画布页面的背景遮罩覆盖整个屏幕，不再留下画布大小的暗框。
+- 配置、列表、选择器和指令编辑页的标题与返回按钮对齐，返回按钮与边框保持两像素间距。
+
+---
+
 2026年10月12日 — 26.10.12 — Searchable selection menus / 可搜索的选择列表
 
 - Multi-select menus and searchable lists use framed text rows with two-pixel gaps. IDs are white and translated names are gold; long text has separate clipping regions. Selection changes only the border; switched-on rows of a multi-selection are green. Lists with ten or more options have a search field. Short single-choice menus, such as dropdowns that switch pages, modes or categories, open as buttons with the current option in yellow.
@@ -19,8 +244,8 @@
 - Item-editing labels use data components on 1.21.1 and 26.1.2; 1.20.1 keeps item NBT terminology.
 - On 26.1.2, unhandled clicks over custom drawing regions reach the page, allowing recipe slots to be selected while preserving scrollbar input.
 
-- 展开的选择项统一使用描边文本行，间隔两像素；ID 白色、译名金色，长文本分区显示，选中只改变边框。十项及以上的列表自动提供搜索框。
 - 多选菜单和可搜索的列表使用描边文本行，间隔两像素；ID 白色、译名金色，长文本分区显示，选中只改变边框，多选中已开启的行为绿色。十项及以上的列表自动提供搜索框。切换页面、模式或分类这类较短的单选下拉菜单以按钮展开，当前项为黄色。
+- 附属可在物品网格中显示数量与耐久覆盖层，同时保持原有图标比例和格子间距。
 - 1.21.1 和 26.1.2 的物品编辑文字改为数据组件；1.20.1 保留物品 NBT 称呼。
 - 修复 26.1.2 自绘区域吞掉未处理点击的问题，配方槽位可以正常选中，滑块输入继续由控件处理。
 

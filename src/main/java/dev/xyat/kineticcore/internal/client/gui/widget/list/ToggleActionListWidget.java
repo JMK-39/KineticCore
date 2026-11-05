@@ -191,7 +191,7 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
             KineticRenderRuntime.enableScissor(graphics, getX(), getY(), getX() + contentWidth(), getY() + getHeight());
             try {
                 int start = scroll.smoothIndexOffset();
-                int end = Math.min(rowButtons.size(), start + visibleRows() + 1);
+                int end = rowEnd(start, rowButtons.size());
                 for (int index = start; index < end; index++) {
                     StateButton rowButton = rowButtons.get(index);
                     if (!rowButton.visible) continue;
@@ -236,6 +236,10 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
         if (!active || !visible) return false;
         if (handleScrollbarPress(mouseX, mouseY, button, selectedIndex)) return true;
         if (button != 0) return false;
+        // Rows are placed at render time; while the list scrolls smoothly they lag behind the hit test, so a click
+        // right after scrolling would miss the row it lands on (or find it inactive). Place them for this frame first.
+        refreshRange();
+        refreshLayout();
         int index = toggleAt(mouseX, mouseY);
         if (index >= 0) {
             ToggleButton toggleButton = toggleButtons.get(index);
@@ -308,7 +312,8 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
     protected void refreshLayout() {
         int start = scroll.smoothIndexOffset();
         int shift = scroll.visualShift(rowPitch());
-        int end = Math.min(rowButtons.size(), start + visibleRows() + 1);
+        shiftRows(-scroll.subPixelShift(rowPitch()), rowButtons, toggleButtons, actionButtons);
+        int end = rowEnd(start, rowButtons.size());
         for (int index = 0; index < rowButtons.size(); index++) {
             ToggleActionItem item = items.get(index);
             boolean rowVisible = visible && index >= start && index < end;
@@ -341,7 +346,7 @@ public final class ToggleActionListWidget extends VerticalScrollListWidget imple
         if (!visible || mouseY < getY() || mouseY >= getY() + getHeight()) return -1;
         int start = scroll.smoothIndexOffset();
         int shift = scroll.visualShift(rowPitch());
-        int end = Math.min(items.size(), start + visibleRows() + 1);
+        int end = rowEnd(start, items.size());
         for (int index = start; index < end; index++) {
             AbstractWidget widget = control == 1 ? toggleButtons.get(index)
                     : control == 2 ? actionButtons.get(index) : rowButtons.get(index);

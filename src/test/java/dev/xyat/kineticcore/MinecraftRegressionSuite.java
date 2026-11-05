@@ -66,8 +66,13 @@ public final class MinecraftRegressionSuite {
     }
 
     public static void main(String[] args) {
+        run("DeleteAndSelectionRegression", () -> dev.xyat.kineticcore.internal.client.screen.DeleteAndSelectionRegression.main(NO_ARGS));
+        run("HoverAndEntityStateRegression", () -> dev.xyat.kineticcore.internal.client.gui.theme.HoverAndEntityStateRegression.main(NO_ARGS));
+        run("MenuItemButtonPresentationRegression", () -> dev.xyat.kineticcore.internal.client.overlay.MenuItemButtonPresentationRegression.main(NO_ARGS));
         run("ItemCreatorDataRegression", () -> dev.xyat.kineticcore.feature.itemcreator.ItemCreatorDataRegression.main(NO_ARGS));
+        run("SpawnEquipmentRegression", () -> dev.xyat.kineticcore.feature.itemcreator.SpawnEquipmentRegression.main(NO_ARGS));
         run("SpawnEggCallbackRegression", () -> dev.xyat.kineticcore.api.spawnegg.SpawnEggCallbackRegression.main(NO_ARGS));
+        run("NativeSpawnEggDataRegression", () -> dev.xyat.kineticcore.feature.spawnegg.NativeSpawnEggDataRegression.main(NO_ARGS));
         run("ItemCreatorPacketRegression", () -> dev.xyat.kineticcore.feature.itemcreator.ItemCreatorPacketRegression.main(NO_ARGS));
         run("ItemCreatorDraftRegression", () -> dev.xyat.kineticcore.feature.itemcreator.ItemCreatorDraftRegression.main(NO_ARGS));
         run("DatapackDiagnosticsRegression", () -> dev.xyat.kineticcore.feature.datapack.DatapackDiagnosticsRegression.main(NO_ARGS));
@@ -83,6 +88,7 @@ public final class MinecraftRegressionSuite {
         run("KTConfigEntryPublicRollbackRegression", () -> KTConfigEntryPublicRollbackRegression.main(NO_ARGS));
         run("KTConfigEntrySingleDecodeRegression", () -> KTConfigEntrySingleDecodeRegression.main(NO_ARGS));
         run("KTConfigPageBuilderAtomicRegression", () -> KTConfigPageBuilderAtomicRegression.main(NO_ARGS));
+        run("ConfigListEditorValuesRegression", () -> dev.xyat.kineticcore.internal.client.config.ConfigListEditorValuesRegression.main(NO_ARGS));
         run("KTServerConfigAttemptedRollbackRegression", () -> KTServerConfigAttemptedRollbackRegression.main(NO_ARGS));
         run("KTServerConfigDependencyRollbackRegression", () -> KTServerConfigDependencyRollbackRegression.main(NO_ARGS));
         run("KTServerConfigPartialSaveRegression", () -> KTServerConfigPartialSaveRegression.main(NO_ARGS));
@@ -106,6 +112,9 @@ public final class MinecraftRegressionSuite {
         run("KineticConfigStartupRegression", () -> KineticConfigStartupRegression.main(NO_ARGS));
         run("KineticNativeSetRollbackRegression", () -> KineticNativeSetRollbackRegression.main(NO_ARGS));
         run("ForgeNetworkUtf8Regression", () -> ForgeNetworkUtf8Regression.main(NO_ARGS));
+        //? if <26.1 {
+        run("VillagerTradesModifiableRegression", () -> dev.xyat.kineticcore.internal.runtime.event.VillagerTradesModifiableRegression.main(NO_ARGS));
+        //?}
         runIsolated(FeatureSwitchPersistenceRegression.class, "invalid");
         runIsolated(FeatureSwitchPersistenceRegression.class, "saveFailure");
         runIsolated(LogFilterRegression.class, "filterAndMigration");

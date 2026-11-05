@@ -80,12 +80,12 @@ public class GeneralMechanicsConfig {
              Enable 'Gluttony Mode' (Always edible), allows eating food even when not hungry.""");
 
         define("mechanics.enableFarmlandProtection", true, """
-             是否开启耕地保护 (穿着带有“保护”附魔的靴子踩踏不破坏耕地)
-             Enable Farmland Protection. Players wearing boots enchanted with 'Protection' will not destroy Farmland by stepping on it.""");
+             是否开启耕地保护 (穿着带有“摔落保护”附魔的靴子跳到耕地上不会踩坏它)
+             Enable Farmland Protection. Players wearing boots enchanted with Feather Falling do not trample farmland when they jump onto it.""");
 
         define("mechanics.fastCobWebBreaking", true, """
-             允许斧头等工具像剑/剪刀一样快速破坏蜘蛛网
-             Allows tools like Axes to break Cobwebs as fast as Swords or Shears.""");
+             斧、镐、锹和锄破坏蜘蛛网和剑一样快，并掉落线
+             Axes, pickaxes, shovels and hoes break cobwebs as fast as a sword and drop string.""");
 
         define("mechanics.recycleBinWorlds", true, """
              删除世界存档时将其移至系统回收站而非直接销毁 (仅支持桌面环境)

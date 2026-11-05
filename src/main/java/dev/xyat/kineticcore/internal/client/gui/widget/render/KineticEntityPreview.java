@@ -70,11 +70,9 @@ public final class KineticEntityPreview {
         /** Minimum visual height used for auto-fit so small collision boxes cannot over-zoom large custom models. */
         public static final float DEFAULT_VISUAL_HEIGHT_FLOOR = 1.35f;
 
-        private static final int CHECKER_SIZE = 6;
+        private static final float VISUAL_WIDTH_FACTOR = 1.5f;
         /** Gap between the model and the preview cell edge: the 1 px frame plus 2 px of space. */
         private static final float MODEL_INSET = 3f;
-        private static final int CHECKER_LIGHT = 0xFFF0F0F0;
-        private static final int CHECKER_DARK = 0xFFD2D2D2;
 
         private final int maxCacheSize;
         private final float fillRatio;
@@ -253,7 +251,9 @@ public final class KineticEntityPreview {
             // several times larger than their hit box; fitting from the raw hit box then scales the model up
             // until most of it is clipped by the preview cell. Use conservative visual floors for small hit
             // boxes while leaving normal/large entities governed by their real dimensions.
-            float fitWidth = Math.max(entityWidth, DEFAULT_VISUAL_WIDTH_FLOOR);
+            // Models turn while previewed and limbs, legs and wings reach past the hit box (a turned box alone is
+            // about 1.4 times as wide), so the width allows for that and wide mobs keep their gap to the side frame.
+            float fitWidth = Math.max(entityWidth * VISUAL_WIDTH_FACTOR, DEFAULT_VISUAL_WIDTH_FLOOR);
             float fitHeight = Math.max(entityHeight, DEFAULT_VISUAL_HEIGHT_FLOOR);
             // The model keeps MODEL_INSET px from the cell edge: the 1 px frame plus 2 px of space.
             float safeWidth = Math.max(1f, Math.min(boxW * fillRatio, boxW - MODEL_INSET * 2));
@@ -369,16 +369,8 @@ public final class KineticEntityPreview {
          * Draws checkerboard.
          */
         public static void drawCheckerboard(GuiGraphics graphics, int x, int y, int width, int height) {
-            graphics.fill(x, y, x + width, y + height, CHECKER_LIGHT);
-            int rows = (height + CHECKER_SIZE - 1) / CHECKER_SIZE;
-            int cols = (width + CHECKER_SIZE - 1) / CHECKER_SIZE;
-            for (int row = 0; row < rows; row++) {
-                for (int col = row & 1; col < cols; col += 2) {
-                    int x1 = x + col * CHECKER_SIZE;
-                    int y1 = y + row * CHECKER_SIZE;
-                    graphics.fill(x1, y1, Math.min(x1 + CHECKER_SIZE, x + width), Math.min(y1 + CHECKER_SIZE, y + height), CHECKER_DARK);
-                }
-            }
+            // Entity cards use the item slot background, so mobs and items look the same in every screen.
+            dev.xyat.kineticcore.internal.client.gui.theme.GuiTheme.itemGrid(graphics, x, y, width, height);
         }
 
         private EntityPreviewState getState(String stateKey) {

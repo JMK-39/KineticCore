@@ -39,7 +39,7 @@ public abstract class KineticPage {
     /** 标准逻辑画布高度 / Standard logical canvas height. */
     public static final int CANVAS_HEIGHT = KineticLayout.MAX_CANVAS_HEIGHT;
     /** 标准安全边距 / Standard safe-area margin. */
-    public static final int SAFE_MARGIN = 6;
+    public static final int SAFE_MARGIN = 4;
     /** 标准控件高度 / Standard control height. */
     public static final int CONTROL_HEIGHT = 16;
     /** 物品卡片按钮高度 / Item card button height. */
@@ -82,6 +82,28 @@ public abstract class KineticPage {
     }
 
     /**
+     * 本页可切换的视图（标签页、分类等），按显示顺序；截图与审查工具（如 KineticShots）会依次切换并截图。切换视图只改变
+     * 显示内容，不得保存或改动服务端数据。默认没有。
+     * The switchable views of this page (tabs, categories) in display order; screenshot and review tools such as
+     * KineticShots switch to each one and capture it. Showing a view only changes what is displayed and never saves or
+     * changes server data. None by default.
+     */
+    public List<ReviewView> reviewViews() {
+        return List.of();
+    }
+
+    /**
+     * 一个视图：用于文件名的固定 ID 与切换到它的操作。
+     * One view: a fixed id used in file names and the action that switches the page to it.
+     */
+    public record ReviewView(String id, Runnable show) {
+        public ReviewView {
+            Objects.requireNonNull(id, "id");
+            Objects.requireNonNull(show, "show");
+        }
+    }
+
+    /**
      * 更改画布逻辑尺寸（最大 640×360）与安全边距，在构造函数中调用。
      * Changes the canvas design size (max 640×360) and safe margin; call from the constructor.
      */
@@ -89,6 +111,28 @@ public abstract class KineticPage {
         canvasDesignWidth = Math.max(1, Math.min(CANVAS_WIDTH, designWidth));
         canvasDesignHeight = Math.max(1, Math.min(CANVAS_HEIGHT, designHeight));
         canvasSafeMargin = Math.max(0, safeMargin);
+    }
+
+    /**
+     * 命名内容区域：返回玩家在布局编辑器（/ktlayout）里调整后的矩形，未调整时返回给定默认值。在 {@link #build} 中调用，
+     * 用返回值放置控件、计算网格列数并绘制背景；玩家拖动区域后页面会重建并按新矩形排版。相邻区域相对的边会一起移动，
+     * 拖动两栏之间的分界即可同时调整两栏宽度。
+     * A named content region: the rectangle the player set in the layout editor (/ktlayout), or the given default. Call
+     * it from {@link #build} and lay controls, grid columns and the background out in the result; when the player
+     * drags the region the page is rebuilt in the new rectangle. Facing edges of neighbouring regions move together,
+     * so dragging the line between two columns resizes both.
+     *
+     * @param id     页面内唯一、固定的名字 / name, unique and fixed within the page
+     * @param x      默认左边界 / default left edge
+     * @param y      默认上边界 / default top edge
+     * @param width  默认宽度 / default width
+     * @param height 默认高度 / default height
+     * @return 区域矩形 / the region rectangle
+     */
+    protected final KineticLayout.Rect region(String id, int x, int y, int width, int height) {
+        int[] rect = dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.region(this, Objects.requireNonNull(id, "id"),
+                new int[]{x, y, width, height});
+        return new KineticLayout.Rect(rect[0], rect[1], rect[2], rect[3]);
     }
 
     /** 打开时是否暂停单人游戏（默认 true）/ Whether the page pauses single-player (default true). */
@@ -266,6 +310,22 @@ public abstract class KineticPage {
         requireHost().screenHost().showItemTooltip(stack);
     }
 
+    /** Shows the complete native item tooltip, then appends page-specific instructions. Captures draft properties immediately. */
+    protected final void showItemTooltip(ItemStack stack, List<Component> additionalLines) {
+        requireHost().screenHost().showItemTooltip(stack, additionalLines);
+    }
+
+    /**
+     * 让本帧的提示显示在它所描述的区域（行、卡片、物品格，页面坐标）旁边而不是盖住它；在 showTooltip / showItemTooltip
+     * 之后调用。放不下时依次尝试右侧、左侧、下方、上方，始终留在屏幕内。
+     * Places this frame's tooltip beside the area it describes (a row, card or item slot, in page coordinates) instead
+     * of over it; call it after showTooltip / showItemTooltip. It tries the right, the left, below and above, and
+     * always stays on screen.
+     */
+    protected final void tooltipAnchor(int x, int y, int width, int height) {
+        requireHost().screenHost().kineticRuntime().anchorTooltip(x, y, width, height, false);
+    }
+
     /** 在页面坐标处打开右键菜单 / Opens a context menu at page coordinates. */
     protected final void openContextMenu(double x, double y, List<KineticOverlays.MenuItem> items) {
         requireHost().screenHost().openContextMenu(x, y, items);
@@ -285,6 +345,12 @@ public abstract class KineticPage {
     protected final void openDialog(Component title, Component message, Component confirmText, Component cancelText,
                                     Runnable onConfirm, Runnable onCancel) {
         requireHost().screenHost().openDialog(title, message, confirmText, cancelText, onConfirm, onCancel);
+    }
+
+    /** Binds Delete to this page's existing deletion operation; text editing and modal dialogs take priority. */
+    protected final void bindDeleteAction(java.util.function.BooleanSupplier available, Runnable action) {
+        Objects.requireNonNull(available); Objects.requireNonNull(action);
+        whenHosted(() -> requireHost().screenHost().kineticRuntime().bindDeleteAction(available, action));
     }
 
     /** 菜单或弹窗是否正在遮挡页面输入 / Whether a menu or dialog blocks page input. */

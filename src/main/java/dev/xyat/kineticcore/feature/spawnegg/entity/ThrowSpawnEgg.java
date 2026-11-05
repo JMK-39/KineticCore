@@ -69,8 +69,7 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
         *///?} else {
         CompoundTag stackTag = stack.getTag();
         //?}
-        if (!dev.xyat.kineticcore.api.itemcreator.ItemCreatorStackData.hasTemplate(stack)
-                && result instanceof BlockHitResult blockHit && handleSpawnerHit(blockHit, spawnEgg, stack, stackTag)) {
+        if (result instanceof BlockHitResult blockHit && handleSpawnerHit(blockHit, spawnEgg, stack, stackTag)) {
             discard();
             return;
         }
@@ -199,6 +198,13 @@ public final class ThrowSpawnEgg extends ThrowableItemProjectile {
 
         BlockEntity blockEntity = level().getBlockEntity(pos);
         if (!(blockEntity instanceof SpawnerBlockEntity spawner)) return false;
+
+        if (level() instanceof ServerLevel serverLevel
+                && dev.xyat.kineticcore.feature.spawnegg.NativeSpawnEggData.configure(
+                        spawner, stack, serverLevel, getOwner() instanceof Player player ? player : null)) {
+            level().sendBlockUpdated(pos, state, state, 3);
+            return true;
+        }
 
         //? if >=1.20.5 {
         /*EntityType<?> entityType = spawnEgg.getType(stack);

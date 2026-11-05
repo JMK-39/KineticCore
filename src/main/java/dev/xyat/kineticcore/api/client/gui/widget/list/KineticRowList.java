@@ -73,7 +73,7 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
         if (rows != null) items.addAll(rows);
         if (selectedIndex >= items.size()) selectedIndex = -1;
         if (lastClickedIndex >= items.size()) lastClickedIndex = -1;
-        scroll.update(items.size(), scrollRangeRows());
+        updateScrollRange();
     }
 
     /** 当前选中下标，无则 -1 / Selected index, or -1. */
@@ -117,7 +117,7 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
 
     /** 立即滚动到行偏移 / Jumps to a row offset. */
     public final void setScrollOffset(int rows) {
-        scroll.update(items.size(), scrollRangeRows());
+        updateScrollRange();
         scroll.setOffset(rows);
     }
 
@@ -135,9 +135,8 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
         return Math.max(1, controlHeight() / rowHeight);
     }
 
-    /** Include a partially visible row when limiting the final scroll position. */
-    private int scrollRangeRows() {
-        return Math.max(1, (controlHeight() + rowHeight - 1) / rowHeight);
+    private void updateScrollRange() {
+        scroll.updateContent(items.size() * rowHeight, controlHeight(), rowHeight);
     }
 
     /** 鼠标下的行，无则 -1 / Row under the pointer, or -1. */
@@ -147,6 +146,20 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
         }
         int index = scroll.smoothIndexOffset() + (int) ((mouseY - controlY() + scroll.visualShift(rowHeight)) / rowHeight);
         return index >= 0 && index < items.size() ? index : -1;
+    }
+
+    @Override
+    protected int[] tooltipBounds(double mouseX, double mouseY) {
+        return hoveredRowBounds(mouseX, mouseY);
+    }
+
+    /** The hovered row as {x, y, width, height}, or null; its tooltip opens beside the row rather than over it. */
+    public final int[] hoveredRowBounds(double mouseX, double mouseY) {
+        int index = rowAt(mouseX, mouseY);
+        if (index < 0) return null;
+        int top = Math.max(controlY(), rowTop(index));
+        int bottom = Math.min(controlY() + controlHeight(), rowTop(index) + rowHeight);
+        return bottom > top ? new int[]{controlX(), top, rowsWidth(), bottom - top} : null;
     }
 
     /** 某行当前的顶部 Y（含平滑滚动位移）/ Current top Y of a row, including the smooth scroll shift. */
@@ -206,7 +219,7 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
 
     @Override
     protected final void render(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        scroll.update(items.size(), scrollRangeRows());
+        updateScrollRange();
         int x = controlX();
         int y = controlY();
         int width = rowsWidth();
@@ -223,8 +236,12 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
         } else {
             int first = scroll.smoothIndexOffset();
             int shift = scroll.visualShift(rowHeight);
+            float subPixel = scroll.subPixelShift(rowHeight);
             int last = Math.min(items.size(), first + visibleRows() + 2);
-            graphics.clipped(x, y, x + width, y + height, () -> {
+            // Item icons in the rows are drawn together, inside the clip.
+            graphics.clipped(x, y, x + width, y + height, () -> graphics.batchItems(() -> graphics.isolated(() -> {
+                // Whole-pixel rows plus the leftover fraction: the rows glide in screen pixels.
+                graphics.translate(0, -subPixel);
                 for (int index = first; index < last; index++) {
                     int rowY = y + (index - first) * rowHeight - shift;
                     boolean selected = index == selectedIndex;
@@ -234,7 +251,7 @@ public abstract class KineticRowList<T> extends KineticCustomControl {
                     // 橘黄色边框闪烁画在行内容之上 / The orange border flash is drawn on top of the row content.
                     scroll.renderSelectionFlash(graphics, index, x, rowY + 1, width, rowHeight - 2);
                 }
-            });
+            })));
         }
         if (scroll.canScroll()) {
             scroll.render(graphics, mouseX, mouseY, scrollbarX(), y, SCROLLBAR_WIDTH, height, MIN_THUMB);

@@ -28,6 +28,15 @@ public final class KineticSuperFlight {
         return KineticFlightAttributes.turnDamping(entity);
     }
 
+    /**
+     * Grants or withdraws super flight for one source, such as an item or an effect named by {@code sourceId}: while
+     * any source grants it (or the flight-speed attribute is above zero for another reason) the player can switch super
+     * flight on. Withdrawing the last grant switches active super flight off. Grants are not saved with the player.
+     */
+    public static void grant(LivingEntity entity, String sourceId, boolean granted) {
+        KineticSuperFlightRuntime.grant(entity, sourceId, granted);
+    }
+
     /** Enables or disables authoritative super flight after validating the current player state. */
     public static boolean setActive(ServerPlayer player, boolean active) {
         return KineticSuperFlightRuntime.setActive(player, active);

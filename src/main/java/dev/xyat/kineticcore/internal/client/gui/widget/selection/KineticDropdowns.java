@@ -51,6 +51,7 @@ public final class KineticDropdowns {
             this.responder = responder == null ? ignored -> { } : responder;
             this.opener = opener;
             this.selectedIndex = indexOfValue(selectedValue, this.options);
+            setExpands(true);
             refreshState();
         }
 

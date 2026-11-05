@@ -23,7 +23,6 @@ import dev.xyat.kineticcore.internal.client.gui.widget.input.KineticNumericField
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -53,11 +52,11 @@ final class KTConfigScreen extends KineticScreen {
     private record LayoutEntry(KTConfigEntry<?> entry, boolean separatorBefore) {
     }
 
-    private static final int VISIBLE_ROWS = 8;
-    private static final int ROW_TOP = 64;
+    private static final int VISIBLE_ROWS = 11;
+    private static final int ROW_TOP = 28;
     private static final int ROW_HEIGHT = 27;
-    private static final int LIST_HEIGHT = VISIBLE_ROWS * ROW_HEIGHT;
-    private static final int SCROLL_X = 615;
+    private static final int LIST_HEIGHT = 328;
+    private static final int SCROLL_X = 632;
     private static final int SCROLL_WIDTH = 4;
 
     private final KTConfigPage configPage;
@@ -180,13 +179,16 @@ final class KTConfigScreen extends KineticScreen {
         visibleRows.clear();
         entryModel.refresh(searchQuery);
         layoutEntries = compactLayout(entryModel.items());
-        entryScroll.update(layoutEntries.size(), VISIBLE_ROWS);
+        entryScroll.updateContent(layoutEntries.size() * ROW_HEIGHT, LIST_HEIGHT, ROW_HEIGHT);
 
         searchBox = addTextField(
-                38, 37, 430,
+                48, 4, 220,
                 KineticText.translatable("gui.kineticcore.config.search_fields"),
                 KineticText.translatable("gui.kineticcore.config.search_fields"),
-                null, null
+                null, showApplyTiming
+                        ? KineticText.translatable("gui.kineticcore.config.search_fields").copy()
+                                .append("\n").append(configPage.applyDetail())
+                        : null
         );
         searchBox.setMaxLength(256);
         searchBox.setValue(searchQuery);
@@ -208,27 +210,26 @@ final class KTConfigScreen extends KineticScreen {
             }
         }
 
-        int footerY = 325;
         boolean editable = KTConfigApi.canEdit(configPage);
         Component unavailable = editable ? null : KTConfigApi.unavailableReason(configPage);
 
         StateButton resetAllButton = addButton(
-                166, footerY, 92,
-                KineticText.translatable("gui.kineticcore.config.reset_all"),
-                unavailable,
-                this::resetAll
+                528, 4, 64,
+                KineticText.translatable("gui.kineticcore.config.reset_all").withStyle(net.minecraft.ChatFormatting.RED),
+                editable ? KineticText.translatable("gui.kineticcore.config.reset_all.tooltip") : unavailable,
+                this::confirmResetAll
         );
         resetAllButton.active = editable;
 
         addButton(
-                26, 14, 92,
+                4, 4, 40,
                 KineticText.translatable("gui.kineticcore.config.back"),
                 null,
                 this::onClose
         );
 
         Button saveButton = addButton(
-                382, footerY, 92,
+                596, 4, 40,
                 KineticText.translatable("gui.kineticcore.config.save"),
                 unavailable,
                 this::save
@@ -256,7 +257,7 @@ final class KTConfigScreen extends KineticScreen {
 
     private void addEntryScrollableWidget(InternalControl control) {
         addScrollableWidget(control,
-                28,
+                4,
                 ROW_TOP,
                 SCROLL_X - 2,
                 ROW_TOP + LIST_HEIGHT,
@@ -290,7 +291,7 @@ final class KTConfigScreen extends KineticScreen {
                 int min = entry.minimum().intValue();
                 int max = entry.maximum().intValue();
                 NumericEditBox box = addIntegerField(
-                        editorX, y, editorWidth, entry.label(),
+                        editorX, y, editorWidth, configLabel(entry.label()),
                         min < 0, min, max,
                         value -> entry.accepts(value.intValue()), null
                 );
@@ -309,7 +310,7 @@ final class KTConfigScreen extends KineticScreen {
                 long min = entry.minimum().longValue();
                 long max = entry.maximum().longValue();
                 NumericEditBox box = addLongField(
-                        editorX, y, editorWidth, entry.label(),
+                        editorX, y, editorWidth, configLabel(entry.label()),
                         min < 0, min, max,
                         value -> entry.accepts(value.longValue()), null
                 );
@@ -329,7 +330,7 @@ final class KTConfigScreen extends KineticScreen {
                 double min = entry.minimum().doubleValue();
                 double max = entry.maximum().doubleValue();
                 NumericEditBox box = addDecimalField(
-                        editorX, y, editorWidth, entry.label(),
+                        editorX, y, editorWidth, configLabel(entry.label()),
                         min < 0, min, max,
                         value -> entry.accepts(value.doubleValue()), null
                 );
@@ -347,7 +348,7 @@ final class KTConfigScreen extends KineticScreen {
             }
             case STRING -> {
                 KineticEditBox box = addTextField(
-                        editorX, y, editorWidth, entry.label(), null,
+                        editorX, y, editorWidth, configLabel(entry.label()), null,
                         entry::accepts, null
                 );
                 box.setMaxLength(32767);
@@ -396,7 +397,7 @@ final class KTConfigScreen extends KineticScreen {
                         Component.literal(formatColor(currentColor)),
                         null,
                         () -> KineticSelectors.openColorPicker(
-                                entry.label(),
+                                configLabel(entry.label()),
                                 currentColor,
                                 selected -> {
                                     updateValidation(entry.id(), entry, selected & 0xFFFFFF);
@@ -511,7 +512,7 @@ final class KTConfigScreen extends KineticScreen {
         if (KineticClientRuntime.currentScreen() != this) return;
         String current = String.valueOf(pendingValues.getOrDefault(entry.id(), ""));
         KineticClientRuntime.openScreen(new KTLongTextEditorScreen(
-                entry.label(),
+                configLabel(entry.label()),
                 current,
                 value -> {
                     updateValidation(entry.id(), entry, value);
@@ -527,14 +528,14 @@ final class KTConfigScreen extends KineticScreen {
         List<?> values = listValue(entry.id());
         KTConfigPage.ListEditor customEditor = configPage.listEditor(entry.id());
         if (customEditor != null) {
-            customEditor.open(entry.label(), values.stream().map(String::valueOf).toList(),
-                    result -> updateValidationAndRebuild(entry.id(), entry, new ArrayList<>(result)));
+            customEditor.open(configLabel(entry.label()), values.stream().map(String::valueOf).toList(),
+                    result -> updateValidationAndRebuild(entry.id(), entry, ConfigListEditorValues.resultFor(entry, result)));
             return;
         }
         if (entry.type() == KTConfigEntry.Type.ENTITY_LIST) {
             List<String> entityIds = values.stream().map(String::valueOf).toList();
             KineticSelectors.openEntitySelector(
-                    entry.label(),
+                    configLabel(entry.label()),
                     entityIds,
                     result -> updateValidationAndRebuild(
                             entry.id(), entry, new ArrayList<>(result)
@@ -549,7 +550,7 @@ final class KTConfigScreen extends KineticScreen {
                     ? KineticSelectors.ItemListMode.ITEMS_ONLY
                     : KineticSelectors.ItemListMode.ITEMS_TAGS_MODS;
             KineticSelectors.openItemListEditor(
-                    entry.label(),
+                    configLabel(entry.label()),
                     itemRules,
                     mode,
                     result -> updateValidationAndRebuild(
@@ -560,7 +561,7 @@ final class KTConfigScreen extends KineticScreen {
         }
         boolean integerList = entry.type() == KTConfigEntry.Type.INTEGER_LIST;
         KineticClientRuntime.openScreen(new KTConfigListScreen(
-                entry.label(), entry.tooltip(), integerList, values,
+configLabel(entry.label()), entry.tooltip(), integerList, entry.listStyle(), values,
                 result -> updateValidationAndRebuild(
                         entry.id(), entry, new ArrayList<>(result)
                 )
@@ -620,12 +621,17 @@ final class KTConfigScreen extends KineticScreen {
         searchDirty = false;
         entryModel.refresh(searchQuery);
         layoutEntries = compactLayout(entryModel.items());
-        entryScroll.update(layoutEntries.size(), VISIBLE_ROWS);
+        entryScroll.updateContent(layoutEntries.size() * ROW_HEIGHT, LIST_HEIGHT, ROW_HEIGHT);
         rebuildUi();
-        if (searchBox != null) {
-            focusControl(searchBox);
-            searchBox.setCursorPosition(searchQuery.length());
-        }
+        if (searchBox != null) focusControl(searchBox);
+    }
+
+    private void confirmResetAll() {
+        KineticOverlays.openCurrentDialog(
+                KineticText.translatable("gui.kineticcore.config.reset_all").withStyle(net.minecraft.ChatFormatting.RED),
+                KineticText.translatable("gui.kineticcore.config.reset_all.confirm"),
+                KineticText.translatable("gui.kineticcore.config.reset_all").withStyle(net.minecraft.ChatFormatting.RED),
+                KineticText.translatable("gui.back"), this::resetAll, null);
     }
 
     private void resetAll() {
@@ -644,7 +650,7 @@ final class KTConfigScreen extends KineticScreen {
         pendingValues.putAll(defaults);
         invalidEntries.clear();
         rawTextValues.clear();
-        status = KineticText.translatable("gui.kineticcore.config.reset_done");
+        save();
         rebuildUi();
     }
 
@@ -831,19 +837,27 @@ final class KTConfigScreen extends KineticScreen {
                 : "gui.kineticcore.config.disabled");
     }
 
+    private static Component configLabel(Component label) {
+        return Component.literal(java.util.Objects.requireNonNullElse(net.minecraft.ChatFormatting.stripFormatting(label.getString()), ""));
+    }
+
+    private static int scopeColor(KTConfigScope scope) {
+        return scope == KTConfigScope.SERVER_AUTHORITATIVE ? 0xFF55FFFF : 0xFFFFFFFF;
+    }
+
     private static String formatColor(int color) {
         return String.format(Locale.ROOT, "#%06X", color & 0xFFFFFF);
     }
 
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        GuiTheme.panel(graphics, 18, 12, 604, 342);
+        GuiTheme.panel(graphics, 0, 0, 640, 360);
         dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
-                .scrollingTextCentered(title, canvasWidth() / 2, 24, 396, 0xFFFFAA00, true);
+                .scrollingText(Component.literal(title.getString()), 272, 8, 252, 0xFFFFFFFF, false);
 
         hoveredEntry = null;
         double pixelOffset = entryPixelOffset();
-        enableUiScissor(graphics, 28, ROW_TOP, SCROLL_X - 2, ROW_TOP + LIST_HEIGHT);
+        enableUiScissor(graphics, 4, ROW_TOP, SCROLL_X - 2, ROW_TOP + LIST_HEIGHT);
         try {
             for (Map.Entry<LayoutEntry, Integer> row : visibleRows.entrySet()) {
                 LayoutEntry layout = row.getKey();
@@ -852,20 +866,20 @@ final class KTConfigScreen extends KineticScreen {
                 if (y + ROW_HEIGHT <= ROW_TOP || y >= ROW_TOP + LIST_HEIGHT) continue;
                 int tooltipWidth = entry.type() == KTConfigEntry.Type.DESCRIPTION ? 582 : 292;
                 if (mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
-                        && GuiTheme.hovering(mouseX, mouseY, 30, y - 3, tooltipWidth, 23)) {
+                        && GuiTheme.hovering(mouseX, mouseY, 4, y - 3, tooltipWidth, 23)) {
                     hoveredEntry = entry;
                 }
                 if (layout.separatorBefore()) {
-                    GuiTheme.separator(graphics, 38, y - 5, 562);
+                    GuiTheme.separator(graphics, 8, y - 5, 618);
                 }
                 if (entry.type() == KTConfigEntry.Type.SECTION) {
-                    graphics.fill(30, y - 3, 612, y + 20, 0x55222222);
-                    VanillaGuiDraw.text(graphics, font, entry.label(), 38, y + 4, 0xFFFFAA00, false);
+                    graphics.fill(4, y - 3, 626, y + 20, 0x55222222);
+                    VanillaGuiDraw.text(graphics, font, configLabel(entry.label()), 8, y + 4, scopeColor(configPage.scope()), false);
                 } else if (entry.type() == KTConfigEntry.Type.DESCRIPTION) {
-                    KineticText.drawScrollingLeft(graphics, font, entry.label(), 38, y + 5, 562, 0xFFAAAAAA, false);
+                    KineticText.drawScrollingLeft(graphics, font, configLabel(entry.label()), 8, y + 5, 618, scopeColor(configPage.scope()), false);
                 } else {
                     int color = invalidEntries.contains(entry.id()) ? 0xFFFF5555 : 0xFFE0E0E0;
-                    KineticText.drawScrollingLeft(graphics, font, entry.label(), 38, y + 6, 282, color, false);
+                    KineticText.drawScrollingLeft(graphics, font, configLabel(entry.label()), 8, y + 6, 316, invalidEntries.contains(entry.id()) ? 0xFFFF5555 : scopeColor(configPage.scope()), false);
                 }
             }
         } finally {
@@ -888,21 +902,8 @@ final class KTConfigScreen extends KineticScreen {
         );
 
         if (status != null) {
-            VanillaGuiDraw.centeredText(graphics, font, status, canvasWidth() / 2, 309,
+            VanillaGuiDraw.centeredText(graphics, font, status, canvasWidth() / 2, 344,
                     invalidEntries.isEmpty() ? 0xFFFFFF55 : 0xFFFF5555);
-        } else if (showApplyTiming) {
-            List<FormattedCharSequence> timingLines = font.split(configPage.applyDetail(), 570);
-            int visibleLineCount = Math.min(2, timingLines.size());
-            int firstY = visibleLineCount == 1 ? 309 : 298;
-            for (int index = 0; index < visibleLineCount; index++) {
-                VanillaGuiDraw.centeredText(graphics, 
-                        font,
-                        timingLines.get(index),
-                        canvasWidth() / 2,
-                        firstY + index * 11,
-                        GuiTheme.current().text()
-                );
-            }
         }
     }
 
@@ -950,7 +951,7 @@ final class KTConfigScreen extends KineticScreen {
 
     @Override
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
-        if (mouseX >= 28 && mouseX <= 620
+        if (mouseX >= 4 && mouseX <= 620
                 && mouseY >= ROW_TOP && mouseY < ROW_TOP + LIST_HEIGHT
                 && entryScroll.scroll(delta, 1.0D)) {
             return true;

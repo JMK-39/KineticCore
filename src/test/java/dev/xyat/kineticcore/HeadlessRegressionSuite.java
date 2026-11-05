@@ -70,6 +70,7 @@ public final class HeadlessRegressionSuite {
         run("SupplementarySearchRegression", () -> SupplementarySearchRegression.main(NO_ARGS));
         run("ServerConfigPacketLimitRegression", () -> ServerConfigPacketLimitRegression.main(NO_ARGS));
         run("NetworkUtf8Regression", () -> NetworkUtf8Regression.main(NO_ARGS));
+        run("LineBreakRulesRegression", () -> dev.xyat.kineticcore.internal.client.gui.text.LineBreakRulesRegression.main(NO_ARGS));
         System.out.println("Headless regression suite passed.");
     }
 

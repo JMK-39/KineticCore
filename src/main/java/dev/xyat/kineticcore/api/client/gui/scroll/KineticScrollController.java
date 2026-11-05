@@ -57,6 +57,11 @@ public final class KineticScrollController {
         delegate.updateRange(maxOffset, totalItems, visibleItems);
     }
 
+    /** Exact content/viewport bounds in pixels. Offsets remain in units of {@code unitPixels}. */
+    public void updateContent(int contentPixels, int viewportPixels, int unitPixels) {
+        delegate.updateContent(contentPixels, viewportPixels, unitPixels);
+    }
+
     /** 当前整数逻辑偏移 / Current integer logical offset. */
     public int offset() {
         return delegate.offset();
@@ -80,6 +85,15 @@ public final class KineticScrollController {
     /** 小数偏移换算成的像素位移 / Pixel shift of the fractional offset for one row size. */
     public int visualShift(int unitPixels) {
         return delegate.visualShift(unitPixels);
+    }
+
+    /**
+     * {@link #visualShift} 取整舍去的部分（-0.5 到 0.5 像素）；绘制行时再平移这一点，滚动就按屏幕像素平滑移动。
+     * The part {@link #visualShift} rounds away (-0.5 to 0.5 px); translating the rows by minus this while drawing
+     * makes scrolling move in screen pixels rather than whole GUI pixels.
+     */
+    public float subPixelShift(int unitPixels) {
+        return delegate.subPixelShift(unitPixels);
     }
 
     /** 最大逻辑偏移 / Maximum logical offset. */

@@ -161,7 +161,7 @@ public final class KineticTextFields {
             super.renderWidget(new ShadowlessGraphics(graphics, color), mouseX, mouseY, partialTick);
             if (!isFocused() && getValue().isEmpty() && !placeholder.getString().isBlank()) {
                 String plain = net.minecraft.ChatFormatting.stripFormatting(placeholder.getString());
-                graphics.drawWordWrap(font, Component.literal(plain == null ? "" : plain),
+                VanillaGuiDraw.wordWrap(graphics, font, Component.literal(plain == null ? "" : plain),
                         getX() + 4, getY() + 4, Math.max(1, getWidth() - 8), GuiTheme.fieldPlaceholderText());
             }
             GuiTheme.stateOutline(
@@ -410,6 +410,7 @@ public final class KineticTextFields {
         @Override
         public void setFocused(boolean focused) {
             super.setFocused(focused);
+            if (focused) visited = true;
             if (!focused) showStart();
         }
 
@@ -622,10 +623,18 @@ GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             }
         }
 
-        /** Returns whether the field should render its error border from explicit, transient, or validator state. */
+        /**
+         * Returns whether the field should render its error border from explicit, transient, or validator state. An
+         * empty field nobody has clicked into yet is waiting for input, not wrong, so it stays unmarked until then.
+         */
         protected boolean hasBorderError() {
-            return validationError || validationErrorStartMillis >= 0L || !isValueValid();
+            if (validationError || validationErrorStartMillis >= 0L) return true;
+            if (!visited && getValue().isBlank()) return false;
+            return !isValueValid();
         }
+
+        // Whether the field has had the keyboard focus at least once.
+        private boolean visited;
 
         /**
          * Renders all single-line Kinetic inputs through one API-owned content layout.

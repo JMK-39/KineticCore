@@ -60,6 +60,11 @@ public final class ItemCreatorStackData {
             data.putBoolean("icon", spec.icon()); effects.add(data);
         }
         tag.put("effects", effects);
+        ListTag equipment = new ListTag();
+        for (EquipmentSpec spec : template.equipment()) {
+            CompoundTag data = new CompoundTag();data.putString("slot", spec.slot().name());data.putString("item", spec.item());equipment.add(data);
+        }
+        tag.put("equipment", equipment);
         return tag;
     }
     public static SpawnEggTemplate decode(CompoundTag tag) {
@@ -78,6 +83,13 @@ public final class ItemCreatorStackData {
             CompoundTag data = list.getCompound(i);
             effects.add(new EffectSpec(data.getString("id"), data.getInt("amplifier"), data.getInt("duration"), data.getBoolean("particles"), data.getBoolean("icon")));
         }
-        return new SpawnEggTemplate(tag.getString("entity"), attributes, effects, tag.getString("name"));
+        list = tag.getList("equipment", Tag.TAG_COMPOUND);
+        if (list.size() > EquipmentSpec.Slot.values().length) throw new IllegalArgumentException("Too many equipment slots");
+        List<EquipmentSpec> equipment = new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag data = list.getCompound(i);
+            equipment.add(new EquipmentSpec(EquipmentSpec.Slot.valueOf(data.getString("slot")), data.getString("item")));
+        }
+        return new SpawnEggTemplate(tag.getString("entity"), attributes, effects, tag.getString("name"), equipment);
     }
 }

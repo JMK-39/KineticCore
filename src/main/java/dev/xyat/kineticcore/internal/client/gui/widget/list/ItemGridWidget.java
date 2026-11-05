@@ -105,6 +105,18 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
         return hoveredStack;
     }
 
+    /** The hovered slot only, not its row: the tooltip may cover the other items, never the one it describes. */
+    @Override
+    public int[] tooltipAnchor(double mouseX, double mouseY) {
+        int index = itemAt(mouseX, mouseY);
+        if (index < 0) return null;
+        ItemGridLayout layout = gridLayout();
+        int x = layout.slotX(index);
+        int y = layout.slotY(index, scroll.smoothIndexOffset(), scroll.visualShift(density.cellPitch()));
+        int top = Math.max(layout.clipTop(), y), bottom = Math.min(layout.clipBottom(), y + density.slotSize());
+        return bottom > top ? new int[]{x, top, density.slotSize(), bottom - top} : null;
+    }
+
     @Override
     protected Component hoveredRowTooltip() {
         return hoveredIndex >= 0 && hoveredIndex < items.size() && items.get(hoveredIndex) != null
@@ -124,8 +136,28 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
                 int cols = columns();
                 int startRow = scroll.smoothIndexOffset();
                 int shift = scroll.visualShift(density.cellPitch());
+                // Whole-pixel slots plus the leftover fraction: the grid glides in screen pixels.
+                VanillaGuiDraw.translate(graphics, 0, -scroll.subPixelShift(density.cellPitch()), 0);
                 int start = startRow * cols;
                 int end = layout.renderEndIndex(startRow, shift, items.size());
+                // Outlines go to the GPU as one batch over the slot backgrounds, then every icon as one batch on top;
+                // drawn one by one, a full grid costs thousands of draw calls a frame on 1.20.1 and 1.21.1.
+                dev.xyat.kineticcore.internal.client.gui.render.ItemBatch.run(graphics, font, () ->
+                        VanillaGuiDraw.batched(graphics, () -> renderSlots(graphics, layout, startRow, shift, start, end, mouseX, mouseY)));
+            } finally {
+                KineticRenderRuntime.disableScissor(graphics);
+            }
+            renderScrollbar(graphics, mouseX, mouseY);
+        } finally {
+            VanillaGuiDraw.pop(graphics);
+        }
+        hoveredIndex = itemAt(mouseX, mouseY);
+        hoveredStack = stackAt(mouseX, mouseY);
+        KineticControlBridge.setHoverTooltip(this, hoveredTooltip());
+    }
+
+    private void renderSlots(GuiGraphics graphics, ItemGridLayout layout, int startRow, int shift, int start, int end,
+                             int mouseX, int mouseY) {
                 for (int index = start; index < end; index++) {
                     int x = layout.slotX(index);
                     int y = layout.slotY(index, startRow, shift);
@@ -141,6 +173,12 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
                     ItemStack stack = safeStack(item);
                     if (!stack.isEmpty()) {
                         GuiTheme.item(graphics, font, stack, x, y, density.slotSize(), density.renderScale(), decorations);
+                    } else if (item.emptyIcon() != null) {
+                        var icon = item.emptyIcon();
+                        int size = Math.min(density.slotSize() - 4, Math.round(16 * density.renderScale()));
+                        int inset = (density.slotSize() - size) / 2;
+                        VanillaGuiDraw.texture(graphics, dev.xyat.kineticcore.api.resource.KineticResourceIds.of(icon.namespace(), icon.path()),
+                                x + inset, y + inset, size, size, 0, 0, icon.textureWidth(), icon.textureHeight(), icon.textureWidth(), icon.textureHeight());
                     }
                     KineticTheme.Indicator outline = outlineIndicator(item.outline());
                     if (item.error()) {
@@ -162,16 +200,6 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
                     }
                     scroll.renderSelectionFlash(graphics, index, x, y, density.slotSize(), density.slotSize());
                 }
-            } finally {
-                KineticRenderRuntime.disableScissor(graphics);
-            }
-            renderScrollbar(graphics, mouseX, mouseY);
-        } finally {
-            VanillaGuiDraw.pop(graphics);
-        }
-        hoveredIndex = itemAt(mouseX, mouseY);
-        hoveredStack = stackAt(mouseX, mouseY);
-        KineticControlBridge.setHoverTooltip(this, hoveredTooltip());
     }
 
     @Override
@@ -229,6 +257,12 @@ public final class ItemGridWidget extends VerticalScrollListWidget implements Ki
     @Override
     protected int rowPitch() {
         return density.cellPitch();
+    }
+
+    @Override
+    protected int contentHeight() {
+        int rows = scrollRangeRows();
+        return rows == 0 ? 0 : density.padding() * 2 + (rows - 1) * density.cellPitch() + density.slotSize();
     }
 
     @Override

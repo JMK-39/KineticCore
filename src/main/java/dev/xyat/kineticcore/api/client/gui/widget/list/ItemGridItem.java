@@ -2,6 +2,7 @@ package dev.xyat.kineticcore.api.client.gui.widget.list;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import dev.xyat.kineticcore.api.client.gui.render.KineticTexture;
 
 /**
  * One slot of a {@link KineticItemGrid}. Outline priority: error, then hover, then selection, then the business
@@ -13,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
  * @param selected whether the slot is drawn as selected
  * @param error whether the slot is drawn in the error state
  * @param outline business-state outline
+ * @param emptyIcon optional background icon shown only while the slot is empty
  */
 public record ItemGridItem(
         ItemStack stack,
@@ -20,6 +22,11 @@ public record ItemGridItem(
         boolean active,
         boolean selected,
         boolean error,
-        ItemGridOutline outline
+        ItemGridOutline outline,
+        KineticTexture emptyIcon
 ) {
+    /** Creates a slot without an empty-slot background icon. */
+    public ItemGridItem(ItemStack stack, Component tooltip, boolean active, boolean selected, boolean error, ItemGridOutline outline) {
+        this(stack, tooltip, active, selected, error, outline, null);
+    }
 }

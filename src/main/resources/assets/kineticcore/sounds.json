@@ -1,0 +1,26 @@
+{
+  "flight.wind": {
+    "subtitle": "subtitles.kineticcore.flight.wind",
+    "sounds": [
+      {
+        "name": "kineticcore:flight/wind"
+      }
+    ]
+  },
+  "flight.sonic_boom": {
+    "subtitle": "subtitles.kineticcore.flight.sonic_boom",
+    "sounds": [
+      {
+        "name": "kineticcore:flight/sonic_boom"
+      }
+    ]
+  },
+  "flight.takeoff": {
+    "subtitle": "subtitles.kineticcore.flight.takeoff",
+    "sounds": [
+      {
+        "name": "kineticcore:flight/takeoff"
+      }
+    ]
+  }
+}

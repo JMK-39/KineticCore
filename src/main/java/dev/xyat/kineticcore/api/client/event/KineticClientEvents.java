@@ -105,6 +105,28 @@ public final class KineticClientEvents {
         void handle(MouseButtonContext context);
     }
 
+    /** Context supplied to mouse-wheel handlers dispatched by Kinetic Client Events. */
+    public interface MouseScrollContext {
+        /** Returns the vertical wheel amount as the window reported it; positive turns away from the user. */
+        double vertical();
+
+        /** Returns the horizontal wheel amount as the window reported it. */
+        double horizontal();
+
+        /** Returns whether this event has been cancelled. */
+        boolean cancelled();
+
+        /** Cancels this event: later handlers, the hotbar and other wheel behaviour do not see this turn. */
+        void cancel();
+    }
+
+    /** Handles mouse-wheel callbacks dispatched by Kinetic Client Events. */
+    @FunctionalInterface
+    public interface MouseScrollHandler {
+        /** Handles one cancellable mouse-wheel turn. */
+        void handle(MouseScrollContext context);
+    }
+
     /** Context supplied to interaction key handlers dispatched by Kinetic Client Events. */
     public interface InteractionKeyContext {
         /** Returns whether this interaction was triggered by the attack key mapping. */
@@ -487,6 +509,24 @@ public final class KineticClientEvents {
     public static KineticEventSubscription onMouseButtonBefore(MouseButtonHandler listener) {
         Objects.requireNonNull(listener, "listener");
         return KineticClientEventRuntime.registerMouseButtonBefore(listener);
+    }
+
+    /**
+     * Registers a cancellable listener for mouse-wheel turns in game, while no screen is open. It runs before the
+     * hotbar slot changes and before every other Kinetic wheel behaviour, such as the creative flight speed (which
+     * listens at {@link dev.xyat.kineticcore.api.event.KineticEventPriority#NORMAL NORMAL}); cancelling keeps the turn
+     * from reaching them.
+     *
+     * @param priority order relative to other handlers; equal priorities run in registration order
+     * @param listener callback
+     * @return a subscription; close it to unsubscribe
+     * @throws NullPointerException if an argument is {@code null}
+     */
+    public static KineticEventSubscription onMouseScroll(dev.xyat.kineticcore.api.event.KineticEventPriority priority,
+                                                         MouseScrollHandler listener) {
+        Objects.requireNonNull(priority, "priority");
+        Objects.requireNonNull(listener, "listener");
+        return KineticClientEventRuntime.registerMouseScroll(priority, listener);
     }
 
     /** Registers a cancellable attack/use interaction-key listener. */

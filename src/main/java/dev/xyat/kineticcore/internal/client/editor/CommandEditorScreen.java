@@ -37,10 +37,11 @@ final class CommandEditorScreen extends KineticScreen {
             initial = parent.currentCommands().get(editingIndex);
         }
 
+        // The command box sits at the bottom so its suggestions (which open above it) have the whole page.
         input = addTextField(
-                44,
-                278,
-                552,
+                4,
+                340,
+                632,
                 KineticText.translatable("gui.kineticcore.command_edit.input"), null, null, null
         );
         input.setCanLoseFocus(false);
@@ -59,17 +60,17 @@ final class CommandEditorScreen extends KineticScreen {
         commandSuggestions.update();
 
         addButton(
-                208,
-                314,
-                96,
+                596,
+                4,
+                40,
                 KineticText.translatable("gui.kineticcore.command_edit.save"),
                 null,
                 this::saveCommand
         );
         addButton(
-                44,
-                24,
-                96,
+                4,
+                4,
+                40,
                 KineticText.translatable("gui.kineticcore.command_edit.back"),
                 null,
                 this::closeToParent
@@ -78,20 +79,22 @@ final class CommandEditorScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.backdrop(graphics, 0, 0, canvasWidth(), canvasHeight());
         graphics.fillGradient(0, 0, canvasWidth(), canvasHeight(), 0xFF171717, 0xFF0E0E0E);
-        GuiTheme.panel(graphics, 24, 18, 592, 324);
+        GuiTheme.panel(graphics, 0, 0, canvasWidth(), canvasHeight());
         dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(graphics)
-                .scrollingTextCentered(title, canvasWidth() / 2, 30, 352, 0xFFFFFF, true);
+                .scrollingTextCentered(title, canvasWidth() / 2, 8, canvasWidth() - 2 * 48, 0xFFFFFF, true);
+        GuiTheme.separator(graphics, 4, 24, canvasWidth() - 8);
         VanillaGuiDraw.text(graphics, 
                 font,
                 KineticText.translatable("gui.kineticcore.command_edit.hint"),
-                44,
-                56,
+                4,
+                30,
                 0xFFFFFF,
                 false
         );
         if (parent.variableHint() != null) {
-            VanillaGuiDraw.text(graphics, font, parent.variableHint(), 44, 76, 0xFFFFFF, false);
+            VanillaGuiDraw.text(graphics, font, parent.variableHint(), 4, 42, 0xFFFFFF, false);
         }
     }
 

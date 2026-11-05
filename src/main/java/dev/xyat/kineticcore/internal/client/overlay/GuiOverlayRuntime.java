@@ -1,5 +1,6 @@
 package dev.xyat.kineticcore.internal.client.overlay;
 
+import dev.xyat.kineticcore.internal.client.gui.text.LineBreaks;
 import dev.xyat.kineticcore.internal.client.gui.render.VanillaGuiDraw;
 
 import dev.xyat.kineticcore.api.client.gui.theme.KineticTheme;
@@ -34,6 +35,14 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class GuiOverlayRuntime {
+    private static java.util.function.Supplier<dev.xyat.kineticcore.api.client.gui.layout.KineticLayout.Rect> titleInformationArea =
+            () -> new dev.xyat.kineticcore.api.client.gui.layout.KineticLayout.Rect(2,2,0,0);
+    public static dev.xyat.kineticcore.api.client.gui.layout.KineticLayout.Rect titleScreenInformationArea() {
+        return titleInformationArea.get();
+    }
+    public static void titleScreenInformationAreaProvider(java.util.function.Supplier<dev.xyat.kineticcore.api.client.gui.layout.KineticLayout.Rect> provider) {
+        titleInformationArea=Objects.requireNonNull(provider,"provider");
+    }
     private static final int TOOLTIP_Z = 1200;
 
     private sealed interface TooltipRequest permits TextTooltip, WrappedTextTooltip, FormattedTooltip, ItemTooltip {
@@ -48,7 +57,7 @@ public final class GuiOverlayRuntime {
     private record WrappedTextTooltip(List<Component> lines, int maxWidth) implements TooltipRequest {
     }
 
-    private record ItemTooltip(ItemStack stack) implements TooltipRequest {
+    private record ItemTooltip(ItemStack stack, List<Component> lines) implements TooltipRequest {
     }
 
     private record MenuControl(MenuItem item, MenuButton button) {
@@ -101,6 +110,8 @@ public final class GuiOverlayRuntime {
     // 菜单最多显示 MAX_VISIBLE_MENU_ITEMS 行，超出部分用滚轮 / 滚动条浏览。
     // Menus show at most MAX_VISIBLE_MENU_ITEMS rows; the rest scrolls with the wheel or the scrollbar.
     private static final int MAX_VISIBLE_MENU_ITEMS = 10;
+    // Long menus show eight rows at most and scroll the rest, so no row ever falls off the screen.
+    private static final int MAX_MENU_VIEWPORT_ROWS = 8;
     private static final int MENU_SCROLLBAR_WIDTH = 4;
     private int menuScroll;
     private boolean draggingMenuThumb;
@@ -109,12 +120,27 @@ public final class GuiOverlayRuntime {
 
     public void beginFrame() {
         tooltip = null;
+        tooltipAnchor = null;
+    }
+
+    // Screen rectangle of the control whose tooltip is shown this frame; the tooltip is placed beside it.
+    private VanillaGuiDraw.TooltipAnchor tooltipAnchor;
+
+    /** Whether a tooltip was requested this frame. */
+    public boolean hasTooltip() {
+        return tooltip != null;
+    }
+
+    /** Places this frame's tooltip beside a control (screen coordinates) instead of beside the cursor. */
+    public void tooltipAnchor(int left, int top, int right, int bottom, boolean control) {
+        tooltipAnchor = new VanillaGuiDraw.TooltipAnchor(left, top, right, bottom, control);
     }
 
     public void tooltip(List<? extends Component> lines) {
         if (lines == null || lines.isEmpty()) return;
         List<Component> clean = lines.stream().filter(Objects::nonNull).map(Component.class::cast).toList();
         if (!clean.isEmpty()) tooltip = new TextTooltip(clean);
+        tooltipAnchor = null;
     }
 
     public void tooltip(Component line, int maxWidth) {
@@ -126,6 +152,7 @@ public final class GuiOverlayRuntime {
         if (lines == null || lines.isEmpty()) return;
         List<Component> clean = lines.stream().filter(Objects::nonNull).map(Component.class::cast).toList();
         if (!clean.isEmpty()) tooltip = new WrappedTextTooltip(clean, Math.max(1, maxWidth));
+        tooltipAnchor = null;
     }
 
     public void formattedTooltip(List<FormattedCharSequence> lines) {
@@ -133,11 +160,25 @@ public final class GuiOverlayRuntime {
         // Match the public tooltip entry: a partially empty list must not crash rendering.
         List<FormattedCharSequence> clean = lines.stream().filter(Objects::nonNull).toList();
         if (!clean.isEmpty()) tooltip = new FormattedTooltip(clean);
+        tooltipAnchor = null;
     }
 
     public void itemTooltip(ItemStack stack) {
+        itemTooltip(stack, List.of());
+    }
+
+    public void itemTooltip(ItemStack stack, List<Component> additionalLines) {
         if (stack == null || stack.isEmpty()) return;
-        tooltip = new ItemTooltip(stack.copy());
+        tooltip = itemTooltipRequest(stack, additionalLines);
+        tooltipAnchor = null;
+    }
+
+    private static ItemTooltip itemTooltipRequest(ItemStack stack, List<Component> additionalLines) {
+        ItemStack copy = stack.copy();
+        // Build while the caller's draft-preview context is active, not after that context has closed.
+        List<Component> lines = new ArrayList<>(net.minecraft.client.gui.screens.Screen.getTooltipFromItem(Minecraft.getInstance(), copy));
+        if (additionalLines != null) additionalLines.stream().filter(Objects::nonNull).forEach(lines::add);
+        return new ItemTooltip(copy, lines.stream().map(Component::copy).map(Component.class::cast).toList());
     }
 
     public static void requestTooltip(Component line, int mouseX, int mouseY) {
@@ -179,9 +220,13 @@ public final class GuiOverlayRuntime {
     }
 
     public static void requestItemTooltip(ItemStack stack, int mouseX, int mouseY) {
+        requestItemTooltip(stack, List.of(), mouseX, mouseY);
+    }
+
+    public static void requestItemTooltip(ItemStack stack, List<Component> additionalLines, int mouseX, int mouseY) {
         KineticClientRuntimeImpl.initialize();
         if (stack == null || stack.isEmpty()) return;
-        pendingScreenTooltip = new GlobalTooltipRequest(new ItemTooltip(stack.copy()), mouseX, mouseY);
+        pendingScreenTooltip = new GlobalTooltipRequest(itemTooltipRequest(stack, additionalLines), mouseX, mouseY);
     }
 
     public void openMenu(int screenX, int screenY, List<MenuItem> items) {
@@ -234,7 +279,20 @@ public final class GuiOverlayRuntime {
             search.setFocused(true);
         }
         contextMenu = new ContextMenu(screenX, screenY, List.copyOf(controls), preferredWidth, search);
+        menuOpenedAt = System.nanoTime();
         dialog = null;
+    }
+
+    // When the menu and the dialog opened, for their opening animation.
+    private long menuOpenedAt;
+    private long dialogOpenedAt;
+    private static final double OPEN_ANIMATION_SECONDS = 0.16D;
+
+    /** 0 → 1 over the opening animation, eased out (fast start, soft landing). */
+    private static float openProgress(long openedAt) {
+        double t = Math.min(1D, Math.max(0D, (System.nanoTime() - openedAt) / 1_000_000_000D / OPEN_ANIMATION_SECONDS));
+        double inverse = 1D - t;
+        return (float) (1D - inverse * inverse * inverse);
     }
 
     public void closeMenu() {
@@ -267,6 +325,7 @@ public final class GuiOverlayRuntime {
                     safeCancel.run();
                 }
         );
+        dialogOpenedAt = System.nanoTime();
         dialog = new Dialog(
                 safeTitle,
                 safeMessage,
@@ -355,7 +414,11 @@ public final class GuiOverlayRuntime {
 
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (dialog != null) {
-            if (keyCode == 256) {
+            if (keyCode == 257 || keyCode == 335) {
+                Dialog confirmed = dialog;
+                dialog = null;
+                confirmed.onConfirm().run();
+            } else if (keyCode == 256) {
                 // ESC is a cancellation, just like clicking the dialog's cancel button.
                 // Clear the modal before invoking addon code so a callback may open a new one.
                 Dialog cancelled = dialog;
@@ -445,7 +508,12 @@ public final class GuiOverlayRuntime {
     }
 
     private void renderTooltip(GuiGraphics graphics, Font font, int mouseX, int mouseY) {
-        renderTooltipRequest(graphics, font, tooltip, mouseX, mouseY);
+        VanillaGuiDraw.tooltipAnchor(tooltipAnchor);
+        try {
+            renderTooltipRequest(graphics, font, tooltip, mouseX, mouseY);
+        } finally {
+            VanillaGuiDraw.tooltipAnchor(null);
+        }
     }
 
     private static void renderTooltipRequest(
@@ -459,7 +527,7 @@ public final class GuiOverlayRuntime {
         VanillaGuiDraw.translate(graphics, 0, 0, TOOLTIP_Z);
         try {
             if (request instanceof ItemTooltip item) {
-                VanillaGuiDraw.tooltip(graphics, font, item.stack(), mouseX, mouseY);
+                VanillaGuiDraw.itemTooltip(graphics, font, item.stack(), item.lines(), mouseX, mouseY);
                 return;
             }
             // Lines wider than the room beside the cursor are wrapped so the tooltip stays on screen.
@@ -468,14 +536,14 @@ public final class GuiOverlayRuntime {
                 List<FormattedCharSequence> lines = new ArrayList<>();
                 for (Component line : text.lines()) {
                     if (font.width(line) <= fitWidth) lines.add(line.getVisualOrderText());
-                    else lines.addAll(font.split(line, fitWidth));
+                    else lines.addAll(LineBreaks.split(font, line, fitWidth));
                 }
                 VanillaGuiDraw.sequenceTooltip(graphics, font, lines, mouseX, mouseY);
                 return;
             }
             if (request instanceof WrappedTextTooltip text) {
                 List<FormattedCharSequence> lines = new ArrayList<>();
-                for (Component line : text.lines()) lines.addAll(font.split(line, Math.min(text.maxWidth(), fitWidth)));
+                for (Component line : text.lines()) lines.addAll(LineBreaks.split(font, line, Math.min(text.maxWidth(), fitWidth)));
                 VanillaGuiDraw.sequenceTooltip(graphics, font, lines, mouseX, mouseY);
                 return;
             }
@@ -509,6 +577,13 @@ public final class GuiOverlayRuntime {
         VanillaGuiDraw.push(graphics);
         try {
             VanillaGuiDraw.translate(graphics, 0, 0, 900);
+            // Opening: the menu unfolds downwards from its top edge and settles into place.
+            float open = openProgress(menuOpenedAt);
+            if (open < 1F) {
+                VanillaGuiDraw.translate(graphics, bounds.x, bounds.y - (1F - open) * 4F, 0);
+                VanillaGuiDraw.scale(graphics, 1F, 0.82F + 0.18F * open, 1F);
+                VanillaGuiDraw.translate(graphics, -bounds.x, -bounds.y, 0);
+            }
             GuiTheme.panel(graphics, bounds.x, bounds.y, bounds.width, bounds.height);
             if (contextMenu.search() != null) VanillaGuiDraw.render(contextMenu.search(), graphics, mouseX, mouseY, 0f);
             graphics.enableScissor(bounds.x, viewportTop, rowRight, viewportBottom);
@@ -549,13 +624,20 @@ public final class GuiOverlayRuntime {
         }
 
         if (hoveredItem != null && !hoveredItem.tooltip().getString().isBlank()) {
-            renderTooltipRequest(
-                    graphics,
-                    font,
-                    new WrappedTextTooltip(List.of(hoveredItem.tooltip()), 320),
-                    mouseX,
-                    mouseY
-            );
+            // Beside the menu, so the explanation never hides the other choices.
+            VanillaGuiDraw.tooltipAnchor(new VanillaGuiDraw.TooltipAnchor(bounds.x(), bounds.y(),
+                    bounds.x() + bounds.width(), bounds.y() + bounds.height(), false));
+            try {
+                renderTooltipRequest(
+                        graphics,
+                        font,
+                        new WrappedTextTooltip(List.of(hoveredItem.tooltip()), 320),
+                        mouseX,
+                        mouseY
+                );
+            } finally {
+                VanillaGuiDraw.tooltipAnchor(null);
+            }
         }
     }
 
@@ -574,7 +656,7 @@ public final class GuiOverlayRuntime {
     }
 
     private static boolean textRow(MenuItem item, ContextMenu menu) {
-        if (menu == null) return false;
+        if (menu == null || item.isButton()) return false;
         int toggles = 0;
         for (MenuControl control : menu.controls()) {
             if (control.item().checked() != null && !control.item().isChoice()) toggles++;
@@ -587,7 +669,7 @@ public final class GuiOverlayRuntime {
         MenuButton button = row.control().button();
         int x = button.getX();
         int width = button.getWidth();
-        graphics.fill(x, row.y(), x + width, row.y() + row.height(), GuiTheme.current().panel());
+        GuiTheme.fillShape(graphics, x, row.y(), width, row.height(), GuiTheme.current().panel());
         // The current option of a single choice is yellow; switched-on rows of a multi-selection are green.
         boolean checked = Boolean.TRUE.equals(item.checked());
         if (checked && !item.isChoice() && !hovered) {
@@ -618,13 +700,21 @@ public final class GuiOverlayRuntime {
         VanillaGuiDraw.push(graphics);
         try {
             VanillaGuiDraw.translate(graphics, 0, 0, 950);
-            graphics.fill(0, 0, screenWidth, screenHeight, GuiTheme.current().shadow());
+            // Opening: the shade fades in and the panel grows from 92 % to full size around its centre.
+            float open = openProgress(dialogOpenedAt);
+            int shadow = GuiTheme.current().shadow();
+            graphics.fill(0, 0, screenWidth, screenHeight, Math.round((shadow >>> 24) * open) << 24 | (shadow & 0x00FFFFFF));
+            if (open < 1F) {
+                float centreX = bounds.x + bounds.width / 2F, centreY = bounds.y + bounds.height / 2F;
+                float scale = 0.92F + 0.08F * open;
+                VanillaGuiDraw.translate(graphics, centreX, centreY, 0);
+                VanillaGuiDraw.scale(graphics, scale, scale, 1F);
+                VanillaGuiDraw.translate(graphics, -centreX, -centreY, 0);
+            }
             GuiTheme.panel(graphics, bounds.x, bounds.y, bounds.width, bounds.height);
-            GuiTheme.stateOutline(graphics, bounds.x, bounds.y, bounds.width, bounds.height, true, false, false);
-            GuiTheme.stateOutline(graphics, bounds.x + 2, bounds.y + 2, bounds.width - 4, bounds.height - 4, true, false, false);
             VanillaGuiDraw.centeredText(graphics, font, dialog.title(), bounds.x + bounds.width / 2, bounds.y + 12, GuiTheme.current().text());
 
-            List<FormattedCharSequence> lines = font.split(dialog.message(), bounds.width - 24);
+            List<FormattedCharSequence> lines = LineBreaks.split(font, dialog.message(), bounds.width - 24);
             int lineY = bounds.y + 34;
             for (FormattedCharSequence line : lines) {
                 int lineX = bounds.x + (bounds.width - font.width(line)) / 2;
@@ -632,8 +722,8 @@ public final class GuiOverlayRuntime {
                 lineY += 10;
             }
 
-            dialog.confirmButton().setBounds(bounds.confirmX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight);
-            dialog.cancelButton().setBounds(bounds.cancelX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight);
+            dialog.confirmButton().setBounds(bounds.confirmX, bounds.buttonY, bounds.confirmWidth, bounds.buttonHeight);
+            dialog.cancelButton().setBounds(bounds.cancelX, bounds.buttonY, bounds.cancelWidth, bounds.buttonHeight);
             VanillaGuiDraw.render(dialog.confirmButton(), graphics, mouseX, mouseY, 0f);
             VanillaGuiDraw.render(dialog.cancelButton(), graphics, mouseX, mouseY, 0f);
         } finally {
@@ -651,8 +741,8 @@ public final class GuiOverlayRuntime {
     ) {
         if (button != 0) return true;
         DialogBounds bounds = dialogBounds(screenWidth, screenHeight, font);
-        dialog.confirmButton().setBounds(bounds.confirmX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight);
-        dialog.cancelButton().setBounds(bounds.cancelX, bounds.buttonY, bounds.buttonWidth, bounds.buttonHeight);
+        dialog.confirmButton().setBounds(bounds.confirmX, bounds.buttonY, bounds.confirmWidth, bounds.buttonHeight);
+        dialog.cancelButton().setBounds(bounds.cancelX, bounds.buttonY, bounds.cancelWidth, bounds.buttonHeight);
         if (dialog.confirmButton().mouseClicked(mouseX, mouseY, button)) return true;
         dialog.cancelButton().mouseClicked(mouseX, mouseY, button);
         return true;
@@ -682,7 +772,7 @@ public final class GuiOverlayRuntime {
                 ? separatorHeight : itemHeight + SelectionMenuLayout.gap(textRow(control.item(), menu));
         if (!controls.isEmpty()) contentHeight -= SelectionMenuLayout.gap(textRow(controls.get(controls.size() - 1).item(), menu));
         int viewportHeight = Math.min(Math.max(itemHeight, contentHeight),
-                Math.min(MAX_VISIBLE_MENU_ITEMS * (itemHeight + 2) - 2, Math.max(6, screenHeight - 14 - searchHeight)));
+                Math.min(MAX_MENU_VIEWPORT_ROWS * (itemHeight + 2) - 2, Math.max(6, screenHeight - 14 - searchHeight)));
         boolean scrollable = contentHeight > viewportHeight;
         if (menu.preferredWidth() > 0) {
             width = menu.preferredWidth();
@@ -723,16 +813,18 @@ public final class GuiOverlayRuntime {
 
     private DialogBounds dialogBounds(int screenWidth, int screenHeight, Font font) {
         int width = Math.min(320, Math.max(220, screenWidth - 40));
-        int messageHeight = Math.max(30, font.split(dialog.message(), width - 24).size() * 10);
+        int messageHeight = Math.max(30, LineBreaks.split(font, dialog.message(), width - 24).size() * 10);
         int height = Math.min(screenHeight - 20, 78 + messageHeight);
         int x = (screenWidth - width) / 2;
         int y = (screenHeight - height) / 2;
-        int buttonWidth = Math.max(70, (width - 36) / 2);
+        int maxButtonWidth = Math.max(70, (width - 36) / 2);
+        int confirmWidth = Math.max(40, Math.min(maxButtonWidth, font.width(dialog.confirmText()) + 12));
+        int cancelWidth = Math.max(40, Math.min(maxButtonWidth, font.width(dialog.cancelText()) + 12));
         int buttonHeight = KineticScreen.STANDARD_CONTROL_HEIGHT;
         int buttonY = y + height - buttonHeight - 10;
         int confirmX = x + 10;
-        int cancelX = x + width - 10 - buttonWidth;
-        return new DialogBounds(x, y, width, height, confirmX, cancelX, buttonY, buttonWidth, buttonHeight);
+        int cancelX = x + width - 10 - cancelWidth;
+        return new DialogBounds(x, y, width, height, confirmX, cancelX, buttonY, confirmWidth, cancelWidth, buttonHeight);
     }
 
 
@@ -744,7 +836,8 @@ public final class GuiOverlayRuntime {
             int confirmX,
             int cancelX,
             int buttonY,
-            int buttonWidth,
+            int confirmWidth,
+            int cancelWidth,
             int buttonHeight
     ) {
     }
@@ -787,8 +880,9 @@ public final class GuiOverlayRuntime {
     private static void renderToasts(GuiGraphics graphics, Font font, int screenWidth, int screenHeight) {
         if (ACTIVE_TOASTS.isEmpty()) return;
         long currentTime = System.currentTimeMillis();
-        int currentBottomY = screenHeight - 40;
-        int currentTopY = 25;
+        final int gap = 2;
+        var nextEdges = new java.util.EnumMap<Position, Integer>(Position.class);
+        var renderedEdges = new java.util.EnumMap<Position, Integer>(Position.class);
 
         // Snapshot iteration is stable even if another callback clears or replaces toasts
         // during rendering. Remove expired entries by identity, never by a stale index.
@@ -803,7 +897,7 @@ public final class GuiOverlayRuntime {
             String raw = bold.getString();
             int wrapWidth = Integer.MAX_VALUE;
             if (raw.length() > 64) wrapWidth = Math.max(40, Math.round(font.width(bold) * 64f / raw.length()));
-            List<FormattedCharSequence> lines = font.split(bold, wrapWidth);
+            List<FormattedCharSequence> lines = LineBreaks.split(font, bold, wrapWidth);
             int maxLineWidth = 0;
             for (FormattedCharSequence line : lines) maxLineWidth = Math.max(maxLineWidth, font.width(line));
             int width = maxLineWidth + 16;
@@ -814,30 +908,28 @@ public final class GuiOverlayRuntime {
             switch (toast.position) {
                 case TOP_CENTER -> {
                     targetX = (screenWidth - width) / 2;
-                    targetY = currentTopY;
-                    currentTopY += height + 4;
+                    targetY = nextEdges.getOrDefault(toast.position, 25);
                 }
                 case BOTTOM_CENTER -> {
                     targetX = (screenWidth - width) / 2;
-                    targetY = currentBottomY;
-                    currentBottomY -= height + 4;
+                    // Anchor the bottom edge: the next notification may wrap to a different height.
+                    targetY = nextEdges.getOrDefault(toast.position, screenHeight - 22) - height;
                 }
                 case CENTER -> {
                     targetX = (screenWidth - width) / 2;
-                    targetY = (screenHeight - height) / 2;
+                    targetY = nextEdges.getOrDefault(toast.position, (screenHeight - height) / 2);
                 }
                 case TOP_LEFT -> {
                     targetX = 10;
-                    targetY = currentTopY;
-                    currentTopY += height + 4;
+                    targetY = nextEdges.getOrDefault(toast.position, 25);
                 }
                 case TOP_RIGHT -> {
                     targetX = screenWidth - width - 10;
-                    targetY = currentTopY;
-                    currentTopY += height + 4;
+                    targetY = nextEdges.getOrDefault(toast.position, 25);
                 }
                 default -> throw new IllegalStateException("Unknown toast position: " + toast.position);
             }
+            nextEdges.put(toast.position, toast.position == Position.BOTTOM_CENTER ? targetY - gap : targetY + height + gap);
 
             targetX += toast.offsetX;
             targetY += toast.offsetY;
@@ -858,6 +950,14 @@ public final class GuiOverlayRuntime {
             int border = alphaHex | (GuiTheme.indicatorColor(KineticTheme.Indicator.WARNING) & 0x00FFFFFF);
             int text = alphaHex | 0x00FFFFFF;
             int renderY = Math.round(toast.currentY);
+            // Entries have independent entrance/exit animations; keep their visible borders apart as they move.
+            Integer previousEdge = renderedEdges.get(toast.position);
+            if (previousEdge != null) {
+                renderY = toast.position == Position.BOTTOM_CENTER
+                        ? Math.min(renderY, previousEdge - height - gap)
+                        : Math.max(renderY, previousEdge + gap);
+            }
+            renderedEdges.put(toast.position, toast.position == Position.BOTTOM_CENTER ? renderY : renderY + height);
 
             //? if <26.1 {
             RenderSystem.enableBlend();
@@ -866,8 +966,17 @@ public final class GuiOverlayRuntime {
             VanillaGuiDraw.push(graphics);
             try {
                 VanillaGuiDraw.translate(graphics, 0, 0, 800);
-                graphics.fill(targetX, renderY, targetX + width, renderY + height, border);
-                graphics.fill(targetX + 2, renderY + 2, targetX + width - 2, renderY + height - 2, background);
+                if (GuiTheme.modern()) {
+                    // A frosted card with a thin warm rim.
+                    float radius = Math.min(6F, height / 3F);
+                    dev.xyat.kineticcore.internal.client.gui.theme.RoundedShapes.fill(graphics, targetX, renderY, width, height, radius,
+                            (int) (alpha * 0xE0) << 24 | (GuiTheme.current().panel() & 0x00FFFFFF));
+                    dev.xyat.kineticcore.internal.client.gui.theme.RoundedShapes.outline(graphics, targetX, renderY, width, height, radius,
+                            2F, border);
+                } else {
+                    graphics.fill(targetX, renderY, targetX + width, renderY + height, border);
+                    graphics.fill(targetX + 2, renderY + 2, targetX + width - 2, renderY + height - 2, background);
+                }
                 int textY = renderY + 5;
                 for (FormattedCharSequence line : lines) {
                     int lineX = targetX + (width - font.width(line)) / 2;

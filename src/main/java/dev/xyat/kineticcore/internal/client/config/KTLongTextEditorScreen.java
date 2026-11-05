@@ -48,7 +48,7 @@ final class KTLongTextEditorScreen extends KineticScreen {
         focusControl(editor);
 
         addButton(
-                PANEL_X + PANEL_W - 154, PANEL_Y + PANEL_H - 30, 68,
+                PANEL_X + PANEL_W - 126, PANEL_Y + PANEL_H - 30, 40,
                 KineticText.translatable("gui.kineticcore.config.long_text.cancel"),
                 null,
                 this::onClose

@@ -38,7 +38,7 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
     /** Standard logical canvas height used by responsive Kinetic screens. */
     public static final int STANDARD_CANVAS_HEIGHT = KineticLayout.MAX_CANVAS_HEIGHT;
     /** Standard safe-area margin applied before logical canvas measurement. */
-    public static final int STANDARD_SAFE_MARGIN = 6;
+    public static final int STANDARD_SAFE_MARGIN = KineticLayout.CANVAS_INSET;
     /** Standard API-defined control height. */
     public static final int STANDARD_CONTROL_HEIGHT = 16;
     /** Compact API-defined control height. */
@@ -415,6 +415,17 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
         return !boundToViewport;
     }
 
+    /** Validation uses the same viewport as rendering; offscreen and clipped row controls are not full layout boxes. */
+    public final boolean canvasControlFullyVisible(AbstractWidget widget) {
+        for (ScrollViewportWidget viewportWidget : scrollViewportWidgets) {
+            if (viewportWidget.widget() != widget) continue;
+            return widget.getX() >= viewportWidget.left() && widget.getY() >= viewportWidget.top()
+                    && (long) widget.getX() + widget.getWidth() <= viewportWidget.right()
+                    && (long) widget.getY() + widget.getHeight() <= viewportWidget.bottom();
+        }
+        return true;
+    }
+
     private void updateScrollableWidgetPositions() {
         Map<ScrollViewportKey, Double> offsets = new HashMap<>();
         for (ScrollViewportWidget viewportWidget : scrollViewportWidgets) {
@@ -460,7 +471,10 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
                     viewportWidget.bottom()
             );
             try {
-                VanillaGuiDraw.render(widget, graphics, mouseX, mouseY, partialTick);
+                boolean insideViewport = mouseX >= viewportWidget.left() && mouseX < viewportWidget.right()
+                        && mouseY >= viewportWidget.top() && mouseY < viewportWidget.bottom();
+                VanillaGuiDraw.render(widget, graphics, insideViewport ? mouseX : Integer.MIN_VALUE,
+                        insideViewport ? mouseY : Integer.MIN_VALUE, partialTick);
             } finally {
                 disableUiScissor(graphics);
             }
@@ -635,14 +649,23 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
         renderScrollableWidgets(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
         renderCanvasForeground(canvasGraphics, virtualMouseX, virtualMouseY, partialTick);
         if (dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.ENABLED) {
+            // Scrolled controls are drawn clipped by their viewport, never by the default pass. A rebuild during the
+            // frame (for example a first-frame re-init) registers new ones after the hide step; skip those too.
+            java.util.Set<AbstractWidget> scrolled = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+            for (ScrollViewportWidget viewportWidget : scrollViewportWidgets) scrolled.add(viewportWidget.widget());
+            scrolled.addAll(hiddenScrollableWidgets);
             List<AbstractWidget> shown = new java.util.ArrayList<>();
             for (var child : children()) {
-                if (child instanceof AbstractWidget widget && !hiddenScrollableWidgets.contains(widget)) shown.add(widget);
+                if (child instanceof AbstractWidget widget && !scrolled.contains(widget)) shown.add(widget);
             }
             dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.controls(canvasGraphics, shown);
         }
         dev.xyat.kineticcore.internal.client.gui.LayoutFrameRecorder.endFrame();
         runtime.controls().renderAutoCompleteSuggestions(canvasGraphics, virtualMouseX, virtualMouseY);
+        // Layout edit mode: outlines, handles, snap guides and the in-page command line over the page; no page tooltips.
+        dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.render(
+                dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter.wrap(canvasGraphics), this, virtualMouseX, virtualMouseY);
+        if (dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.active()) return;
 
         if (runtime.businessTooltipsAllowed(isInsideCanvas(screenMouseX, screenMouseY))
                 && !runtime.requestWidgetTooltip(virtualMouseX, virtualMouseY,
@@ -657,7 +680,8 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
     //? if <26.1
     @Override
     public final boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return runtime.mouseClicked(mouseX, mouseY, button, this::canvasMouseClicked);
+        // The layout editor sees every click first and consumes it in edit mode.
+        return runtime.mouseClicked(mouseX, mouseY, button, (x, y, b) -> dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.mouseClicked(this, x, y, b) || canvasMouseClicked(x, y, b));
     }
 
     /** Handles a mouse click after converting screen coordinates to virtual canvas coordinates. */
@@ -675,7 +699,7 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
     //? if <26.1
     @Override
     public final boolean mouseReleased(double mouseX, double mouseY, int button) {
-        return runtime.mouseReleased(mouseX, mouseY, button, this::canvasMouseReleased);
+        return runtime.mouseReleased(mouseX, mouseY, button, (x, y, b) -> dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.mouseReleased(x, y, b) || canvasMouseReleased(x, y, b));
     }
 
     /** Handles mouse release after converting screen coordinates to virtual canvas coordinates. */
@@ -687,7 +711,8 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
     //? if <26.1
     @Override
     public final boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        return runtime.mouseDragged(mouseX, mouseY, button, dragX, dragY, this::canvasMouseDragged);
+        return runtime.mouseDragged(mouseX, mouseY, button, dragX, dragY,
+                (x, y, b, dx, dy) -> dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.mouseDragged(this, x, y, b) || canvasMouseDragged(x, y, b, dx, dy));
     }
 
     /** Handles mouse dragging after converting screen coordinates to virtual canvas coordinates. */
@@ -703,7 +728,7 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
     @Override
     public final boolean mouseScrolled(double mouseX, double mouseY, double delta) {
     //?}
-        return runtime.mouseScrolled(mouseX, mouseY, delta, this::canvasMouseScrolled);
+        return runtime.mouseScrolled(mouseX, mouseY, delta, (x, y, d) -> dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.mouseScrolled(this, x, y, d) || canvasMouseScrolled(x, y, d));
     }
 
     /** Handles mouse scrolling in virtual canvas coordinates. */
@@ -748,7 +773,12 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
     //? if <26.1
     @Override
     public final boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        return runtime.keyPressed(keyCode, scanCode, modifiers, this::canvasKeyPressed, this::vanillaKeyPressed);
+        // The layout editor's command line takes every key first: Enter runs it, Backspace edits it (not the page).
+        if (dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.commandLineOpen()) {
+            return dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.keyPressed(this, keyCode, modifiers);
+        }
+        return runtime.keyPressed(keyCode, scanCode, modifiers,
+                (k, sc, m) -> dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.keyPressed(this, k, m) || canvasKeyPressed(k, sc, m), this::vanillaKeyPressed);
     }
 
     /** {@inheritDoc} */
@@ -763,8 +793,11 @@ public abstract class KineticScreen extends Screen implements KineticScreenHost 
     //? if <26.1
     @Override
     public final boolean charTyped(char codePoint, int modifiers) {
+        if (dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.commandLineOpen()) {
+            return dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.charTyped(codePoint);
+        }
         return runtime.charTyped(codePoint, modifiers,
-                (character, mods) -> canvasCharTyped(character, mods) || vanillaCharTyped(character, mods));
+                (character, mods) -> dev.xyat.kineticcore.internal.client.gui.layout.LayoutEditor.charTyped(character) || canvasCharTyped(character, mods) || vanillaCharTyped(character, mods));
     }
 
     // ---- vanilla input and rendering across versions -----------------------------------------------------------

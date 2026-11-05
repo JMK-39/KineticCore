@@ -136,6 +136,16 @@ public interface KineticGraphics {
         }
     }
 
+    /**
+     * 批量绘制物品图标：其中通过 KineticTheme.item 画的物品会收集起来一次画完（放在裁剪区域内调用）。
+     * Draws item icons in one batch: items drawn through {@code KineticTheme.item} inside are collected and drawn
+     * together when {@code drawing} returns, in front of what it drew. Call it inside the clip of a grid or list; a
+     * grid of hundreds of icons then costs a few draw calls instead of hundreds.
+     */
+    default void batchItems(Runnable drawing) {
+        drawing.run();
+    }
+
     /** 在 push/pop 之间执行绘制 / Runs drawing between push and pop. */
     default void isolated(Runnable drawing) {
         push();
