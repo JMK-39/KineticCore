@@ -60,16 +60,26 @@ public final class KineticScrollStateRegression {
                 "minimum thumb must be capped by track height");
         KineticScroll.GridScrollController horizontal = new KineticScroll.GridScrollController();
         horizontal.updateRange(5, 2, 6);
-        //? if >=26.1 {
-        /*net.minecraft.client.gui.GuiGraphics graphics = new net.minecraft.client.gui.GuiGraphics(null, new net.minecraft.client.renderer.state.gui.GuiRenderState(), 0, 0) {
-        *///?} else {
-        net.minecraft.client.gui.GuiGraphics graphics = new net.minecraft.client.gui.GuiGraphics(null, (MultiBufferSource.BufferSource) null) {
-        //?}
-            @Override public void fill(int x1, int y1, int x2, int y2, int color) {
-                check(x1 >= 4 && x2 <= 24 && x2 >= x1, "horizontal thumb escaped 20-pixel track");
-            }
-        };
-        horizontal.renderHorizontal(graphics, 0, 0, 4, 8, 20, 4, 50);
+        horizontal.renderHorizontal(new ThumbGraphics(), 0, 0, 4, 8, 20, 4, 50);
         System.out.println("PASS: " + checks + " scroll state regression checks");
+    }
+
+    /**
+     * Checks every fill of the horizontal thumb. A named class: an anonymous one takes the parameter names of the
+     * Minecraft constructor, which are obfuscated duplicates in the CI build and do not compile there.
+     */
+    private static final class ThumbGraphics extends net.minecraft.client.gui.GuiGraphics {
+        ThumbGraphics() {
+            //? if >=26.1 {
+            /*super(null, new net.minecraft.client.renderer.state.gui.GuiRenderState(), 0, 0);
+            *///?} else {
+            super(null, (MultiBufferSource.BufferSource) null);
+            //?}
+        }
+
+        @Override
+        public void fill(int x1, int y1, int x2, int y2, int color) {
+            check(x1 >= 4 && x2 <= 24 && x2 >= x1, "horizontal thumb escaped 20-pixel track");
+        }
     }
 }
