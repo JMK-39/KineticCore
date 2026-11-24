@@ -5,14 +5,14 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 public class GeneralMechanicsConfig {
-    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/general.toml");
+    private static final Path CONFIG_PATH = KineticPaths.configFile("kineticcore/core/general_mechanics.toml");
     private static CommentedFileConfig configData;
 
     public static boolean enablePvpProtection = true;
@@ -31,6 +31,8 @@ public class GeneralMechanicsConfig {
 
     public static void load() {
         try {
+            KineticPaths.migrateConfigFile("kineticcore/general.toml", "kineticcore/core/general_mechanics.toml");
+            KineticPaths.ensureConfigDirectory("kineticcore/core");
             configData = CommentedFileConfig.builder(CONFIG_PATH)
                     .sync().preserveInsertionOrder().writingMode(WritingMode.REPLACE).build();
             configData.load();

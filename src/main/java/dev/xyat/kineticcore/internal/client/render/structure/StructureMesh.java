@@ -209,13 +209,12 @@ final class StructureMesh {
     }
 
     /**
-     * Draws the mesh. {@code model} maps snapshot cells (one unit per cell) into the GUI pose space; the caller has
-     * cleared depth inside its clip and flushed pending GUI geometry.
+     * Draws the mesh through a camera: {@code view} maps snapshot cells (one unit per cell) into the camera's space and
+     * {@code projection} is its lens. The caller has set the viewport to the preview's box, cleared depth inside its
+     * clip and flushed pending GUI geometry.
      */
-    void draw(GuiGraphics graphics, Matrix4f model) {
+    void draw(GuiGraphics graphics, Matrix4f view, Matrix4f projection) {
         if (!ready()) return;
-        Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewMatrix()).mul(model);
-        Matrix4f projection = RenderSystem.getProjectionMatrix();
         float fogStart = RenderSystem.getShaderFogStart();
         FogRenderer.setupNoFog();
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
@@ -229,27 +228,52 @@ final class StructureMesh {
                     // The world renderer leaves the last chunk's offset in this uniform.
                     if (shader.CHUNK_OFFSET != null) shader.CHUNK_OFFSET.set(0.0F, 0.0F, 0.0F);
                     buffer.bind();
-                    buffer.drawWithShader(modelView, projection, shader);
+                    buffer.drawWithShader(view, projection, shader);
                 }
                 layer.clearRenderState();
             }
             VertexBuffer.unbind();
-            drawEntityBlocks(graphics, model);
+            drawEntityBlocks(graphics, view, projection);
         } finally {
             RenderSystem.setShaderFogStart(fogStart);
         }
     }
 
-    private void drawEntityBlocks(GuiGraphics graphics, Matrix4f model) {
+    private void drawEntityBlocks(GuiGraphics graphics, Matrix4f view, Matrix4f projection) {
         if (entityBlocks.isEmpty()) return;
         BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
         PoseStack stack = new PoseStack();
-        stack.last().pose().set(model);
-        // Lit item models need unit-length normals under the preview's rotation and scale.
-        float unit = new org.joml.Vector3f(model.m00(), model.m01(), model.m02()).length();
-        stack.last().normal().set(new org.joml.Matrix3f(model).normal()).scale(unit);
+        stack.last().pose().set(view);
+        stack.last().normal().set(new org.joml.Matrix3f(view));
         Lighting.setupFor3DItems();
+        // Batched drawing takes the lens and the camera from the render system.
+        RenderSystem.backupProjectionMatrix();
+        RenderSystem.setProjectionMatrix(projection, com.mojang.blaze3d.vertex.VertexSorting.DISTANCE_TO_ORIGIN);
+        var modelView = RenderSystem.getModelViewStack();
+        //? if >=1.21 {
+        /*modelView.pushMatrix();
+        modelView.identity();
+        *///?} else {
+        modelView.pushPose();
+        modelView.setIdentity();
+        //?}
+        RenderSystem.applyModelViewMatrix();
         var buffers = graphics.bufferSource();
+        try {
+            drawEntityBlocks(dispatcher, stack, buffers);
+            buffers.endBatch();
+        } finally {
+            //? if >=1.21 {
+            /*modelView.popMatrix();
+            *///?} else {
+            modelView.popPose();
+            //?}
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.restoreProjectionMatrix();
+        }
+    }
+
+    private void drawEntityBlocks(BlockRenderDispatcher dispatcher, PoseStack stack, net.minecraft.client.renderer.MultiBufferSource buffers) {
         for (int[] cell : entityBlocks) {
             BlockState state = view.getBlockState(cursorPos.set(cell[0], cell[1], cell[2]));
             stack.pushPose();
@@ -261,7 +285,6 @@ final class StructureMesh {
             }
             stack.popPose();
         }
-        buffers.endBatch();
     }
 
     /** Frees the GPU buffers; the mesh draws nothing afterwards. */

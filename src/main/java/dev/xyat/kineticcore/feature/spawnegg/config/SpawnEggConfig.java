@@ -5,7 +5,7 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,7 +15,7 @@ public final class SpawnEggConfig {
     public static final double DEFAULT_SPEED = 1.5D;
     public static final double DEFAULT_INACCURACY = 0.2D;
 
-    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/spawnegg.toml");
+    private static final Path CONFIG_PATH = KineticPaths.configFile("kineticcore/core/spawn_eggs.toml");
     private static CommentedFileConfig configData;
 
     public static boolean enableSpawnEggThrow = DEFAULT_ENABLED;
@@ -27,6 +27,7 @@ public final class SpawnEggConfig {
 
     public static void load() {
         try {
+            KineticPaths.migrateConfigFile("kineticcore/spawnegg.toml", "kineticcore/core/spawn_eggs.toml");
             Files.createDirectories(CONFIG_PATH.getParent());
             configData = CommentedFileConfig.builder(CONFIG_PATH)
                     .sync()

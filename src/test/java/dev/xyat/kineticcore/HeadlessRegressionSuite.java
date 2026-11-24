@@ -41,6 +41,7 @@ public final class HeadlessRegressionSuite {
     }
 
     public static void main(String[] args) throws Exception {
+        run("ConfigFileMigrationRegression", () -> dev.xyat.kineticcore.internal.runtime.ConfigFileMigrationRegression.main(NO_ARGS));
         run("GuiContractRegression", () -> GuiContractRegression.main(NO_ARGS));
         run("SelectionMenuLayoutRegression", () -> dev.xyat.kineticcore.internal.client.overlay.SelectionMenuLayoutRegression.main(NO_ARGS));
         run("ItemGridLayoutRegression", () -> ItemGridLayoutRegression.main(NO_ARGS));

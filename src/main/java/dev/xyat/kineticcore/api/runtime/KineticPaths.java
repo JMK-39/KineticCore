@@ -3,6 +3,7 @@ package dev.xyat.kineticcore.api.runtime;
 import dev.xyat.kineticcore.internal.runtime.KineticPlatformRuntime;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,6 +30,24 @@ public final class KineticPaths {
      */
     public static Path configFile(String relativeFile) {
         return KineticPlatformRuntime.configFile(Objects.requireNonNull(relativeFile, "relativeFile"));
+    }
+
+    /** Moves a legacy config before the new file is loaded. Existing destination files and conflicting legacy files are preserved. */
+    public static void migrateConfigFile(String legacyFile, String targetFile) {
+        try {
+            KineticPlatformRuntime.migrateConfigFile(legacyFile, targetFile);
+        } catch (IOException error) {
+            throw new UncheckedIOException("Cannot migrate config " + legacyFile + " to " + targetFile, error);
+        }
+    }
+
+    /** Moves files in a mod-owned config directory, retaining their relative paths and preserving collisions. */
+    public static void migrateConfigDirectory(String legacyDirectory, String targetDirectory) {
+        try {
+            KineticPlatformRuntime.migrateConfigDirectory(legacyDirectory, targetDirectory);
+        } catch (IOException error) {
+            throw new UncheckedIOException("Cannot migrate config directory " + legacyDirectory + " to " + targetDirectory, error);
+        }
     }
 
     /**

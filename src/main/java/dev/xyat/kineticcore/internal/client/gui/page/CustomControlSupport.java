@@ -198,6 +198,8 @@ public final class CustomControlSupport {
         protected void renderWidget(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             //? if >=1.20.3
             /*sync();*/
+            // Hidden since the last sync: vanilla saw the old state this frame, so draw nothing rather than a stale frame.
+            if (!visible) return;
             access().render(control, GuiGraphicsAdapter.wrap(graphics), mouseX, mouseY, partialTick);
         }
 
@@ -225,7 +227,10 @@ public final class CustomControlSupport {
         @Override
         public boolean mouseReleased(double mouseX, double mouseY, int button) {
             sync();
-            if (button == pressedButton) pressedButton = -1;
+            // 只接收本控件按下的那次松开且只收一次：原版与 PageUi 可能都会送达。
+            // Only the release of the press this control took, and only once: vanilla and PageUi may both deliver it.
+            if (button != pressedButton) return false;
+            pressedButton = -1;
             if (!active || !visible) return false;
             return access().onMouseRelease(control, InputRecords.mouse(mouseX, mouseY, button));
         }

@@ -5,7 +5,6 @@ import dev.xyat.kineticcore.api.client.effect.KineticEffectDisplay;
 import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
 import dev.xyat.kineticcore.api.config.client.KTClientConfigSpec;
 import dev.xyat.kineticcore.api.runtime.KineticPlatform;
-import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 
 public class MiniEffectsFeature {
 
@@ -57,7 +56,7 @@ public class MiniEffectsFeature {
         INITIALIZATION.run(
                 () -> KTClientConfigAdapter.registerSpec(
                         CLIENT_SPEC,
-                        KineticRuntime.MOD_ID + "/mini_effects_client.toml"
+                        "kineticcore/core/mini_effects_client.toml"
                 ),
                 () -> hasEffectsLeft = KineticPlatform.isModLoaded("effectsleft"),
                 () -> KineticEffectDisplay.configure(

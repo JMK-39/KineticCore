@@ -6,7 +6,7 @@ import java.nio.file.Path;
 
 /** Runs one case per JVM to leave static startup feature state isolated. */
 public final class FeatureSwitchPersistenceRegression {
-    private static final Path CONFIG = Path.of("config", "kineticcore", "startup_features.toml");
+    private static final Path CONFIG = Path.of("config", "kineticcore", "core", "startup_features.toml");
 
     public static void main(String[] args) throws Exception {
         if (args.length != 1) throw new IllegalArgumentException("case");
@@ -19,13 +19,15 @@ public final class FeatureSwitchPersistenceRegression {
     }
 
     private static void invalidBooleanMustKeepDefault() throws Exception {
-        Files.createDirectories(CONFIG.getParent());
-        Files.writeString(CONFIG, """
+        Path legacy = Path.of("config", "kineticcore", "startup_features.toml");
+        Files.createDirectories(legacy.getParent());
+        Files.writeString(legacy, """
                 movement.flight_server = typo
                 movement.flight_client = FALSE
                 player.crawling = true # user comment
                 """, StandardCharsets.UTF_8);
         FeatureSwitchRuntime.initialize();
+        check(!Files.exists(legacy) && Files.isRegularFile(CONFIG), "early startup migrates the old feature switches before reading them");
         check(FeatureSwitchRuntime.isEnabled("movement.flight_server"),
                 "malformed boolean must not disable a default-enabled startup feature");
         check(!FeatureSwitchRuntime.isEnabled("movement.flight_client"),

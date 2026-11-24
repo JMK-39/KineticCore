@@ -12,7 +12,7 @@ import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
 import dev.xyat.kineticcore.api.minecraft.MinecraftAttributes;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -25,7 +25,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class AttributeConfig {
-    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/attributes.toml");
+    private static final Path CONFIG_PATH = KineticPaths.configFile("kineticcore/core/attribute_overrides.toml");
     private static CommentedFileConfig configData;
 
     private static final Map<ResourceLocation, DefaultEntry> PREDEFINED_DEFAULTS = new HashMap<>();
@@ -56,6 +56,8 @@ public class AttributeConfig {
         if (configData != null) return;
 
         try {
+            KineticPaths.migrateConfigFile("kineticcore/attributes.toml", "kineticcore/core/attribute_overrides.toml");
+            KineticPaths.ensureConfigDirectory("kineticcore/core");
             captureRegistryDefaults();
             configData = CommentedFileConfig.builder(CONFIG_PATH)
                     .sync().preserveInsertionOrder().writingMode(WritingMode.REPLACE).build();

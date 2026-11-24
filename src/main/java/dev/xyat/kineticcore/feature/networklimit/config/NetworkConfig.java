@@ -5,12 +5,12 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.network.KineticNetwork;
 import dev.xyat.kineticcore.api.network.NetworkTransportLimits;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 
 import java.nio.file.Path;
 
 public class NetworkConfig {
-    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/network.toml");
+    private static final Path CONFIG_PATH = KineticPaths.configFile("kineticcore/core/network_limits.toml");
     private static CommentedFileConfig configData;
 
     public static int timeout = 120;
@@ -25,6 +25,8 @@ public class NetworkConfig {
 
     public static void load() {
         try {
+            KineticPaths.migrateConfigFile("kineticcore/network.toml", "kineticcore/core/network_limits.toml");
+            KineticPaths.ensureConfigDirectory("kineticcore/core");
             configData = CommentedFileConfig.builder(CONFIG_PATH).sync().preserveInsertionOrder().writingMode(WritingMode.REPLACE).build();
             configData.load();
             setupConfig();

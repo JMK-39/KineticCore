@@ -5,6 +5,7 @@ import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.kineticcore.api.hook.ClientHooks;
 import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
 import dev.xyat.kineticcore.api.minecraft.MinecraftKeys;
 
@@ -17,7 +18,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class OptionsManager {
-    private static final File CUSTOM_DEFAULTS_FILE = KineticPlatform.configDirectory().resolve("kineticcore/defaultoptions.txt").toFile();
+    private static final File CUSTOM_DEFAULTS_FILE = defaultsFile();
+
+    private static File defaultsFile() {
+        KineticPaths.migrateConfigFile("kineticcore/defaultoptions.txt", "kineticcore/core/default_client_options.txt");
+        return KineticPaths.configFile("kineticcore/core/default_client_options.txt").toFile();
+    }
     private static final KineticRegistrationBatch HOOK_REGISTRATION = new KineticRegistrationBatch();
 
     public static synchronized void registerHook() {

@@ -4,6 +4,7 @@ import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LogCleanerConfig {
-    private static final Path CONFIG_DIR = KineticPlatform.configDirectory().resolve("kineticcore");
+    private static final Path CONFIG_DIR = KineticPlatform.configDirectory().resolve("kineticcore/core");
     private static final Path CONFIG_PATH = CONFIG_DIR.resolve("log_cleaner.toml");
     private static CommentedFileConfig configData;
 
@@ -27,6 +28,7 @@ public class LogCleanerConfig {
 
     public static void load() {
         try {
+            KineticPaths.migrateConfigFile("kineticcore/log_cleaner.toml", "kineticcore/core/log_cleaner.toml");
             if (!Files.exists(CONFIG_DIR)) {
                 Files.createDirectories(CONFIG_DIR);
             }
@@ -48,7 +50,9 @@ public class LogCleanerConfig {
                 "是否在游戏关闭时自动在后台清理旧的日志和崩溃报告。\nWhether to auto-clean old logs and crash reports asynchronously on game shutdown.");
 
         define("log_cleaner.errors_only", false,
-                "仅保留 ERROR/FATAL 错误日志，其余日志都不输出。默认关闭。\nOnly ERROR/FATAL logs are kept and all other logs are dropped. Off by default.");
+                "仅保留 ERROR/FATAL 错误日志，其余日志都不输出（启动器用来判断游戏加载完成和正常关闭的几行除外）。默认关闭。\n排查崩溃或向他人求助前请先关闭，否则日志里没有可供分析的内容。\n"
+                        + "Only ERROR/FATAL logs are kept and all other logs are dropped, except the few lines launchers read to tell that the game has loaded and closed normally. Off by default.\n"
+                        + "Turn it off before looking into a crash or asking for help: the log holds nothing to analyse otherwise.");
 
         configData.remove("log_cleaner.deduplication");
 

@@ -5,14 +5,14 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 public class WorldInitConfig {
-    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/world_init.toml");
+    private static final Path CONFIG_PATH = KineticPaths.configFile("kineticcore/core/world_initialization.toml");
     private static CommentedFileConfig configData;
 
     public static boolean enableWorldInit = true;
@@ -20,6 +20,8 @@ public class WorldInitConfig {
 
     public static void load() {
         try {
+            KineticPaths.migrateConfigFile("kineticcore/world_init.toml", "kineticcore/core/world_initialization.toml");
+            KineticPaths.ensureConfigDirectory("kineticcore/core");
             configData = CommentedFileConfig.builder(CONFIG_PATH)
                     .sync()
                     .preserveInsertionOrder()

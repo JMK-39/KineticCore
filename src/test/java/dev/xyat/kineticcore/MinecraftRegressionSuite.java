@@ -66,6 +66,8 @@ public final class MinecraftRegressionSuite {
     }
 
     public static void main(String[] args) {
+        runIsolated(dev.xyat.kineticcore.api.minecraft.AttributeRangeRegression.class, "ranges");
+        runIsolated(dev.xyat.kineticcore.api.minecraft.AttributeInvalidationRegression.class, "cache");
         run("DeleteAndSelectionRegression", () -> dev.xyat.kineticcore.internal.client.screen.DeleteAndSelectionRegression.main(NO_ARGS));
         run("HoverAndEntityStateRegression", () -> dev.xyat.kineticcore.internal.client.gui.theme.HoverAndEntityStateRegression.main(NO_ARGS));
         run("MenuItemButtonPresentationRegression", () -> dev.xyat.kineticcore.internal.client.overlay.MenuItemButtonPresentationRegression.main(NO_ARGS));

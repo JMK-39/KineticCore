@@ -38,12 +38,14 @@ public final class StructurePreviewRuntime {
     }
 
     /**
-     * Draws a snapshot centred in a box, in the graphics' current coordinates. {@code yaw} and {@code pitch} are in
-     * degrees, {@code zoom} multiplies the size that fits the box and {@code panX}/{@code panY} move it. Cells at or
-     * above {@code cutY} are left out. Returns how far the mesh is built, from 0 to 1; at 1 the snapshot was drawn.
+     * Draws a snapshot into a box, in the graphics' current coordinates, as {@link PreviewCamera} sees it: turned by
+     * {@code yaw} and {@code pitch} (degrees), {@code distance} cells from the target point (in cells). Cells at or
+     * above {@code cutY} are left out; {@code overlay} is drawn over the snapshot. Returns how far the mesh is built,
+     * from 0 to 1; at 1 the snapshot was drawn.
      */
     public static float draw(GuiGraphics graphics, KineticBlockSnapshot snapshot, int cutY, int x, int y, int width,
-                             int height, float yaw, float pitch, float zoom, float panX, float panY) {
+                             int height, float yaw, float pitch, float distance, float targetX, float targetY, float targetZ,
+                             PreviewOverlay overlay) {
         //? if <26.1 {
         if (snapshot == null || width <= 0 || height <= 0) return 0F;
         StructureMesh mesh = mesh(snapshot, cutY);
@@ -59,46 +61,46 @@ public final class StructurePreviewRuntime {
             }
             if (!mesh.ready()) return mesh.progress();
         }
+        // The box in window pixels: the camera draws into it through a viewport of its own.
+        var window = Minecraft.getInstance().getWindow();
+        double guiScale = window.getGuiScale();
+        Matrix4f pose = graphics.pose().last().pose();
+        org.joml.Vector3f topLeft = pose.transformPosition(new org.joml.Vector3f(x, y, 0F));
+        org.joml.Vector3f bottomRight = pose.transformPosition(new org.joml.Vector3f(x + width, y + height, 0F));
+        int left = (int) Math.round(Math.min(topLeft.x, bottomRight.x) * guiScale);
+        int right = (int) Math.round(Math.max(topLeft.x, bottomRight.x) * guiScale);
+        int top = (int) Math.round(Math.min(topLeft.y, bottomRight.y) * guiScale);
+        int bottom = (int) Math.round(Math.max(topLeft.y, bottomRight.y) * guiScale);
+        if (right <= left || bottom <= top) return 1F;
         float sx = snapshot.sizeX(), sy = snapshot.sizeY(), sz = snapshot.sizeZ();
-        float half = (float) Math.sqrt(sx * sx + sy * sy + sz * sz) / 2F;
-        float scale = fitScale(sx, sy, sz, width, height) * zoom;
-        // Depth only orders faces in this orthographic view, so it is squeezed to stay inside the GUI depth range.
-        float depth = Math.min(1F, 300F / Math.max(1F, scale * half));
-        Matrix4f local = new Matrix4f()
-                .translate(x + width / 2F + panX, y + height / 2F + panY, 400F)
-                .scale(scale, -scale, scale * depth)
-                .rotateX((float) Math.toRadians(pitch))
-                .rotateY((float) Math.toRadians(yaw))
-                .translate(-sx / 2F, -sy / 2F, -sz / 2F);
-        Matrix4f model = new Matrix4f(graphics.pose().last().pose()).mul(local);
+        Matrix4f view = PreviewCamera.view(yaw, pitch, distance, targetX, targetY, targetZ);
+        Matrix4f projection = PreviewCamera.projection((right - left) / (float) (bottom - top), distance,
+                PreviewCamera.reach(sx, sy, sz, targetX, targetY, targetZ));
         graphics.flush();
         KineticRenderRuntime.enableScissor(graphics, x, y, x + width, y + height);
         try {
             RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+            RenderSystem.viewport(left, window.getHeight() - bottom, right - left, bottom - top);
             RenderSystem.enableDepthTest();
-            mesh.draw(graphics, model);
+            mesh.draw(graphics, view, projection);
+            PreviewOverlayRenderer.draw(graphics, overlay, view, projection);
             // Later GUI drawing in this box must not be hidden behind the structure's depth.
             RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
         } finally {
+            RenderSystem.viewport(0, 0, window.getWidth(), window.getHeight());
             KineticRenderRuntime.disableScissor(graphics);
         }
         return 1F;
         //?} else {
         /*if (snapshot == null || width <= 0 || height <= 0) return 0F;
-        float sx = snapshot.sizeX(), sy = snapshot.sizeY(), sz = snapshot.sizeZ();
-        float half = (float) Math.sqrt(sx * sx + sy * sy + sz * sz) / 2F;
         // 26.1 draws the preview into its own texture in screen units, so the box goes through the GUI pose first.
         var pose = graphics.pose();
         org.joml.Vector2f topLeft = pose.transformPosition(x, y, new org.joml.Vector2f());
         org.joml.Vector2f bottomRight = pose.transformPosition(x + width, y + height, new org.joml.Vector2f());
-        float poseScale = (bottomRight.x - topLeft.x) / width;
-        float blockScale = fitScale(sx, sy, sz, width, height) * zoom * poseScale;
-        float guiScale = (float) net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScale();
-        float depth = Math.min(1F, 900F / Math.max(1F, blockScale * guiScale * half));
-        PipAccess.submit(graphics, new StructurePreviewPip.State(snapshot, cutY, yaw, pitch, blockScale, depth,
-                panX * poseScale, panY * poseScale, Math.round(topLeft.x), Math.round(topLeft.y),
-                Math.round(bottomRight.x), Math.round(bottomRight.y), PipAccess.scissor(graphics)));
-        return 1F;
+        PipAccess.submit(graphics, new StructurePreviewPip.State(snapshot, cutY, yaw, pitch, distance, targetX, targetY,
+                targetZ, Math.round(topLeft.x), Math.round(topLeft.y), Math.round(bottomRight.x), Math.round(bottomRight.y),
+                PipAccess.scissor(graphics), overlay));
+        return StructurePreviewPip.progress(snapshot, cutY);
         *///?}
     }
 
@@ -145,8 +147,21 @@ public final class StructurePreviewRuntime {
     }
     *///?}
 
+    /** How far the mesh of a snapshot and cross-section is built, from 0 to 1; 0 before it was first drawn. */
+    public static float progress(KineticBlockSnapshot snapshot, int cutY) {
+        //? if >=26.1 {
+        /*return StructurePreviewPip.progress(snapshot, cutY);
+        *///?} else {
+        StructureMesh mesh = MESHES.get(new Key(snapshot, Math.max(0, cutY)));
+        return mesh == null ? 0F : mesh.progress();
+        //?}
+    }
+
     /** Frees the meshes of a snapshot, for a screen that closes and will not show it again. */
     public static void release(KineticBlockSnapshot snapshot) {
+        //? if >=26.1 {
+        /*StructurePreviewPip.release(snapshot);
+        *///?}
         //? if <26.1 {
         for (Iterator<Map.Entry<Key, StructureMesh>> it = MESHES.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Key, StructureMesh> entry = it.next();
@@ -156,25 +171,6 @@ public final class StructurePreviewRuntime {
             }
         }
         //?}
-    }
-
-    /**
-     * Scale at which the box, seen from the default angle, fills the view with a small margin. Fitting at one fixed
-     * angle keeps the size steady while the view is turned.
-     */
-    static float fitScale(float sx, float sy, float sz, int width, int height) {
-        org.joml.Matrix4f rotation = new org.joml.Matrix4f()
-                .rotateX((float) Math.toRadians(dev.xyat.kineticcore.api.client.gui.widget.KineticStructureView.DEFAULT_PITCH))
-                .rotateY((float) Math.toRadians(dev.xyat.kineticcore.api.client.gui.widget.KineticStructureView.DEFAULT_YAW));
-        float maxX = 0.5F, maxY = 0.5F;
-        org.joml.Vector3f corner = new org.joml.Vector3f();
-        for (int i = 0; i < 8; i++) {
-            corner.set(((i & 1) == 0 ? -sx : sx) / 2F, ((i & 2) == 0 ? -sy : sy) / 2F, ((i & 4) == 0 ? -sz : sz) / 2F);
-            rotation.transformPosition(corner);
-            maxX = Math.max(maxX, Math.abs(corner.x));
-            maxY = Math.max(maxY, Math.abs(corner.y));
-        }
-        return Math.min(width / (2F * maxX), height / (2F * maxY)) * 0.92F;
     }
 
     //? if <26.1 {

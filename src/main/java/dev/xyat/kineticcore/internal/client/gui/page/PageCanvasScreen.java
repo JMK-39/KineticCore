@@ -70,7 +70,8 @@ final class PageCanvasScreen extends KineticScreen implements PageHost {
     @Override
     protected boolean canvasMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (access.onMouseDrag(page, InputRecords.drag(mouseX, mouseY, button, dragX, dragY))) return true;
-        return super.canvasMouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.canvasMouseDragged(mouseX, mouseY, button, dragX, dragY)
+                || ui.dragPressedCustomControls(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override

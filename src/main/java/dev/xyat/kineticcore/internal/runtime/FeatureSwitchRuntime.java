@@ -21,7 +21,9 @@ import java.util.Objects;
 
 public final class FeatureSwitchRuntime {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Path CONFIG_PATH = Paths.get("config", "kineticcore", "startup_features.toml");
+    // Read before the mod lifecycle starts, using the same working directory as the original startup config.
+    private static final Path CONFIG_ROOT = Paths.get("config").toAbsolutePath().normalize();
+    private static final Path CONFIG_PATH = CONFIG_ROOT.resolve("kineticcore/core/startup_features.toml");
     private static final List<Definition> CORE_DEFINITIONS = createDefinitions();
     private static final Map<String, Definition> EXTERNAL_DEFINITIONS = new LinkedHashMap<>();
     private static final Map<String, Boolean> ACTIVE = new LinkedHashMap<>();
@@ -115,6 +117,12 @@ public final class FeatureSwitchRuntime {
 
     public static synchronized void initialize() {
         if (initialized) return;
+
+        try {
+            ConfigFileMigration.file(CONFIG_ROOT, CONFIG_ROOT.resolve("kineticcore/startup_features.toml"), CONFIG_PATH);
+        } catch (IOException failure) {
+            throw new UncheckedIOException("Cannot migrate KineticCore startup features", failure);
+        }
 
         for (Definition definition : definitions()) {
             ACTIVE.put(definition.id(), definition.defaultEnabled());

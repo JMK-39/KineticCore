@@ -3,6 +3,7 @@ package dev.xyat.kineticcore.internal.client;
 import com.mojang.logging.LogUtils;
 import dev.xyat.kineticcore.api.runtime.KineticFeatureSwitches;
 import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -18,7 +19,8 @@ final class DefaultOptionsRecoveryRuntime {
     static void restoreConfiguredDefaults() {
         if (!KineticFeatureSwitches.isEnabled(FEATURE_ID)) return;
 
-        Path defaultsFile = KineticPlatform.configDirectory().resolve("kineticcore/defaultoptions.txt");
+        KineticPaths.migrateConfigFile("kineticcore/defaultoptions.txt", "kineticcore/core/default_client_options.txt");
+        Path defaultsFile = KineticPaths.configFile("kineticcore/core/default_client_options.txt");
         Path optionsFile = KineticPlatform.gameDirectory().resolve("options.txt");
         try {
             DefaultOptionsRecovery.Result result = DefaultOptionsRecovery.restore(defaultsFile, optionsFile);

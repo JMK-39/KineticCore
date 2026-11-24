@@ -2,13 +2,13 @@ package dev.xyat.kineticcore.internal.client.editor.itemcreator;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import java.nio.file.*;
 import java.util.*;
 
 /**
- * Saved potion and spawn-egg records, kept on this client in config/kineticcore/item_creator_presets.json. The editor
+ * Saved potion and spawn-egg records, kept on this client in config/kineticcore/core/item_creator_presets.json. The editor
  * lists them on its left, newest first; only Save writes a record, so leaving the editor never stores half edits.
  */
 public final class ItemCreatorPresets {
@@ -24,7 +24,10 @@ public final class ItemCreatorPresets {
     private boolean saveFailed;
 
     public static ItemCreatorPresets local() {
-        if (instance == null) instance = new ItemCreatorPresets(KineticPlatform.configDirectory().resolve("kineticcore/item_creator_presets.json"));
+        if (instance == null) {
+            KineticPaths.migrateConfigFile("kineticcore/item_creator_presets.json", "kineticcore/core/item_creator_presets.json");
+            instance = new ItemCreatorPresets(KineticPaths.configFile("kineticcore/core/item_creator_presets.json"));
+        }
         return instance;
     }
 

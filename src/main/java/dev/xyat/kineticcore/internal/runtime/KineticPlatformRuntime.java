@@ -31,6 +31,16 @@ public final class KineticPlatformRuntime {
         return resolveConfigFile(relativeFile);
     }
 
+    public static void migrateConfigFile(String legacyFile, String targetFile) throws IOException {
+        ConfigFileMigration.file(configDirectory().toAbsolutePath().normalize(),
+                resolveConfigFile(legacyFile), resolveConfigFile(targetFile));
+    }
+
+    public static void migrateConfigDirectory(String legacyDirectory, String targetDirectory) throws IOException {
+        ConfigFileMigration.directory(configDirectory().toAbsolutePath().normalize(),
+                resolveConfigFile(legacyDirectory), resolveConfigFile(targetDirectory));
+    }
+
     public static Path ensureConfigDirectory(String relativeDirectory) throws IOException {
         Path relative = Path.of(relativeDirectory.trim());
         if (relativeDirectory.isBlank() || relative.isAbsolute()) {

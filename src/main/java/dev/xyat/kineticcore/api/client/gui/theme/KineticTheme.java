@@ -202,6 +202,28 @@ public final class KineticTheme {
         return GuiTheme.indicatorColor(indicator);
     }
 
+    /** Height of a {@link #tag status tag}. */
+    public static final int TAG_HEIGHT = 12;
+    private static final int TAG_PADDING = 3;
+
+    /** The width a {@link #tag status tag} with this text takes. */
+    public static int tagWidth(KineticGraphics graphics, Component text) {
+        return graphics.textWidth(text) + TAG_PADDING * 2;
+    }
+
+    /**
+     * Draws a status tag with its top-left corner at (x, y) and returns its width: a word or two in the indicator's
+     * colour on a faint ground of that colour, {@link #TAG_HEIGHT} high. For states shown next to a name, such as
+     * draft, modified or published. The text is not shortened; a tag is as wide as its text.
+     */
+    public static int tag(KineticGraphics graphics, Component text, int x, int y, Indicator indicator) {
+        int width = tagWidth(graphics, text);
+        // A muted tag is a neutral one: its ground is the theme's border grey, on which only plain text reads well.
+        indicatorFill(graphics, x, y, width, TAG_HEIGHT, indicator, 0.22F);
+        graphics.text(text, x + TAG_PADDING, y + 2, indicator == Indicator.MUTED ? current().text() : indicatorColor(indicator), false);
+        return width;
+    }
+
     /** Draws a panel using the alternate panel background and standard border. */
     public static void panelAlt(KineticGraphics graphics, int x, int y, int width, int height) {
         GuiTheme.panelAlt(GuiGraphicsAdapter.unwrap(graphics), x, y, width, height);

@@ -1,3 +1,41 @@
+2026年11月24日 — 26.11.24 — Config folders / 配置归档
+- Core settings live under `config/kineticcore/core`. Updated add-ons can group settings under their mod ID and migrate earlier paths before loading. Existing destination files take precedence, and conflicts retain the previous file for inspection.
+- 核心配置迁入 `config/kineticcore/core`。更新后的附属按模组 ID 归档配置，并在读取之前自动迁移老路径。新位置已有配置时优先使用它，冲突的旧文件留待核对。
+- Log Cleaner keeps game lifecycle messages visible in error-only mode so PCL can recognize a normal exit.
+- 日志清理的仅错误模式会保留游戏生命周期消息，便于 PCL 识别正常退出。
+- Runtime attribute APIs support applying and removing newly attached attribute instances and respect registered attribute ranges.
+- 运行时属性 API 支持添加、移除新的属性实例，并遵循已注册属性的取值范围。
+
+2026年11月14日 — 26.11.14 — Structure preview camera / 结构预览镜头
+- The 3D structure preview handles like a modelling program: drag to turn it all the way round, over the top and from below; right- or middle-drag to move it; the wheel zooms toward the pointer and, zoomed on, goes into the structure through a perspective camera, so rooms can be seen from inside. Zooming eases smoothly; double-click resets.
+- 3D 结构预览的操作改得像建模软件：拖拽可 360° 自由旋转，能翻过顶部、从下方看；右键或中键拖拽平移；滚轮朝鼠标处缩放，继续推进会以透视镜头进入结构内部，可以看到房间里面。缩放过渡平滑，双击复位。
+- Dragging a 3D preview in a real screen (RealmControl's structure panel, rules page and structure editor) turned it only for the first instant and then stopped responding: the preview takes no keyboard focus, so the screen dropped it as the drag target within a tick. A drag now stays with the control it started on until the button is released, for every Kinetic custom control and every mouse button.
+- 在实际界面（RealmControl 的结构面板、规则页与结构编辑器）中拖拽 3D 预览时，只有刚按下的一瞬间会转动，之后就不再响应：预览不接受键盘焦点，界面在一刻内就把它从拖拽目标中移除了。现在拖拽会一直交给开始拖拽的控件，直到松开按键；所有 Kinetic 自绘控件与所有鼠标按键都是如此。
+- The controls hint of a 3D preview no longer covers the structure whenever the pointer is over it: it moved to a small "?" badge in the preview's top-right corner and shows only while the pointer rests on the badge, one short line per control.
+- 3D 预览的操作说明不再在鼠标移到预览上时一直遮挡结构：说明移到预览右上角的小“?”图标上，只有鼠标停在图标上时才显示，每种操作一行短句。
+- On 26.1, a Kinetic custom control (list scroll bars, entity grids, 3D previews) never learned that the mouse button came up when it was released over the control, since 26.1 tells only the focused control. Every control now gets the release of a press it took, exactly once, on all versions.
+- 26.1 上在 Kinetic 自绘控件（列表滚动条、实体网格、3D 预览）上松开鼠标时，控件收不到松开事件，因为 26.1 只通知获得焦点的控件。现在所有版本中，控件都会收到自己那次按下对应的松开，且只收一次。
+- The 3D structure preview draws the structure's entities as their models, and names the block under the pointer, with its position, in its bottom-left corner. Public API: `KineticStructureView` takes markers (boxes such as containers and entities) that the pointer picks, blocks in front hiding them; the one under the pointer is outlined and named, the current one outlined yellow and other selected ones green, visible through walls. A `PickListener` hears clicks without dragging and double-clicks on markers; a double-click on empty space still resets the view. `lookAt` eases the camera to a point and `setEntities` draws changed entity data.
+- 3D 结构预览会画出结构里的生物模型，并在左下角显示鼠标所指方块的名称和坐标。公开 API：`KineticStructureView` 可以设置标记（箱子、生物等的包围盒），鼠标可以拾取，前方的方块会挡住标记；鼠标所指的标记会描边并显示名称，当前标记为黄色描边，其他选中的为绿色描边，隔着墙也能看到。`PickListener` 接收不拖动的单击和对标记的双击；双击空白处仍然复位视角。`lookAt` 让镜头平滑移到某一点，`setEntities` 用修改后的数据显示生物。
+- On 26.1, structure previews left out chests, beds, signs, banners and other blocks drawn by their block entity: their models have no faces of their own. They are drawn by their block entity's model now, as in a minecart.
+- 26.1 的结构预览里不显示箱子、床、告示牌、旗帜等由方块实体绘制的方块，因为它们自身的模型没有面。现在改由方块实体的模型绘制，与矿车里显示方块的方式相同。
+- The 3D structure preview has a backdrop that is lighter at the top, a fine grid on the floor around the structure with its footprint outlined, and an orientation gizmo in the bottom-right corner showing where X (east), Y (up) and Z (south) point as the view turns. Clicking a letter of the gizmo looks straight along that axis (X from the east, Y from above, Z from the south), and clicking it again looks from the other side. `KineticStructureView.setGridShown` and `setAxesShown` switch the grid and the gizmo off.
+- 3D 结构预览加了上亮下暗的背景、结构周围地面上的细网格（结构占地范围有描边），以及右下角的方向指示：旋转视角时显示 X（东）、Y（上）、Z（南）各自的朝向。点击方向指示上的字母会正对该轴（X 从东面看，Y 从上方看，Z 从南面看），再点一次从另一面看。`KineticStructureView.setGridShown` 和 `setAxesShown` 可以关闭网格和方向指示。
+- Public API: `KineticTheme.tag(graphics, text, x, y, indicator)` draws a status tag, a word or two in the indicator's colour on a faint ground of that colour (`TAG_HEIGHT` high, `tagWidth` wide), for states such as draft, modified or published next to a name.
+- 公开 API：`KineticTheme.tag(graphics, text, x, y, indicator)` 绘制状态标签：一两个字，用该状态的颜色，底色是同色的淡色块（高 `TAG_HEIGHT`，宽 `tagWidth`），用于名称旁的“草稿”“已修改”“已发布”等状态。
+- On 1.21.1, labels drawn at world positions through `KineticWorldRender.beginScreenOverlay` (name tags, damage numbers) were placed as if the camera never turned, so most of them were not drawn at all: from 1.20.5 on the level-render pose stack starts empty and the camera's rotation is in the stage's model-view matrix. `project` now uses that rotation. Public API: `LevelRenderContext.viewMatrix()` returns it on every version, and `KineticWorldRender.captureProjection(context)` keeps a frame's camera so a HUD render callback can project world points, which is how such labels are drawn on 26.1.
+- 1.21.1 上通过 `KineticWorldRender.beginScreenOverlay` 画在世界位置上的标签（名牌、伤害数字）是按镜头从不转动来计算位置的，所以大多数根本不显示：从 1.20.5 起，世界渲染的姿态栈一开始是空的，镜头的旋转在该阶段的模型视图矩阵里。`project` 现在使用这个旋转。公开 API：`LevelRenderContext.viewMatrix()` 在所有版本上返回它，`KineticWorldRender.captureProjection(context)` 保存一帧的镜头，供 HUD 渲染回调把世界坐标投影到屏幕上；26.1 上这类标签就是这样绘制的。
+- On 1.21.1 and 26.1, a Kinetic custom control a page had just hidden was still drawn for one more frame, so a list that a page swaps for other controls flashed over them. It is no longer drawn once hidden.
+- 1.21.1 与 26.1 上，页面刚隐藏的 Kinetic 自绘控件还会再绘制一帧，页面用其他控件替换列表时，列表会在它们上面闪一下。现在隐藏后立即不再绘制。
+- With `log_cleaner.errors_only` on, the few lines launchers read to follow a game stay on the console and in the log: the user and LWJGL lines, "OpenAL initialized", the texture atlas lines, "Stopping!" and the lines that say where a crash report was saved. PCL counts them to tell that a game has finished loading and reports a game that ends before that as crashed; with errors only the count stopped at 3 of 5, so that then rested on PCL finding the game window alone. "Stopping!" also shows, in a log sent for help, that the game was closed normally. The option's description now says to turn it off before looking into a crash.
+- 开启 `log_cleaner.errors_only` 时，启动器用来跟踪游戏状态的几行日志仍会输出到控制台和日志文件：用户与 LWJGL 两行、“OpenAL initialized”、材质图集的几行、“Stopping!”以及说明崩溃报告保存位置的几行。PCL 靠这些行判断游戏是否加载完成，游戏在此之前结束会被报告为崩溃；仅保留错误日志时这个计数停在 3/5，之后就只能靠 PCL 找到游戏窗口来判断。“Stopping!”还能让求助时发出的日志看得出游戏是正常关闭的。该选项的说明里补充了：排查崩溃前请先关闭它。
+- The structure preview on 26.1 keeps its mesh on the graphics card and builds it a slice per frame, like the other versions: turning a large structure no longer re-tessellates every block each frame, and opening one no longer stalls the game.
+- 26.1 的结构预览与其他版本一样把网格保留在显卡上、每帧分片构建：旋转大型结构时不再每帧重新生成全部方块，打开时也不再卡住游戏。
+
+2026年11月7日 — 26.11.7 — Layered attribute ranges / 属性范围优先级
+- Public API: owner-scoped, prioritized attribute range overrides with atomic replacement. Existing range setters update the base layer; removing an override restores the latest base. Addons can invalidate native attribute-instance caches to apply new bounds immediately without changing entity base values or modifiers.
+- 公开 API 新增按附属与优先级管理的属性范围覆盖，整组替换前完成校验；原有范围设置更新基础层，移除覆盖时恢复最新基础范围。附属可刷新原版属性实例缓存，使新范围立即作用于已有实体，同时保留基础值和修饰符。
+
 2026年11月5日 — 26.11.5 — Line breaks in Chinese text / 中文换行
 - Wrapped text in Kinetic GUIs (dialogs, descriptions, tooltips, toasts and field placeholders) no longer starts a line with a comma, full stop or closing bracket, or ends one with an opening bracket or quotation mark. Vanilla breaks Chinese text after any character; the break now moves back a character or two. Breaks between English words are unchanged.
 - Kinetic 界面中自动换行的文字（对话框、说明、悬浮提示、通知与输入框占位文字）不再把逗号、句号、右括号等放在行首，也不再把左括号、左引号放在行尾：原版会在任意汉字后换行，现在换行位置会往前挪一两个字。英文单词之间的换行不变。

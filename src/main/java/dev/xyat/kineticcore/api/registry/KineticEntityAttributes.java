@@ -2,6 +2,7 @@ package dev.xyat.kineticcore.api.registry;
 
 import dev.xyat.kineticcore.internal.registry.KineticEntityAttributeRuntime;
 import dev.xyat.kineticcore.internal.registry.RuntimeAttributeMapAccess;
+import dev.xyat.kineticcore.internal.registry.RuntimeAttributeInstanceAccess;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -32,6 +33,11 @@ public final class KineticEntityAttributes {
     }
 
     private KineticEntityAttributes() {
+    }
+
+    /** Marks the computed value and native tracking sync dirty without changing the base value or modifiers. */
+    public static void invalidate(AttributeInstance instance) {
+        ((RuntimeAttributeInstanceAccess) Objects.requireNonNull(instance, "instance")).kineticcore$invalidate();
     }
 
     /** Makes an already registered attribute available on this entity at runtime, on either logical side. */

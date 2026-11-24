@@ -5,13 +5,13 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 
 import java.nio.file.Path;
 import java.util.*;
 
 public class SetSpawnConfig {
-    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/setspawn.toml");
+    private static final Path CONFIG_PATH = KineticPaths.configFile("kineticcore/core/spawn_location.toml");
     private static CommentedFileConfig configData;
 
     public static boolean enableCustomSpawn = true;
@@ -43,6 +43,8 @@ public class SetSpawnConfig {
         CommentedFileConfig candidate = null;
         SettingsSnapshot priorSettings = SettingsSnapshot.capture();
         try {
+            KineticPaths.migrateConfigFile("kineticcore/setspawn.toml", "kineticcore/core/spawn_location.toml");
+            KineticPaths.ensureConfigDirectory("kineticcore/core");
             candidate = CommentedFileConfig.builder(CONFIG_PATH)
                     .sync().preserveInsertionOrder().writingMode(WritingMode.REPLACE).build();
             configData = candidate;

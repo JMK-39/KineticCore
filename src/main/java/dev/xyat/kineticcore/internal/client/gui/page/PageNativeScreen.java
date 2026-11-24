@@ -71,7 +71,8 @@ final class PageNativeScreen extends KineticNativeScreen implements PageHost {
 
     @Override
     protected boolean nativeMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        return access.onMouseDrag(page, InputRecords.drag(mouseX, mouseY, button, dragX, dragY));
+        return access.onMouseDrag(page, InputRecords.drag(mouseX, mouseY, button, dragX, dragY))
+                || ui.dragPressedCustomControls(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override

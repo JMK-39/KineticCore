@@ -75,14 +75,32 @@ public final class PageUi implements KineticUi {
     }
 
     /**
-     * 把松开事件补发给按下后被拖出范围的自绘控件 / Delivers a release to custom controls that were pressed and then
-     * dragged outside their bounds (vanilla only notifies the child under the pointer).
+     * 把松开事件补发给原版没有通知到的已按下自绘控件 / Delivers a release to pressed custom controls vanilla did not
+     * notify: up to 1.21.5 vanilla tells only the child under the pointer, so a control dragged out of misses it;
+     * since 26.1 it tells only the focused child, and only of the left button, so a control that takes no focus
+     * misses every release.
      */
     public void releasePressedCustomControls(double mouseX, double mouseY, int button) {
         for (CustomControlSupport.Widget widget : List.copyOf(customs)) {
-            // 鼠标下的控件由原版分发 / The control under the pointer gets the release from vanilla.
-            if (widget.isPressed(button) && !widget.isMouseOver(mouseX, mouseY)) widget.mouseReleased(mouseX, mouseY, button);
+            // 控件只接收一次松开，原版先送达或后送达都不会重复 / A control takes a release once, whether vanilla
+            // delivers it before or after this.
+            if (widget.isPressed(button)) widget.mouseReleased(mouseX, mouseY, button);
         }
+    }
+
+    /**
+     * 原版只把左键拖动交给获得焦点的控件，而不接受键盘焦点的自绘控件（如 3D 预览）在下一刻就会失去该焦点；
+     * 原版没有处理的拖动（包括右键与中键）由此交给在其上按下该键的自定义控件。
+     * Vanilla hands only left-button drags, and only to the focused control; a custom control that takes no keyboard
+     * focus (a 3D preview, for one) loses that focus by the next tick. Drags vanilla left unhandled, right and middle
+     * ones included, reach the custom control the button was pressed on through here.
+     */
+    public boolean dragPressedCustomControls(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        boolean handled = false;
+        for (CustomControlSupport.Widget widget : List.copyOf(customs)) {
+            if (widget.isPressed(button)) handled |= widget.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        }
+        return handled;
     }
 
     public void tickCustomControls() {

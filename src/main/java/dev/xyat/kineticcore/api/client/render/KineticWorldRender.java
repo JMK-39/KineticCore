@@ -229,10 +229,69 @@ public final class KineticWorldRender {
     }
 
     /**
+     * Keeps this frame's camera from a level-render callback, so world points can be projected to the screen later:
+     * in a HUD render callback, which is where labels that follow world positions are drawn on every version
+     * (26.1 draws GUI elements nowhere else). Capture one per frame and draw with the HUD callback's graphics.
+     */
+    public static WorldProjection captureProjection(KineticClientEvents.LevelRenderContext context) {
+        return new WorldProjection(Objects.requireNonNull(context, "context"));
+    }
+
+    /** A frame's camera position, rotation and projection, for projecting world points to GUI-scaled coordinates. */
+    public static final class WorldProjection {
+        private final Matrix4f view;
+        private final Matrix4f projection;
+        private final Vec3 cameraPosition;
+
+        private WorldProjection(KineticClientEvents.LevelRenderContext context) {
+            this.view = context.viewMatrix();
+            this.projection = new Matrix4f(context.projectionMatrix());
+            this.cameraPosition = KineticWorldRenderRuntime.cameraPosition(context.camera());
+        }
+
+        /** Where the camera was, in world coordinates. */
+        public Vec3 cameraPosition() {
+            return cameraPosition;
+        }
+
+        /**
+         * Projects a world point to the GUI-scaled coordinates of the current window.
+         *
+         * @return the screen position, which may lie outside the window, or {@code null} when the point is behind the
+         *   camera
+         */
+        public @Nullable Vec2 project(Vec3 worldPosition) {
+            return project(worldPosition, KineticClientRuntime.guiScaledWidth(), KineticClientRuntime.guiScaledHeight());
+        }
+
+        /** As {@link #project(Vec3)}, for a canvas of the given size. */
+        public @Nullable Vec2 project(Vec3 worldPosition, int width, int height) {
+            if (worldPosition == null) {
+                return null;
+            }
+            Vector4f position = new Vector4f(
+                    (float) (worldPosition.x - cameraPosition.x),
+                    (float) (worldPosition.y - cameraPosition.y),
+                    (float) (worldPosition.z - cameraPosition.z),
+                    1.0F
+            );
+            view.transform(position);
+            projection.transform(position);
+            if (position.w() <= 0.0F) {
+                return null;
+            }
+            float screenX = (position.x() / position.w() + 1.0F) * 0.5F * width;
+            float screenY = (1.0F - position.y() / position.w()) * 0.5F * height;
+            return new Vec2(screenX, screenY);
+        }
+    }
+
+    /**
      * Begins a screen-space overlay for the supplied Kinetic level-render callback, for labels that follow world
      * positions such as name tags or damage numbers. Project a world point with {@link ScreenOverlay#project(Vec3)}
      * and draw at the result through {@link ScreenOverlay#graphics()}. Drawing uses GUI-scaled coordinates, ignores
-     * depth and stays on top of the world. The overlay must be closed after drawing.
+     * depth and stays on top of the world. The overlay must be closed after drawing. Not available on 26.1, where
+     * {@link #captureProjection} and a HUD render callback do the same.
      */
     public static ScreenOverlay beginScreenOverlay(KineticClientEvents.LevelRenderContext context) {
         return new ScreenOverlay(Objects.requireNonNull(context, "context"));
@@ -243,18 +302,14 @@ public final class KineticWorldRender {
      * restores the world render state.
      */
     public static final class ScreenOverlay implements AutoCloseable {
-        private final Matrix4f view;
-        private final Matrix4f projection;
-        private final Vec3 cameraPosition;
+        private final WorldProjection projection;
         private final int width;
         private final int height;
         private final KineticGraphics graphics;
         private boolean closed;
 
         private ScreenOverlay(KineticClientEvents.LevelRenderContext context) {
-            this.view = new Matrix4f(context.poseStack().last().pose());
-            this.projection = new Matrix4f(context.projectionMatrix());
-            this.cameraPosition = context.camera().getPosition();
+            this.projection = new WorldProjection(context);
             this.width = KineticClientRuntime.guiScaledWidth();
             this.height = KineticClientRuntime.guiScaledHeight();
             this.graphics = KineticWorldRenderRuntime.beginScreenOverlay(width, height);
@@ -278,23 +333,7 @@ public final class KineticWorldRender {
          *   camera
          */
         public @Nullable Vec2 project(Vec3 worldPosition) {
-            if (worldPosition == null) {
-                return null;
-            }
-            Vector4f position = new Vector4f(
-                    (float) (worldPosition.x - cameraPosition.x),
-                    (float) (worldPosition.y - cameraPosition.y),
-                    (float) (worldPosition.z - cameraPosition.z),
-                    1.0F
-            );
-            view.transform(position);
-            projection.transform(position);
-            if (position.w() <= 0.0F) {
-                return null;
-            }
-            float screenX = (position.x() / position.w() + 1.0F) * 0.5F * width;
-            float screenY = (1.0F - position.y() / position.w()) * 0.5F * height;
-            return new Vec2(screenX, screenY);
+            return projection.project(worldPosition, width, height);
         }
 
         /** Graphics surface drawing in GUI-scaled screen coordinates on top of the world. */

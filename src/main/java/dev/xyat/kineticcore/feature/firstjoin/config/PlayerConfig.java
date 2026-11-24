@@ -8,7 +8,7 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.kineticcore.api.runtime.KineticRuntime;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
 import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -45,7 +45,7 @@ public class PlayerConfig {
     //?}
     public static final String DEFAULT_OFFHAND = "1x minecraft:shield";
 
-    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/player.toml");
+    private static final Path CONFIG_PATH = KineticPaths.configFile("kineticcore/core/player_first_join.toml");
     private static CommentedFileConfig configData;
 
     // 逻辑开关
@@ -72,6 +72,8 @@ public class PlayerConfig {
 
     public static void load() {
         try {
+            KineticPaths.migrateConfigFile("kineticcore/player.toml", "kineticcore/core/player_first_join.toml");
+            KineticPaths.ensureConfigDirectory("kineticcore/core");
             configData = CommentedFileConfig.builder(CONFIG_PATH)
                     .sync().preserveInsertionOrder().writingMode(WritingMode.REPLACE).build();
             configData.load();

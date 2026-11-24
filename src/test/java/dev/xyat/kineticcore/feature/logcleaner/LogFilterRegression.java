@@ -17,9 +17,10 @@ import java.nio.file.Path;
 public final class LogFilterRegression {
     public static void main(String[] args) throws Exception {
         FMLPaths.loadAbsolutePaths(Path.of("."));
-        Path config = KineticPlatform.configDirectory().resolve("kineticcore/log_cleaner.toml");
-        Files.createDirectories(config.getParent());
-        Files.writeString(config, """
+        Path old = KineticPlatform.configDirectory().resolve("kineticcore/log_cleaner.toml");
+        Path config = KineticPlatform.configDirectory().resolve("kineticcore/core/log_cleaner.toml");
+        Files.createDirectories(old.getParent());
+        Files.writeString(old, """
                 [log_cleaner]
                 enable = false
                 errors_only = false
@@ -30,6 +31,7 @@ public final class LogFilterRegression {
                 max_debug_logs = 11
                 """);
         LogCleanerConfig.load();
+        check(!Files.exists(old) && Files.isRegularFile(config), "legacy log config is moved before loading");
         LogFilter filter = new LogFilter();
         LogEvent repeated = event(Level.INFO, "visible repeated message");
         for (int i = 0; i < 5; i++) {
@@ -43,6 +45,16 @@ public final class LogFilterRegression {
         LogCleanerConfig.errorsOnly = true;
         check(filter.filter(event(Level.INFO, "visible")) == Filter.Result.DENY, "errors-only hides INFO");
         check(filter.filter(event(Level.WARN, "visible")) == Filter.Result.DENY, "errors-only hides WARN");
+        // The lines a launcher reads to follow the game stay, in the form the game logs them.
+        for (String line : new String[] {"Setting user: Dev", "Backend library: LWJGL version 3.3.1 build 7", "OpenAL initialized on device OpenAL Soft",
+                "Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas", "Stopping!",
+                "[net.minecraft.server.Bootstrap:m_135875_:151]: #@!@# Game crashed! Crash report saved to: #@!@# crash-reports/crash.txt"}) {
+            check(filter.filter(event(Level.INFO, line)) == Filter.Result.NEUTRAL, "errors-only keeps what launchers read: " + line);
+        }
+        check(filter.filter(event(Level.INFO, "Created: a world")) == Filter.Result.DENY, "errors-only keeps only the atlas lines of Created:");
+        check(filter.filter(event(Level.WARN, "Stopping!")) == Filter.Result.DENY, "errors-only keeps launcher lines at INFO only");
+        check(filter.filter(event(Level.INFO, "Not Stopping!")) == Filter.Result.DENY, "errors-only matches launcher lines from their start");
+        check(filter.filter(event(Level.INFO, "Stopping! hidden noise")) == Filter.Result.DENY, "keyword filtering still applies to launcher lines");
         for (Level level : new Level[] { Level.ERROR, Level.FATAL }) {
             LogEvent error = event(level, "visible error");
             for (int i = 0; i < 3; i++) {

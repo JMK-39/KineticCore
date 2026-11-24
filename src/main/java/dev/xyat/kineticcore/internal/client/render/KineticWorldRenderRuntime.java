@@ -47,6 +47,11 @@ public final class KineticWorldRenderRuntime {
                     .createRenderSetup());
     *///?} else {
     private static final RenderType SEE_THROUGH_LINES = ThickWorldLineType.createSeeThroughLinesType();
+
+    /** Lines that ignore depth, also for structure previews. */
+    public static RenderType seeThroughLines() {
+        return SEE_THROUGH_LINES;
+    }
     //?}
     /**
      * Additive glow quads: lightning blending, no culling, depth-tested without writing depth. 26.1's lightning type

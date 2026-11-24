@@ -17,6 +17,7 @@ import dev.xyat.kineticcore.api.client.gui.scroll.KineticScrollSettings;
 import dev.xyat.kineticcore.api.config.client.KTClientConfigAdapter;
 import dev.xyat.kineticcore.api.config.client.KTConfigApi;
 import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 import dev.xyat.kineticcore.feature.attribute.config.AttributeConfigGui;
 import dev.xyat.kineticcore.feature.crawl.client.PlayerCrawlHandler;
 import dev.xyat.kineticcore.feature.datapack.ResourcePackReloadNotifier;
@@ -53,11 +54,14 @@ public final class KineticCoreClientBootstrap {
 
     public static void registerInfrastructure() {
         INFRASTRUCTURE.run(
-                () -> KTClientConfigAdapter.registerSpec(TpsClientConfig.SPEC, "kineticcore/tps_client.toml"),
-                () -> KTClientConfigAdapter.registerSpec(FpsClientConfig.SPEC, "kineticcore/fps_client.toml"),
-                () -> KTClientConfigAdapter.registerSpec(StartupConfig.SPEC, "kineticcore/startup.toml"),
-                () -> KTClientConfigAdapter.registerSpec(SuperFlightClientConfig.SPEC, "kineticcore/super_flight_client.toml"),
-                () -> KTClientConfigAdapter.registerSpec(KineticScrollSettings.configSpec(), "kineticcore/ui_client.toml"),
+                () -> KTClientConfigAdapter.registerSpec(TpsClientConfig.SPEC, "kineticcore/core/tps_client.toml"),
+                () -> KTClientConfigAdapter.registerSpec(FpsClientConfig.SPEC, "kineticcore/core/fps_client.toml"),
+                () -> {
+                    KineticPaths.migrateConfigFile("kineticcore/startup.toml", "kineticcore/core/startup_screen_client.toml");
+                    KTClientConfigAdapter.registerSpec(StartupConfig.SPEC, "kineticcore/core/startup_screen_client.toml");
+                },
+                () -> KTClientConfigAdapter.registerSpec(SuperFlightClientConfig.SPEC, "kineticcore/core/super_flight_client.toml"),
+                () -> KTClientConfigAdapter.registerSpec(KineticScrollSettings.configSpec(), "kineticcore/core/ui_client.toml"),
                 KineticCoreConfigKeyBinding::register
         );
     }

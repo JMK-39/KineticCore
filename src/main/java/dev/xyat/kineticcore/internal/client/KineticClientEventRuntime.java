@@ -893,6 +893,15 @@ public final class KineticClientEventRuntime {
         }
 
         @Override
+        public org.joml.Matrix4f viewMatrix() {
+            //? if >=1.20.5 {
+            /*return new org.joml.Matrix4f(event.getModelViewMatrix()).mul(event.getPoseStack().last().pose());
+            *///?} else {
+            return new org.joml.Matrix4f(event.getPoseStack().last().pose());
+            //?}
+        }
+
+        @Override
         public float partialTick() {
             //? if >=26.1 {
             /*return net.minecraft.client.Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);

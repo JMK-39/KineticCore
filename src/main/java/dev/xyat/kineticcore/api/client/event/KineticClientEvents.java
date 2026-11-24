@@ -168,6 +168,14 @@ public final class KineticClientEvents {
         /** Returns the projection matrix active for the current level render stage. */
         Matrix4f projectionMatrix();
 
+        /**
+         * Returns the camera's rotation: the matrix that turns a position relative to the camera into view space.
+         * On 1.20.1 this is the top of {@link #poseStack()}; from 1.20.5 on the pose stack starts empty and the
+         * rotation is the stage's model-view matrix, so code that projects world points to the screen must use this
+         * method rather than the pose stack. A new matrix on every call.
+         */
+        Matrix4f viewMatrix();
+
         /** Returns the partial-tick value for interpolation during this render callback. */
         float partialTick();
     }

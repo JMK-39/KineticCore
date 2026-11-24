@@ -7,6 +7,7 @@
   "mixins": [
     "crawl.PlayerCrawlPoseMixin",
     "attribute.AttributeMapRuntimeMixin",
+    "attribute.AttributeInstanceInvoker",
     "datapack.DatapackRepositoryMixin",
     "despawn.MobDespawnMixins$MobTweaks",
     "despawn.MobDespawnMixins$LivingEntityTweaks",

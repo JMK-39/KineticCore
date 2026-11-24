@@ -98,7 +98,8 @@ public final class PageContainerScreen<M extends AbstractContainerMenu> extends 
 
     @Override
     protected boolean containerMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        return access.onMouseDrag(page, InputRecords.drag(mouseX, mouseY, button, dragX, dragY));
+        return access.onMouseDrag(page, InputRecords.drag(mouseX, mouseY, button, dragX, dragY))
+                || ui.dragPressedCustomControls(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override
