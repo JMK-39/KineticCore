@@ -8,6 +8,10 @@
 
 KineticCore is the core mod of the Kinetic series. It adds a set of gameplay and client improvements, and gives addon mods one API for GUI, configuration, networking, input and more.
 
+Drag the 3D structure preview to inspect the house from another side. [GUI API guide](https://github.com/JMK-39/KineticCore/wiki/GUI-API-Guide)
+
+<img src="https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/showcase-20261126/en/core-3d-motion.gif" alt="Continuous in-game recording of rotating a 3D structure preview" width="640">
+
 How to use each feature is described in the **[Wiki](https://github.com/JMK-39/KineticCore/wiki)**.
 
 ### Versions
@@ -39,6 +43,10 @@ Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 ## 简体中文
 
 KineticCore 是 Kinetic 系列的核心模组：自带一组玩法与客户端改进，同时为附属模组提供统一的 GUI、配置、网络、输入等开发接口。
+
+在 3D 结构预览里拖拽，可以从另一侧观察木屋。 [GUI API 指南](https://github.com/JMK-39/KineticCore/wiki/GUI-API-%E6%8C%87%E5%8D%97)
+
+<img src="https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/showcase-20261126/zh/core-3d-motion.gif" alt="拖拽旋转 3D 结构预览的游戏内连续实拍" width="640">
 
 各功能的具体用法见 **[Wiki](https://github.com/JMK-39/KineticCore/wiki)**。
 
