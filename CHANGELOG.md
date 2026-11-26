@@ -1,3 +1,13 @@
+2026年11月26日 — 26.11.26.1 — Picking blocks in a structure preview / 结构预览方块点选
+
+**English**
+
+- A 3D structure editor can now identify the visible block under the mouse at the moment of the press. On a reduced-detail preview the API returns the selected cell and its scale, so an editor can open a full-detail view before making a change. Containers, spawners and entity markers still take priority when visible. The existing marker-click listener continues to work.
+
+**简体中文**
+
+- 3D 结构编辑器现在能取得按下鼠标时指向的可见方块。缩略视图会返回选中格及其缩放比例，方便编辑器打开原始精度的局部视图后再修改。可见的容器、刷怪笼和实体标记优先选中，原有标记点击监听器继续可用。
+
 2026年11月26日 — 26.11.26 — First-join reward save fix / 首次进入奖励存档修复
 
 **English**

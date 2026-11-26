@@ -11,6 +11,7 @@ import dev.xyat.kineticcore.internal.client.gui.render.GuiGraphicsAdapter;
 import dev.xyat.kineticcore.internal.client.render.structure.PreviewCamera;
 import dev.xyat.kineticcore.internal.client.render.structure.PreviewOverlay;
 import dev.xyat.kineticcore.internal.client.render.structure.StructurePreviewRuntime;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Vector3f;
@@ -89,6 +90,16 @@ public final class KineticStructureView extends KineticCustomControl {
         /** A click without dragging, on a marker or on none ({@code null}); {@code input} carries the press's modifiers. */
         void clicked(@Nullable Marker marker, MouseInput input);
 
+        /**
+         * A click at the mouse press's camera position. An unobscured marker takes priority over its block, so at
+         * most one of {@code marker} and {@code cell} is present. A cell is an index into the displayed snapshot
+         * from its minimum corner. When {@code scale > 1}, it represents a region and does not identify an exact
+         * block. A scale of zero means there is no snapshot. The default forwards to the original listener method.
+         */
+        default void clicked(@Nullable Marker marker, @Nullable BlockPos cell, int scale, MouseInput input) {
+            clicked(marker, input);
+        }
+
         /** A double-click on a marker. A double-click on no marker resets the view instead. */
         default void activated(Marker marker) {
         }
@@ -118,7 +129,8 @@ public final class KineticStructureView extends KineticCustomControl {
     private double pressX, pressY;
     private float pressYaw, pressPitch;
     private boolean pressMoved;
-    @Nullable private Marker pressMarker;
+    @Nullable private Pick pressPick;
+    @Nullable private KineticBlockSnapshot pressSnapshot;
     private long lastClick;
     @Nullable private String lastClickKey;
 
@@ -255,6 +267,34 @@ public final class KineticStructureView extends KineticCustomControl {
     public Marker markerAt(double mouseX, double mouseY) {
         Pick pick = pick(mouseX, mouseY);
         return pick == null ? null : pick.marker();
+    }
+
+    /**
+     * The first visible block at a point in control units, relative to a full-resolution snapshot's minimum corner.
+     * Returns {@code null} for air, an unobscured marker, or a downsampled snapshot. Use {@link #cellAt} to find
+     * the corresponding region in a downsampled snapshot.
+     */
+    @Nullable
+    public BlockPos blockAt(double mouseX, double mouseY) {
+        return snapshot == null || snapshot.scale() != 1 ? null : cellAt(mouseX, mouseY);
+    }
+
+    /**
+     * The first visible occupied cell at a point in control units, as an index in the displayed snapshot.
+     * One cell spans {@link KineticBlockSnapshot#scale()} blocks along each axis. An unobscured marker has priority.
+     */
+    @Nullable
+    public BlockPos cellAt(double mouseX, double mouseY) {
+        if (mouseX < controlX() + 1 || mouseY < controlY() + 1
+                || mouseX >= controlX() + controlWidth() - 1 || mouseY >= controlY() + controlHeight() - 1) return null;
+        return cell(pick(mouseX, mouseY));
+    }
+
+    @Nullable
+    private static BlockPos cell(@Nullable Pick pick) {
+        if (pick == null || pick.cell() == null) return null;
+        int[] hit = pick.cell();
+        return new BlockPos(hit[0], hit[1], hit[2]);
     }
 
     /** Eases the camera to look at a point, in blocks from the snapshot's minimum corner, coming closer if it is far. */
@@ -682,7 +722,8 @@ public final class KineticStructureView extends KineticCustomControl {
             pressPitch = pitch;
             pressMoved = false;
             pressAxis = axisAt(input.x(), input.y());
-            pressMarker = pressAxis >= 0 ? null : markerAt(input.x(), input.y());
+            pressSnapshot = snapshot;
+            pressPick = pressAxis >= 0 ? null : pick(input.x(), input.y());
         }
         return true;
     }
@@ -693,6 +734,9 @@ public final class KineticStructureView extends KineticCustomControl {
         MouseInput pressed = press;
         if (!input.isLeft() || pressed == null) return false;
         press = null;
+        Pick clicked = pressSnapshot == snapshot ? pressPick : null;
+        pressPick = null;
+        pressSnapshot = null;
         if (pressMoved || Math.abs(input.x() - pressX) >= CLICK_SLOP || Math.abs(input.y() - pressY) >= CLICK_SLOP) {
             lastClick = 0L;
             return false;
@@ -708,11 +752,12 @@ public final class KineticStructureView extends KineticCustomControl {
             return true;
         }
         long now = System.nanoTime();
+        Marker pressMarker = clicked == null ? null : clicked.marker();
         String key = pressMarker == null ? null : pressMarker.key();
         boolean doubleClick = lastClick != 0L && now - lastClick < DOUBLE_CLICK_NANOS && Objects.equals(key, lastClickKey);
         lastClick = doubleClick ? 0L : now;
         lastClickKey = key;
-        if (pickListener != null) pickListener.clicked(pressMarker, pressed);
+        if (pickListener != null) pickListener.clicked(pressMarker, cell(clicked), snapshot == null ? 0 : snapshot.scale(), pressed);
         if (doubleClick) {
             if (pressMarker == null) resetView();
             else if (pickListener != null) pickListener.activated(pressMarker);
