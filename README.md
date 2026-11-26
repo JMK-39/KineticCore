@@ -8,9 +8,20 @@
 
 KineticCore is the core mod of the Kinetic series. It adds a set of gameplay and client improvements, and gives addon mods one API for GUI, configuration, networking, input and more.
 
-Drag the 3D structure preview to inspect the house from another side. [GUI API guide](https://github.com/JMK-39/KineticCore/wiki/GUI-API-Guide)
+### Find an addon in the shared F6 menu
 
-<img src="https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/showcase-20261126/en/core-3d-motion.gif" alt="Continuous in-game recording of rotating a 3D structure preview" width="640">
+Press F6 to open the shared configuration center. Switch between its two layouts, then type TextStudio and open the matching module directly from the results.
+
+![Switching the F6 configuration layout, searching for TextStudio and opening its module settings](https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/tutorials-20261126/en.gif)
+
+<details>
+<summary>Full walkthrough with Mandarin narration</summary>
+
+https://github.com/user-attachments/assets/eccf966a-b432-4862-80fc-353d85fac637
+
+</details>
+
+[Editor guide](https://github.com/JMK-39/KineticCore/wiki/Config-Center-and-Files)
 
 How to use each feature is described in the **[Wiki](https://github.com/JMK-39/KineticCore/wiki)**.
 
@@ -44,9 +55,20 @@ Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 KineticCore 是 Kinetic 系列的核心模组：自带一组玩法与客户端改进，同时为附属模组提供统一的 GUI、配置、网络、输入等开发接口。
 
-在 3D 结构预览里拖拽，可以从另一侧观察木屋。 [GUI API 指南](https://github.com/JMK-39/KineticCore/wiki/GUI-API-%E6%8C%87%E5%8D%97)
+### 从 F6 配置中心找到要改的模组
 
-<img src="https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/showcase-20261126/zh/core-3d-motion.gif" alt="拖拽旋转 3D 结构预览的游戏内连续实拍" width="640">
+按 F6 打开配置中心。右上角可以切换界面外观，在搜索框输入 TextStudio 后，点匹配项就能进入这个模组自己的设置页。
+
+![在 F6 配置中心切换外观、搜索 TextStudio 并打开模组设置的实录](https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/tutorials-20261126/zh.gif)
+
+<details>
+<summary>播放完整普通话讲解</summary>
+
+https://github.com/user-attachments/assets/eccf966a-b432-4862-80fc-353d85fac637
+
+</details>
+
+[编辑器使用指南](https://github.com/JMK-39/KineticCore/wiki/%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E4%B8%8E%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6)
 
 各功能的具体用法见 **[Wiki](https://github.com/JMK-39/KineticCore/wiki)**。
 
