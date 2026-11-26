@@ -2,11 +2,11 @@
 
 **English**
 
-- Fixed a save crash on NeoForge 1.21.1 when a player received enchanted first-join equipment in a second world opened without restarting Minecraft. KineticCore now reads reward items using the current world's registries each time it grants them, so the enchantments can be saved with that player's inventory.
+- Fixed an issue when a player received enchanted first-join equipment in a second world opened without restarting Minecraft. On NeoForge 1.21.1 the inventory save could crash. On NeoForge 26.1.2 the player could disconnect and the equipment could fail to save. KineticCore now reads reward items using the current world's registries each time it grants them.
 
 **简体中文**
 
-- 修复 NeoForge 1.21.1 上不重启 Minecraft、进入第二个存档并领取带附魔的新手装备后，保存玩家物品栏时崩溃的问题。KineticCore 每次发放奖励时都从当前存档的注册表解析物品，使附魔能够随玩家物品栏正确写入存档。
+- 修复同一次游戏会话中进入第二个存档并领取附魔新手装备时的问题。NeoForge 1.21.1 可能在保存物品栏时崩溃，NeoForge 26.1.2 可能断开连接并无法保存装备。KineticCore 现在每次发放奖励都从当前存档的注册表解析物品。
 
 2026年11月24日 — 26.11.24 — Config folders / 配置归档
 - Core settings live under `config/kineticcore/core`. Updated add-ons can group settings under their mod ID and migrate earlier paths before loading. Existing destination files take precedence, and conflicts retain the previous file for inspection.
