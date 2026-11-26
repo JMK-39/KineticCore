@@ -55,6 +55,8 @@ Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 KineticCore 是 Kinetic 系列的核心模组：自带一组玩法与客户端改进，同时为附属模组提供统一的 GUI、配置、网络、输入等开发接口。
 
+<a name="zh-walkthrough"></a>
+
 ### 从 F6 配置中心找到要改的模组
 
 按 F6 打开配置中心。右上角可以切换界面外观，在搜索框输入 TextStudio 后，点匹配项就能进入这个模组自己的设置页。
