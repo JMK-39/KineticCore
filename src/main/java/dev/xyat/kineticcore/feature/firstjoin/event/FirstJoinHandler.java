@@ -106,13 +106,14 @@ public class FirstJoinHandler {
         // 延迟期间可能已被其它途径标记（例如同一玩家重复登录事件）。
         if (hasReceived(player)) return;
         // 配置有误时整份奖励都不发，也不清理快捷栏，避免玩家只拿到一部分却被标记为已领取。
-        if (!PlayerConfig.rewardsValid()) {
+        PlayerConfig.JoinRewards rewards = PlayerConfig.parseRewards();
+        if (!rewards.valid()) {
             KineticRuntime.logger().error("首次进服奖励配置中有物品解析失败，本次不发放也不标记: {}", player.getGameProfile().getName());
             return;
         }
         boolean granted;
         try {
-            granted = grantRewards(player);
+            granted = grantRewards(player, rewards);
         } catch (Throwable throwable) {
             KineticRuntime.logger().error("首次进服奖励发放失败: {}", player.getGameProfile().getName(), throwable);
             granted = false;
@@ -121,7 +122,7 @@ public class FirstJoinHandler {
         if (granted) markReceived(player);
     }
 
-    private static boolean grantRewards(ServerPlayer player) {
+    private static boolean grantRewards(ServerPlayer player, PlayerConfig.JoinRewards rewards) {
         Inventory inventory = player.getInventory();
         if (PlayerConfig.clearInvBeforeJoin) {
             for (int slot = 0; slot < Inventory.getSelectionSize(); slot++) {
@@ -129,7 +130,7 @@ public class FirstJoinHandler {
             }
         }
 
-        PlayerConfig.getJoinItems().forEach((slot, stack) -> {
+        rewards.items().forEach((slot, stack) -> {
             if (stack.isEmpty()) return;
             ItemStack copy = stack.copy();
             if (slot >= 0 && slot < inventory.items.size()) {
@@ -140,7 +141,7 @@ public class FirstJoinHandler {
             }
         });
 
-        PlayerConfig.getArmor().forEach((slot, stack) -> {
+        rewards.armor().forEach((slot, stack) -> {
             if (!stack.isEmpty()) player.setItemSlot(slot, stack.copy());
         });
 

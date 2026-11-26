@@ -63,13 +63,6 @@ public class PlayerConfig {
     public static String bootsId = "";
     public static String offhandId = "";
 
-    // 缓存对象 (改为 Map 以支持槽位绑定)
-    private static final Map<Integer, ItemStack> CACHED_JOIN_ITEMS = new HashMap<>();
-    private static final Map<EquipmentSlot, ItemStack> CACHED_ARMOR = new EnumMap<>(EquipmentSlot.class);
-    private static boolean isCacheInitialized = false;
-    // Whether every configured reward parsed; a reward with a broken entry is not handed out at all.
-    private static boolean rewardsValid = true;
-
     public static void load() {
         try {
             KineticPaths.migrateConfigFile("kineticcore/player.toml", "kineticcore/core/player_first_join.toml");
@@ -165,29 +158,12 @@ public class PlayerConfig {
         leggingsId = configData.getOrElse("first_join.armor.leggings", DEFAULT_LEGGINGS);
         bootsId = configData.getOrElse("first_join.armor.boots", DEFAULT_BOOTS);
         offhandId = configData.getOrElse("first_join.armor.offhand", DEFAULT_OFFHAND);
-
-        isCacheInitialized = false;
     }
 
-    public static Map<Integer, ItemStack> getJoinItems() {
-        if (!isCacheInitialized) rebuildCache();
-        return CACHED_JOIN_ITEMS;
-    }
-
-    public static Map<EquipmentSlot, ItemStack> getArmor() {
-        if (!isCacheInitialized) rebuildCache();
-        return CACHED_ARMOR;
-    }
-
-    /** Returns whether every configured first-join item and armor entry parsed. */
-    public static boolean rewardsValid() {
-        if (!isCacheInitialized) rebuildCache();
-        return rewardsValid;
-    }
-
-    private static void rebuildCache() {
-        CACHED_JOIN_ITEMS.clear();
-        CACHED_ARMOR.clear();
+    /** Parse one grant on the server thread, using the current world's registry for item components. */
+    public static JoinRewards parseRewards() {
+        Map<Integer, ItemStack> items = new HashMap<>();
+        Map<EquipmentSlot, ItemStack> armor = new EnumMap<>(EquipmentSlot.class);
         boolean valid = true;
 
         int defaultSlot = 0;
@@ -208,27 +184,24 @@ public class PlayerConfig {
 
             ItemStack stack = parseItemStackInternal(itemStr);
             if (!stack.isEmpty()) {
-                CACHED_JOIN_ITEMS.put(slot, stack);
+                items.put(slot, stack);
             } else if (!itemStr.isBlank()) {
                 valid = false;
             }
             defaultSlot++;
         }
 
-        valid &= cacheArmor(EquipmentSlot.HEAD, helmetId);
-        valid &= cacheArmor(EquipmentSlot.CHEST, chestplateId);
-        valid &= cacheArmor(EquipmentSlot.LEGS, leggingsId);
-        valid &= cacheArmor(EquipmentSlot.FEET, bootsId);
-        valid &= cacheArmor(EquipmentSlot.OFFHAND, offhandId);
-
-        rewardsValid = valid;
-        isCacheInitialized = true;
+        valid &= parseArmor(armor, EquipmentSlot.HEAD, helmetId);
+        valid &= parseArmor(armor, EquipmentSlot.CHEST, chestplateId);
+        valid &= parseArmor(armor, EquipmentSlot.LEGS, leggingsId);
+        valid &= parseArmor(armor, EquipmentSlot.FEET, bootsId);
+        valid &= parseArmor(armor, EquipmentSlot.OFFHAND, offhandId);
+        return new JoinRewards(items, armor, valid);
     }
 
-    // Caches one armor entry; an empty entry means no item, a non-empty one that does not parse is an error.
-    private static boolean cacheArmor(EquipmentSlot slot, String entry) {
+    private static boolean parseArmor(Map<EquipmentSlot, ItemStack> armor, EquipmentSlot slot, String entry) {
         ItemStack stack = parseItemStackInternal(entry);
-        CACHED_ARMOR.put(slot, stack);
+        armor.put(slot, stack);
         return !stack.isEmpty() || entry == null || entry.isBlank();
     }
 
@@ -296,6 +269,9 @@ public class PlayerConfig {
 
     public static ItemStack parseItemStack(String input) {
         return parseItemStackInternal(input);
+    }
+
+    public record JoinRewards(Map<Integer, ItemStack> items, Map<EquipmentSlot, ItemStack> armor, boolean valid) {
     }
 
     public record JoinItemEntry(int slot, ItemStack stack) {

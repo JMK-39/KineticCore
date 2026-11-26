@@ -3,6 +3,10 @@ package dev.xyat.kineticcoreitemcreatorvalidation;
 @net.minecraftforge.fml.common.Mod("kineticcore_itemcreator_validation")
 public final class ItemCreatorValidationEntry {
     public ItemCreatorValidationEntry() {
+        if (Boolean.getBoolean("kineticcore.firstJoinWorldValidation")) {
+            dev.xyat.kineticcore.api.runtime.KineticPlatform.runOnClient(() -> FirstJoinWorldValidation::install);
+            return;
+        }
         if (Boolean.getBoolean("kineticcore.spawnerEggValidation")) {
             dev.xyat.kineticcore.api.runtime.KineticPlatform.runOnClient(() -> SpawnerEggValidation::install);
             return;
