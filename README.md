@@ -12,14 +12,10 @@ KineticCore is the core mod of the Kinetic series. It adds a set of gameplay and
 
 Press F6 to open the shared configuration center. Switch between its two layouts, then type TextStudio and open the matching module directly from the results.
 
-![Switching the F6 configuration layout, searching for TextStudio and opening its module settings](https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/tutorials-20261126/en.gif)
+![Switching the F6 configuration layout, searching for TextStudio and opening its module settings](https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/bilingual-editors/KineticCore/en.gif)
 
-<details>
-<summary>Full walkthrough with Mandarin narration</summary>
+[Watch with English narration](https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/bilingual-editors/KineticCore/en.mp4) · [Download English subtitles](https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/bilingual-editors/KineticCore/en.srt)
 
-https://github.com/user-attachments/assets/eccf966a-b432-4862-80fc-353d85fac637
-
-</details>
 
 [Editor guide](https://github.com/JMK-39/KineticCore/wiki/Config-Center-and-Files)
 
@@ -61,14 +57,10 @@ KineticCore 是 Kinetic 系列的核心模组：自带一组玩法与客户端�
 
 按 F6 打开配置中心。右上角可以切换界面外观，在搜索框输入 TextStudio 后，点匹配项就能进入这个模组自己的设置页。
 
-![在 F6 配置中心切换外观、搜索 TextStudio 并打开模组设置的实录](https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/tutorials-20261126/zh.gif)
+![在 F6 配置中心切换外观、搜索 TextStudio 并打开模组设置的实录](https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/bilingual-editors/KineticCore/zh.gif)
 
-<details>
-<summary>播放完整普通话讲解</summary>
+[观看中文配音版](https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/bilingual-editors/KineticCore/zh.mp4) · [下载中文字幕](https://raw.githubusercontent.com/wiki/JMK-39/KineticCore/media/bilingual-editors/KineticCore/zh.srt)
 
-https://github.com/user-attachments/assets/eccf966a-b432-4862-80fc-353d85fac637
-
-</details>
 
 [编辑器使用指南](https://github.com/JMK-39/KineticCore/wiki/%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E4%B8%8E%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6)
 

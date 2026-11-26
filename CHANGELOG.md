@@ -1,21 +1,14 @@
-2026年11月26日 — 26.11.26.1 — Picking blocks in a structure preview / 结构预览方块点选
+2026年11月26日 — 26.11.26 — Structure preview picking and first-join equipment saves / 结构预览点选与首次进入装备存档修复
 
 **English**
 
 - A 3D structure editor can now identify the visible block under the mouse at the moment of the press. On a reduced-detail preview the API returns the selected cell and its scale, so an editor can open a full-detail view before making a change. Containers, spawners and entity markers still take priority when visible. The existing marker-click listener continues to work.
 
-**简体中文**
-
-- 3D 结构编辑器现在能取得按下鼠标时指向的可见方块。缩略视图会返回选中格及其缩放比例，方便编辑器打开原始精度的局部视图后再修改。可见的容器、刷怪笼和实体标记优先选中，原有标记点击监听器继续可用。
-
-2026年11月26日 — 26.11.26 — First-join reward save fix / 首次进入奖励存档修复
-
-**English**
-
 - Fixed an issue when a player received enchanted first-join equipment in a second world opened without restarting Minecraft. On NeoForge 1.21.1 the inventory save could crash. On NeoForge 26.1.2 the player could disconnect and the equipment could fail to save. KineticCore now reads reward items using the current world's registries each time it grants them.
 
 **简体中文**
 
+- 3D 结构编辑器现在能取得按下鼠标时指向的可见方块。缩略视图会返回选中格及其缩放比例，方便编辑器打开原始精度的局部视图后再修改。可见的容器、刷怪笼和实体标记优先选中，原有标记点击监听器继续可用。
 - 修复同一次游戏会话中进入第二个存档并领取附魔新手装备时的问题。NeoForge 1.21.1 可能在保存物品栏时崩溃，NeoForge 26.1.2 可能断开连接并无法保存装备。KineticCore 现在每次发放奖励都从当前存档的注册表解析物品。
 
 2026年11月24日 — 26.11.24 — Config folders / 配置归档
